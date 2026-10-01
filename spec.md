@@ -644,5 +644,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 
 | Phase | Status |
 | --- | --- |
-| A0 | Proposed; awaiting your review |
+| A0 | Approved 2026-10-01; done when the `CLAUDE.md` update is merged |
+| A1 | Next; not started |
 | All others | Not started |

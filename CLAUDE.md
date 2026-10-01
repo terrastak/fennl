@@ -4,6 +4,8 @@ Fennl is a modern, local-first recipe web app (Paprika 3-style feature set, aimi
 
 Read this file before making architecture, data-model, auth, billing, or sync decisions. If a task would contradict something marked **Decided**, stop and ask. Items marked **Leaning** are the current plan but can change. Items marked **Open** or **Unverified** must not be treated as settled.
 
+The step-by-step build plan is in `spec.md`. Work happens one approved phase at a time; do not start a phase the owner has not approved.
+
 ## Status legend
 
 - **Decided**: the owner has chosen this.
@@ -62,11 +64,21 @@ UI copy should say: recipes are stored in your account, and the browser keeps a 
 
 Exact prices: Open.
 
+### Beta scope (Decided for the invite-only beta)
+
+The first release is an **invite-only beta**. Invited testers get Premium free (see "Beta grants"); Stripe billing is built after the beta, before public launch.
+
+- In the beta: import (see "Import sources"), multiple photos per recipe with a cover photo, nested categories (several per recipe), linked sub-recipes, nutrition (stored and shown; no automatic calculation), scaling and unit conversion, pan-size scaling, cook mode.
+- After the beta: grocery list, meal planner, automatic nutrition calculation, paste-a-link and phone share-button import, extensions for other browsers, social and video import.
+- One web app for phone and computer equally, installable to the home screen.
+
 ## Entitlements model (Leaning)
 
 Every user gets a personal **household** (a Better Auth organization) at signup. Recipes belong to a household, not to a user. A Household plan lets a second member join. An Individual plan is a household with a seat limit of 1. A free account is a household with no subscription.
 
 The **subscription attaches to the household** (Stripe plugin with organization customers). Entitlements are derived from the household's subscription, so every endpoint checks one thing: the household's current entitlement.
+
+**Beta grants (Decided for the beta).** Entitlements are derived from the household's subscription **or from a beta grant**. A beta grant comes from an invite code and gives a household Premium for a set period. It is one more input to the same entitlement computation, not a separate code path. When a grant expires and there is no subscription, the household falls back to Free.
 
 Derived entitlement fields (computed server-side, never trusted from the client):
 
@@ -90,6 +102,14 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `image` | One row per stored image | `hash` (content hash), `household_id`, `bytes`, `content_type`, `created_at`, `deleted_at` |
 | `recipe` | Recipe records (if stored in D1; see Sync architecture) | `id` (UUID), `household_id`, fields..., `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_version` | Premium version history | `id`, `recipe_id`, `snapshot`, `created_at`, `author_user_id` |
+| `category` | Nested categories, per household | `id` (UUID), `household_id`, `parent_id`, `name`, sort order, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_category` | Recipe-to-category links (many per recipe) | `recipe_id`, `category_id`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_photo` | Photos on a recipe, incl. kept import originals | `id` (UUID), `recipe_id`, `image_hash`, role (cover, photo, import original), sort order, `updated_at`, `deleted_at`, `server_seq` |
+| `import_job` | One row per import attempt | `id`, `household_id`, `user_id`, source type, status, draft, provenance, resulting `recipe_id`, `created_at` |
+| `ai_usage` | Metering for every AI call | `id`, `household_id`, `import_job_id`, provider, model, input/output tokens, estimated cost, `created_at` |
+| `beta_invite` | Invite codes that grant Premium during the beta | `code`, `created_by`, `max_uses`, `uses`, grant duration, `expires_at`, `created_at` |
+
+Columns marked with a description rather than a name are settled in the phase that builds the table (see `spec.md`). Category and photo rows are synced like recipes, so the sync columns may move with the recipe store if recipes end up in a Durable Object.
 
 Notes:
 
@@ -146,6 +166,18 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 - Compress and resize in the client before upload (WebP or AVIF). Largest cost lever.
 - Use R2 lifecycle rules to abort incomplete multipart uploads. Delete orphaned objects when recipes are deleted.
 - Trial accounts get a lower image quota. Require a payment method up front for trials (the Better Auth Stripe plugin limits one trial per account, but a new account can dodge that).
+
+## Import sources (Decided for the beta)
+
+Import is the headline feature and is **Premium only** (`import_enabled`). Free accounts type recipes by hand.
+
+- **Web pages**: a **Chrome extension** (desktop) is the first and, during the beta, only web import path. It reads the page as the user sees it, so logged-in and paywalled sites work. It never collects passwords for recipe sites. Extraction order: Schema.org structured data first, then AI for pages without it.
+- **Photos and documents**: handwritten cards (front/back, multi-card), printed cookbook pages (multi-page), screenshots, and PDFs (possibly many recipes per file).
+- **Paprika 3**: full library import with photos and categories, essential for the beta. Re-importing must update rather than duplicate.
+- **Original photos are always kept** with the imported recipe.
+- **Every import is reviewed before saving.** Nothing is silently added or overwritten.
+- **Measured quality.** Import accuracy is scored field by field against a real test set; see `spec.md` phase E1.
+- **Not in the beta**: paste-a-link import, phone share button, other browsers' extensions, social and video import.
 
 ## AI import (Leaning)
 
