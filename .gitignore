@@ -43,3 +43,6 @@ next-env.d.ts
 /playwright-report
 .dev.vars*
 !.dev.vars.example
+
+# Personal Claude Code settings
+.claude/settings.local.json

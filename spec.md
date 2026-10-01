@@ -127,6 +127,13 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   5. Production deploys only when `main` changes, and only after tests pass.
 - **You check**: Open the preview link from the PR and see "Hello, Fennl".
 - **Done when**: A PR shows a green check and a working preview link.
+- **Built (2026-10-01)**: `.github/workflows/ci.yml` with three jobs:
+  - **check** (every PR and every push to `main`): format, lint, typecheck, unit tests, browser tests.
+  - **preview** (PRs from this repo, after check): builds the separate **`fennl-preview`** Worker (`env.preview` in `wrangler.jsonc`) and uploads a version with the alias `pr-<number>`. The link is `https://pr-<number>-fennl-preview.<subdomain>.workers.dev`. The job checks `/api/health` and posts the link as a PR comment, which is updated in place on later pushes. The first-ever run creates the preview Worker, because Cloudflare only accepts preview versions for a Worker that already exists.
+  - **deploy** (push to `main`, after check): builds with `APP_HOSTNAME` (read in `vite.config.ts`, production builds only), deploys the **`fennl`** Worker to that custom domain, and waits for `/api/health` to answer there.
+  - Production has `workers_dev` and `preview_urls` off, so it's reachable only on its custom domain.
+  - Step 4 (staging resources): there are no D1/R2 bindings yet. When B1 and D1 add them, staging bindings go under `env.preview` and production ones at the top level, so previews can never reach production data.
+  - Preview links are public to anyone who has the link. That's fine while there's no user data; revisit before previews hold anything real.
 
 ### A4. Design direction
 - **Goal**: Choose how Fennl looks and feels.
@@ -653,6 +660,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | --- | --- |
 | A0 | Approved 2026-10-01; done when the `CLAUDE.md` update is merged |
 | A1 | Done 2026-10-01: access check green (token, account, `terrastak.workers.dev`, D1, R2, `fennl.app` routes; no existing `beta` DNS record) |
-| A2 | Approved 2026-10-01; built, all checks pass locally; waiting on review |
-| A3 | Next; awaiting approval |
+| A2 | Done 2026-10-01 (merged) |
+| A3 | Approved 2026-10-01; built; done when this PR shows a green check and a working preview link |
 | All others | Not started |

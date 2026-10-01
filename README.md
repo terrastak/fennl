@@ -40,6 +40,13 @@ Open the address it prints. You should see "Hello, Fennl" and "Server status: ok
 
 The first browser test run may ask you to install a browser: `npx playwright install chromium`. If a Chromium is already installed somewhere, point `PLAYWRIGHT_CHROMIUM_EXECUTABLE` at it instead.
 
+## Automatic checks, previews, and deploys
+
+Set up in `.github/workflows/ci.yml`:
+
+- **Every pull request** runs all the checks above. If they pass, it gets a **preview link** (posted as a comment on the pull request) running that exact version, on a separate preview Worker that never touches production data.
+- **Every merge to `main`** runs the checks again and then deploys to production, at the address in the GitHub variable `APP_HOSTNAME`.
+
 ## Notes for contributors
 
 - Use **npm 11 or newer** (it ships with Node 24) when **adding or upgrading** packages. npm 10 has a bug resolving this project's dependency tree from scratch. Installing from the lockfile with `npm ci` works on either.
