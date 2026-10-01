@@ -23,7 +23,8 @@ jobs:
       - name: Check Cloudflare access
         shell: bash
         run: |
-          set -uo pipefail
+          # GitHub runs bash with -e; turn it off so every check reports instead of stopping silently.
+          set +e -uo pipefail
 
           errors=0
           summary="$GITHUB_STEP_SUMMARY"
@@ -53,7 +54,7 @@ jobs:
           if [ "$(jq -r '.result.status // empty' <<< "$r")" = "active" ]; then
             ok "API token is valid and active."
           else
-            fail "API token was rejected: $(jq -c '.errors // "no response"' <<< "$r"). Re-create it (setup step 3)."
+            fail "API token was rejected: $(jq -c '.errors // "no response"' <<< "$r" 2> /dev/null || echo 'unreadable response from Cloudflare'). Re-create it (setup step 3)."
             exit 1
           fi
 
