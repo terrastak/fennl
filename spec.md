@@ -661,5 +661,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | A0 | Approved 2026-10-01; done when the `CLAUDE.md` update is merged |
 | A1 | Done 2026-10-01: access check green (token, account, `terrastak.workers.dev`, D1, R2, `fennl.app` routes; no existing `beta` DNS record) |
 | A2 | Done 2026-10-01 (merged) |
-| A3 | Approved 2026-10-01; built; done when this PR shows a green check and a working preview link |
+| A3 | Done 2026-10-01: PR #4 green (check, preview) with a working preview link. The first production deploy runs when it merges |
+| A4 | Next; awaiting approval |
 | All others | Not started |
