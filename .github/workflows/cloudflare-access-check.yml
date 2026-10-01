@@ -1,0 +1,139 @@
+# Read-only check that GitHub can reach the Cloudflare account Fennl deploys to.
+# It never deploys or changes anything. See docs/setup/a1-cloudflare-and-github.md.
+name: Cloudflare access check
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/cloudflare-access-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      APP_HOSTNAME: ${{ vars.APP_HOSTNAME }}
+    steps:
+      - name: Check Cloudflare access
+        shell: bash
+        run: |
+          # GitHub runs bash with -e; turn it off so every check reports instead of stopping silently.
+          set +e -uo pipefail
+
+          errors=0
+          summary="$GITHUB_STEP_SUMMARY"
+          echo "## Cloudflare access check" >> "$summary"
+
+          ok()   { echo "OK: $1"; echo "- ✅ $1" >> "$summary"; }
+          warn() { echo "::warning::$1"; echo "- ⚠️ $1" >> "$summary"; }
+          fail() { echo "::error::$1"; echo "- ❌ $1" >> "$summary"; errors=$((errors + 1)); }
+          api()  { curl -sS --max-time 20 -H "Authorization: Bearer $CF_API_TOKEN" "https://api.cloudflare.com/client/v4$1" || echo '{}'; }
+          succeeded() { [ "$(jq -r '.success // false' <<< "$1")" = "true" ]; }
+
+          # Setup not started yet: report it without failing the build.
+          if [ -z "$CF_API_TOKEN" ] && [ -z "$CF_ACCOUNT_ID" ] && [ -z "$APP_HOSTNAME" ]; then
+            msg="Setup not done yet: CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID and APP_HOSTNAME are not set. Follow docs/setup/a1-cloudflare-and-github.md, then re-run this check."
+            echo "::notice::$msg"
+            echo "- ⏳ $msg" >> "$summary"
+            exit 0
+          fi
+
+          [ -n "$CF_API_TOKEN" ]  || fail "Secret CLOUDFLARE_API_TOKEN is missing (setup step 4)."
+          [ -n "$CF_ACCOUNT_ID" ] || fail "Secret CLOUDFLARE_ACCOUNT_ID is missing (setup step 4)."
+          [ -n "$APP_HOSTNAME" ]  || fail "Variable APP_HOSTNAME is missing (setup step 4, Variables tab)."
+          [ "$errors" -eq 0 ] || exit 1
+
+          # 1. Token is valid.
+          r=$(api "/user/tokens/verify")
+          if [ "$(jq -r '.result.status // empty' <<< "$r")" = "active" ]; then
+            ok "API token is valid and active."
+          else
+            fail "API token was rejected: $(jq -c '.errors // "no response"' <<< "$r" 2> /dev/null || echo 'unreadable response from Cloudflare'). Re-create it (setup step 3)."
+            exit 1
+          fi
+
+          # 2. Account is reachable.
+          r=$(api "/accounts/$CF_ACCOUNT_ID")
+          if succeeded "$r"; then
+            ok "Token can see the account \"$(jq -r '.result.name' <<< "$r")\"."
+          else
+            fail "Token cannot see the account in CLOUDFLARE_ACCOUNT_ID. Check the Account ID (setup step 2) and the token's Account Resources (step 3)."
+          fi
+
+          # 3. workers.dev subdomain exists (preview links live there).
+          r=$(api "/accounts/$CF_ACCOUNT_ID/workers/subdomain")
+          sub=$(jq -r '.result.subdomain // empty' <<< "$r")
+          if [ -n "$sub" ]; then
+            ok "workers.dev subdomain is \"$sub.workers.dev\"."
+          else
+            fail "No workers.dev subdomain found, or the token can't read it (setup step 1)."
+          fi
+
+          # 4. D1 (database) access.
+          r=$(api "/accounts/$CF_ACCOUNT_ID/d1/database?per_page=1")
+          if succeeded "$r"; then
+            ok "Token can access D1 databases."
+          else
+            fail "Token cannot access D1. Add the permission Account > D1 > Edit (setup step 3)."
+          fi
+
+          # 5. R2 (images) access. Not needed until Stage D, so only a warning.
+          r=$(api "/accounts/$CF_ACCOUNT_ID/r2/buckets")
+          if succeeded "$r"; then
+            ok "Token can access R2."
+          else
+            warn "Token cannot access R2 yet. R2 may need to be switched on in the dashboard; this is only needed in Stage D."
+          fi
+
+          # 6. APP_HOSTNAME looks valid and its domain is managed by this token.
+          if [[ ! "$APP_HOSTNAME" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]]; then
+            fail "APP_HOSTNAME \"$APP_HOSTNAME\" is not a plain lowercase hostname (no https://, no slashes)."
+          else
+            r=$(api "/zones?per_page=50&account.id=$CF_ACCOUNT_ID")
+            zone_id=""
+            zone_name=""
+            while IFS=$'\t' read -r id name; do
+              if [ "$APP_HOSTNAME" = "$name" ] || [[ "$APP_HOSTNAME" == *".$name" ]]; then
+                zone_id="$id"
+                zone_name="$name"
+              fi
+            done < <(jq -r '.result[]? | [.id, .name] | @tsv' <<< "$r")
+
+            if [ -z "$zone_id" ]; then
+              fail "The token can't manage a domain that $APP_HOSTNAME belongs to. Check the token's Zone Resources (setup step 3)."
+            else
+              ok "$APP_HOSTNAME belongs to the domain $zone_name, which the token can access."
+              r=$(api "/zones/$zone_id/workers/routes")
+              if succeeded "$r"; then
+                ok "Token can manage Worker routes on $zone_name."
+              else
+                fail "Token can't manage Worker routes on $zone_name. Use the \"Edit Cloudflare Workers\" template (setup step 3)."
+              fi
+            fi
+
+            # 7. Nothing already answering at that name (a CNAME there would block the custom domain).
+            if command -v dig > /dev/null; then
+              existing=$(dig +short "$APP_HOSTNAME" @1.1.1.1 || true)
+              if [ -n "$existing" ]; then
+                warn "$APP_HOSTNAME already has a DNS record. Check it in the Cloudflare DNS page before the first deploy (setup step 5)."
+              else
+                ok "No DNS record exists yet for $APP_HOSTNAME (Cloudflare creates it on the first deploy)."
+              fi
+            else
+              warn "Couldn't check DNS for $APP_HOSTNAME (dig not available). Check it by hand (setup step 5)."
+            fi
+          fi
+
+          if [ "$errors" -gt 0 ]; then
+            echo "" >> "$summary"
+            echo "**$errors problem(s) found.** Fix them and re-run this check." >> "$summary"
+            exit 1
+          fi
+          echo "" >> "$summary"
+          echo "**All required checks passed.**" >> "$summary"

@@ -90,14 +90,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 
 ### A1. Accounts and keys setup (guided, mostly done by you)
 - **Goal**: Prepare the Cloudflare and GitHub settings the build needs. No code.
-- **Steps** (I'll give exact click-by-click instructions):
+- **Steps** (click-by-click guide: `docs/setup/a1-cloudflare-and-github.md`):
   1. Turn on Workers in your Cloudflare account and choose a `workers.dev` subdomain.
-  2. Create a Cloudflare API token limited to what deployments need.
-  3. Add the token and account ID as GitHub repository secrets, so automatic deploys work.
-  4. Connect your domain to Cloudflare (if it isn't already) and pick names: e.g. `app.<domain>` for production, preview links on `workers.dev`.
-- **You check**: I confirm from a test run that GitHub can deploy to your account.
-- **Done when**: A test deploy succeeds.
-- **Decisions**: Which domain/subdomain the app lives on.
+  2. Create a Cloudflare API token from the "Edit Cloudflare Workers" template, plus D1 Edit, limited to your account and the `fennl.app` zone.
+  3. Add the token and account ID as GitHub repository secrets, and the app's address as the GitHub variable `APP_HOSTNAME`.
+  4. Check that no DNS record already uses the app's address.
+  5. A read-only "Cloudflare access check" workflow on GitHub confirms all of the above without deploying anything.
+- **You check**: Follow the guide; then the access check on GitHub is green.
+- **Done when**: The access check passes with no errors.
+- **Decided (2026-10-01)**: The beta runs at **`beta.fennl.app`** (`fennl.app` is already in the owner's Cloudflare account). The address will change later, so it is **never hardcoded**: it lives only in the GitHub variable `APP_HOSTNAME`, and code and config read it from there. Preview links live on `workers.dev`.
 
 ### A2. Empty project skeleton
 - **Goal**: A minimal project that builds, tests, and runs locally, with nothing recipe-specific yet.
@@ -115,9 +116,10 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Goal**: Every pull request is tested automatically and gets its own preview link.
 - **Steps**:
   1. GitHub Actions workflow: lint, typecheck, test on each pull request.
-  2. Deploy a preview version of the Worker per pull request and post the link on the PR. (**Unverified**: confirm Cloudflare's current preview-URL feature for Workers.)
-  3. A separate "staging" set of D1/R2 resources so previews never touch real user data.
-  4. Production deploys only when `main` changes, and only after tests pass.
+  2. Deploy a preview version of the Worker per pull request and post the link on the PR. (Checked 2026-10-01: `wrangler versions upload --preview-alias` gives a `<alias>-<worker>.<subdomain>.workers.dev` link. **Caveat**: Cloudflare's docs say preview URLs don't work for Workers that use Durable Objects. If C1 picks Durable Objects, previews must deploy a separate per-PR or staging Worker instead.)
+  3. The production custom domain is generated from `APP_HOSTNAME` at deploy time (Wrangler has no command-line flag for it, so the workflow writes it into the deploy config). No hostname appears in committed files.
+  4. A separate "staging" set of D1/R2 resources so previews never touch real user data.
+  5. Production deploys only when `main` changes, and only after tests pass.
 - **You check**: Open the preview link from the PR and see "Hello, Fennl".
 - **Done when**: A PR shows a green check and a working preview link.
 
@@ -213,7 +215,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. A short document plus shared TypeScript types covering: title, description/headnote, ingredients (with section headings, original text, and parsed quantity/unit/item), directions (with section headings), prep/cook/total times, servings/yield, source (URL, name, author), notes, rating, difficulty, categories (nested, many per recipe), photos (many, one cover), linked sub-recipes on ingredients, nutrition (values plus where each came from), import provenance, and the sync columns (`updated_at`, `deleted_at`, `server_seq`).
   2. Check this covers every Paprika 3 field, so Paprika import loses nothing.
   3. Decide how per-field last-write-wins applies to lists (e.g. ingredients are one field in the beta; finer merging later).
-  4. **Decide where recipes live on the server** (open question 7): check current Cloudflare D1 and Durable Object limits and pricing, and compare.
+  4. **Decide where recipes live on the server** (open question 7): check current Cloudflare D1 and Durable Object limits and pricing, and compare. Include the preview-link caveat from A3 (Durable Objects don't get preview URLs).
 - **You check**: Read a one-page plain-English description of a recipe record and say if anything is missing.
 - **Done when**: Types, validation rules, and the decision are merged.
 - **Decisions**: D1 vs. Durable Object per household (I'll bring a recommendation with verified facts).
@@ -612,7 +614,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 
 | # | Question | Needed by |
 | --- | --- | --- |
-| 1 | Domain and subdomain for the app | A1 |
+| 1 | ~~Domain and subdomain for the app~~ Decided: `beta.fennl.app`, stored only in `APP_HOSTNAME` | A1 |
 | 2 | Email-sending service | B2 |
 | 3 | Invite-only sign-up during beta? Beta grant length? | B5 |
 | 4 | D1 vs. Durable Object for recipe storage | C1 |
@@ -644,5 +646,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 
 | Phase | Status |
 | --- | --- |
-| A0 | Proposed; awaiting your review |
+| A0 | Approved 2026-10-01; done when the `CLAUDE.md` update is merged |
+| A1 | Done 2026-10-01: access check green (token, account, `terrastak.workers.dev`, D1, R2, `fennl.app` routes; no existing `beta` DNS record) |
+| A2 | Next; awaiting approval |
 | All others | Not started |
