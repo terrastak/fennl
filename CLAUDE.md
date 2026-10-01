@@ -22,6 +22,7 @@ Read this file before making architecture, data-model, auth, billing, or sync de
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
 | Per-household live sync / recipe store | Durable Object (SQLite-backed) per household | Open (see "Sync architecture") |
 | Local data layer in the browser | SQLite compiled to WASM on OPFS, or IndexedDB via Dexie | Leaning (SQLite/OPFS, for real SQL and full-text search) |
+| AI recipe reading (photos, PDFs, pages without structured data) | Anthropic Claude API, starting with Claude Haiku, called only from the Worker, behind a swappable provider interface | Leaning (see "AI import") |
 | Sync framework | LiveStore | Open, not adopted. Beta-stage, event-sourced, would reshape the whole data layer. Revisit if it matures |
 
 Stripe is the billing engine and Fennl is the merchant of record. A merchant-of-record provider (Paddle, Lemon Squeezy, Polar) was considered as an alternative for tax handling. Revisit only if tax filing becomes a burden.
@@ -146,6 +147,20 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 - Use R2 lifecycle rules to abort incomplete multipart uploads. Delete orphaned objects when recipes are deleted.
 - Trial accounts get a lower image quota. Require a payment method up front for trials (the Better Auth Stripe plugin limits one trial per account, but a new account can dodge that).
 
+## AI import (Leaning)
+
+AI reads recipes from photos (handwritten cards, cookbook pages), screenshots, PDFs, and web pages that have no structured recipe data. Import is a Premium feature (`import_enabled`).
+
+- **One multimodal model call, no separate OCR service.** A multimodal model reads the image or PDF and returns a structured recipe draft in one step. OCR-only services (for example Google Cloud Vision) return plain text only and would still need an AI step, so they are not used.
+- **Starting model: Claude Haiku** via the Anthropic API. Researched 2026-10-01 against Gemini Flash, OpenAI GPT models, Google Cloud Vision / Document AI, and Cloudflare Workers AI. Rough cost is about half a cent per recipe or less, so accuracy matters more than price.
+- **Swappable by design.** All AI calls go through one provider interface in the Worker that returns a fixed recipe-draft shape. The model name and provider come from configuration, never hardcoded in import code. Prompts and output validation sit above the interface. Switching to a bigger Claude model, Gemini, or OpenAI must be a config change or one new adapter file.
+- **Server only.** The API key is a Worker secret. It never reaches the browser or the extension. Clients never call an AI vendor directly.
+- **Gated and metered.** Check `import_enabled` and the household's AI usage cap before any AI call. Record every call in `ai_usage` (household, model, tokens, estimated cost). Keep a global spending alarm. Enforce file size and page limits.
+- **Review before save.** AI output is a draft. The user reviews it, and the original photo or page is kept with the recipe (counts toward the image quota).
+- **Measure, then change models.** Compare models on a real test set (accuracy and cost) before switching.
+- **Privacy.** User photos go to a third-party vendor. Check the vendor's API data-retention and training terms and state them in the privacy policy.
+- **Open:** whether free accounts get a few "teaser" AI imports. Not decided; revisit before public launch. Until then, AI import is Premium only.
+
 ## Lapsed subscriptions (Open)
 
 Need a policy before launch. Current thinking:
@@ -177,6 +192,8 @@ Need a policy before launch. Current thinking:
 7. Whether to use a Durable Object per household or keep recipes in D1 for Phase 1.
 8. Design of household "smart merge" beyond per-field last-write-wins.
 9. LiveStore: revisit only if its maturity improves; adopting it means rewriting the data layer around events.
+10. Current Claude Haiku model name, price, image and PDF limits, and the Anthropic API data-retention terms. The 2026-10-01 research used third-party roundups, not vendor pages. Check official docs before building the AI layer.
+11. Whether free accounts get teaser AI imports (Open, owner undecided).
 
 ## Working conventions for Claude Code
 
@@ -185,3 +202,4 @@ Need a policy before launch. Current thinking:
 - Entitlement checks live on the server. Never trust tier, device status, or quota from the client.
 - Keep the free/Premium difference in entitlement flags, not in separate code paths wherever possible: one client, one data layer.
 - Do not add dependencies for sync, auth, or billing without asking.
+- Never hardcode an AI model name or vendor outside the AI provider layer, and never call an AI vendor from client code.
