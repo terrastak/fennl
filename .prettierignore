@@ -7,3 +7,4 @@ test-results
 playwright-report
 # Owner-edited planning docs keep their own formatting.
 *.md
+.claude/settings.local.json
