@@ -1,0 +1,16 @@
+// Cloudflare Worker configuration. The app's public hostname is deliberately NOT here:
+// it comes from the APP_HOSTNAME GitHub variable at deploy time (see CLAUDE.md).
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fennl",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-15",
+  "assets": {
+    // Serve the single-page app for any path that isn't a file, and send /api/* to the Worker first.
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "observability": {
+    "enabled": true,
+  },
+}
