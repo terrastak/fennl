@@ -1,0 +1,9 @@
+dist
+.wrangler
+node_modules
+package-lock.json
+worker-configuration.d.ts
+test-results
+playwright-report
+# Owner-edited planning docs keep their own formatting.
+*.md

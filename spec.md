@@ -111,6 +111,11 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Nothing to click yet (A3 adds the preview link). I show you the test run output.
 - **Done when**: Build, lint, typecheck, and tests all pass locally.
 - **Decisions**: Approve the dependency list (React, Vite, Hono, Vitest, Playwright, Wrangler).
+- **Built (2026-10-01)**: React 19 + Vite 8 with Cloudflare's Vite plugin (one build makes both the app and the Worker), Hono 4, Wrangler 4, TypeScript 6.0 (strict), ESLint + Prettier, Vitest 4, Playwright.
+  - **TypeScript 6.0, not 7**: the lint tool (typescript-eslint) supports only up to 6.0 so far. Revisit when it supports 7.
+  - **Vitest 4, not 5**: Cloudflare's Workers test pool, needed from B1 for D1 tests, supports Vitest 4 only. Worker tests run in Node until then.
+  - **Node 24 / npm 11**: npm 10 (bundled with Node 22) crashes when resolving this dependency tree from scratch; installing from the lockfile works on both. npm 11 runs install scripts only for packages listed in `allowScripts` (`workerd`, `esbuild`).
+  - The Worker only handles `/api/*`; every other path serves the single-page app, so deep links work.
 
 ### A3. Continuous integration and preview links
 - **Goal**: Every pull request is tested automatically and gets its own preview link.
@@ -648,5 +653,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | --- | --- |
 | A0 | Approved 2026-10-01; done when the `CLAUDE.md` update is merged |
 | A1 | Done 2026-10-01: access check green (token, account, `terrastak.workers.dev`, D1, R2, `fennl.app` routes; no existing `beta` DNS record) |
-| A2 | Next; awaiting approval |
+| A2 | Approved 2026-10-01; built, all checks pass locally; waiting on review |
+| A3 | Next; awaiting approval |
 | All others | Not started |
