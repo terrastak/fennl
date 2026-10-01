@@ -235,3 +235,4 @@ Need a policy before launch. Current thinking:
 - Keep the free/Premium difference in entitlement flags, not in separate code paths wherever possible: one client, one data layer.
 - Do not add dependencies for sync, auth, or billing without asking.
 - Never hardcode an AI model name or vendor outside the AI provider layer, and never call an AI vendor from client code.
+- Never hardcode the app's hostname (currently `beta.fennl.app`; it will change). It lives only in the GitHub Actions variable `APP_HOSTNAME`. Deploy config gets it from there, and code reads its own origin from configuration or the incoming request.
