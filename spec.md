@@ -27,7 +27,8 @@ Recorded from the planning conversation on 2026-10-01.
 | Photo/document import | Handwritten cards (incl. front/back, multi-card), printed cookbook pages (incl. multi-page), screenshots, PDFs (incl. many recipes per file). |
 | Who can import | **Premium only** (as in `CLAUDE.md`). Free accounts type recipes by hand. |
 | Beta access to Premium | **Invited testers get Premium free** through an invite code. Stripe billing is built in a later stage, before public launch. |
-| AI provider | **Claude (Anthropic API)**, behind a thin "provider" layer so another could be swapped in. |
+| AI provider | **Claude (Anthropic API), starting with Claude Haiku**, behind a thin "provider" layer. **Swapping models or providers must be easy** (a config change for a different Claude model, one new file for a different vendor). Chosen after comparing options on 2026-10-01; see "Notes: AI provider research" below. |
+| Free-user AI import teaser | **Open.** Whether free accounts get a few AI imports as a taste of Premium. Revisit later (before public launch). |
 | Original card/page photos | **Always kept** with the imported recipe. They count toward the image quota. |
 | Social media / video import | **After the beta.** |
 | Paprika 3 import | **Essential for the beta.** The owner has a large library, photos included. |
@@ -53,7 +54,7 @@ These are recommendations. Each one is confirmed in the phase that first needs i
 | Local browser database | SQLite (WASM) on OPFS, with full-text search | Already the `CLAUDE.md` leaning. Must be tested on real phones first (phase C2) | C2 |
 | Recipe storage on server | **Open**: D1, or a Durable Object per household | `CLAUDE.md` open question 7. Decided in phase C1 after checking current Cloudflare limits | C1 |
 | Email (verification, password reset, invites) | **Open**: a transactional email service (e.g. Resend or Postmark) or Cloudflare's own email sending, if it's ready | Better Auth needs a way to send email | B2 |
-| AI | Anthropic Claude API with vision, called only from the server | Owner's choice. API key never reaches the browser | E6 |
+| AI | Anthropic Claude API (Haiku to start) with vision, called only from the server, behind a swappable provider interface | Owner's choice. One call reads a photo or PDF and returns a structured recipe, so no separate OCR service is needed. API key never reaches the browser | E7 |
 | Browser extension | Chrome extension (Manifest V3), TypeScript, shares parsing code with the app | Reuses the import engine | E5 |
 | Tests | Vitest (unit), Playwright (in-browser), Cloudflare's local Workers runtime for server tests | Standard, runs in CI | A2 |
 | CI and previews | GitHub Actions runs tests on every pull request and deploys a preview version of the Worker | Gives the preview link for each phase | A3 |
@@ -63,7 +64,7 @@ These are recommendations. Each one is confirmed in the phase that first needs i
 Phase A0 proposes these edits to `CLAUDE.md`. None of them changes a **Decided** item, but they need the owner's approval:
 
 1. **Beta grants.** Entitlements are derived from the household's subscription, **or from a beta grant** (an invite code that gives a household Premium for a set period). A grant is one more input to the same entitlement check. It is not a separate code path.
-2. **Import.** Record the import goals above: Chrome extension first, the AI provider, originals kept, Premium only, video after the beta.
+2. **Import.** Record the import goals above: Chrome extension first, the AI provider (Claude Haiku to start, swappable by design, no separate OCR service), originals kept, Premium only, video after the beta.
 3. **AI usage limits.** Every AI call is metered per household, with a monthly cap (value Open) and a global spending alarm, so a bug or abuse can't run up a large bill.
 4. **New tables**: `category`, `recipe_category`, `recipe_photo`, `import_job`, `ai_usage`, `beta_invite`. Their exact columns are set in the phase that builds them.
 5. **Beta scope**: scaling, conversions, pan sizes, cook mode, linked sub-recipes, nutrition, nested categories, multiple photos. Meal planner and grocery list come later.
@@ -411,14 +412,17 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### E7. AI provider layer and cost controls
 - **Goal**: A safe, swappable way to call Claude.
 - **Steps**:
-  1. Provider interface: "turn this text/image into a recipe draft". Claude is the first implementation.
-  2. API key stored as a Worker secret; never sent to the browser or extension.
-  3. `ai_usage` table: every call metered per household (tokens, cost estimate).
-  4. Monthly per-household cap and a global daily spending alarm.
-  5. Check current Anthropic models and prices at this point and pick the model.
+  1. Provider interface: "turn this text/image/PDF into a recipe draft", always returning the same draft format (E1). Claude is the first implementation.
+  2. **Swappable by design**: the model name (and provider) comes from one config setting, never hardcoded in import code. Prompts and output validation sit above the provider interface, so changing models does not mean rewriting them. No other part of the app talks to an AI vendor directly.
+  3. API key stored as a Worker secret; never sent to the browser or extension.
+  4. `ai_usage` table: every call metered per household (tokens, model used, cost estimate).
+  5. Monthly per-household cap and a global daily spending alarm.
+  6. Start with **Claude Haiku**. Check current Anthropic model names and prices at this point and record them here.
+  7. A "model comparison" script that runs the E1 quality test set through any configured model and prints accuracy and cost side by side. Used to decide whether to move up to a bigger Claude model (for example for handwriting) or to try Gemini or OpenAI later.
+  8. Check the vendor's data-retention and training terms for API data, and note them for the privacy policy (H2).
 - **You check**: Create an Anthropic API key (I'll guide you) and add it to the Worker. See usage on the admin page.
 - **Done when**: Caps and metering are tested with a fake provider.
-- **Decisions**: Monthly AI import cap per household for the beta; monthly spending alarm amount.
+- **Decisions**: Monthly AI import cap per household for the beta; monthly spending alarm amount. (Provider and starting model are already decided: Claude Haiku, swappable.)
 
 ### E8. AI fallback for web pages without structured data
 - **Goal**: Import from blogs and sites that don't publish recipe data.
@@ -617,10 +621,24 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 7 | Quality test set contents and target scores | E1 |
 | 8 | Chrome Web Store unlisted vs. manual install | E5 |
 | 9 | AI cap per household and spending alarm | E7 |
+| 14 | Should free accounts get a few "teaser" AI imports? (Owner undecided; revisit later) | Before public launch (Stage I) |
 | 10 | PDF size and page limits | E12 |
 | 11 | Paprika libraries larger than the photo quota | E13 |
 | 12 | Joining a household with existing recipes; leaving one | G1 |
 | 13 | Version history retention | G2 |
+
+## Notes: AI provider research (2026-10-01)
+
+Why Claude Haiku first, and what else was considered. Prices came from third-party roundups, not vendor pages, so they are **Unverified**; E7 re-checks them.
+
+- **OCR services (Google Cloud Vision, Document AI)** only turn pixels into text. They don't understand recipes, so a second step (usually an AI model) would still be needed. Cloud Vision is about $1.50 per 1,000 images; Document AI Form Parser is about $30 per 1,000 pages and is built for invoices and forms. **Not used.**
+- **Multimodal AI models** read the image or PDF and return structured data in one call, which suits handwriting, cookbook layouts, and screenshots. Candidates:
+  - **Claude Haiku**: about $1 / $5 per million input / output tokens. **Chosen to start.**
+  - **Gemini Flash**: similar or cheaper (introductory pricing runs to the end of 2026, then rises). Strong at reading documents. The main alternative to test.
+  - **OpenAI GPT models**: comparable; no clear advantage found.
+  - **Cloudflare Workers AI** open vision models: cheapest and fits the stack, but likely weaker on messy handwriting and cookbook layouts.
+- **Rough cost**: a photo or page is about 1,500 input tokens and the recipe about 1,000 output tokens, so about half a cent per recipe or less on Haiku or Gemini Flash (an estimate). A 500-recipe import would cost a few dollars, so cost is not the deciding factor; accuracy is.
+- **Plan**: build the provider layer so models are interchangeable (E7), measure on the real test set (E1), and change models only when the numbers say so (E14).
 
 ## Progress
 
