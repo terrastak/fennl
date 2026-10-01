@@ -647,5 +647,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | Phase | Status |
 | --- | --- |
 | A0 | Approved 2026-10-01; done when the `CLAUDE.md` update is merged |
-| A1 | Approved 2026-10-01; in progress (waiting on the owner's setup steps and a green access check) |
+| A1 | Done 2026-10-01: access check green (token, account, `terrastak.workers.dev`, D1, R2, `fennl.app` routes; no existing `beta` DNS record) |
+| A2 | Next; awaiting approval |
 | All others | Not started |
