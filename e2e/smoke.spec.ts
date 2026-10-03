@@ -6,9 +6,9 @@ test("home page shows the recipes page", async ({ page }) => {
   await expect(page).toHaveTitle("Recipes · Fennl");
 });
 
-test("settings shows the server is reachable", async ({ page }) => {
+test("settings shows the server and database are reachable", async ({ page }) => {
   await page.goto("/settings");
-  await expect(page.getByText("Server status: ok")).toBeVisible();
+  await expect(page.getByText("Server status: ok, database connected")).toBeVisible();
 });
 
 test("unknown addresses show a friendly not-found page inside the app", async ({ page }) => {
@@ -19,10 +19,10 @@ test("unknown addresses show a friendly not-found page inside the app", async ({
   await expect(page).toHaveURL("/");
 });
 
-test("health endpoint returns JSON", async ({ request }) => {
+test("health endpoint returns JSON, including the database", async ({ request }) => {
   const res = await request.get("/api/health");
   expect(res.ok()).toBe(true);
-  expect(await res.json()).toEqual({ status: "ok", service: "fennl" });
+  expect(await res.json()).toEqual({ status: "ok", service: "fennl", database: "ok" });
 });
 
 test("the app can be installed", async ({ page, request }) => {

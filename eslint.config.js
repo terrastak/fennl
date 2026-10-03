@@ -22,7 +22,7 @@ export default defineConfig([
     extends: [reactHooks.configs.flat["recommended-latest"], reactRefresh.configs.vite],
   },
   {
-    files: ["*.{js,ts}", "e2e/**/*.ts"],
+    files: ["*.{js,ts}", "e2e/**/*.ts", "scripts/**/*.mjs"],
     languageOptions: { globals: globals.node },
   },
   prettier,

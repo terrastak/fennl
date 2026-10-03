@@ -5,7 +5,10 @@
 // so production is reachable only on that custom domain.
 //
 // env.preview = a separate Worker ("fennl-preview") used for pull-request preview links on
-// workers.dev. Staging databases and buckets will be bound here, never production ones.
+// workers.dev. It is bound to the staging database ("fennl-preview"), never the production one.
+//
+// Databases are found by name, so no database IDs are committed. CI creates a missing database
+// and applies migrations before each deploy (see .github/workflows/ci.yml).
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fennl",
@@ -19,12 +22,29 @@
   "observability": {
     "enabled": true,
   },
+  // Production database. Migrations live in worker/db/migrations and are written by Drizzle.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fennl",
+      "migrations_dir": "worker/db/migrations",
+    },
+  ],
   "workers_dev": false,
   "preview_urls": false,
   "env": {
     "preview": {
       "workers_dev": true,
       "preview_urls": true,
+      // Staging database, shared by every pull-request preview. Bindings are not inherited from
+      // the top level, so this list must name the database explicitly.
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "fennl-preview",
+          "migrations_dir": "worker/db/migrations",
+        },
+      ],
     },
   },
 }

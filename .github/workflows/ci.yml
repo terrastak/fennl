@@ -1,9 +1,14 @@
 # Checks every pull request, gives it a preview link, and deploys main to production.
 #
-# - check:   format, lint, typecheck, unit tests, browser tests.
-# - preview: (pull requests from this repo) uploads a version of the "fennl-preview" Worker with a
-#            per-PR alias, checks it responds, and comments the link on the PR.
-# - deploy:  (pushes to main) deploys the "fennl" Worker to the APP_HOSTNAME custom domain.
+# - check:   format, lint, typecheck, migration check, unit tests, browser tests.
+# - preview: (pull requests from this repo) applies migrations to the staging database, uploads a
+#            version of the "fennl-preview" Worker with a per-PR alias, checks it responds, and
+#            comments the link on the PR.
+# - deploy:  (pushes to main) applies migrations to the production database, then deploys the
+#            "fennl" Worker to the APP_HOSTNAME custom domain.
+#
+# Migrations run before the new code goes live, so each migration must keep working with the code
+# that is already running (add things first; remove old columns only in a later change).
 #
 # Needs the repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID and the variable
 # APP_HOSTNAME (see docs/setup/a1-cloudflare-and-github.md).
@@ -38,6 +43,7 @@ jobs:
       - run: npm run format:check
       - run: npm run lint
       - run: npm run typecheck
+      - run: npm run db:check
       - run: npm test
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
@@ -74,6 +80,20 @@ jobs:
       - run: npm ci
       - name: Build the preview Worker
         run: npm run build
+      - name: Create the database if it doesn't exist yet
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The database name comes from the built config (wrangler.jsonc), so it's never repeated here.
+          name=$(node -p 'require("./dist/fennl/wrangler.json").d1_databases[0].database_name')
+          if npx wrangler d1 info "$name" > /dev/null 2>&1; then
+            echo "Database $name exists."
+          else
+            echo "Creating database $name."
+            npx wrangler d1 create "$name"
+          fi
+      - name: Apply database migrations
+        run: npx wrangler d1 migrations apply DB --remote
       - name: Upload preview version
         id: upload
         shell: bash
@@ -151,6 +171,20 @@ jobs:
       - run: npm ci
       - name: Build for production
         run: npm run build
+      - name: Create the database if it doesn't exist yet
+        shell: bash
+        run: |
+          set -euo pipefail
+          # The database name comes from the built config (wrangler.jsonc), so it's never repeated here.
+          name=$(node -p 'require("./dist/fennl/wrangler.json").d1_databases[0].database_name')
+          if npx wrangler d1 info "$name" > /dev/null 2>&1; then
+            echo "Database $name exists."
+          else
+            echo "Creating database $name."
+            npx wrangler d1 create "$name"
+          fi
+      - name: Apply database migrations
+        run: npx wrangler d1 migrations apply DB --remote
       - name: Deploy
         run: npx wrangler deploy --message "main at ${GITHUB_SHA:0:7}"
       - name: Check production responds
