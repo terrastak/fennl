@@ -148,7 +148,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Based on the **Harbor** direction (sidebar layout, warm paper), with a light handwritten touch from **Heirloom**.
   - Headings in **Commissioner** (flair 80, weight 540); body in **Instrument Sans**; occasional handwriting in **Caveat** for names, greetings, captions and family notes. Recipe sources show just the name (June, Dad, Nana).
   - Two color schemes, **Harbor** (navy and coral) and **Heirloom** (olive and berry), each in light and dark. The **color scheme is an account-level setting**. Light/Dark/Match my device; default is match my device.
-  - Still open: self-host the fonts before the beta (privacy and offline); the final logo.
+  - Still open: the final logo. (Fonts are self-hosted since A5.)
 
 ### A5. App shell
 - **Goal**: The empty frame of the app: navigation, pages, settings.
@@ -166,6 +166,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Settings › Appearance: Harbor/Heirloom cards, Light/Dark/Match my device, four text sizes. Applied instantly, saved on this device, and restored before the first paint (no flash). The color scheme moves to the account in Stage B.
   - Keyboard: skip link, visible focus, logical order, and focus moves to the new page's heading after navigating.
   - Installable: web app manifest, icons (including maskable and Apple touch icons), theme colors. No offline behavior yet.
+  - Fonts are self-hosted (no Google requests). The handwritten greeting's position was re-measured against the approved mockup with the real fonts.
   - Tests: browser tests at desktop and phone size cover navigation, appearance and keyboard use, and run axe accessibility checks on every page in all four looks. `@axe-core/playwright` was added as a test-only dependency.
 
 ## Stage B: Accounts, households, entitlements, devices

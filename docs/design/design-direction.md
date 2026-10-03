@@ -8,6 +8,8 @@ Modern and professional, but warm, because recipes are part of the family. It sh
 
 ## Type
 
+All three fonts are self-hosted (`public/fonts`, `app/styles/fonts.css`, Latin and Latin Extended only): nothing loads from Google, and they work offline in the installed app.
+
 | Role | Typeface | Settings | Used for |
 | --- | --- | --- | --- |
 | Headings | **Commissioner**, flared | Flair axis `FLAR` 80; weight 540 (just under semibold); italic intros at weight 400 | Logo wordmark, page and recipe titles, section headings, step numbers |
@@ -53,6 +55,5 @@ Working mark: a filled circle in the accent color with a white fennel frond, nex
 
 ## Open
 
-- **Self-hosting the fonts.** They currently load from Google Fonts. Before the beta, serve them from Fennl itself, for privacy (no requests to Google) and so they work offline in the installed app.
 - **Final logo.**
 - **Text size setting:** stored per device (leaning; screens differ).

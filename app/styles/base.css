@@ -46,7 +46,8 @@ a:hover {
 /* A handwritten touch: tilted, tucked against the heading below it, hanging a little left. */
 .hand-note {
   display: inline-block;
-  margin: 0 0 -1.4rem -1.6rem;
+  /* Matches the approved mockup: the note's text sits just over the heading's (about 5px overlap). */
+  margin: 0 0 0 -1.6rem;
   position: relative;
   z-index: 1;
   transform: rotate(var(--hand-tilt));
