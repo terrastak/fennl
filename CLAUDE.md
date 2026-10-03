@@ -23,7 +23,7 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Auth | Better Auth (self-hosted in the Worker; D1 via Drizzle; organization plugin for households) | Decided |
 | Sign-in methods | Email and password (confirmed email required), Google, Apple. Settings in `worker/auth/options.ts` | Decided (B2) |
 | Email sending | Resend, only through the one `SendEmail` function in `worker/email/` | Decided (B2) |
-| Workers plan | Workers Paid ($5/month): password hashing needs about 90 ms of CPU, and the free plan allows 10 ms per request | Needed from B2; owner to confirm |
+| Workers plan | Workers Paid ($5/month): password hashing needs about 90 ms of CPU, the free plan allows 10 ms per request, and 30-day database backups need it | Decided (switched 2026-10-03) |
 | Database access and migrations | Drizzle (schema in `worker/db/schema.ts`, migrations in `worker/db/migrations`, applied by Wrangler) | Decided (B1) |
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
 | Per-household live sync / recipe store | Durable Object (SQLite-backed) per household | Open (see "Sync architecture") |
@@ -136,6 +136,7 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `limit_override` | Per-account limit exceptions, which beat the tier limit | `household_id`, `key`, `value`, `expires_at`, `note`, `created_by`, `created_at` |
 | `admin_audit_log` | Every admin action, append-only, copied off-site | `id`, `admin_user_id`, `action`, `target_user_id`, `reason`, `details`, `created_at` |
 | `household_plan_contribution` | Each partner's contributed plan value when combining, used for the split math (Stage I) | `household_id`, `user_id`, `contributed_value_cents`, `currency`, `source_subscription_id`, `combined_at`, `settled_at` |
+| `feedback` | Messages sent from the in-app feedback form (phase B8) | `id`, `user_id`, `household_id`, message, page, app version, device, status, `created_at` |
 | `beta_invite` | Invite codes that grant Premium during the beta | `code`, `created_by`, `max_uses`, `uses`, grant duration, `expires_at`, `created_at` |
 
 Columns marked with a description rather than a name are settled in the phase that builds the table (see `spec.md`). Category and photo rows are synced like recipes, so the sync columns may move with the recipe store if recipes end up in a Durable Object.
@@ -305,6 +306,7 @@ Other current thinking:
 - Entitlement checks live on the server. Never trust tier, device status, or quota from the client.
 - Keep the free/Premium difference in entitlement flags, not in separate code paths wherever possible: one client, one data layer.
 - Do not add dependencies for sync, auth, or billing without asking.
+- Every API route that reads or writes household data goes through `requireHousehold` (`worker/household/`), which only ever resolves a household the caller is a member of. Better Auth's organization endpoints stay closed at the Worker until G1 opens the ones sharing needs.
 - Never hard-code plan limits; read them from `plan_limits` and `limit_override`.
 - Never add an in-app way to grant the admin role.
 - Never hardcode an AI model name or vendor outside the AI provider layer, and never call an AI vendor from client code.

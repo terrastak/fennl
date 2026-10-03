@@ -247,6 +247,24 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   3. Server helper: "which household is this request for, and is the caller a member?"
 - **You check**: After sign-up, the Account page shows "Household: <your name>'s kitchen" (wording TBD).
 - **Done when**: Tests prove a user can never read another household's data through this helper.
+- **Added (2026-10-03)**: the color scheme moves to the account (it was saved per device since A5).
+- **Built (2026-10-03)**:
+  - **Household creation**: Better Auth's organization plugin; a household is an organization. Each person's own household ("June's kitchen") is created at their first sign-in, so addresses that are never confirmed get none. It becomes the session's active household.
+  - Accounts from before B3 get their household the next time they're used.
+  - The household's slug is `personal-<user id>`, which is unique, so two requests racing can't create two households.
+  - **Closed endpoints**: Better Auth's own household endpoints (create, delete, rename, invite, switch...) are closed at the Worker until sharing arrives in G1.
+  - **The helper (`requireHousehold`)**: every API route that touches household data goes through it. It answers 401 without a session. It uses the session's household only if the caller really is a member; otherwise it uses the caller's own household and corrects the session.
+  - `GET /api/household` feeds the Account page.
+  - **Color scheme on the account** (`user.color_scheme`):
+    - Choosing one in Settings saves it via `PUT /api/account/appearance`, which accepts only real schemes. Better Auth's own update endpoint can't change it.
+    - Signing in on another device applies it there. The device keeps a copy for the first paint.
+    - An account gets a scheme only once one is chosen in Settings.
+    - Light or dark and text size stay per device.
+  - **Migration `0002_households`** only adds tables and columns, so it's safe to apply before the new code goes live.
+  - **Tests**:
+    - Server tests prove that a session pointed at someone else's household (in the database itself) still only reaches the caller's own.
+    - Other cases covered: the race, older accounts, closed endpoints, and color scheme checks.
+    - A browser test checks the scheme follows the account to a second "device".
 
 ### B4. Entitlement service
 - **Goal**: One server-side function that answers "what is this household allowed to do?"
@@ -312,6 +330,17 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - See all of it in the log.
 - **Done when**: Every tool is tested, and every action is logged with who, what, and when.
 - **Later admin tools (not scheduled)**: revoke devices, mark an email verified, disable an account, delete on request, export on someone's behalf, stats, a site-wide announcement banner.
+
+### B8. Feedback: in-app form and admin inbox
+- **Goal**: Testers can tell you what's wrong or what they'd like, and you can read and track it in the admin console. (Owner's choice, 2026-10-03: a phase of its own, not part of B7.)
+- **Steps**:
+  1. A "Send feedback" form in the app, reachable from every page (for example in Account and the menu). The person writes a message. The page they were on, the app version, and their browser and device are attached automatically.
+  2. A `feedback` table: who sent it, their household, the message, those details, a status (new, read, done), and when. Never deleted by the person; kept for the beta.
+  3. Admin inbox (inside B4a's secure admin area): newest first, filter by status, mark read or done, add a private note, and jump to the sender's account page (B7). Every change goes into `admin_audit_log`.
+  4. A rate limit per person, and a size cap on messages.
+- **You check**: Send feedback from a test account on your phone, find it in the inbox, open the sender's account, and mark it done.
+- **Done when**: Sending, the inbox, status changes and the rate limit are tested.
+- **Decisions**: Should each new message also email you (perhaps as a daily summary)? Replying from the inbox by email, and attaching screenshots (needs photo storage from Stage D), can come later.
 
 ## Stage C: The recipe core
 
@@ -746,7 +775,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **Decisions**: Which error-reporting service, if any (Cloudflare's built-in logs may be enough for the beta).
 
 ### H5. Beta rollout
-- Production deploy on your domain, invite the first testers, a simple in-app "send feedback" link, and a short tester guide.
+- Production deploy on your domain, invite the first testers (feedback form from B8), and a short tester guide.
 
 ## Stage I: After the beta (outline only; detailed when we get there)
 
@@ -787,8 +816,8 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 13 | Version history retention | G2 |
 | 15 | Beta grants and households: when two granted users join, whose grant covers the household? On a split, does each keep their own remaining grant? (Suggest: the household uses the longer grant; on a split each keeps their own original grant end date.) | G1 |
 | 16 | Free structured import vs. the 100-recipe limit: a free user importing a 1,240-recipe Paprika library. Import up to the remaining allowance, with a clear message? (Suggest: yes, show the rest in the preview as "needs Premium".) | E3, E13 |
-| 17 | Is the Cloudflare account on Workers Paid ($5/month)? Needed for 30-day backups. | H3 (before H5) |
-| 18 | Preview links are public. Once B2 puts real sign-ups on staging, should Cloudflare Access cover the whole preview Worker, not just its admin routes? (Suggest: yes, from B4a.) | B4a |
+| 17 | ~~Is the Cloudflare account on Workers Paid ($5/month)?~~ Yes: switched on 2026-10-03 (B2 setup, step 1) | H3 (before H5) |
+| 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
 
 ## Notes: AI provider research (2026-10-01)
 
@@ -814,6 +843,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | A4 | Done 2026-10-03 (merged; live on the beta site) |
 | A5 | Done 2026-10-03 (merged; live on the beta site) |
 | B1 | Done 2026-10-03 (merged; staging and production databases created by CI) |
-| B2 | Approved 2026-10-03 (Resend; email and password, Google, Apple); built, waiting on review and the owner's setup steps |
-| B3 | Next; awaiting approval |
+| B2 | Done 2026-10-03 (merged; live on the beta site with Resend email. Google and Apple wait on their setup steps) |
+| B3 | Approved 2026-10-03 (with the account-level color scheme); built, waiting on review |
+| B4 | Next; awaiting approval |
 | All others | Not started |

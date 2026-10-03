@@ -14,6 +14,7 @@ A recipe app focused on importing recipes from the web, photos of recipe cards, 
 | `worker/` | The server: a Cloudflare Worker that answers `/api/...` requests (Hono). |
 | `worker/db/` | The server database (Cloudflare D1): table definitions (`schema.ts`) and migrations (Drizzle). |
 | `worker/auth/` | Accounts and sign-in (Better Auth): settings, Google and Apple. |
+| `worker/household/` | Households: each person's own household, and the check that every request only reaches the caller's household. |
 | `worker/email/` | The one function that sends email, with its Resend adapter and the email texts. |
 | `app/auth/` | The sign-in, sign-up and password screens. |
 | `shared/` | Code used by both, such as data shapes and, later, recipe parsing. |

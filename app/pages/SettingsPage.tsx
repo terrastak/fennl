@@ -7,6 +7,7 @@ import {
   type TextSize,
 } from "../../shared/appearance";
 import { useAppearance } from "../appearance/appearance";
+import { saveAccountScheme } from "../appearance/accountScheme";
 import { PageHeader } from "./PageHeader";
 import styles from "./SettingsPage.module.css";
 
@@ -30,6 +31,13 @@ const TEXT_SIZES: { value: TextSize; label: string; sample: string }[] = [
 
 export function SettingsPage() {
   const [appearance, update] = useAppearance();
+  const [schemeSaveFailed, setSchemeSaveFailed] = useState(false);
+
+  const chooseScheme = (scheme: ColorScheme) => {
+    update({ scheme });
+    setSchemeSaveFailed(false);
+    void saveAccountScheme(scheme).then((saved) => setSchemeSaveFailed(!saved));
+  };
 
   return (
     <>
@@ -40,10 +48,13 @@ export function SettingsPage() {
 
         <fieldset className={styles.fieldset}>
           <legend>Color scheme</legend>
-          <p className={styles.help}>
-            Saved on this device for now. Once you can sign in, your color scheme will follow your
-            account to every device.
-          </p>
+          <p className={styles.help}>Saved to your account, so it follows you to every device.</p>
+          {schemeSaveFailed ? (
+            <p role="alert" className={styles.help}>
+              Couldn&rsquo;t save this to your account just now. It&rsquo;s used on this device, and
+              you can choose it again to retry.
+            </p>
+          ) : null}
           <div className={styles.schemes}>
             {SCHEMES.map((scheme) => {
               const p = SCHEME_PREVIEW[scheme.value];
@@ -54,7 +65,7 @@ export function SettingsPage() {
                     name="scheme"
                     value={scheme.value}
                     checked={appearance.scheme === scheme.value}
-                    onChange={() => update({ scheme: scheme.value })}
+                    onChange={() => chooseScheme(scheme.value)}
                     className={styles.schemeInput}
                   />
                   <span
@@ -83,6 +94,7 @@ export function SettingsPage() {
 
         <fieldset className={styles.fieldset}>
           <legend>Light or dark</legend>
+          <p className={styles.help}>Set per device, since screens and rooms differ.</p>
           <div className={styles.segmented}>
             {MODES.map((mode) => (
               <label key={mode.value} className={styles.segment}>

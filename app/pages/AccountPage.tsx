@@ -13,6 +13,7 @@ const PROVIDER_NAMES: Record<string, string> = {
 export function AccountPage() {
   const { data: session } = useSession();
   const [methods, setMethods] = useState<string[] | null>(null);
+  const [household, setHousehold] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -21,6 +22,12 @@ export function AccountPage() {
       if (!cancelled && data)
         setMethods(data.map((a) => PROVIDER_NAMES[a.providerId] ?? a.providerId));
     });
+    fetch("/api/household")
+      .then((res) => (res.ok ? (res.json() as Promise<{ name: string }>) : null))
+      .then((body) => {
+        if (!cancelled && body) setHousehold(body.name);
+      })
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -43,6 +50,10 @@ export function AccountPage() {
           <div>
             <dt>Email</dt>
             <dd>{session.user.email}</dd>
+          </div>
+          <div>
+            <dt>Household</dt>
+            <dd>{household ?? "…"}</dd>
           </div>
           <div>
             <dt>Sign in with</dt>

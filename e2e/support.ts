@@ -54,3 +54,13 @@ export async function signUpConfirmed(
   expect(confirm.ok()).toBe(true);
   return email;
 }
+
+/**
+ * Switches this test to its own new, signed-in account. For tests that change account settings
+ * (like the color scheme), so they don't affect the shared test account other tests use.
+ */
+export async function useOwnAccount(context: BrowserContext, baseURL: string): Promise<string> {
+  await context.clearCookies();
+  await useFreshAddress(context);
+  return signUpConfirmed(context, baseURL);
+}

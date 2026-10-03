@@ -42,6 +42,7 @@ test("create an account, confirm the email, sign out and sign back in", async ({
   await page.goto("/account");
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByText("Email and password")).toBeVisible();
+  await expect(page.getByText("Rose's kitchen")).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL("/sign-in");
 

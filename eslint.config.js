@@ -28,7 +28,7 @@ export default defineConfig([
   },
   {
     // Tests may assert that a value exists after checking it with expect().
-    files: ["**/*.test.{ts,tsx}", "e2e/**/*.ts"],
+    files: ["**/*.test.{ts,tsx}", "e2e/**/*.ts", "worker/test/**/*.ts"],
     rules: { "@typescript-eslint/no-non-null-assertion": "off" },
   },
   prettier,
