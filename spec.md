@@ -37,7 +37,7 @@ Recorded from the planning conversation on 2026-10-01.
 | Devices | **Phone and computer equally.** One web app that works at both sizes and can be installed to the home screen. |
 | Visual design | A **fresh design phase** early on: 2 to 3 directions to choose from. The old `fennl_cursor` look is not carried over by default. |
 | Review style | **Preview link + plain-English checklist** for every phase. |
-| Accounts in place | Cloudflare account (Workers not yet set up) and a domain name. Still needed: Anthropic API key (Stage E), email-sending service (Stage B), Stripe (post-beta). |
+| Accounts in place | Cloudflare account (Workers not yet set up) and a domain name. Still needed: Anthropic API key (Stage E), email-sending service, Resend (Stage B), Stripe (post-beta). |
 
 The old `fennl_cursor` repo is background only. Its PRD has useful detail on import quality, cooking features, and keyboard use, and this plan borrows requirements from it. Its stack (Next.js via vinext, Clerk) and code are **not** used.
 
@@ -53,7 +53,7 @@ These are recommendations. Each one is confirmed in the phase that first needs i
 | Database access | Drizzle (works with Better Auth and D1) | Typed queries and migration files | B1 |
 | Local browser database | SQLite (WASM) on OPFS, with full-text search | Already the `CLAUDE.md` leaning. Must be tested on real phones first (phase C2) | C2 |
 | Recipe storage on server | **Open**: D1, or a Durable Object per household | `CLAUDE.md` open question 7. Decided in phase C1 after checking current Cloudflare limits | C1 |
-| Email (verification, password reset, invites) | **Open**: a transactional email service (e.g. Resend or Postmark) or Cloudflare's own email sending, if it's ready | Better Auth needs a way to send email | B2 |
+| Email (verification, password reset, invites) | **Decided**: Resend, called only through one swappable "send email" function in the Worker. The API key is a Worker secret | Simple HTTP API; free tier (3,000 emails/month, 100/day) covers the beta. Postmark and Cloudflare Email Sending (beta as of 2026-10-03) were compared and stay as later options; switching means rewriting that one function | B2 |
 | AI | Anthropic Claude API (Haiku to start) with vision, called only from the server, behind a swappable provider interface | Owner's choice. One call reads a photo or PDF and returns a structured recipe, so no separate OCR service is needed. API key never reaches the browser | E7 |
 | Browser extension | Chrome extension (Manifest V3), TypeScript, shares parsing code with the app | Reuses the import engine | E5 |
 | Tests | Vitest (unit), Playwright (in-browser), Cloudflare's local Workers runtime for server tests | Standard, runs in CI | A2 |
@@ -180,9 +180,11 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Email + password sign-up with email verification; password reset.
   3. Sign-in, sign-out, and session handling in the app.
   4. Basic rate limits on sign-in and sign-up.
-- **You check**: Create an account, verify the email, sign out, sign in, reset the password.
+  5. Email goes through one swappable "send email" function (Resend adapter). Send from a subdomain of the app's domain, with SPF, DKIM and a DMARC record (start at `p=none`). Plain-text and HTML versions, link/open tracking off for auth emails, bounces and complaints watched.
+  6. Verification screen shows "Check your spam folder" and a "Resend email" button.
+- **You check**: Create an account, verify the email, sign out, sign in, reset the password. Send test emails to Gmail, Outlook and iCloud addresses and confirm they reach the inbox (the headers show SPF, DKIM and DMARC all passing).
 - **Done when**: Auth flows pass end-to-end tests.
-- **Decisions**: Email-sending service. Whether to also offer "Sign in with Google" or Apple, or magic links (can come later).
+- **Decisions**: ~~Email-sending service~~ Decided: Resend, behind a swappable function. Whether to also offer "Sign in with Google" or Apple, or magic links (can come later).
 
 ### B3. Personal household at sign-up
 - **Goal**: Every new user automatically gets their own household (Better Auth organization).
@@ -632,7 +634,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | # | Question | Needed by |
 | --- | --- | --- |
 | 1 | ~~Domain and subdomain for the app~~ Decided: `beta.fennl.app`, stored only in `APP_HOSTNAME` | A1 |
-| 2 | Email-sending service | B2 |
+| 2 | ~~Email-sending service~~ Decided: Resend, behind a swappable function | B2 |
 | 3 | Invite-only sign-up during beta? Beta grant length? | B5 |
 | 4 | D1 vs. Durable Object for recipe storage | C1 |
 | 5 | Trash retention days | C9 |
