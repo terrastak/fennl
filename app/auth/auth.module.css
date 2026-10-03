@@ -1,0 +1,247 @@
+/* Sign-in, sign-up and the other account screens: one calm card in the middle of the page. */
+.page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+  background: var(--color-bg);
+}
+
+.brand {
+  margin-bottom: var(--space-8);
+}
+
+.brandLink {
+  display: inline-flex;
+  color: inherit;
+  text-decoration: none;
+  border-radius: var(--radius-md);
+}
+
+.main {
+  width: 100%;
+  max-width: 28rem;
+  outline: none;
+}
+
+.card {
+  padding: var(--space-8) var(--space-6);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+}
+
+@media (min-width: 600px) {
+  .page {
+    padding-top: var(--space-12);
+  }
+  .card {
+    padding: var(--space-10) var(--space-10);
+  }
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: var(--space-6);
+}
+
+/* The handwritten note sits inside the card, so it hangs left only slightly. */
+.header :global(.hand-note) {
+  margin-left: -0.25rem;
+}
+
+.title {
+  font-size: var(--text-2xl);
+  outline: none;
+}
+
+@media (min-width: 600px) {
+  .title {
+    font-size: var(--text-3xl);
+  }
+}
+
+.lead p {
+  margin: 0;
+}
+
+.lead {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+}
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.label {
+  font-weight: var(--weight-semibold);
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.input:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 1px;
+  border-color: var(--color-accent);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.button,
+.secondaryButton,
+.providerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.button:hover {
+  background: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+  color: var(--color-on-accent);
+}
+
+.secondaryButton,
+.providerButton {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondaryButton:hover,
+.providerButton:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.button:disabled,
+.secondaryButton:disabled,
+.providerButton:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.providerIcon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+
+.providers {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-6) 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.divider::before,
+.divider::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--color-border);
+}
+
+.error,
+.notice {
+  margin: 0 0 var(--space-5);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.error {
+  border: 1px solid var(--color-danger);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.notice {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.footer {
+  margin: var(--space-6) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.smallLink {
+  font-size: var(--text-sm);
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.body {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.note {
+  margin: var(--space-8) 0 0;
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  max-width: 28rem;
+}

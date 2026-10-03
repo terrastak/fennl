@@ -14,6 +14,8 @@
   "name": "fennl",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-15",
+  // Node.js APIs in the Worker. Better Auth uses node:crypto's native scrypt to hash passwords.
+  "compatibility_flags": ["nodejs_compat"],
   "assets": {
     // Serve the single-page app for any path that isn't a file, and send /api/* to the Worker first.
     "not_found_handling": "single-page-application",
@@ -22,6 +24,9 @@
   "observability": {
     "enabled": true,
   },
+  // Secrets (BETTER_AUTH_SECRET, email, Google, Apple) are set by CI and listed with the bindings
+  // in worker/env.d.ts. They're deliberately not declared here: declaring them makes local
+  // development ignore every optional setting in .dev.vars.
   // Production database. Migrations live in worker/db/migrations and are written by Drizzle.
   "d1_databases": [
     {

@@ -21,6 +21,9 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Relational data | Cloudflare D1 (auth, billing state, household membership, device registry, quotas) | Decided |
 | Images | Cloudflare R2, gated behind paid tier | Decided |
 | Auth | Better Auth (self-hosted in the Worker; D1 via Drizzle; organization plugin for households) | Decided |
+| Sign-in methods | Email and password (confirmed email required), Google, Apple. Settings in `worker/auth/options.ts` | Decided (B2) |
+| Email sending | Resend, only through the one `SendEmail` function in `worker/email/` | Decided (B2) |
+| Workers plan | Workers Paid ($5/month): password hashing needs about 90 ms of CPU, and the free plan allows 10 ms per request | Needed from B2; owner to confirm |
 | Database access and migrations | Drizzle (schema in `worker/db/schema.ts`, migrations in `worker/db/migrations`, applied by Wrangler) | Decided (B1) |
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
 | Per-household live sync / recipe store | Durable Object (SQLite-backed) per household | Open (see "Sync architecture") |
@@ -252,4 +255,5 @@ Need a policy before launch. Current thinking:
 - Keep the free/Premium difference in entitlement flags, not in separate code paths wherever possible: one client, one data layer.
 - Do not add dependencies for sync, auth, or billing without asking.
 - Never hardcode an AI model name or vendor outside the AI provider layer, and never call an AI vendor from client code.
+- Secrets reach the Worker only from GitHub secrets via CI (`--secrets-file`). Never commit them or put them in `wrangler.jsonc`. List new ones in `worker/env.d.ts` and the setup docs.
 - Never hardcode the app's hostname (currently `beta.fennl.app`; it will change). It lives only in the GitHub Actions variable `APP_HOSTNAME`. Deploy config gets it from there, and code reads its own origin from configuration or the incoming request.

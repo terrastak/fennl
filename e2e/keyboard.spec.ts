@@ -1,12 +1,18 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // Keyboard-only use on a computer (the sidebar layout).
 test.beforeEach(({ isMobile }) => {
   test.skip(isMobile, "Keyboard navigation is checked on the desktop layout");
 });
 
+/** Opens a page and waits for it to finish loading (it first checks who's signed in). */
+async function open(page: Page, path: string) {
+  await page.goto(path);
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+}
+
 test("the first Tab reaches a skip link that jumps to the content", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
   await page.keyboard.press("Tab");
   const skip = page.getByRole("link", { name: "Skip to content" });
   await expect(skip).toBeFocused();
@@ -16,7 +22,7 @@ test("the first Tab reaches a skip link that jumps to the content", async ({ pag
 });
 
 test("the sidebar can be used with the keyboard alone", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
   await page.keyboard.press("Tab"); // skip link
   await page.keyboard.press("Tab"); // logo
   await page.keyboard.press("Tab"); // Recipes
@@ -28,7 +34,7 @@ test("the sidebar can be used with the keyboard alone", async ({ page }) => {
 });
 
 test("appearance choices work with arrow keys", async ({ page }) => {
-  await page.goto("/settings");
+  await open(page, "/settings");
   await page.getByRole("radio", { name: /Harbor/ }).focus();
   await page.keyboard.press("ArrowRight");
   await expect(page.getByRole("radio", { name: /Heirloom/ })).toBeChecked();
@@ -36,7 +42,7 @@ test("appearance choices work with arrow keys", async ({ page }) => {
 });
 
 test("focus is always visible", async ({ page }) => {
-  await page.goto("/");
+  await open(page, "/");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");

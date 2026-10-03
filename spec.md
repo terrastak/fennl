@@ -202,7 +202,31 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   6. Verification screen shows "Check your spam folder" and a "Resend email" button.
 - **You check**: Create an account, verify the email, sign out, sign in, reset the password. Send test emails to Gmail, Outlook and iCloud addresses and confirm they reach the inbox (the headers show SPF, DKIM and DMARC all passing).
 - **Done when**: Auth flows pass end-to-end tests.
-- **Decisions**: ~~Email-sending service~~ Decided: Resend, behind a swappable function. Whether to also offer "Sign in with Google" or Apple, or magic links (can come later).
+- **Decisions**: ~~Email-sending service~~ Decided: Resend, behind a swappable function. ~~Whether to also offer "Sign in with Google" or Apple, or magic links~~ Decided 2026-10-03: email and password, plus Google and Apple. Magic links not now.
+- **Built (2026-10-03)**: owner setup steps are in `docs/setup/b2-email-and-sign-in.md`.
+  - **Better Auth 1.7.7** runs in the Worker at `/api/auth/*`, with its tables in D1 (migration `0001_auth`, generated from `worker/auth/options.ts` by `npm run auth:generate`). Each request builds its auth settings from the request's own address, so no hostname is stored.
+  - **Email and password**:
+    - Passwords are at least 8 characters, hashed with scrypt.
+    - The email must be confirmed before the first sign-in; signing in unconfirmed sends a fresh link.
+    - Confirmation links last 24 hours and sign you in.
+    - Password-reset links last 1 hour and sign out every device.
+  - **Google and Apple**: each button appears only when its settings exist. They're production-only, because both providers accept sign-ins only at registered addresses and preview addresses change per pull request. Apple's client secret is signed on the server from the `.p8` key, so it never needs renewing by hand. Signing in with Google or Apple joins an existing account with the same email.
+  - **Email** goes through one `SendEmail` function (`worker/email/`). The Resend adapter sends plain-text and HTML versions with no tracking. Local development and tests keep emails in memory (`/api/dev/outbox`) instead.
+  - **Sessions**: 30 days, checked against the database on every request (no cookie cache), so signing out or resetting a password takes effect at once.
+  - **Rate limits** per visitor IP (Cloudflare's `cf-connecting-ip`), stored in D1:
+    - sign-in: 5 a minute
+    - sign-up: 3 a minute
+    - password-reset requests: 3 per 5 minutes
+    - resending the confirmation: 2 a minute
+    - everything else: 100 a minute
+    - The "who's signed in?" check is not limited.
+  - **App**:
+    - Screens: sign in, create account, check your email (spam-folder note and "Resend email"), email confirmed, forgot password, and choose a new password.
+    - Every other page needs a signed-in account.
+    - The Account page shows name, email and sign-in methods, and has "Sign out".
+  - **CI**: GitHub secrets are uploaded as Worker secrets on each deploy. `BETTER_AUTH_SECRET` is generated in CI (once for production, per push for previews). Production refuses to deploy without email settings.
+  - **Needs the Cloudflare Workers Paid plan** ($5/month; owner to confirm): a password hash takes about 90 ms of CPU, and the free plan allows 10 ms per request.
+  - Not in B2: the color scheme still saves on the device. Moving it to the account fits B3/B4 (it needs a user settings field).
 
 ### B3. Personal household at sign-up
 - **Goal**: Every new user automatically gets their own household (Better Auth organization).
@@ -689,6 +713,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | A3 | Done 2026-10-01: PR #4 green (check, preview) with a working preview link. The first production deploy runs when it merges |
 | A4 | Done 2026-10-03 (merged; live on the beta site) |
 | A5 | Done 2026-10-03 (merged; live on the beta site) |
-| B1 | Approved 2026-10-03 (Drizzle); built, waiting on review |
-| B2 | Next; awaiting approval |
+| B1 | Done 2026-10-03 (merged; staging and production databases created by CI) |
+| B2 | Approved 2026-10-03 (Resend; email and password, Google, Apple); built, waiting on review and the owner's setup steps |
+| B3 | Next; awaiting approval |
 | All others | Not started |

@@ -13,6 +13,7 @@ export default defineConfig([
     "worker-configuration.d.ts",
     "test-results",
     "playwright-report",
+    "e2e/.auth",
   ]),
   js.configs.recommended,
   tseslint.configs.strict,
@@ -24,6 +25,11 @@ export default defineConfig([
   {
     files: ["*.{js,ts}", "e2e/**/*.ts", "scripts/**/*.mjs"],
     languageOptions: { globals: globals.node },
+  },
+  {
+    // Tests may assert that a value exists after checking it with expect().
+    files: ["**/*.test.{ts,tsx}", "e2e/**/*.ts"],
+    rules: { "@typescript-eslint/no-non-null-assertion": "off" },
   },
   prettier,
 ]);

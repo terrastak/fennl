@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { SIGNED_IN_STATE } from "./e2e/support";
 
 const port = 4173;
 // Lets a machine with a preinstalled Chromium use it instead of downloading one.
@@ -15,17 +16,25 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
+    // Makes a confirmed test account; the other projects start signed in as it.
     {
-      name: "desktop",
+      name: "setup",
+      testMatch: /\.setup\.ts$/,
       use: { ...devices["Desktop Chrome"], launchOptions },
     },
     {
+      name: "desktop",
+      use: { ...devices["Desktop Chrome"], launchOptions, storageState: SIGNED_IN_STATE },
+      dependencies: ["setup"],
+    },
+    {
       name: "phone",
-      use: { ...devices["Pixel 7"], launchOptions },
+      use: { ...devices["Pixel 7"], launchOptions, storageState: SIGNED_IN_STATE },
+      dependencies: ["setup"],
     },
   ],
   webServer: {
-    command: `npm run build && npm run db:migrate:local && npx vite preview --port ${port} --strictPort`,
+    command: `node scripts/ensure-dev-vars.mjs && npm run build && npm run db:migrate:local && npx vite preview --port ${port} --strictPort`,
     port,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

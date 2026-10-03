@@ -27,7 +27,11 @@ export default defineConfig({
             wrangler: { configPath: "./wrangler.jsonc" },
             miniflare: {
               compatibilityDate: TEST_POOL_COMPATIBILITY_DATE,
-              bindings: { TEST_MIGRATIONS: await readD1Migrations("./worker/db/migrations") },
+              bindings: {
+                TEST_MIGRATIONS: await readD1Migrations("./worker/db/migrations"),
+                BETTER_AUTH_SECRET: "test-secret-for-worker-tests-only-0123456789",
+                DEV_EMAIL_OUTBOX: "true",
+              },
             },
           })),
         ],
