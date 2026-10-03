@@ -2,14 +2,34 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Fennl</title>
+    <meta name="description" content="Your family's recipes, kept together." />
+    <meta name="theme-color" content="#f6f5f0" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111412" media="(prefers-color-scheme: dark)" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Fennl" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Commissioner:FLAR,slnt,wght@0..100,-12..0,100..900&family=Instrument+Sans:wght@400..700&family=Caveat:wght@500..600&display=swap"
     />
+    <script>
+      // Apply saved appearance before the first paint, so there's no flash of the wrong colors.
+      // Mirrors app/appearance/appearance.ts (same storage key and values).
+      try {
+        var saved = JSON.parse(localStorage.getItem("fennl:appearance") || "{}");
+        var root = document.documentElement;
+        if (saved.scheme === "heirloom") root.dataset.scheme = "heirloom";
+        if (saved.mode === "light" || saved.mode === "dark") root.dataset.mode = saved.mode;
+        if (["large", "larger", "largest"].indexOf(saved.textSize) !== -1) {
+          root.dataset.textSize = saved.textSize;
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

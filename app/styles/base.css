@@ -57,3 +57,10 @@ a:hover {
   line-height: 1;
   color: var(--color-hand);
 }
+
+/* Phones have a narrow margin, so the note hangs left only slightly there. */
+@media (max-width: 899px) {
+  .hand-note {
+    margin-left: -0.25rem;
+  }
+}
