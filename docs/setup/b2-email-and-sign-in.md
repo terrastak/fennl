@@ -29,7 +29,10 @@ Fennl hashes passwords with scrypt, a deliberately slow method that makes stolen
 ## Step 2: Set up Resend to send account emails
 
 1. Create an account at [resend.com](https://resend.com) (the free tier covers 3,000 emails a month, 100 a day).
-2. Open **Domains** › **Add domain** and enter `mail.fennl.app`. A subdomain keeps the reputation of Fennl's account emails separate from anything else you send from `fennl.app`.
+2. Open **Domains** › **Add Domain**:
+   - Enter `mail.fennl.app`. A subdomain keeps the reputation of Fennl's account emails separate from anything else you send from `fennl.app`.
+   - **Region**: North America (`us-east-1`), unless most testers are elsewhere.
+   - **Return-Path**: leave the default (`send`).
 3. Choose **Sign in to Cloudflare** (automatic setup) and allow Resend to add its records. It adds three records to `fennl.app`: an MX and an SPF record named `send.mail`, and a DKIM record named `resend._domainkey.mail`.
    - If automatic setup isn't offered, copy each record into Cloudflare by hand (**DNS** › **Records** › **Add record** for `fennl.app`). Resend shows the exact values. In the Name field, enter only the part before `.fennl.app`.
 4. Wait until Resend shows the domain as **Verified** (usually a few minutes).
@@ -41,6 +44,8 @@ Fennl hashes passwords with scrypt, a deliberately slow method that makes stolen
    | TXT | `_dmarc` | `v=DMARC1; p=none;` |
 
    `p=none` only asks mail providers to report problems; it doesn't block anything. If a DMARC record for `fennl.app` already exists, leave it alone and tell me.
+
+   Optional: Cloudflare's free **DMARC Management** (in the `fennl.app` zone, under **Email**) can collect the reports for you. Turning it on adds a `rua=` address to this record.
 7. Open **API Keys** › **Create API key**. Name it `fennl`, choose **Sending access**, and limit it to the `mail.fennl.app` domain. Copy the key (Resend shows it only once).
 
 ## Step 3: Store the email settings in GitHub
