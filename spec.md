@@ -39,6 +39,17 @@ Recorded from the planning conversation on 2026-10-01.
 | Review style | **Preview link + plain-English checklist** for every phase. |
 | Accounts in place | Cloudflare account (Workers not yet set up) and a domain name. Still needed: Anthropic API key (Stage E), email-sending service, Resend (Stage B), Stripe (post-beta). |
 
+**Merged 2026-10-03 from a parallel planning conversation:**
+- household recipe ownership and splitting
+- household billing rules
+- free-tier limits (100 recipes, 3 MB) with admin-editable limits and per-account overrides
+- over-limit and downgrade behavior with a usage bar
+- the 90-day photo grace period
+- 30-day Trash
+- an admin console with strong security and silent impersonation
+
+Details are in `CLAUDE.md`. They're reflected below in B4, B4a, B5, B7, C1, C2, C3, C9, C11, C12, D1, D3, G1–G1c, H1–H3, and Stage I. Platform facts checked that day are in `docs/research/2026-10-03-platform-check.md`.
+
 The old `fennl_cursor` repo is background only. Its PRD has useful detail on import quality, cooking features, and keyboard use, and this plan borrows requirements from it. Its stack (Next.js via vinext, Clerk) and code are **not** used.
 
 ## Proposed technical approach (Leaning, approved phase by phase)
@@ -242,16 +253,34 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Steps**:
   1. Compute the derived fields from `CLAUDE.md` (`tier`, `max_members`, `max_devices`, `images_enabled`, `import_structured_enabled`, `import_ai_enabled`, quotas...).
   2. Inputs for now: beta grant or nothing (free). Stripe subscription is added in Stage I.
-  3. Placeholder numbers for quotas, all in one config file so they're easy to change.
+  3. Limits come from the `plan_limits` table plus per-account `limit_override` rows (an unexpired override wins), not from code. They're seeded with: Free 100 recipes and 3 MB text, a per-recipe cap of about 256 KB on all tiers, and Premium text caps of 50 MB Individual and 100 MB Household. Other quotas are placeholders. Limits are cached briefly, so admin changes take effect within about a minute.
   4. Account page shows the current plan and limits.
 - **You check**: A fresh account shows "Free".
 - **Done when**: Unit tests cover every tier and status combination we know about.
+
+### B4a. Secure admin access
+- **Goal**: A locked-down admin area exists *before* the first admin page (B5), so admin powers can never become a way into user accounts.
+- **Steps**:
+  1. An admin hostname from a new GitHub variable `ADMIN_HOSTNAME` (never hardcoded), served by the same Worker but only answering admin routes there.
+  2. **Cloudflare Access** in front of the admin hostname *and* the preview Worker's admin routes (free for up to 50 users). Access checks you before any Fennl code runs.
+  3. Admin role granted only by a database command (documented in a runbook). The Better Auth admin plugin's `set-role` permission is removed. No in-app path to admin.
+  4. A dedicated admin account with a **passkey or hardware key** required (`@better-auth/passkey` plus a check that the session was created with a passkey).
+  5. Short admin sessions (30 minutes idle, 8 hours max). Passkey re-confirmation for sensitive actions.
+  6. Email alert to you on every admin sign-in.
+  7. `admin_audit_log` (append-only) with a continuous copy to separate storage the console can't write to.
+- **You check**:
+  - Register your passkey and open the admin area (it works).
+  - Try it from a private window without passing Cloudflare Access (blocked before Fennl loads).
+  - Sign in as a normal test account (refused).
+  - Receive the sign-in alert email.
+- **Done when**: Tests prove non-admins, non-passkey sessions, and requests without Access are refused, and every admin action writes a log row.
+- **Decisions**: Approve adding `@better-auth/passkey` (an auth dependency).
 
 ### B5. Beta invites
 - **Goal**: You can invite testers who get Premium free.
 - **Steps**:
   1. `beta_invite` table: code, created by, max uses, Premium duration, expiry.
-  2. A simple owner-only admin page to create codes and see who used them.
+  2. An admin page (inside B4a's secure admin area) to create codes, see who used them, and disable them.
   3. Sign-up (or Account page) accepts a code and grants the household Premium.
   4. Optionally: invite-only sign-up (no code, no account) during the beta.
 - **You check**: Create a code, sign up a second test account with it, see "Premium (beta)".
@@ -268,6 +297,22 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: With a free account, sign in on your phone, then your laptop, and take over. With a beta account, use both at once.
 - **Done when**: Tests cover register, over-limit, takeover, revoke, and eviction recovery (device ID lost).
 
+### B7. Admin console: account tools
+- **Goal**: You can help users and manage limits yourself.
+- **Steps**:
+  1. Find an account by email or name. The account page shows plan or beta grant, household and partner, sign-up and last-seen dates, devices, recipe count, storage used vs. limits, and any overrides.
+  2. Password help: send a reset email (the default), or set a temporary password that must be changed at the next sign-in. Either can also sign the user out everywhere.
+  3. Edit tier limits (`plan_limits`), e.g. free recipes 100 → 150.
+  4. Per-account overrides (`limit_override`), with an optional expiry date and a note.
+  5. Admin activity log viewer, filterable by account.
+- **You check**:
+  - Look up a test account.
+  - Send it a reset email, then set a temporary password.
+  - Change the free recipe limit and give one account an override.
+  - See all of it in the log.
+- **Done when**: Every tool is tested, and every action is logged with who, what, and when.
+- **Later admin tools (not scheduled)**: revoke devices, mark an email verified, disable an account, delete on request, export on someone's behalf, stats, a site-wide announcement banner.
+
 ## Stage C: The recipe core
 
 ### C1. Recipe data model
@@ -276,7 +321,8 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. A short document plus shared TypeScript types covering: title, description/headnote, ingredients (with section headings, original text, and parsed quantity/unit/item), directions (with section headings), prep/cook/total times, servings/yield, source (URL, name, author), notes, rating, difficulty, categories (nested, many per recipe), photos (many, one cover), linked sub-recipes on ingredients, nutrition (values plus where each came from), import provenance, and the sync columns (`updated_at`, `deleted_at`, `server_seq`).
   2. Check this covers every Paprika 3 field, so Paprika import loses nothing.
   3. Decide how per-field last-write-wins applies to lists (e.g. ingredients are one field in the beta; finer merging later).
-  4. **Decide where recipes live on the server** (open question 7): check current Cloudflare D1 and Durable Object limits and pricing, and compare. Include the preview-link caveat from A3 (Durable Objects don't get preview URLs).
+  4. **Decide where recipes live on the server** (open question 7): check current Cloudflare D1 and Durable Object limits and pricing, and compare. Include the preview-link caveat from A3 (Durable Objects don't get preview URLs). The household ownership model (data owned per user, households only grant visibility) favors D1.
+  5. Ownership columns from `CLAUDE.md` ("Recipe ownership in households"): `owner_user_id` on recipes, categories, and images; `updated_by_user_id`; and `copied_from` for copies kept after a split.
 - **You check**: Read a one-page plain-English description of a recipe record and say if anything is missing.
 - **Done when**: Types, validation rules, and the decision are merged.
 - **Decisions**: D1 vs. Durable Object per household (I'll bring a recommendation with verified facts).
@@ -290,14 +336,14 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. Check `navigator.storage.persist()` on each (**Unverified** item 3 in `CLAUDE.md`).
 - **You check**: Open the test page on your own phone and computer and send me the results it shows.
 - **Done when**: Results are recorded here, and SQLite/OPFS is confirmed or we switch to the fallback (IndexedDB via Dexie).
-- **Decisions**: Approve the SQLite WASM library choice.
+- **Decisions**: Approve the SQLite WASM library choice. Checked 2026-10-03: SQLite's official build with the `opfs-sahpool` storage mode needs no special server headers, works on Safari 16.4+, and is the fastest option. It allows one connection per database, so step 3's two-tab test decides how tabs share it.
 
 ### C3. Server recipe storage and sync endpoints
 - **Goal**: The server can accept and hand out recipe changes.
 - **Steps**:
   1. Create the server tables (or Durable Object) chosen in C1.
-  2. `POST /api/sync/push`: validate, check device and entitlement, apply per-field last-write-wins, assign `server_seq`.
-  3. `GET /api/sync/pull?since=`: return changes after a cursor, in batches (Paprika imports will be large).
+  2. `POST /api/sync/push`: validate, check device and entitlement, check the access rule (the recipe's owner is in the caller's household), apply per-field last-write-wins, and assign `server_seq`. New rows are owned by the creator. D1 has no interactive transactions, so writes are batched or conditional.
+  3. `GET /api/sync/pull`: return changes in batches (Paprika imports will be large), with one cursor per household member whose recipes the caller can see.
   4. Tombstones for deletes; client schema version check with an "please refresh" response.
   5. Free tier: reject large offline batches, per `CLAUDE.md`.
 - **You check**: Nothing visible; tests only.
@@ -360,7 +406,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Goal**: Deleting is safe and reversible.
 - **Steps**:
   1. Delete moves a recipe to Trash (tombstone); restore from Trash.
-  2. Empty Trash after a stated number of days (value Open).
+  2. Trash is emptied automatically after **30 days** (decided). Each item shows "deleted forever in N days", with an "Empty trash now" button. Expunging wipes content and photos but keeps a minimal tombstone so every device removes it.
 - **You check**: Delete a recipe on one device, see it go to Trash on the other, restore it.
 - **Done when**: Deletes and restores sync correctly.
 
@@ -372,6 +418,35 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Export your library and open the file.
 - **Done when**: An export, re-imported into a test account, reproduces the library (round-trip test).
 
+### C11. Limits, usage bar, and over-limit behavior
+- **Goal**: Free limits are enforced kindly, and dropping to Free never loses anything.
+- **Steps**:
+  1. Enforce the limits from B4: Free 100 recipes (Trash excluded) and 3 MB of text (Trash included), plus the per-recipe cap. A hidden cap gives a plain message ("This recipe is unusually large").
+  2. Storage usage bar in Settings ("87 of 100 recipes"), with a small version next to "New recipe" when near or over.
+  3. Over the limit (beta grant expired, downgrade, or household split): everything stays readable, editable, deletable, and exportable. New recipes, imports, and uploads are blocked with a friendly message until usage is back under.
+- **You check**:
+  - Set the free limit to 5 in the admin console and fill a test account.
+  - The bar warns, then blocks "New recipe".
+  - Editing and export still work.
+  - Delete one recipe and you can add again.
+- **Done when**: Limit, override, and over-limit cases are tested.
+
+### C12. Admin: act as user (impersonation)
+- **Goal**: Help users and investigate abuse by seeing and acting exactly as they do.
+- **Steps** (rules in `CLAUDE.md`, "Admin console"):
+  1. "View as this user" from B7's account page. A reason is required (stored only in the admin log), with passkey re-confirmation.
+  2. At least the user's full abilities. Every change is attributed to you in the admin log.
+  3. **Silent**: nothing appears in the user's activity, devices, or sign-in history, and no sign-in emails go out. Password and email changes still send the standard security email.
+  4. Passkey re-confirmation for password, email, deletion, and household actions.
+  5. Ends automatically after 30 minutes, with a bright "Acting as …" banner. Other admins can't be impersonated.
+  6. Never counts as a device and never triggers takeover. Saves go straight to the server. The user's data loads into a separate local copy that's wiped on exit.
+  7. Email alert to you when impersonation starts.
+- **You check**:
+  - Act as a test account and edit a recipe.
+  - The change appears on that account's own device with no sign of impersonation.
+  - Exit, and the log shows your reason and the edit.
+- **Done when**: Tests cover the blocked and silent behaviors, the device rules, and the log.
+
 ## Stage D: Photos and images (Premium)
 
 ### D1. Image storage
@@ -380,7 +455,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. Create R2 buckets (staging, production); no public access.
   2. Upload endpoint: entitlement check, per-file size limit, household quota, content-hash naming.
   3. Serve images only through the Worker, only to the owning household, with long caching.
-  4. `image` and `household_usage` tables.
+  4. `image` (owned per user, so photos follow their recipe in a household split) and `household_usage` (a shared household's quota is the sum of both members' images) tables.
 - **You check**: Nothing visible yet; tests only.
 - **Done when**: Tests prove other households and free accounts can't upload or read.
 - **Decisions**: Starting image quotas (bytes, count, max file size) for the beta.
@@ -401,7 +476,8 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. Delete orphaned images when recipes are permanently deleted.
   2. Scheduled job that reconciles `household_usage` against R2.
   3. R2 rule to clean up incomplete uploads.
-  4. Show usage on the Account page.
+  4. Add photos to C11's usage bar (households see the combined total and each member's share).
+  5. 90-day photo grace period after dropping to Free: reminder emails (proposed at 30, 7, and 1 days left), then deletion. Resubscribing (or a new grant) cancels it.
 - **You check**: Account page shows your photo usage.
 - **Done when**: The reconcile job is tested.
 
@@ -614,15 +690,33 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ## Stage G: Premium sharing and history
 
-### G1. Households: inviting a second member
-- **Goal**: Two people share one library.
+### G1. Households: invite and join (merged recipe box)
+- **Goal**: Two people share one recipe box (rules decided 2026-10-03; see `CLAUDE.md`, "Recipe ownership in households").
 - **Steps**:
-  1. Invite by email; accept; the library is now shared.
-  2. Enforce `max_members`; leaving or removing a member.
-  3. What happens to a joiner's own existing recipes (merge into the shared household, or keep separate). **Open**, decided before this phase.
-- **You check**: Invite a household member; both of you edit the same recipe.
-- **Done when**: Membership tests pass, including limits and removal.
-- **Decisions**: What happens to the joiner's existing recipes; what happens to recipes when a member leaves.
+  1. Invite one person by email (max 2 members, enforce `max_members`).
+  2. On joining, both people's devices download the other's recipes. Nothing is moved or copied on the server, and every recipe keeps its owner.
+  3. Beta grants on joining: handled as decided in open question 15.
+- **You check**: Invite a second test account. After accepting, both see one combined recipe box.
+- **Done when**: Membership tests pass, including limits.
+- **Decisions**: Open question 15.
+
+### G1a. Merged categories and ownership labels
+- **Steps**:
+  1. Same-named categories show as one. Tagging a partner's recipe uses (or quietly creates) the owner's category of that name.
+  2. "Added by <name>" on the recipe page, and a Mine / Partner's / All filter.
+- **You check**: Both accounts have "Desserts". It appears once and holds both people's desserts. Filter to "Partner's".
+
+### G1b. Equal-partner editing
+- **Steps**: Either member can edit any recipe (per-field last-write-wins). Deleting a partner's recipe sends it to Trash, where either can restore it.
+- **You check**: Edit the same recipe from both accounts. Delete your partner's recipe and restore it from the other account.
+
+### G1c. Leaving and splitting
+- **Steps**:
+  1. Leaving or being removed starts the split. Each person first sees the partner's recipes (search, select all) and picks which to keep a copy of. Copies are new recipes they own, photos included.
+  2. Each person returns to their own recipe box (their recipes plus copies). The partner's recipes disappear from their devices, and edits from a removed member's devices are refused.
+  3. Anyone now over free limits follows C11's rules (nothing deleted, additions blocked).
+- **You check**: Split two test accounts, keeping three copies. Each account shows the right recipes, and the copies are editable.
+- **Done when**: Two-user tests cover conflicting edits, tagging a partner's recipe, delete and restore across members, a split with copies, a cut-off device, and re-joining after a split.
 
 ### G2. Version history
 - **Goal**: See and restore earlier versions of a recipe.
@@ -637,13 +731,15 @@ Import quality is the core of the product, so this stage starts by building a wa
 ## Stage H: Beta launch readiness
 
 ### H1. Abuse limits
-- Rate limits on sign-up, sign-in, takeover, import, and uploads. A text size cap per free account. Email verification required.
+- Rate limits on sign-up, sign-in, takeover, import, and uploads. Confirm the C11 limits are set correctly in production. Email verification required.
+- Full security review of sign-in, the admin console, impersonation, the access rule, and photo access, with findings fixed. Consider an outside penetration test before the public launch.
 
 ### H2. Privacy, terms, and account deletion
-- Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). Self-service account deletion that removes D1 rows, recipes, and R2 images.
+- Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
 
 ### H3. Backups
-- Verify point-in-time restore for D1 and Durable Objects (**Unverified** item 2) and record the facts here. Nightly text export of each household to R2 as a second copy. A tested restore drill.
+- Checked 2026-10-03: D1 Time Travel restores to any minute in the last 30 days on **Workers Paid** (7 days on Free), but it overwrites the whole database. So the nightly per-household text export to R2 is required, since it's the only way to restore one account. A tested restore drill on staging.
+- **Decision**: Confirm the Cloudflare account is on Workers Paid ($5/month) before real users arrive (open question 17).
 
 ### H4. Monitoring
 - Error reporting and logs from the Worker and the app; alerts for errors and AI spend.
@@ -656,8 +752,8 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 Not detailed yet on purpose. Each becomes its own set of phases later.
 
-1. Stripe billing: Individual and Household plans, Stripe Tax, checkout, customer portal, trials with a card up front, dunning (past due), cancel and resubscribe (`CLAUDE.md` unverified item 4).
-2. Lapsed subscription policy (`CLAUDE.md` Open section), including the image grace period.
+1. Stripe billing: Individual and Household plans, Stripe Tax, checkout, customer portal, trials with a card up front, dunning (past due), cancel and resubscribe (`CLAUDE.md` unverified item 4). Includes the household billing rules in `CLAUDE.md`: payer keeps the plan, a joiner's value converts by money, and splits are proportional then equal, via Stripe credit balance. Also the impersonation billing limits (cancel and downgrade only).
+2. Lapsed subscriptions: the over-limit rules and 90-day photo grace period are decided (built in C11 and D3 for expiring beta grants). Remaining: anything specific to paid lapses.
 3. Moving beta testers onto paid plans.
 4. Paste-a-link web import (reuses E3 and E8).
 5. Phone share-button import.
@@ -679,7 +775,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 2 | ~~Email-sending service~~ Decided: Resend, behind a swappable function | B2 |
 | 3 | Invite-only sign-up during beta? Beta grant length? | B5 |
 | 4 | D1 vs. Durable Object for recipe storage | C1 |
-| 5 | Trash retention days | C9 |
+| 5 | ~~Trash retention days~~ Decided: 30 days, then auto-expunge | C9 |
 | 6 | Beta image quotas | D1 |
 | 7 | Quality test set contents and target scores | E1 |
 | 8 | Chrome Web Store unlisted vs. manual install | E5 |
@@ -687,8 +783,12 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 14 | Should free accounts get a few "teaser" AI imports? (Owner undecided; revisit later) | Before public launch (Stage I) |
 | 10 | PDF size and page limits | E12 |
 | 11 | Paprika libraries larger than the photo quota | E13 |
-| 12 | Joining a household with existing recipes; leaving one | G1 |
+| 12 | ~~Joining a household with existing recipes; leaving one~~ Decided: merged view, owners kept, copies on split | G1 |
 | 13 | Version history retention | G2 |
+| 15 | Beta grants and households: when two granted users join, whose grant covers the household? On a split, does each keep their own remaining grant? (Suggest: the household uses the longer grant; on a split each keeps their own original grant end date.) | G1 |
+| 16 | Free structured import vs. the 100-recipe limit: a free user importing a 1,240-recipe Paprika library. Import up to the remaining allowance, with a clear message? (Suggest: yes, show the rest in the preview as "needs Premium".) | E3, E13 |
+| 17 | Is the Cloudflare account on Workers Paid ($5/month)? Needed for 30-day backups. | H3 (before H5) |
+| 18 | Preview links are public. Once B2 puts real sign-ups on staging, should Cloudflare Access cover the whole preview Worker, not just its admin routes? (Suggest: yes, from B4a.) | B4a |
 
 ## Notes: AI provider research (2026-10-01)
 
