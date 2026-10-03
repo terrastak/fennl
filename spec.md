@@ -144,13 +144,18 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Compare the directions on your phone and computer and pick.
 - **Done when**: A chosen direction is written down as tokens in the code and summarized in this file.
 - **Decisions**: The name/logo treatment, and any colors or fonts you love or hate.
+- **Decided (2026-10-03)**: Full record in `docs/design/design-direction.md`; tokens in `app/styles/tokens.css` (tested for completeness and contrast in `tokens.test.ts`).
+  - Based on the **Harbor** direction (sidebar layout, warm paper), with a light handwritten touch from **Heirloom**.
+  - Headings in **Commissioner** (flair 80, weight 540); body in **Instrument Sans**; occasional handwriting in **Caveat** for names, greetings, captions and family notes. Recipe sources show just the name (June, Dad, Nana).
+  - Two color schemes, **Harbor** (navy and coral) and **Heirloom** (olive and berry), each in light and dark. The **color scheme is an account-level setting**. Light/Dark/Match my device; default is match my device.
+  - Still open: self-host the fonts before the beta (privacy and offline); the final logo.
 
 ### A5. App shell
 - **Goal**: The empty frame of the app: navigation, pages, settings.
 - **Steps**:
   1. Layout that adapts between phone (bottom or top bar) and desktop (sidebar).
   2. Placeholder pages: Recipes, Import, Settings, Account.
-  3. Settings: text size, light/dark/system color scheme (stored per device).
+  3. Settings › Appearance (A4 design): color scheme Harbor or Heirloom (an **account-level** setting, kept on this device until accounts exist in Stage B), Light/Dark/Match my device, and text size.
   4. Keyboard baseline: visible focus, logical tab order, skip link. (From the old PRD: every screen must be efficient without a mouse.)
   5. Installable web app basics: app name, icons, home-screen install. (No offline behavior yet.)
 - **You check**: Navigate on phone and desktop; change text size and dark mode; install to your phone's home screen.
@@ -662,5 +667,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | A1 | Done 2026-10-01: access check green (token, account, `terrastak.workers.dev`, D1, R2, `fennl.app` routes; no existing `beta` DNS record) |
 | A2 | Done 2026-10-01 (merged) |
 | A3 | Done 2026-10-01: PR #4 green (check, preview) with a working preview link. The first production deploy runs when it merges |
-| A4 | Next; awaiting approval |
+| A4 | Approved 2026-10-03; design chosen; done when this PR merges |
+| A5 | Next; awaiting approval |
 | All others | Not started |

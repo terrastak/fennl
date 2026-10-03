@@ -9,7 +9,7 @@ const serverLabels: Record<ServerState, string> = {
   unreachable: "unreachable",
 };
 
-// Placeholder screen for phase A2. The real layout and design arrive in A4 and A5.
+// Placeholder screen, styled with the A4 design tokens. The real app shell arrives in A5.
 export function App() {
   const [server, setServer] = useState<ServerState>("checking");
 
@@ -25,9 +25,10 @@ export function App() {
   }, []);
 
   return (
-    <main style={{ fontFamily: "system-ui, sans-serif", padding: "2rem" }}>
-      <h1>Hello, Fennl</h1>
-      <p>
+    <main style={{ padding: "var(--space-12) var(--space-10)" }}>
+      <p className="hand-note">Welcome home</p>
+      <h1 style={{ fontSize: "var(--text-4xl)" }}>Hello, Fennl</h1>
+      <p style={{ color: "var(--color-text-muted)" }}>
         Server status: <output>{serverLabels[server]}</output>
       </p>
     </main>

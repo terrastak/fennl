@@ -1,0 +1,59 @@
+/* Element defaults built on tokens.css. Screens add their own styles on top. */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  line-height: var(--leading-tight);
+  letter-spacing: -0.015em;
+  margin: 0;
+}
+
+a {
+  color: var(--color-accent);
+}
+
+a:hover {
+  color: var(--color-accent-hover);
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* A handwritten touch: tilted, tucked against the heading below it, hanging a little left. */
+.hand-note {
+  display: inline-block;
+  margin: 0 0 -1.4rem -1.6rem;
+  position: relative;
+  z-index: 1;
+  transform: rotate(var(--hand-tilt));
+  transform-origin: 0 100%;
+  font-family: var(--font-hand);
+  font-size: var(--text-hand);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--color-hand);
+}

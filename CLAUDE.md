@@ -116,6 +116,13 @@ Notes:
 - A device row is a **browser profile**, not a physical device. A private window or cleared site data looks like a new device.
 - Eviction recovery and device switching are the same event (the device ID disappears with the storage). The **takeover flow must be self-service and fast**. Do not add long cooldowns. Light rate limiting for abuse only.
 
+## Design (Decided, phase A4)
+
+The look is recorded in `docs/design/design-direction.md` and implemented as CSS variables in `app/styles/tokens.css`. Screens use the tokens and never hardcode colors, fonts or sizes.
+
+- Headings: Commissioner (flair axis 80, weight 540). Body: Instrument Sans. Handwritten touches: Caveat, used sparingly (names, greetings, captions, family notes); a recipe's source is just the person's name.
+- Two color schemes, Harbor and Heirloom, each with light and dark. **The color scheme is an account-level setting** (it follows the user to every device; store it server-side with the user's account). Light/Dark/Match my device is also offered.
+
 ## Data model rules (sync-ready)
 
 - All records use **client-generated UUIDs**, so a local library can attach to an account later without ID clashes.
