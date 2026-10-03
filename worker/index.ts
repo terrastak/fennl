@@ -6,6 +6,7 @@ import { createAuth, signInMethods } from "./auth/auth";
 import { database, databaseStatus } from "./db/client";
 import { user } from "./db/schema";
 import { devOutbox } from "./email/outbox";
+import { householdEntitlements } from "./entitlements/entitlements";
 import { householdSummary } from "./household/household";
 import { requireHousehold } from "./household/requireHousehold";
 
@@ -35,6 +36,12 @@ app.get("/api/sign-in-methods", (c) => c.json(signInMethods(c.env)));
 app.get("/api/household", requireHousehold, async (c) => {
   const { db, userId, household } = c.var.signedIn;
   return c.json(await householdSummary(db, household, userId));
+});
+
+// What the caller's household may do: its plan and limits (computed here, never by the app).
+app.get("/api/entitlements", requireHousehold, async (c) => {
+  const { db, household } = c.var.signedIn;
+  return c.json(await householdEntitlements(db, household.householdId));
 });
 
 // The account's color scheme, which follows the person to every device.

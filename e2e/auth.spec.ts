@@ -43,6 +43,10 @@ test("create an account, confirm the email, sign out and sign back in", async ({
   await expect(page.getByText(email)).toBeVisible();
   await expect(page.getByText("Email and password")).toBeVisible();
   await expect(page.getByText("Rose's kitchen")).toBeVisible();
+  // A new account is on the Free plan, with the limits from the plan_limits table.
+  await expect(page.getByRole("heading", { name: "Your plan: Free" })).toBeVisible();
+  await expect(page.getByText("Up to 100")).toBeVisible();
+  await expect(page.getByText("Up to 3 MB in total")).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL("/sign-in");
 
