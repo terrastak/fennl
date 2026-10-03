@@ -5,6 +5,7 @@ package-lock.json
 worker-configuration.d.ts
 test-results
 playwright-report
+e2e/.auth
 # Owner-edited planning docs keep their own formatting.
 *.md
 .claude/settings.local.json

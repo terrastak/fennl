@@ -23,8 +23,15 @@ export function usePath(): string {
   );
 }
 
-export function navigate(to: string): void {
-  if (to === window.location.pathname) return;
-  window.history.pushState(null, "", to);
+/** Switches page without reloading. `replace` swaps the current history entry (for redirects). */
+export function navigate(to: string, options: { replace?: boolean } = {}): void {
+  if (to === `${window.location.pathname}${window.location.search}`) return;
+  if (options.replace) window.history.replaceState(null, "", to);
+  else window.history.pushState(null, "", to);
   window.dispatchEvent(new Event(NAVIGATE_EVENT));
+}
+
+/** One value from the address's query string, read when a page opens. */
+export function queryParam(name: string): string | null {
+  return new URLSearchParams(window.location.search).get(name);
 }

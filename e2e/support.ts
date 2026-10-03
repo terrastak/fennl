@@ -1,0 +1,56 @@
+import { expect, type APIRequestContext, type BrowserContext } from "@playwright/test";
+
+/** Browser tests start signed in as this account (made by auth.setup.ts). */
+export const SIGNED_IN_STATE = "e2e/.auth/user.json";
+
+export const PASSWORD = "correct horse battery";
+
+export function uniqueEmail(label: string): string {
+  return `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
+}
+
+/**
+ * Gives a browser context its own visitor address, so each test gets its own sign-in rate limits.
+ * (Cloudflare sets this header itself in real deployments; visitors can't choose it there.)
+ */
+export async function useFreshAddress(context: BrowserContext): Promise<void> {
+  const part = () => Math.floor(Math.random() * 250) + 1;
+  await context.setExtraHTTPHeaders({ "cf-connecting-ip": `10.${part()}.${part()}.${part()}` });
+}
+
+/** The link in the newest email to an address, from the local dev outbox, as a path. */
+export async function linkFromLatestEmail(
+  request: APIRequestContext,
+  to: string,
+  count = 1,
+): Promise<string> {
+  let link = "";
+  await expect(async () => {
+    const res = await request.get(`/api/dev/outbox?to=${encodeURIComponent(to)}`);
+    const emails = (await res.json()) as { text: string }[];
+    expect(emails.length).toBeGreaterThanOrEqual(count);
+    const match = emails[0]?.text.match(/https?:\/\/\S+/);
+    expect(match).toBeTruthy();
+    const url = new URL(match![0]);
+    link = `${url.pathname}${url.search}`;
+  }).toPass({ timeout: 10_000 });
+  return link;
+}
+
+/** Makes a confirmed account through the API, signed in within this context. */
+export async function signUpConfirmed(
+  context: BrowserContext,
+  baseURL: string,
+  name = "June Lee",
+): Promise<string> {
+  const email = uniqueEmail("e2e");
+  const res = await context.request.post("/api/auth/sign-up/email", {
+    headers: { origin: baseURL },
+    data: { name, email, password: PASSWORD, callbackURL: "/email-confirmed" },
+  });
+  expect(res.ok()).toBe(true);
+  const link = await linkFromLatestEmail(context.request, email);
+  const confirm = await context.request.get(link);
+  expect(confirm.ok()).toBe(true);
+  return email;
+}
