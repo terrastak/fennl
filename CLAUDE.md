@@ -87,7 +87,8 @@ Derived entitlement fields (computed server-side, never trusted from the client)
 - `max_devices`: 1 for free, a cap for Premium
 - `images_enabled`: boolean
 - `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: values Open
-- `offline_enabled`, `history_enabled`, `import_enabled`: booleans
+- `offline_enabled`, `history_enabled`: booleans
+- `import_structured_enabled`, `import_ai_enabled`: booleans. Import is gated by what it costs, not by source. See "Import sources".
 
 Subscription statuses to handle: active, trialing, past_due (dunning: do not remove members or shrink limits while payment is retried), canceled, and resubscribed after cancellation.
 
@@ -162,7 +163,7 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 | `POST /api/images/upload` (or `/upload-url`) | Upload an image via the Worker or a short-lived signed URL | `images_enabled`, per-file size, total quota |
 | `GET /api/images/:hash` | Serve an image | Caller's household owns it; never public bucket URLs |
 | `GET /api/export` | Full-library export | Always allowed, including lapsed accounts |
-| `POST /api/import` | Import recipes | `import_enabled` |
+| `POST /api/import` | Import recipes | `import_structured_enabled` for Paprika files and pages with structured data; `import_ai_enabled` plus the AI usage cap for anything that calls the AI |
 | `GET /api/recipes/:id/versions` | Version history | `history_enabled` |
 
 ## R2 and image rules (Decided: R2 is gated)
@@ -176,7 +177,14 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 
 ## Import sources (Decided for the beta)
 
-Import is the headline feature and is **Premium only** (`import_enabled`). Free accounts type recipes by hand.
+Import is the headline feature. It is gated by cost, using two flags (**Decided**, changed from "Premium only" on 2026-10-03):
+
+| Flag | Covers | Free tier |
+| --- | --- | --- |
+| `import_structured_enabled` | Paprika library files and web pages with Schema.org data. No AI call, so no marginal cost. | **Yes**, text only (no photos, since free has no R2 access), with a size cap on how many recipes one import can add |
+| `import_ai_enabled` | Photos, PDFs, screenshots, handwritten cards, and pages with no structured data. Each one calls the AI. | No (Premium only) |
+
+Keeping imported photos and original-card photos needs `images_enabled`. A free Paprika import brings in the text and drops the photos, and tells the user so. Add a new import source by deciding which of the two flags it falls under, not by adding a flag per source.
 
 - **Web pages**: a **Chrome extension** (desktop) is the first and, during the beta, only web import path. It reads the page as the user sees it, so logged-in and paywalled sites work. It never collects passwords for recipe sites. Extraction order: Schema.org structured data first, then AI for pages without it.
 - **Photos and documents**: handwritten cards (front/back, multi-card), printed cookbook pages (multi-page), screenshots, and PDFs (possibly many recipes per file).
@@ -188,13 +196,13 @@ Import is the headline feature and is **Premium only** (`import_enabled`). Free 
 
 ## AI import (Leaning)
 
-AI reads recipes from photos (handwritten cards, cookbook pages), screenshots, PDFs, and web pages that have no structured recipe data. Import is a Premium feature (`import_enabled`).
+AI reads recipes from photos (handwritten cards, cookbook pages), screenshots, PDFs, and web pages that have no structured recipe data. Import is gated by `import_ai_enabled` (Premium only).
 
 - **One multimodal model call, no separate OCR service.** A multimodal model reads the image or PDF and returns a structured recipe draft in one step. OCR-only services (for example Google Cloud Vision) return plain text only and would still need an AI step, so they are not used.
 - **Starting model: Claude Haiku** via the Anthropic API. Researched 2026-10-01 against Gemini Flash, OpenAI GPT models, Google Cloud Vision / Document AI, and Cloudflare Workers AI. Rough cost is about half a cent per recipe or less, so accuracy matters more than price.
 - **Swappable by design.** All AI calls go through one provider interface in the Worker that returns a fixed recipe-draft shape. The model name and provider come from configuration, never hardcoded in import code. Prompts and output validation sit above the interface. Switching to a bigger Claude model, Gemini, or OpenAI must be a config change or one new adapter file.
 - **Server only.** The API key is a Worker secret. It never reaches the browser or the extension. Clients never call an AI vendor directly.
-- **Gated and metered.** Check `import_enabled` and the household's AI usage cap before any AI call. Record every call in `ai_usage` (household, model, tokens, estimated cost). Keep a global spending alarm. Enforce file size and page limits.
+- **Gated and metered.** Check `import_ai_enabled` and the household's AI usage cap before any AI call. Record every call in `ai_usage` (household, model, tokens, estimated cost). Keep a global spending alarm. Enforce file size and page limits.
 - **Review before save.** AI output is a draft. The user reviews it, and the original photo or page is kept with the recipe (counts toward the image quota).
 - **Measure, then change models.** Compare models on a real test set (accuracy and cost) before switching.
 - **Privacy.** User photos go to a third-party vendor. Check the vendor's API data-retention and training terms and state them in the privacy policy.

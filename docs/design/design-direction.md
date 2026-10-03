@@ -47,6 +47,17 @@ Every scheme defines the same set of color tokens. `app/styles/tokens.test.ts` c
 - **Import review:** the original photo on the left (kept with the recipe); the draft on the right, with uncertain items highlighted in the warm color and a short note; nothing is saved until the user chooses.
 - **Settings › Appearance:** color scheme cards with a preview, a Light/Dark/Match-my-device switch, and text size.
 
+## Empty states (preferred pattern, chosen 2026-10-03)
+
+Quiet, not a loud card. Centered on the page with no card or box around it:
+
+- A faint, fading grid of ghosted recipe-card outlines behind the text (hairline borders, a very light fill, fading out toward the bottom), so the page shows what it will become. It must not look like a loading skeleton, so no animation.
+- A soft patch of the page color behind the text so it stays readable over the grid.
+- A small Caveat greeting, a Commissioner heading ("Your recipe box is empty, for now"), one line of body text, then two buttons: **Add recipe** (filled accent) and **Import** (outlined).
+- Copy is an invitation, not an apology. Use tokens for all colors, fonts and sizes.
+- Reuse this pattern for other empty screens (categories, search with no results), with the text and buttons changed.
+- Import is shown to everyone. What it offers depends on the entitlement flags (see `CLAUDE.md`, "Import sources").
+
 ## Logo
 
 Working mark: a filled circle in the accent color with a white fennel frond, next to "Fennl" set in Commissioner. Final logo is still open.

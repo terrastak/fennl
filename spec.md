@@ -25,7 +25,7 @@ Recorded from the planning conversation on 2026-10-01.
 | Web import, first method | **Chrome browser extension** (desktop). It reads the page as the user sees it, so logged-in and paywalled sites work. |
 | Web import on phones during beta | Not supported. Phone users import on a computer or by screenshot/photo. Paste-a-link and the phone share button come after the beta. |
 | Photo/document import | Handwritten cards (incl. front/back, multi-card), printed cookbook pages (incl. multi-page), screenshots, PDFs (incl. many recipes per file). |
-| Who can import | **Premium only** (as in `CLAUDE.md`). Free accounts type recipes by hand. |
+| Who can import | **Split by cost** (as in `CLAUDE.md`, changed 2026-10-03). Imports that need no AI (Paprika files, web pages with structured data) are allowed on Free as text only, with a size cap and no photos (`import_structured_enabled`). Imports that call the AI are Premium only (`import_ai_enabled`). |
 | Beta access to Premium | **Invited testers get Premium free** through an invite code. Stripe billing is built in a later stage, before public launch. |
 | AI provider | **Claude (Anthropic API), starting with Claude Haiku**, behind a thin "provider" layer. **Swapping models or providers must be easy** (a config change for a different Claude model, one new file for a different vendor). Chosen after comparing options on 2026-10-01; see "Notes: AI provider research" below. |
 | Free-user AI import teaser | **Open.** Whether free accounts get a few AI imports as a taste of Premium. Revisit later (before public launch). |
@@ -64,7 +64,7 @@ These are recommendations. Each one is confirmed in the phase that first needs i
 Phase A0 proposes these edits to `CLAUDE.md`. None of them changes a **Decided** item, but they need the owner's approval:
 
 1. **Beta grants.** Entitlements are derived from the household's subscription, **or from a beta grant** (an invite code that gives a household Premium for a set period). A grant is one more input to the same entitlement check. It is not a separate code path.
-2. **Import.** Record the import goals above: Chrome extension first, the AI provider (Claude Haiku to start, swappable by design, no separate OCR service), originals kept, Premium only, video after the beta.
+2. **Import.** Record the import goals above: Chrome extension first, the AI provider (Claude Haiku to start, swappable by design, no separate OCR service), originals kept, AI import Premium only (structured import also on Free, text only), video after the beta.
 3. **AI usage limits.** Every AI call is metered per household, with a monthly cap (value Open) and a global spending alarm, so a bug or abuse can't run up a large bill.
 4. **New tables**: `category`, `recipe_category`, `recipe_photo`, `import_job`, `ai_usage`, `beta_invite`. Their exact columns are set in the phase that builds them.
 5. **Beta scope**: scaling, conversions, pan sizes, cook mode, linked sub-recipes, nutrition, nested categories, multiple photos. Meal planner and grocery list come later.
@@ -196,7 +196,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 ### B4. Entitlement service
 - **Goal**: One server-side function that answers "what is this household allowed to do?"
 - **Steps**:
-  1. Compute the derived fields from `CLAUDE.md` (`tier`, `max_members`, `max_devices`, `images_enabled`, `import_enabled`, quotas...).
+  1. Compute the derived fields from `CLAUDE.md` (`tier`, `max_members`, `max_devices`, `images_enabled`, `import_structured_enabled`, `import_ai_enabled`, quotas...).
   2. Inputs for now: beta grant or nothing (free). Stripe subscription is added in Stage I.
   3. Placeholder numbers for quotas, all in one config file so they're easy to change.
   4. Account page shows the current plan and limits.
@@ -278,7 +278,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Steps**:
   1. Recipe list with title, cover photo placeholder, categories; sort options.
   2. Recipe page: all fields laid out for reading, including section headings.
-  3. Empty state that points to "New recipe" (and Import for Premium).
+  3. Empty state as in `docs/design/design-direction.md` ("Empty states"): a faint ghosted grid, a short welcome, **Add recipe** and **Import**. Import is shown to everyone; what it offers depends on the flags.
   4. A few sample recipes you can add to try it out.
 - **You check**: Add the sample recipes; browse on phone and desktop.
 - **Done when**: Pages pass accessibility and keyboard tests.
