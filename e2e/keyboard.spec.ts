@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { useOwnAccount } from "./support";
 
 // Keyboard-only use on a computer (the sidebar layout).
 test.beforeEach(({ isMobile }) => {
@@ -33,7 +34,8 @@ test("the sidebar can be used with the keyboard alone", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Import recipes" })).toBeFocused();
 });
 
-test("appearance choices work with arrow keys", async ({ page }) => {
+test("appearance choices work with arrow keys", async ({ page, context, baseURL }) => {
+  await useOwnAccount(context, baseURL!); // changes the account's color scheme
   await open(page, "/settings");
   await page.getByRole("radio", { name: /Harbor/ }).focus();
   await page.keyboard.press("ArrowRight");

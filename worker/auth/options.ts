@@ -1,9 +1,11 @@
 import type { BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { organization } from "better-auth/plugins";
 import type { Database } from "../db/client";
 import * as schema from "../db/schema";
 import type { SendEmail } from "../email/email";
 import { passwordResetEmail, verificationEmail } from "../email/templates";
+import { activeHouseholdFor } from "../household/household";
 
 export interface AuthSettings {
   /** This deployment's own origin, taken from the incoming request (never hardcoded). */
@@ -58,6 +60,31 @@ export function authOptions(settings: AuthSettings) {
       },
     },
     socialProviders,
+    user: {
+      additionalFields: {
+        // The color scheme follows the account to every device (CLAUDE.md, "Design"). Only
+        // PUT /api/account/appearance changes it, after checking the value; Better Auth's own
+        // update-user endpoint can't (input: false).
+        colorScheme: { type: "string", required: false, input: false },
+      },
+    },
+    // Households are Better Auth organizations (CLAUDE.md, "Entitlements model"). Their HTTP
+    // endpoints are closed in worker/index.ts until sharing arrives (phase G1); B3 only needs
+    // each person's own household, which Fennl manages itself (worker/household/).
+    plugins: [organization({ allowUserToCreateOrganization: false, membershipLimit: 2 })],
+    databaseHooks: {
+      session: {
+        create: {
+          // Every new session starts in the person's household, creating it on first sign-in.
+          before: async (session) => ({
+            data: {
+              ...session,
+              activeOrganizationId: await activeHouseholdFor(settings.db, session.userId),
+            },
+          }),
+        },
+      },
+    },
     account: {
       // Google and Apple confirm the email address, so signing in with them joins an existing
       // account with the same email instead of making a second one.

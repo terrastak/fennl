@@ -1,4 +1,5 @@
 import { useEffect, type ComponentType } from "react";
+import { useAccountSchemeSync } from "./appearance/accountScheme";
 import { AuthLayout } from "./auth/AuthLayout";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
 import { useSession } from "./auth/client";
@@ -48,6 +49,7 @@ function Redirect({ to }: { to: string }) {
 export function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
   const { data: session, isPending } = useSession();
+  useAccountSchemeSync();
 
   const accountRoute = ACCOUNT_ROUTES[path];
   if (accountRoute) {

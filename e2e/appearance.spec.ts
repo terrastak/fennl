@@ -1,4 +1,10 @@
 import { expect, test, type Page } from "@playwright/test";
+import { PASSWORD, useFreshAddress, useOwnAccount } from "./support";
+
+// The color scheme is saved to the account, so each test uses an account of its own.
+test.beforeEach(async ({ context, baseURL }) => {
+  await useOwnAccount(context, baseURL!);
+});
 
 const html = (page: Page) => page.locator("html");
 const background = (page: Page) =>
@@ -41,4 +47,32 @@ test("'Match my device' follows the device's dark mode", async ({ page }) => {
 
   await page.getByRole("radio", { name: "Light" }).check();
   expect(await background(page)).toBe("rgb(246, 245, 240)"); // Harbor light, despite the device
+});
+
+test("the color scheme follows the account to another device", async ({
+  page,
+  context,
+  browser,
+  baseURL,
+}) => {
+  const email = await useOwnAccount(context, baseURL!);
+  await page.goto("/settings");
+  await page.getByRole("radio", { name: /Heirloom/ }).check();
+  await expect(html(page)).toHaveAttribute("data-scheme", "heirloom");
+  await page.getByRole("radio", { name: "Dark" }).check();
+
+  // A second "device": a fresh browser with nothing saved, signing in to the same account.
+  const other = await browser.newContext({ storageState: { cookies: [], origins: [] } });
+  await useFreshAddress(other);
+  const otherPage = await other.newPage();
+  await otherPage.goto("/sign-in");
+  await otherPage.getByLabel("Email").fill(email);
+  await otherPage.getByLabel("Password").fill(PASSWORD);
+  await otherPage.getByRole("button", { name: "Sign in" }).click();
+  await expect(otherPage.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+
+  // The scheme comes along; light or dark stays per device.
+  await expect(html(otherPage)).toHaveAttribute("data-scheme", "heirloom");
+  await expect(html(otherPage)).not.toHaveAttribute("data-mode", /.*/);
+  await other.close();
 });
