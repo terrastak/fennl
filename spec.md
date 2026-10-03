@@ -50,7 +50,7 @@ These are recommendations. Each one is confirmed in the phase that first needs i
 | Language | TypeScript everywhere (app, server, extension) | One language; strong checking catches mistakes early | A2 |
 | Web app | React single-page app built with Vite | A local-first app does its work in the browser, so a plain single-page app fits better than a server-rendering framework. Widely known, so less debugging | A2 |
 | Server | One Cloudflare Worker that serves the app files and the `/api` routes, using the small Hono routing library | Simplest deployment: one thing to deploy | A2 |
-| Database access | Drizzle (works with Better Auth and D1) | Typed queries and migration files | B1 |
+| Database access | **Drizzle** (works with Better Auth and D1). Decided 2026-10-03 | Typed queries and migration files | B1 |
 | Local browser database | SQLite (WASM) on OPFS, with full-text search | Already the `CLAUDE.md` leaning. Must be tested on real phones first (phase C2) | C2 |
 | Recipe storage on server | **Open**: D1, or a Durable Object per household | `CLAUDE.md` open question 7. Decided in phase C1 after checking current Cloudflare limits | C1 |
 | Email (verification, password reset, invites) | **Open**: a transactional email service (e.g. Resend or Postmark) or Cloudflare's own email sending, if it's ready | Better Auth needs a way to send email | B2 |
@@ -180,6 +180,16 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Nothing visible; I show the migration run.
 - **Done when**: Migrations run in CI and on staging.
 - **Decisions**: Approve Drizzle (vs. Kysely; both supported by Better Auth).
+- **Decided (2026-10-03)**: Drizzle.
+- **Built (2026-10-03)**:
+  - Two D1 databases: **`fennl`** (production) and **`fennl-preview`** (staging, shared by every pull-request preview). They're found by name, so no database IDs are committed. CI creates a database the first time it's missing.
+  - Tables are defined in `worker/db/schema.ts`. `npm run db:generate` writes a migration file into `worker/db/migrations`. Migrations are never edited after they're merged; a change is always a new migration.
+  - The first migration is an empty baseline. Better Auth's tables arrive in B2 as the next migration.
+  - CI checks that the schema and the migrations match (`npm run db:check`) and tests that every migration applies to an empty database. It then applies migrations to staging before each preview, and to production before each deploy.
+  - Migrations run **before** the new code goes live, so each one must work with the code already running: add first, remove old columns only in a later change.
+  - `/api/health` now also checks the database. It answers "degraded" (and CI fails) if the database doesn't respond. Settings › About shows "Server status: ok, database connected".
+  - New packages: `drizzle-orm`, plus two dev-only tools: `drizzle-kit` (writes migrations) and `@cloudflare/vitest-pool-workers` (runs Worker tests in Cloudflare's local runtime with a real local database).
+  - Cloudflare's test pool bundles an older Workers runtime than Wrangler, so Worker tests use its newest supported compatibility date (`vitest.config.ts`). Deploys still use the date in `wrangler.jsonc`. Remove the override when the pool catches up.
 
 ### B2. Sign up, sign in, sign out
 - **Goal**: Real accounts with Better Auth.
@@ -676,6 +686,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | A2 | Done 2026-10-01 (merged) |
 | A3 | Done 2026-10-01: PR #4 green (check, preview) with a working preview link. The first production deploy runs when it merges |
 | A4 | Done 2026-10-03 (merged; live on the beta site) |
-| A5 | Approved 2026-10-03; built, all checks pass; waiting on review |
-| B1 | Next; awaiting approval |
+| A5 | Done 2026-10-03 (merged; live on the beta site) |
+| B1 | Approved 2026-10-03 (Drizzle); built, waiting on review |
+| B2 | Next; awaiting approval |
 | All others | Not started |

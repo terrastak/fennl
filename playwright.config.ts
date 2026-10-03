@@ -25,7 +25,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run build && npx vite preview --port ${port} --strictPort`,
+    command: `npm run build && npm run db:migrate:local && npx vite preview --port ${port} --strictPort`,
     port,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

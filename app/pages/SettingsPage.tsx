@@ -132,11 +132,12 @@ export function SettingsPage() {
   );
 }
 
-type ServerState = "checking" | "ok" | "unreachable";
+type ServerState = "checking" | "ok" | "database-unavailable" | "unreachable";
 
 const SERVER_LABELS: Record<ServerState, string> = {
   checking: "checking…",
-  ok: "ok",
+  ok: "ok, database connected",
+  "database-unavailable": "running, but the database isn't answering",
   unreachable: "unreachable",
 };
 
@@ -145,9 +146,13 @@ function ServerStatus() {
 
   useEffect(() => {
     const controller = new AbortController();
+    // A 503 still carries a health report (the database is down), so read the body either way.
     fetch("/api/health", { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: unknown) => setServer(isHealthStatus(body) ? "ok" : "unreachable"))
+      .then((res) => res.json())
+      .then((body: unknown) => {
+        if (!isHealthStatus(body)) setServer("unreachable");
+        else setServer(body.database === "ok" ? "ok" : "database-unavailable");
+      })
       .catch(() => {
         if (!controller.signal.aborted) setServer("unreachable");
       });

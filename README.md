@@ -11,6 +11,7 @@ A recipe app focused on importing recipes from the web, photos of recipe cards, 
 | --- | --- |
 | `app/` | The web app people see (React). |
 | `worker/` | The server: a Cloudflare Worker that answers `/api/...` requests (Hono). |
+| `worker/db/` | The server database (Cloudflare D1): table definitions (`schema.ts`) and migrations (Drizzle). |
 | `shared/` | Code used by both, such as data shapes and, later, recipe parsing. |
 | `e2e/` | Tests that drive the real app in a browser (Playwright). |
 
@@ -25,7 +26,7 @@ npm ci            # install exactly the versions in package-lock.json
 npm run dev       # start the app at http://localhost:5173 (the server runs too)
 ```
 
-Open the address it prints. You should see "Hello, Fennl" and "Server status: ok".
+Open the address it prints. Settings should show "Server status: ok, database connected". `npm run dev` first brings your local copy of the database up to date (it lives in `.wrangler/`).
 
 ## Checks
 
@@ -35,20 +36,30 @@ Open the address it prints. You should see "Hello, Fennl" and "Server status: ok
 | `npm run format:check` | Checks code formatting (`npm run format` fixes it). |
 | `npm run lint` | Looks for common mistakes. |
 | `npm run typecheck` | Generates Cloudflare's types, then checks all TypeScript. |
-| `npm test` | Fast unit tests for `app/`, `worker/`, and `shared/`. |
+| `npm run db:check` | Checks the migrations match `worker/db/schema.ts`. |
+| `npm test` | Fast unit tests for `app/`, `worker/`, and `shared/`. Worker tests run in Cloudflare's local runtime with a real local database, and apply every migration to an empty one. |
 | `npm run test:e2e` | Builds the app and tests it in a real browser. |
 
 The first browser test run may ask you to install a browser: `npx playwright install chromium`. If a Chromium is already installed somewhere, point `PLAYWRIGHT_CHROMIUM_EXECUTABLE` at it instead.
+
+## Changing the database
+
+1. Edit the tables in `worker/db/schema.ts`.
+2. Run `npm run db:generate`. Drizzle writes a new migration file in `worker/db/migrations`.
+3. Commit both. CI applies the migration to the staging database for the preview, and to production when the change merges.
+
+Migrations run **before** the new code goes live, so a migration must keep working with the code that's already running: add things first, and remove old columns only in a later change. Never edit a migration that has already been merged.
 
 ## Automatic checks, previews, and deploys
 
 Set up in `.github/workflows/ci.yml`:
 
-- **Every pull request** runs all the checks above. If they pass, it gets a **preview link** (posted as a comment on the pull request) running that exact version, on a separate preview Worker that never touches production data.
-- **Every merge to `main`** runs the checks again and then deploys to production, at the address in the GitHub variable `APP_HOSTNAME`.
+- **Every pull request** runs all the checks above. If they pass, it gets a **preview link** (posted as a comment on the pull request) running that exact version, on a separate preview Worker with its own staging database (`fennl-preview`) that never touches production data. All previews share that one staging database.
+- **Every merge to `main`** runs the checks again, applies migrations to the production database (`fennl`), and then deploys to production, at the address in the GitHub variable `APP_HOSTNAME`.
+- Both databases are found by name, and CI creates either one if it's missing.
 
 ## Notes for contributors
 
 - Use **npm 11 or newer** (it ships with Node 24) when **adding or upgrading** packages. npm 10 has a bug resolving this project's dependency tree from scratch. Installing from the lockfile with `npm ci` works on either.
-- npm 11 only runs install scripts it has been told to trust. They're listed under `allowScripts` in `package.json` (currently `workerd`, Cloudflare's local runtime, and `esbuild`). After upgrading either one, approve the new version with `npm install-scripts approve <name>`.
+- npm 11 only runs install scripts it has been told to trust. They're listed under `allowScripts` in `package.json` (currently `workerd`, Cloudflare's local runtime, in two versions because the Worker test pool brings its own, and `esbuild`). After upgrading either one, approve the new version with `npm install-scripts approve <name>`.
 - The app's public address is **never** written in code or config. It comes from the GitHub variable `APP_HOSTNAME` at deploy time (see `CLAUDE.md`).

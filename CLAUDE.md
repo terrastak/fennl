@@ -20,7 +20,8 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Hosting / API | Cloudflare Workers | Decided |
 | Relational data | Cloudflare D1 (auth, billing state, household membership, device registry, quotas) | Decided |
 | Images | Cloudflare R2, gated behind paid tier | Decided |
-| Auth | Better Auth (self-hosted in the Worker; D1 via Drizzle or its Kysely D1 dialect; organization plugin for households) | Decided |
+| Auth | Better Auth (self-hosted in the Worker; D1 via Drizzle; organization plugin for households) | Decided |
+| Database access and migrations | Drizzle (schema in `worker/db/schema.ts`, migrations in `worker/db/migrations`, applied by Wrangler) | Decided (B1) |
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
 | Per-household live sync / recipe store | Durable Object (SQLite-backed) per household | Open (see "Sync architecture") |
 | Local data layer in the browser | SQLite compiled to WASM on OPFS, or IndexedDB via Dexie | Leaning (SQLite/OPFS, for real SQL and full-text search) |
@@ -131,6 +132,7 @@ The look is recorded in `docs/design/design-direction.md` and implemented as CSS
 - The server assigns a monotonic `server_seq` (or cursor) on every accepted change. Clients pull "everything after cursor N".
 - Images are stored and referenced by **content hash**.
 - Conflict resolution: **per-field last-write-wins by default** (title, ingredients, notes, etc.). Premium "smart merging" for households is a feature to be designed (Open).
+- Server migrations run before new code is deployed, so every migration must stay compatible with the code already running (add first; drop or rename only in a later change). Never edit a merged migration.
 - Client schema migrations are required, since local databases live on user devices. The sync protocol carries a client schema version and rejects incompatible clients with an upgrade prompt.
 
 ## Sync architecture
