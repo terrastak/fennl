@@ -1,0 +1,175 @@
+.section {
+  max-width: 52rem;
+  margin-bottom: var(--space-12);
+}
+
+.section h2 {
+  font-size: var(--text-2xl);
+  margin-bottom: var(--space-6);
+}
+
+.fieldset {
+  margin: 0 0 var(--space-8);
+  padding: 0;
+  border: 0;
+}
+
+.fieldset legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-xl);
+}
+
+.help {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Visually hidden but still focusable radios; the surrounding label shows the state. */
+.schemeInput,
+.segment input,
+.size input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.schemes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: var(--space-4);
+}
+
+.schemeCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.schemeCard:has(input:checked) {
+  border-color: var(--color-accent);
+}
+
+.schemeCard:has(input:focus-visible),
+.segment:has(input:focus-visible),
+.size:has(input:focus-visible) {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.preview {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  height: 7rem;
+  margin-bottom: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.previewHand {
+  font-family: var(--font-hand);
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.previewTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-lg);
+}
+
+.previewButton {
+  margin-top: auto;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.schemeName {
+  font-weight: var(--weight-semibold);
+  padding: 0 var(--space-1);
+}
+
+.schemeDescription {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  padding: 0 var(--space-1);
+}
+
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.segment {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border-radius: 0.6rem;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.segment:has(input:checked) {
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  box-shadow: var(--shadow-sm);
+}
+
+.sizes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.size {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1);
+  min-width: 5.5rem;
+  min-height: 5rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.size:has(input:checked) {
+  border-color: var(--color-accent);
+}
+
+.sizeSample {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  line-height: 1;
+}
+
+.sizeLabel {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}

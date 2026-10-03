@@ -1,7 +1,7 @@
 /// <reference types="node" />
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COLOR_SCHEMES, isColorMode, isColorScheme } from "../../shared/appearance";
+import { COLOR_SCHEMES, isColorMode, isColorScheme, SCHEME_PREVIEW } from "../../shared/appearance";
 
 // Read from disk: Vitest turns CSS imports (even ?raw) into empty strings.
 const css = readFileSync(new URL("./tokens.css", import.meta.url), "utf8");
@@ -90,6 +90,21 @@ describe("design tokens", () => {
   it("has a block for every color scheme in shared/appearance.ts", () => {
     for (const scheme of COLOR_SCHEMES) {
       expect(() => block(`:root[data-scheme="${scheme}"]`)).not.toThrow();
+    }
+  });
+
+  it("settings previews use the same colors as the tokens", () => {
+    for (const scheme of COLOR_SCHEMES) {
+      const vars = colors(`:root[data-scheme="${scheme}"]`);
+      const p = SCHEME_PREVIEW[scheme];
+      expect({
+        bg: vars.get("--color-bg"),
+        surface: vars.get("--color-surface"),
+        accent: vars.get("--color-accent"),
+        onAccent: vars.get("--color-on-accent"),
+        hand: vars.get("--color-hand"),
+        text: vars.get("--color-text"),
+      }).toEqual(p);
     }
   });
 

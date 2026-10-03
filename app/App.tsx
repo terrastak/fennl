@@ -1,36 +1,27 @@
-import { useEffect, useState } from "react";
-import { isHealthStatus } from "../shared/health";
+import type { ComponentType } from "react";
+import { AccountPage } from "./pages/AccountPage";
+import { ImportPage } from "./pages/ImportPage";
+import { NotFoundPage } from "./pages/NotFoundPage";
+import { RecipesPage } from "./pages/RecipesPage";
+import { SettingsPage } from "./pages/SettingsPage";
+import { usePath } from "./navigation";
+import { AppShell } from "./shell/AppShell";
 
-type ServerState = "checking" | "ok" | "unreachable";
-
-const serverLabels: Record<ServerState, string> = {
-  checking: "checking…",
-  ok: "ok",
-  unreachable: "unreachable",
+const ROUTES: Record<string, { title: string; Page: ComponentType }> = {
+  "/": { title: "Recipes", Page: RecipesPage },
+  "/import": { title: "Import", Page: ImportPage },
+  "/settings": { title: "Settings", Page: SettingsPage },
+  "/account": { title: "Account", Page: AccountPage },
 };
 
-// Placeholder screen, styled with the A4 design tokens. The real app shell arrives in A5.
+const NOT_FOUND = { title: "Page not found", Page: NotFoundPage };
+
 export function App() {
-  const [server, setServer] = useState<ServerState>("checking");
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetch("/api/health", { signal: controller.signal })
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: unknown) => setServer(isHealthStatus(body) ? "ok" : "unreachable"))
-      .catch(() => {
-        if (!controller.signal.aborted) setServer("unreachable");
-      });
-    return () => controller.abort();
-  }, []);
-
+  const path = usePath();
+  const { title, Page } = ROUTES[path.replace(/\/+$/, "") || "/"] ?? NOT_FOUND;
   return (
-    <main style={{ padding: "var(--space-12) var(--space-10)" }}>
-      <p className="hand-note">Welcome home</p>
-      <h1 style={{ fontSize: "var(--text-4xl)" }}>Hello, Fennl</h1>
-      <p style={{ color: "var(--color-text-muted)" }}>
-        Server status: <output>{serverLabels[server]}</output>
-      </p>
-    </main>
+    <AppShell path={path} title={title}>
+      <Page />
+    </AppShell>
   );
 }

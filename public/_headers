@@ -1,0 +1,4 @@
+# Cloudflare static-asset headers. Font files never change in place (a new font gets a new
+# file name), so browsers may keep them for a year.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
