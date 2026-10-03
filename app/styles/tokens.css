@@ -1,0 +1,249 @@
+/*
+ * Fennl design tokens (chosen in phase A4; see docs/design/design-direction.md).
+ *
+ * Screens never hardcode a color, font or size: they use these variables, so a scheme or
+ * mode change is a change here only.
+ *
+ * Two attributes on <html> select the look:
+ *   data-scheme="harbor" | "heirloom"       color scheme, an account-level setting (default harbor)
+ *   data-mode="light" | "dark" | "system"   light/dark; missing or "system" follows the device
+ *
+ * Every scheme block must define the same color variables; tokens.test.ts checks that and
+ * the contrast of the main text/background pairs.
+ */
+
+/* ---------- Scheme-independent tokens ---------- */
+:root {
+  /* Headings: Commissioner with its "flair" axis (small flared ends), slightly under semibold. */
+  --font-display: "Commissioner", ui-sans-serif, system-ui, sans-serif;
+  --font-display-settings: "FLAR" 80, "wght" 540;
+  --font-display-italic-settings: "FLAR" 80, "wght" 400;
+  /* Everything else. */
+  --font-ui: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  /* Handwritten touches only: people's names, greetings, photo captions, family notes. */
+  --font-hand: "Caveat", "Segoe Print", "Bradley Hand", cursive;
+  --hand-tilt: -3deg;
+
+  /* Sizes are in rem so the text-size setting scales the whole interface. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --text-4xl: 2.75rem;
+  --text-hand: 1.8rem;
+
+  --leading-tight: 1.1;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
+  --radius-full: 999px;
+
+  --shadow-sm: 0 1px 2px rgb(29 33 30 / 0.06);
+  --shadow-md: 0 1px 2px rgb(29 33 30 / 0.05), 0 4px 12px rgb(29 33 30 / 0.05);
+  --shadow-lg: 0 2px 4px rgb(29 33 30 / 0.05), 0 12px 32px rgb(29 33 30 / 0.1);
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --sidebar-width: 15.5rem;
+  --content-max: 72rem;
+  --tap-target: 2.75rem;
+}
+
+/* ---------- Harbor (default): navy and coral on warm paper ---------- */
+:root,
+:root[data-scheme="harbor"] {
+  color-scheme: light;
+  --color-bg: #f6f5f0;
+  --color-sidebar: #fbfaf6;
+  --color-surface: #ffffff;
+  --color-surface-sunken: #efeee7;
+  --color-border: #e3e1d8;
+  --color-border-soft: #efede6;
+  --color-border-strong: #bdb9ab;
+  --color-text: #1d211e;
+  --color-text-muted: #5c635d;
+  --color-text-subtle: #6a7069;
+  --color-accent: #24406b;
+  --color-accent-hover: #1b3257;
+  --color-on-accent: #ffffff;
+  --color-accent-soft: #e1e8f3;
+  --color-accent-soft-text: #1b3257;
+  --color-warm: #e0664a;
+  --color-warm-soft: #fbe6df;
+  --color-warm-text: #a8432b;
+  --color-hand: #a8432b;
+  --color-focus: #24406b;
+  --color-success: #2e7a4d;
+  --color-danger: #b0412d;
+}
+
+/* ---------- Heirloom: olive and berry on linen ---------- */
+:root[data-scheme="heirloom"] {
+  color-scheme: light;
+  --color-bg: #f5efe4;
+  --color-sidebar: #f9f4ea;
+  --color-surface: #fffaf1;
+  --color-surface-sunken: #ede4d4;
+  --color-border: #e2d6c1;
+  --color-border-soft: #ece2d0;
+  --color-border-strong: #cdbfa6;
+  --color-text: #2a2320;
+  --color-text-muted: #6b5e53;
+  --color-text-subtle: #726557;
+  --color-accent: #4f5d2f;
+  --color-accent-hover: #3c4722;
+  --color-on-accent: #fffaf1;
+  --color-accent-soft: #e7e8d3;
+  --color-accent-soft-text: #3c4722;
+  --color-warm: #9a3b4f;
+  --color-warm-soft: #f6e1e3;
+  --color-warm-text: #8a3346;
+  --color-hand: #9a3b4f;
+  --color-focus: #4f5d2f;
+  --color-success: #2e7a4d;
+  --color-danger: #b0412d;
+}
+
+/* ---------- Dark mode, chosen explicitly ---------- */
+:root[data-mode="dark"] {
+  color-scheme: dark;
+  --color-bg: #111412;
+  --color-sidebar: #141815;
+  --color-surface: #171b18;
+  --color-surface-sunken: #0d0f0e;
+  --color-border: #283029;
+  --color-border-soft: #222923;
+  --color-border-strong: #4a544b;
+  --color-text: #eceee8;
+  --color-text-muted: #a3aaa2;
+  --color-text-subtle: #8a9189;
+  --color-accent: #8fb1e6;
+  --color-accent-hover: #a9c4ee;
+  --color-on-accent: #0b1629;
+  --color-accent-soft: #1a2638;
+  --color-accent-soft-text: #bcd1f2;
+  --color-warm: #f08c73;
+  --color-warm-soft: #3a211a;
+  --color-warm-text: #f5a690;
+  --color-hand: #f08c73;
+  --color-focus: #a9c4ee;
+  --color-success: #6dbd92;
+  --color-danger: #e57a63;
+}
+
+:root[data-scheme="heirloom"][data-mode="dark"] {
+  color-scheme: dark;
+  --color-bg: #1a1613;
+  --color-sidebar: #1d1915;
+  --color-surface: #231e1a;
+  --color-surface-sunken: #15110f;
+  --color-border: #3a3129;
+  --color-border-soft: #2e2721;
+  --color-border-strong: #4a3f34;
+  --color-text: #f1e9dd;
+  --color-text-muted: #b8aa99;
+  --color-text-subtle: #9a8d7e;
+  --color-accent: #b9c78a;
+  --color-accent-hover: #d6e0ad;
+  --color-on-accent: #1b2010;
+  --color-accent-soft: #2c3120;
+  --color-accent-soft-text: #d6e0ad;
+  --color-warm: #e39aa8;
+  --color-warm-soft: #3a2228;
+  --color-warm-text: #e9a9b5;
+  --color-hand: #e39aa8;
+  --color-focus: #d6e0ad;
+  --color-success: #6dbd92;
+  --color-danger: #e57a63;
+}
+
+/* ---------- Dark mode, following the device ("system" or no choice yet) ---------- */
+/* Same values as the explicit dark blocks above; tokens.test.ts keeps them in step. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-mode="light"]) {
+    color-scheme: dark;
+    --color-bg: #111412;
+    --color-sidebar: #141815;
+    --color-surface: #171b18;
+    --color-surface-sunken: #0d0f0e;
+    --color-border: #283029;
+    --color-border-soft: #222923;
+    --color-border-strong: #4a544b;
+    --color-text: #eceee8;
+    --color-text-muted: #a3aaa2;
+    --color-text-subtle: #8a9189;
+    --color-accent: #8fb1e6;
+    --color-accent-hover: #a9c4ee;
+    --color-on-accent: #0b1629;
+    --color-accent-soft: #1a2638;
+    --color-accent-soft-text: #bcd1f2;
+    --color-warm: #f08c73;
+    --color-warm-soft: #3a211a;
+    --color-warm-text: #f5a690;
+    --color-hand: #f08c73;
+    --color-focus: #a9c4ee;
+    --color-success: #6dbd92;
+    --color-danger: #e57a63;
+  }
+
+  :root[data-scheme="heirloom"]:not([data-mode="light"]) {
+    color-scheme: dark;
+    --color-bg: #1a1613;
+    --color-sidebar: #1d1915;
+    --color-surface: #231e1a;
+    --color-surface-sunken: #15110f;
+    --color-border: #3a3129;
+    --color-border-soft: #2e2721;
+    --color-border-strong: #4a3f34;
+    --color-text: #f1e9dd;
+    --color-text-muted: #b8aa99;
+    --color-text-subtle: #9a8d7e;
+    --color-accent: #b9c78a;
+    --color-accent-hover: #d6e0ad;
+    --color-on-accent: #1b2010;
+    --color-accent-soft: #2c3120;
+    --color-accent-soft-text: #d6e0ad;
+    --color-warm: #e39aa8;
+    --color-warm-soft: #3a2228;
+    --color-warm-text: #e9a9b5;
+    --color-hand: #e39aa8;
+    --color-focus: #d6e0ad;
+    --color-success: #6dbd92;
+    --color-danger: #e57a63;
+  }
+}
+
+/* ---------- Text size (per device; set by the A5 settings screen) ---------- */
+:root[data-text-size="large"] {
+  font-size: 112.5%;
+}
+:root[data-text-size="larger"] {
+  font-size: 125%;
+}
+:root[data-text-size="largest"] {
+  font-size: 143.75%;
+}
