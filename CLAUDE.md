@@ -85,11 +85,12 @@ The **subscription attaches to the household** (Stripe plugin with organization 
 
 **Beta grants (Decided for the beta).** Entitlements are derived from the household's subscription **or from a beta grant**. A beta grant comes from an invite code and gives a household Premium for a set period. It is one more input to the same entitlement computation, not a separate code path. When a grant expires and there is no subscription, the household falls back to Free.
 
-Derived entitlement fields (computed server-side, never trusted from the client):
+Derived entitlement fields (computed server-side by `householdEntitlements` in `worker/entitlements/`, never trusted from the client; built in B4):
 
-- `tier`: `free` | `individual` | `household`
+- `tier`: `free` | `individual` | `household`, plus `source` (`free`, `subscription`, `beta_grant`), `trialing`, `past_due`, and `ends_at`
 - `max_members`: 1 or 2
 - `max_devices`: 1 for free, a cap for Premium
+- `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
 - `images_enabled`: boolean
 - `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: values Open
 - `offline_enabled`, `history_enabled`: booleans

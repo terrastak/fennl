@@ -275,6 +275,24 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. Account page shows the current plan and limits.
 - **You check**: A fresh account shows "Free".
 - **Done when**: Unit tests cover every tier and status combination we know about.
+- **Built (2026-10-03)**:
+  - **`computeEntitlements`** (`worker/entitlements/compute.ts`) is one pure function. It takes a subscription (Stage I) and a beta grant (B5) and returns every field in `CLAUDE.md`. Today both inputs are empty, so every household is Free.
+    - **Subscription statuses:**
+      - Active: Premium.
+      - Trialing: Premium, with the "trial" image quotas.
+      - Past due: nothing is taken away.
+      - Cancelled: Premium until the paid period ends.
+      - Incomplete, unpaid or paused: Free.
+    - An unexpired grant counts like a plan. When both exist, the better tier wins, and a plan wins a tie.
+  - **Limits** come from **`plan_limits`**, then the trial's lower image quotas, then the household's unexpired **`limit_override`** rows. A null value means no limit. A limit missing from the table counts as 0, so a gap blocks rather than allows.
+  - **Starting values** come from migration `0004`:
+    - Free: 100 recipes, 3 MB of text, 1 device, no photos.
+    - Every tier: 256 KB per recipe.
+    - Individual: 50 MB of text. Household: 100 MB.
+    - Device caps (5 and 10) and image quotas (2 GB and 4 GB, 10 MB per file; trial 100 MB) are placeholders for B6 and D1.
+  - **Caching**: tier limits are cached for a minute per Worker instance, so admin changes apply within a minute. Overrides are read fresh every time.
+  - **API and UI**: `GET /api/entitlements` (through `requireHousehold`) returns the caller's household's entitlements. The Account page shows "Your plan" with its name, any end date, and what it includes.
+  - **Tests**: unit tests cover free, both paid tiers, every subscription status, active and expired grants, a plan together with a grant, overrides (expiry, lifting a limit, other households unaffected), missing limits, the seeded values, and the one-minute cache.
 
 ### B4a. Secure admin access
 - **Goal**: A locked-down admin area exists *before* the first admin page (B5), so admin powers can never become a way into user accounts.
@@ -844,6 +862,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | A5 | Done 2026-10-03 (merged; live on the beta site) |
 | B1 | Done 2026-10-03 (merged; staging and production databases created by CI) |
 | B2 | Done 2026-10-03 (merged; live on the beta site with Resend email. Google and Apple wait on their setup steps) |
-| B3 | Approved 2026-10-03 (with the account-level color scheme); built, waiting on review |
-| B4 | Next; awaiting approval |
+| B3 | Done 2026-10-03 (merged; live on the beta site) |
+| B4 | Approved 2026-10-03; built, waiting on review |
+| B4a | Next; awaiting approval |
 | All others | Not started |

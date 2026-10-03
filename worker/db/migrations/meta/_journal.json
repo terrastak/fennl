@@ -22,6 +22,20 @@
       "when": 1791069112303,
       "tag": "0002_households",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791070860382,
+      "tag": "0003_plan_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791070861206,
+      "tag": "0004_seed_plan_limits",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import type { Entitlements } from "../../shared/entitlements";
 import { authClient, useSession } from "../auth/client";
 import { navigate } from "../navigation";
 import { PageHeader } from "./PageHeader";
+import { planDetails, planName, planStatus } from "./plan";
 import styles from "./pages.module.css";
 
 const PROVIDER_NAMES: Record<string, string> = {
@@ -14,6 +16,7 @@ export function AccountPage() {
   const { data: session } = useSession();
   const [methods, setMethods] = useState<string[] | null>(null);
   const [household, setHousehold] = useState<string | null>(null);
+  const [plan, setPlan] = useState<Entitlements | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -26,6 +29,12 @@ export function AccountPage() {
       .then((res) => (res.ok ? (res.json() as Promise<{ name: string }>) : null))
       .then((body) => {
         if (!cancelled && body) setHousehold(body.name);
+      })
+      .catch(() => {});
+    fetch("/api/entitlements")
+      .then((res) => (res.ok ? (res.json() as Promise<Entitlements>) : null))
+      .then((body) => {
+        if (!cancelled && body) setPlan(body);
       })
       .catch(() => {});
     return () => {
@@ -67,6 +76,31 @@ export function AccountPage() {
           {busy ? "Signing out…" : "Sign out"}
         </button>
       </section>
+      {plan ? <PlanSection plan={plan} /> : null}
     </>
+  );
+}
+
+function PlanSection({ plan }: { plan: Entitlements }) {
+  const status = planStatus(plan);
+  return (
+    <section className={`${styles.card} ${styles.stacked}`} aria-labelledby="plan-title">
+      <p className={styles.eyebrow} aria-hidden="true">
+        Your plan
+      </p>
+      <h2 id="plan-title">
+        <span className="visually-hidden">Your plan: </span>
+        {planName(plan)}
+      </h2>
+      {status ? <p>{status}</p> : null}
+      <dl className={styles.details}>
+        {planDetails(plan).map((line) => (
+          <div key={line.label}>
+            <dt>{line.label}</dt>
+            <dd>{line.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
   );
 }
