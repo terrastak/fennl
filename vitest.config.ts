@@ -31,6 +31,8 @@ export default defineConfig({
                 TEST_MIGRATIONS: await readD1Migrations("./worker/db/migrations"),
                 BETTER_AUTH_SECRET: "test-secret-for-worker-tests-only-0123456789",
                 DEV_EMAIL_OUTBOX: "true",
+                ACCESS_DEV_BYPASS: "true",
+                ADMIN_ALERT_EMAIL: "owner@example.com",
               },
             },
           })),

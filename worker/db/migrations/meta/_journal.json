@@ -36,6 +36,20 @@
       "when": 1791070861206,
       "tag": "0004_seed_plan_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791071710127,
+      "tag": "0005_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791071710933,
+      "tag": "0006_audit_log_append_only",
+      "breakpoints": true
     }
   ]
 }

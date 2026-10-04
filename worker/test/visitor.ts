@@ -40,6 +40,10 @@ export function visitor(ip = `203.0.113.${++ipCounter}`) {
       }
       return res;
     },
+    /** The visitor's cookies, for calling the app with a different env or address. */
+    cookie() {
+      return cookie;
+    },
     async session() {
       const res = await this.request("/api/auth/get-session");
       return (await res.json()) as {

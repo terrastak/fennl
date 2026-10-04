@@ -135,7 +135,7 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `ai_usage` | Metering for every AI call | `id`, `household_id`, `import_job_id`, provider, model, input/output tokens, estimated cost, `created_at` |
 | `plan_limits` | Every tier limit (recipe count, text caps, device caps, image quotas), editable without a deploy | `tier`, `key`, `value`, `updated_at`, `updated_by` |
 | `limit_override` | Per-account limit exceptions, which beat the tier limit | `household_id`, `key`, `value`, `expires_at`, `note`, `created_by`, `created_at` |
-| `admin_audit_log` | Every admin action, append-only, copied off-site | `id`, `admin_user_id`, `action`, `target_user_id`, `reason`, `details`, `created_at` |
+| `admin_audit_log` | Every admin action. Append-only (database triggers), copied to the R2 bucket `fennl-audit` under a 365-day lock | `id`, `admin_user_id`, `action`, `target_user_id`, `reason`, `details`, `created_at` |
 | `household_plan_contribution` | Each partner's contributed plan value when combining, used for the split math (Stage I) | `household_id`, `user_id`, `contributed_value_cents`, `currency`, `source_subscription_id`, `combined_at`, `settled_at` |
 | `feedback` | Messages sent from the in-app feedback form (phase B8) | `id`, `user_id`, `household_id`, message, page, app version, device, status, `created_at` |
 | `beta_invite` | Invite codes that grant Premium during the beta | `code`, `created_by`, `max_uses`, `uses`, grant duration, `expires_at`, `created_at` |
@@ -246,7 +246,7 @@ AI reads recipes from photos (handwritten cards, cookbook pages), screenshots, P
 
 An admin console exists before the beta, **including impersonation**. Admin security must be strong enough that it can't become a way to compromise accounts. The measures below are Leaning; `spec.md` B4a, B7, and C12 have the details.
 
-- Served on a **separate admin hostname** behind **Cloudflare Access**, so it's gated before any Fennl code runs. The hostname is never hardcoded (GitHub variable `ADMIN_HOSTNAME`, like `APP_HOSTNAME`). Access is free for up to 50 users and can also cover the preview Worker.
+- Served on a **separate admin hostname** behind **Cloudflare Access**, so it's gated before any Fennl code runs. The hostname is never hardcoded (GitHub variable `ADMIN_HOSTNAME`, like `APP_HOSTNAME`). Access is free for up to 50 users and also covers the preview Worker. Built in B4a (`worker/admin/`): the Worker re-checks Access on every admin request, and every `/api/admin` route goes through `requireAdmin`.
 - **Passkey or hardware key required** for admins (`@better-auth/passkey`, plus our own check that admin sessions were created with a passkey). No SMS, and no password-only access. Admins use a dedicated admin account.
 - The admin role is granted **only by a direct database command**. Remove the Better Auth admin plugin's `set-role` permission through custom access control. Never add an in-app path to grant admin.
 - Admin sessions: 30 minutes idle and 8 hours maximum. Re-confirm with the passkey for impersonation, password changes, and limit changes. Email alerts go to the owner on every admin sign-in and impersonation start.
@@ -309,7 +309,7 @@ Other current thinking:
 - Do not add dependencies for sync, auth, or billing without asking.
 - Every API route that reads or writes household data goes through `requireHousehold` (`worker/household/`), which only ever resolves a household the caller is a member of. Better Auth's organization endpoints stay closed at the Worker until G1 opens the ones sharing needs.
 - Never hard-code plan limits; read them from `plan_limits` and `limit_override`.
-- Never add an in-app way to grant the admin role.
+- Never add an in-app way to grant the admin role. Admin actions record to the audit log (`recordAdminAction`) before they change anything.
 - Never hardcode an AI model name or vendor outside the AI provider layer, and never call an AI vendor from client code.
 - Secrets reach the Worker only from GitHub secrets via CI (`--secrets-file`). Never commit them or put them in `wrangler.jsonc`. List new ones in `worker/env.d.ts` and the setup docs.
 - Never hardcode the app's hostname (currently `beta.fennl.app`; it will change). It lives only in the GitHub Actions variable `APP_HOSTNAME`. Deploy config gets it from there, and code reads its own origin from configuration or the incoming request.

@@ -310,7 +310,22 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Sign in as a normal test account (refused).
   - Receive the sign-in alert email.
 - **Done when**: Tests prove non-admins, non-passkey sessions, and requests without Access are refused, and every admin action writes a log row.
-- **Decisions**: Approve adding `@better-auth/passkey` (an auth dependency).
+- **Decisions**: Approve adding `@better-auth/passkey` (an auth dependency). Approved with the phase (2026-10-04).
+- **Built (2026-10-04)**: owner setup in `docs/setup/b4a-admin-access.md`; the admin role runbook in `docs/runbooks/grant-admin-role.md`.
+  - **Where the admin area lives**: the admin console is its own page (`admin.html`, `app/admin/`) at `/admin`. Every request now reaches the Worker first (`run_worker_first: true`), which keeps the admin area to its place:
+    - In production, it exists only on `ADMIN_HOSTNAME` (a GitHub variable, never committed). Without the variable, the admin area is switched off.
+    - On the app's address, admin paths are 404s. The admin address serves only the console, its API, sign-in and the built files; any other path redirects to `/admin`.
+    - In previews and locally, the console is at `/admin`.
+  - **Cloudflare Access**: checked in the Worker as well as at the edge. A request passes if Cloudflare's `ctx.access` names one of our applications, or if it carries a valid `Cf-Access-Jwt-Assertion` token. The token check means RS256 against the team's published keys (refreshed when keys rotate), our team as issuer, one of our audience tags, and not expired. With no Access settings everything is closed, except `ACCESS_DEV_BYPASS` on localhost for local development.
+  - **The admin role**: Better Auth's admin plugin adds `user.role`. Its HTTP endpoints are closed, and its permissions leave out `set-role`, so the role comes only from a database command. The database writes every role change into the audit log by itself.
+  - **Passkeys** (`@better-auth/passkey`) work only in the admin area, behind Access.
+    - Only admins can register one. An admin with no passkey may add a first one from a password session (to set up), and after that only from a passkey session. The console has "Add a backup passkey".
+    - Each session records how it was signed in (`session.auth_method`), and the admin API accepts only passkey sessions.
+  - **Short sessions**: admin sessions end after 30 minutes without use (`session.last_active_at`) or 8 hours after sign-in; an expired session is deleted. `hasFreshPasskey` (sign-in within 5 minutes) is ready for B7's sensitive actions.
+  - **Alerts**: every admin sign-in and new passkey is emailed to `ADMIN_ALERT_EMAIL`, with IP, country and browser.
+  - **Audit log**: `admin_audit_log` refuses updates and deletes (database triggers). Each entry the Worker writes is also copied to the `fennl-audit` R2 bucket, which CI locks so objects can't be changed or deleted for 365 days. The console shows recent activity.
+  - **Previews**: GitHub Actions uses an Access service token (`CF_ACCESS_CLIENT_ID/SECRET`) to check previews once they're behind Access.
+  - **Tests**: Access tokens (valid, wrong audience, wrong team, expired, other keys, tampered, the local switch), the admin address rules, every admin check in order, idle and 8-hour expiry, passkey registration rules, the closed role endpoints, and the audit log (written, copied, alerted, append-only, and the database-side entries). A browser test runs the real flow with a software passkey: password sign-in, add a passkey, console, sign out, then passkey sign-in.
 
 ### B5. Beta invites
 - **Goal**: You can invite testers who get Premium free.
@@ -863,6 +878,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B1 | Done 2026-10-03 (merged; staging and production databases created by CI) |
 | B2 | Done 2026-10-03 (merged; live on the beta site with Resend email. Google and Apple wait on their setup steps) |
 | B3 | Done 2026-10-03 (merged; live on the beta site) |
-| B4 | Approved 2026-10-03; built, waiting on review |
-| B4a | Next; awaiting approval |
+| B4 | Done 2026-10-03 (merged; live on the beta site) |
+| B4a | Approved 2026-10-04; built, waiting on review and the owner's Access setup |
+| B5 | Next; awaiting approval |
 | All others | Not started |
