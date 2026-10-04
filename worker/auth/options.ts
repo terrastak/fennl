@@ -1,11 +1,23 @@
 import type { BetterAuthOptions } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { organization } from "better-auth/plugins";
+import { passkey } from "@better-auth/passkey";
+import { admin, organization } from "better-auth/plugins";
+import { adminAccessControl, adminRoles } from "../admin/roles";
+import { checkSignUp, grantSignUpCode } from "../codes/signUp";
 import type { Database } from "../db/client";
 import * as schema from "../db/schema";
 import type { SendEmail } from "../email/email";
 import { passwordResetEmail, verificationEmail } from "../email/templates";
 import { activeHouseholdFor } from "../household/household";
+import { signInMethodFor, type SignInMethod } from "./signInMethod";
+
+/** A new session, as the admin area's alerts and audit log see it (worker/admin/events.ts). */
+export interface SessionCreatedEvent {
+  userId: string;
+  sessionId: string;
+  method: SignInMethod;
+  request: Request | undefined;
+}
 
 export interface AuthSettings {
   /** This deployment's own origin, taken from the incoming request (never hardcoded). */
@@ -15,6 +27,11 @@ export interface AuthSettings {
   sendEmail: SendEmail;
   google?: { clientId: string; clientSecret: string } | undefined;
   apple?: { clientId: string; clientSecret: string } | undefined;
+  /** Runs after every new session (admin sign-in alerts and audit log). */
+  onSessionCreated?: ((event: SessionCreatedEvent) => Promise<void>) | undefined;
+  /** Runs after a passkey is registered. */
+  onPasskeyRegistered?:
+    ((userId: string, request: Request | undefined) => Promise<void>) | undefined;
 }
 
 export const AUTH_BASE_PATH = "/api/auth";
@@ -25,6 +42,7 @@ export const MIN_PASSWORD_LENGTH = 8;
  * (worker/auth/cli.ts) can load it too.
  */
 export function authOptions(settings: AuthSettings) {
+  const origin = new URL(settings.origin);
   const socialProviders: NonNullable<BetterAuthOptions["socialProviders"]> = {};
   if (settings.google) socialProviders.google = { ...settings.google, prompt: "select_account" };
   if (settings.apple) socialProviders.apple = settings.apple;
@@ -68,20 +86,65 @@ export function authOptions(settings: AuthSettings) {
         colorScheme: { type: "string", required: false, input: false },
       },
     },
-    // Households are Better Auth organizations (CLAUDE.md, "Entitlements model"). Their HTTP
-    // endpoints are closed in worker/index.ts until sharing arrives (phase G1); B3 only needs
-    // each person's own household, which Fennl manages itself (worker/household/).
-    plugins: [organization({ allowUserToCreateOrganization: false, membershipLimit: 2 })],
+    plugins: [
+      // Households are Better Auth organizations (CLAUDE.md, "Entitlements model"). Their HTTP
+      // endpoints are closed in worker/index.ts until sharing arrives (phase G1); B3 only needs
+      // each person's own household, which Fennl manages itself (worker/household/).
+      organization({ allowUserToCreateOrganization: false, membershipLimit: 2 }),
+      // The admin role (user.role). Its HTTP endpoints are closed in worker/index.ts, and its
+      // permissions leave out "set-role" (worker/admin/roles.ts).
+      admin({
+        ac: adminAccessControl,
+        roles: adminRoles,
+        defaultRole: "user",
+        adminRoles: ["admin"],
+        impersonationSessionDuration: 30 * 60,
+      }),
+      // Passkeys, used only in the admin area for now (worker/admin/).
+      passkey({
+        rpID: origin.hostname,
+        rpName: "Fennl",
+        origin: origin.origin,
+        registration: {
+          afterVerification: async ({ user, ctx }) => {
+            await settings.onPasskeyRegistered?.(user.id, ctx.request);
+          },
+        },
+      }),
+    ],
     databaseHooks: {
+      user: {
+        create: {
+          // Every new account, however it's made (email, Google, Apple), passes the invite and
+          // promo code check (worker/codes/signUp.ts).
+          before: async (_user, ctx) => {
+            await checkSignUp(settings.db, ctx);
+          },
+          after: async (user, ctx) => {
+            await grantSignUpCode(settings.db, user.id, ctx);
+          },
+        },
+      },
       session: {
         create: {
-          // Every new session starts in the person's household, creating it on first sign-in.
-          before: async (session) => ({
+          // Every new session starts in the person's household (created on first sign-in), and
+          // records how it was signed in.
+          before: async (session, ctx) => ({
             data: {
               ...session,
               activeOrganizationId: await activeHouseholdFor(settings.db, session.userId),
+              authMethod: signInMethodFor(ctx?.path),
+              lastActiveAt: new Date(),
             },
           }),
+          after: async (session, ctx) => {
+            await settings.onSessionCreated?.({
+              userId: session.userId,
+              sessionId: session.id,
+              method: signInMethodFor(ctx?.path),
+              request: ctx?.request,
+            });
+          },
         },
       },
     },
@@ -95,6 +158,11 @@ export function authOptions(settings: AuthSettings) {
     session: {
       expiresIn: 60 * 60 * 24 * 30,
       updateAge: 60 * 60 * 24,
+      additionalFields: {
+        // How this session was signed in, and (for admin sessions) when it was last used.
+        authMethod: { type: "string", required: false, input: false },
+        lastActiveAt: { type: "date", required: false, input: false },
+      },
     },
     rateLimit: {
       enabled: true,

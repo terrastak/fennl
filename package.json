@@ -24,6 +24,7 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:check && npm run test && npm run test:e2e"
   },
   "dependencies": {
+    "@better-auth/passkey": "^1.7.7",
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
     "hono": "^4.13.12",

@@ -29,7 +29,7 @@ export function isLimitKey(value: unknown): value is LimitKey {
 }
 
 /** Where the household's tier comes from. */
-export type EntitlementSource = "free" | "subscription" | "beta_grant";
+export type EntitlementSource = "free" | "subscription" | "promo_code";
 
 export interface Entitlements extends Limits {
   tier: Tier;
@@ -38,7 +38,7 @@ export interface Entitlements extends Limits {
   trialing: boolean;
   /** A payment failed and is being retried. Nothing is taken away meanwhile. */
   past_due: boolean;
-  /** When the current tier ends, if it's known to end (a beta grant, or a cancelled plan). */
+  /** When the current tier ends, if it's known to end (Premium from a code, or a cancelled plan). */
   ends_at: string | null;
   max_members: number;
   images_enabled: boolean;

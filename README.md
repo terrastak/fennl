@@ -5,6 +5,7 @@ A recipe app focused on importing recipes from the web, photos of recipe cards, 
 - **What we're building and why:** `CLAUDE.md` (architecture decisions) and `spec.md` (the phase-by-phase plan).
 - **One-time Cloudflare and GitHub setup:** `docs/setup/a1-cloudflare-and-github.md`.
 - **Email, Google and Apple sign-in setup:** `docs/setup/b2-email-and-sign-in.md`.
+- **Admin area setup (Cloudflare Access, admin account):** `docs/setup/b4a-admin-access.md`, and `docs/runbooks/grant-admin-role.md`.
 
 ## Project layout
 
@@ -17,6 +18,8 @@ A recipe app focused on importing recipes from the web, photos of recipe cards, 
 | `worker/household/` | Households: each person's own household, and the check that every request only reaches the caller's household. |
 | `worker/email/` | The one function that sends email, with its Resend adapter and the email texts. |
 | `app/auth/` | The sign-in, sign-up and password screens. |
+| `app/admin/`, `admin.html` | The admin console (its own page, served only in the admin area). |
+| `worker/admin/` | The admin area's locks: Cloudflare Access, the admin role, passkey sessions, the audit log. |
 | `shared/` | Code used by both, such as data shapes and, later, recipe parsing. |
 | `e2e/` | Tests that drive the real app in a browser (Playwright). |
 
@@ -32,6 +35,8 @@ npm run dev       # start the app at http://localhost:5173 (the server runs too)
 ```
 
 Open the address it prints and create an account. `npm run dev` first creates `.dev.vars` (local settings, from `.dev.vars.example`) if it's missing and brings your local copy of the database up to date (it lives in `.wrangler/`).
+
+The admin console is at http://localhost:5173/admin. Give an account the admin role with `npx wrangler d1 execute DB --local --config wrangler.jsonc --command "UPDATE user SET role = 'admin' WHERE email = 'you@example.com'"`. If your `.dev.vars` predates B4a, add the `ACCESS_DEV_BYPASS` and `ADMIN_ALERT_EMAIL` lines from `.dev.vars.example`.
 
 Locally, emails aren't sent. They're kept in memory, so open http://localhost:5173/api/dev/outbox to find the confirmation link. To send real email locally, put a Resend key in `.dev.vars` (see the comments there).
 

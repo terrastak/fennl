@@ -26,8 +26,8 @@ export interface SubscriptionInput {
   periodEnd: Date | null;
 }
 
-/** Premium given by a beta invite code (phase B5). */
-export interface BetaGrantInput {
+/** Free Premium from a beta invite or promo code (phase B5, worker/codes). */
+export interface GrantInput {
   tier: PaidTier;
   endsAt: Date;
 }
@@ -48,7 +48,7 @@ export interface LimitOverride {
 export interface EntitlementInputs {
   now: Date;
   subscription: SubscriptionInput | null;
-  grant: BetaGrantInput | null;
+  grant: GrantInput | null;
   planLimits: PlanLimits;
   overrides: LimitOverride[];
 }
@@ -93,11 +93,11 @@ function fromSubscription(sub: SubscriptionInput, now: Date): Standing | null {
   }
 }
 
-function fromGrant(grant: BetaGrantInput, now: Date): Standing | null {
+function fromGrant(grant: GrantInput, now: Date): Standing | null {
   if (grant.endsAt <= now) return null;
   return {
     tier: grant.tier,
-    source: "beta_grant",
+    source: "promo_code",
     trialing: false,
     pastDue: false,
     endsAt: grant.endsAt,
@@ -112,7 +112,7 @@ const FREE: Standing = {
   endsAt: null,
 };
 
-/** The best of what the subscription and the beta grant give. A subscription wins a tie. */
+/** The best of what the subscription and a code give. A subscription wins a tie. */
 function standingFor(inputs: EntitlementInputs): Standing {
   const candidates = [
     inputs.subscription && fromSubscription(inputs.subscription, inputs.now),

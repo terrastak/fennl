@@ -7,6 +7,13 @@ BETTER_AUTH_SECRET=local-development-secret-not-used-anywhere-else
 # Keep emails in memory instead of sending them. Read them at http://localhost:5173/api/dev/outbox
 DEV_EMAIL_OUTBOX=true
 
+# The admin console is at http://localhost:5173/admin. Locally there's no Cloudflare Access in
+# front of it, so this lets requests to localhost through instead. Never set it anywhere else.
+ACCESS_DEV_BYPASS=true
+
+# Admin sign-in alerts go here (in the outbox above, locally).
+ADMIN_ALERT_EMAIL=owner@example.com
+
 # To send real email locally, set these (and remove DEV_EMAIL_OUTBOX):
 # RESEND_API_KEY=
 # EMAIL_FROM=Fennl <hello@mail.example.com>

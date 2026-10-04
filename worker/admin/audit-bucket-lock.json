@@ -1,0 +1,10 @@
+{
+  "rules": [
+    {
+      "id": "audit-retention",
+      "enabled": true,
+      "prefix": "audit/",
+      "condition": { "type": "Age", "maxAgeSeconds": 31536000 }
+    }
+  ]
+}

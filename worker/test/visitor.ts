@@ -1,11 +1,22 @@
-import { env } from "cloudflare:test";
+import { applyD1Migrations, env } from "cloudflare:test";
 import { expect } from "vitest";
+import { database } from "../db/client";
 import { devOutbox } from "../email/outbox";
 import app from "../index";
+import { writeSetting } from "../settings/settings";
 
 // Helpers for Worker tests that sign people up and act as them.
 
 export const ORIGIN = "http://localhost";
+
+/**
+ * Applies the migrations to this test file's database. Sign-up is open unless a test says
+ * otherwise, so tests that aren't about invite codes can make accounts freely.
+ */
+export async function setUpDatabase(options: { inviteOnly?: boolean } = {}) {
+  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await writeSetting(database(env.DB), "sign_up_requires_code", options.inviteOnly ?? false, null);
+}
 export const PASSWORD = "correct horse battery";
 
 let ipCounter = 0;
@@ -39,6 +50,14 @@ export function visitor(ip = `203.0.113.${++ipCounter}`) {
         cookie = kept.join("; ");
       }
       return res;
+    },
+    /** Adds a cookie by hand ("name=value"), as a browser would send it. */
+    addCookie(pair: string) {
+      cookie = cookie ? `${cookie}; ${pair}` : pair;
+    },
+    /** The visitor's cookies, for calling the app with a different env or address. */
+    cookie() {
+      return cookie;
     },
     async session() {
       const res = await this.request("/api/auth/get-session");

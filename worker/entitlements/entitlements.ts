@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import { TIERS, isLimitKey, type Entitlements } from "../../shared/entitlements";
+import { activeGrant } from "../codes/codes";
 import type { Database } from "../db/client";
 import { limitOverride, planLimits } from "../db/schema";
 import { computeEntitlements, type LimitOverride, type PlanLimits } from "./compute";
@@ -55,16 +56,17 @@ export async function householdEntitlements(
   householdId: string,
   now = new Date(),
 ): Promise<Entitlements> {
-  const [limits, overrides] = await Promise.all([
+  const [limits, overrides, grant] = await Promise.all([
     loadPlanLimits(db, now.getTime()),
     loadOverrides(db, householdId),
+    activeGrant(db, householdId, now),
   ]);
   return computeEntitlements({
     now,
     // Stripe subscriptions arrive in Stage I.
     subscription: null,
-    // Beta grants from invite codes arrive in phase B5.
-    grant: null,
+    // Free Premium from a beta invite or promo code (worker/codes).
+    grant,
     planLimits: limits,
     overrides,
   });

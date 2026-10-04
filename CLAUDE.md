@@ -85,9 +85,11 @@ The **subscription attaches to the household** (Stripe plugin with organization 
 
 **Beta grants (Decided for the beta).** Entitlements are derived from the household's subscription **or from a beta grant**. A beta grant comes from an invite code and gives a household Premium for a set period. It is one more input to the same entitlement computation, not a separate code path. When a grant expires and there is no subscription, the household falls back to Free.
 
+**Invite and promo codes (Decided 2026-10-04, built in B5, `worker/codes/`).** Beta invites and promo codes are the same thing: a `promo_code` that gives a household free Premium (Individual or Household) either **until a set date** (moving the date moves it for everyone who used the code) or **for a number of days** from each use. Each use is a `premium_grant` row; the household's best active grant is the grant input above (`source: promo_code`). A code may or may not allow creating an account. **Sign-up is invite-only during the beta** (the `sign_up_requires_code` switch in `app_setting`, changed from the admin console); Better Auth's user-creation hook enforces it for every sign-in method. **Price discounts are Stripe promotion codes** (Stage I), never Fennl codes: Fennl codes never touch money.
+
 Derived entitlement fields (computed server-side by `householdEntitlements` in `worker/entitlements/`, never trusted from the client; built in B4):
 
-- `tier`: `free` | `individual` | `household`, plus `source` (`free`, `subscription`, `beta_grant`), `trialing`, `past_due`, and `ends_at`
+- `tier`: `free` | `individual` | `household`, plus `source` (`free`, `subscription`, `promo_code`), `trialing`, `past_due`, and `ends_at`
 - `max_members`: 1 or 2
 - `max_devices`: 1 for free, a cap for Premium
 - `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
@@ -135,10 +137,12 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `ai_usage` | Metering for every AI call | `id`, `household_id`, `import_job_id`, provider, model, input/output tokens, estimated cost, `created_at` |
 | `plan_limits` | Every tier limit (recipe count, text caps, device caps, image quotas), editable without a deploy | `tier`, `key`, `value`, `updated_at`, `updated_by` |
 | `limit_override` | Per-account limit exceptions, which beat the tier limit | `household_id`, `key`, `value`, `expires_at`, `note`, `created_by`, `created_at` |
-| `admin_audit_log` | Every admin action, append-only, copied off-site | `id`, `admin_user_id`, `action`, `target_user_id`, `reason`, `details`, `created_at` |
+| `admin_audit_log` | Every admin action. Append-only (database triggers), copied to the R2 bucket `fennl-audit` under a 365-day lock | `id`, `admin_user_id`, `action`, `target_user_id`, `reason`, `details`, `created_at` |
 | `household_plan_contribution` | Each partner's contributed plan value when combining, used for the split math (Stage I) | `household_id`, `user_id`, `contributed_value_cents`, `currency`, `source_subscription_id`, `combined_at`, `settled_at` |
 | `feedback` | Messages sent from the in-app feedback form (phase B8) | `id`, `user_id`, `household_id`, message, page, app version, device, status, `created_at` |
-| `beta_invite` | Invite codes that grant Premium during the beta | `code`, `created_by`, `max_uses`, `uses`, grant duration, `expires_at`, `created_at` |
+| `promo_code` | Invite and promo codes that give free Premium (B5; replaces the planned `beta_invite`) | `id`, `code`, `label`, `tier`, `access_until` or `access_days`, `allows_sign_up`, `max_uses`, `uses`, `redeem_by`, `disabled_at`, `created_by`, `created_at`, `updated_at` |
+| `premium_grant` | Premium a household got from a code, one row per person per code | `id`, `household_id`, `user_id`, `promo_code_id`, `tier`, `starts_at`, `ends_at` (null: the code's `access_until`), `revoked_at`, `created_at` |
+| `app_setting` | App-wide switches the admin console changes without a deploy (for now, invite-only sign-up) | `key`, `value`, `updated_at`, `updated_by` |
 
 Columns marked with a description rather than a name are settled in the phase that builds the table (see `spec.md`). Category and photo rows are synced like recipes, so the sync columns may move with the recipe store if recipes end up in a Durable Object.
 
@@ -246,7 +250,7 @@ AI reads recipes from photos (handwritten cards, cookbook pages), screenshots, P
 
 An admin console exists before the beta, **including impersonation**. Admin security must be strong enough that it can't become a way to compromise accounts. The measures below are Leaning; `spec.md` B4a, B7, and C12 have the details.
 
-- Served on a **separate admin hostname** behind **Cloudflare Access**, so it's gated before any Fennl code runs. The hostname is never hardcoded (GitHub variable `ADMIN_HOSTNAME`, like `APP_HOSTNAME`). Access is free for up to 50 users and can also cover the preview Worker.
+- Served on a **separate admin hostname** behind **Cloudflare Access**, so it's gated before any Fennl code runs. The hostname is never hardcoded (GitHub variable `ADMIN_HOSTNAME`, like `APP_HOSTNAME`). Access is free for up to 50 users and also covers the preview Worker. Built in B4a (`worker/admin/`): the Worker re-checks Access on every admin request, and every `/api/admin` route goes through `requireAdmin`.
 - **Passkey or hardware key required** for admins (`@better-auth/passkey`, plus our own check that admin sessions were created with a passkey). No SMS, and no password-only access. Admins use a dedicated admin account.
 - The admin role is granted **only by a direct database command**. Remove the Better Auth admin plugin's `set-role` permission through custom access control. Never add an in-app path to grant admin.
 - Admin sessions: 30 minutes idle and 8 hours maximum. Re-confirm with the passkey for impersonation, password changes, and limit changes. Email alerts go to the owner on every admin sign-in and impersonation start.
@@ -309,7 +313,7 @@ Other current thinking:
 - Do not add dependencies for sync, auth, or billing without asking.
 - Every API route that reads or writes household data goes through `requireHousehold` (`worker/household/`), which only ever resolves a household the caller is a member of. Better Auth's organization endpoints stay closed at the Worker until G1 opens the ones sharing needs.
 - Never hard-code plan limits; read them from `plan_limits` and `limit_override`.
-- Never add an in-app way to grant the admin role.
+- Never add an in-app way to grant the admin role. Admin actions record to the audit log (`recordAdminAction`) before they change anything.
 - Never hardcode an AI model name or vendor outside the AI provider layer, and never call an AI vendor from client code.
 - Secrets reach the Worker only from GitHub secrets via CI (`--secrets-file`). Never commit them or put them in `wrangler.jsonc`. List new ones in `worker/env.d.ts` and the setup docs.
 - Never hardcode the app's hostname (currently `beta.fennl.app`; it will change). It lives only in the GitHub Actions variable `APP_HOSTNAME`. Deploy config gets it from there, and code reads its own origin from configuration or the incoming request.

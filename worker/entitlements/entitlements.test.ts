@@ -1,10 +1,10 @@
-import { applyD1Migrations, env } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { and, eq } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { LIMIT_KEYS, TIERS } from "../../shared/entitlements";
 import { database } from "../db/client";
 import { limitOverride, planLimits } from "../db/schema";
-import { signUpConfirmed, visitor } from "../test/visitor";
+import { signUpConfirmed, visitor, setUpDatabase } from "../test/visitor";
 import {
   PLAN_LIMITS_CACHE_MS,
   forgetCachedPlanLimits,
@@ -16,7 +16,7 @@ const MB = 1024 * 1024;
 const db = () => database(env.DB);
 
 beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await setUpDatabase();
 });
 
 beforeEach(() => {

@@ -45,17 +45,30 @@ function AppleIcon() {
 /**
  * "Continue with Google" and "Continue with Apple", shown only when this deployment has them
  * set up. Renders nothing otherwise (including the "or" divider).
+ *
+ * `beforeStart` runs first and can stop the redirect (the sign-up page checks the invite code).
+ * `returnTo` is where an error brings the person back to.
  */
-export function ProviderButtons() {
+export function ProviderButtons({
+  beforeStart,
+  returnTo = "/sign-in",
+}: {
+  beforeStart?: () => Promise<boolean>;
+  returnTo?: string;
+}) {
   const methods = useSignInMethods();
   const [busy, setBusy] = useState(false);
   if (!methods.google && !methods.apple) return null;
 
-  const start = (provider: "google" | "apple") => {
+  const start = async (provider: "google" | "apple") => {
     setBusy(true);
-    // The browser leaves for Google or Apple and comes back signed in, or to sign-in with an error.
-    void authClient.signIn
-      .social({ provider, callbackURL: "/", errorCallbackURL: "/sign-in" })
+    if (beforeStart && !(await beforeStart())) {
+      setBusy(false);
+      return;
+    }
+    // The browser leaves for Google or Apple and comes back signed in, or here with an error.
+    await authClient.signIn
+      .social({ provider, callbackURL: "/", errorCallbackURL: returnTo })
       .finally(() => setBusy(false));
   };
 
@@ -68,7 +81,7 @@ export function ProviderButtons() {
             type="button"
             className={styles.providerButton}
             disabled={busy}
-            onClick={() => start("google")}
+            onClick={() => void start("google")}
           >
             <GoogleIcon />
             Continue with Google
@@ -79,7 +92,7 @@ export function ProviderButtons() {
             type="button"
             className={styles.providerButton}
             disabled={busy}
-            onClick={() => start("apple")}
+            onClick={() => void start("apple")}
           >
             <AppleIcon />
             Continue with Apple

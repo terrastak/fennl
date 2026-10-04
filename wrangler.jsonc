@@ -17,9 +17,12 @@
   // Node.js APIs in the Worker. Better Auth uses node:crypto's native scrypt to hash passwords.
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
-    // Serve the single-page app for any path that isn't a file, and send /api/* to the Worker first.
+    // Every request reaches the Worker first (worker/index.ts): it answers /api/*, keeps the admin
+    // area to its own address, and hands everything else to the static files below. Paths that
+    // aren't files get the single-page app.
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"],
+    "run_worker_first": true,
   },
   "observability": {
     "enabled": true,
@@ -35,6 +38,14 @@
       "migrations_dir": "worker/db/migrations",
     },
   ],
+  // Write-once copy of the admin audit log. CI creates the bucket with a retention lock, so
+  // entries can't be changed or deleted, not even by the Worker that wrote them.
+  "r2_buckets": [
+    {
+      "binding": "AUDIT_LOG",
+      "bucket_name": "fennl-audit",
+    },
+  ],
   "workers_dev": false,
   "preview_urls": false,
   "env": {
@@ -48,6 +59,12 @@
           "binding": "DB",
           "database_name": "fennl-preview",
           "migrations_dir": "worker/db/migrations",
+        },
+      ],
+      "r2_buckets": [
+        {
+          "binding": "AUDIT_LOG",
+          "bucket_name": "fennl-audit-preview",
         },
       ],
     },

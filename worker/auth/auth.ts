@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { adminEventHandlers } from "../admin/events";
 import { database } from "../db/client";
 import { createEmailSender } from "../email/email";
 import { appleClientSecret } from "./apple";
@@ -40,6 +41,7 @@ export async function createAuth(env: Env, request: Request) {
       sendEmail: createEmailSender(env),
       google: googleSettings(env),
       apple: apple && { clientId: apple.clientId, clientSecret: await appleClientSecret(apple) },
+      ...adminEventHandlers(env),
     }),
   );
 }

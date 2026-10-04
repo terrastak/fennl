@@ -1,15 +1,15 @@
-import { applyD1Migrations, env } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { database } from "../db/client";
 import { organization, session, user } from "../db/schema";
-import { signUp, signUpConfirmed, visitor } from "../test/visitor";
+import { signUp, signUpConfirmed, visitor, setUpDatabase } from "../test/visitor";
 import { ensurePersonalHousehold, householdName, personalSlug } from "./household";
 
 const db = () => database(env.DB);
 
 beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await setUpDatabase();
 });
 
 interface Summary {

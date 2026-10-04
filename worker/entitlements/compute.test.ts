@@ -133,10 +133,10 @@ describe.each(["individual", "household"] as const)("%s plan", (plan) => {
     },
   );
 
-  it("beta grant: Premium until the grant ends, then Free", () => {
+  it("a code: Premium until it ends, then Free", () => {
     expect(compute({ grant: { tier: plan, endsAt: LATER } })).toMatchObject({
       ...premium,
-      source: "beta_grant",
+      source: "promo_code",
       ends_at: LATER.toISOString(),
     });
     expect(compute({ grant: { tier: plan, endsAt: EARLIER } })).toMatchObject({
@@ -147,11 +147,11 @@ describe.each(["individual", "household"] as const)("%s plan", (plan) => {
   });
 });
 
-describe("a plan and a beta grant together", () => {
+describe("a plan and a code together", () => {
   it("use whichever gives more", () => {
     expect(
       compute({ ...sub("individual", "active"), grant: { tier: "household", endsAt: LATER } }),
-    ).toMatchObject({ tier: "household", source: "beta_grant" });
+    ).toMatchObject({ tier: "household", source: "promo_code" });
     expect(
       compute({ ...sub("household", "active"), grant: { tier: "individual", endsAt: LATER } }),
     ).toMatchObject({ tier: "household", source: "subscription" });
@@ -166,7 +166,7 @@ describe("a plan and a beta grant together", () => {
   it("fall back to the grant when the plan lapses", () => {
     expect(
       compute({ ...sub("household", "unpaid"), grant: { tier: "individual", endsAt: LATER } }),
-    ).toMatchObject({ tier: "individual", source: "beta_grant" });
+    ).toMatchObject({ tier: "individual", source: "promo_code" });
   });
 });
 

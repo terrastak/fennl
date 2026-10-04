@@ -9,6 +9,23 @@
 interface FennlEnv {
   /** D1 database: "fennl" in production, "fennl-preview" for previews (wrangler.jsonc). */
   DB: D1Database;
+  /** The built app and admin console (wrangler.jsonc "assets"). */
+  ASSETS: Fetcher;
+  /** R2 bucket with the write-once copy of admin_audit_log (wrangler.jsonc). */
+  AUDIT_LOG: R2Bucket;
+  /**
+   * The admin console's own address in production (from the GitHub variable ADMIN_HOSTNAME,
+   * set at build time). Unset in previews and local development, where /admin is used.
+   */
+  ADMIN_HOSTNAME?: string;
+  /** Cloudflare Access team domain, for example "fennl.cloudflareaccess.com". */
+  ACCESS_TEAM_DOMAIN?: string;
+  /** The Access application's audience tag(s), comma-separated. */
+  ACCESS_AUD?: string;
+  /** Where admin sign-in and passkey alerts are emailed. */
+  ADMIN_ALERT_EMAIL?: string;
+  /** "true" only in local development: treat requests to localhost as passing Access. */
+  ACCESS_DEV_BYPASS?: string;
   /** Signs sign-in sessions. CI creates it once per Worker; Cloudflare keeps it. */
   BETTER_AUTH_SECRET: string;
   /** Resend API key. Without it, email can't be sent (except to the local dev outbox). */

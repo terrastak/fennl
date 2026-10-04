@@ -56,3 +56,24 @@ export function passwordResetEmail(to: { email: string; name: string }, url: str
     html: layout(lines, { label: "Choose a new password", url }),
   };
 }
+
+/** A short security notice to the owner. Plain, with no links to click. */
+export function adminAlertEmail(to: string, subject: string, lines: string[]): EmailMessage {
+  const closing =
+    "If this wasn't you, change the admin account's password and remove its passkeys right away.";
+  const paragraphs = [...lines, closing];
+  return {
+    to,
+    subject,
+    text: `${paragraphs.join("\n")}\n`,
+    html: `<!doctype html>
+<html lang="en">
+<body style="margin:0;padding:24px;background:#f6f5f0;color:#1d2420;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5">
+<div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:28px">
+<p style="margin:0 0 16px;font-size:18px;font-weight:600;color:#24406b">${escapeHtml(subject)}</p>
+${paragraphs.map((p) => `<p style="margin:0 0 8px">${escapeHtml(p)}</p>`).join("\n")}
+</div>
+</body>
+</html>`,
+  };
+}
