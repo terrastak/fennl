@@ -24,6 +24,22 @@ SELECT email, role FROM "user" WHERE role = 'admin';
 
 The account must already exist (sign up and confirm the email first).
 
+## Before the first admin exists: open sign-up for a minute
+
+Sign-up is invite-only during the beta (phase B5), and invite codes are made in the admin console. To create the very first admin account, open sign-up from the database, create and confirm the account, then close it again:
+
+```sql
+UPDATE app_setting SET value = 'false' WHERE key = 'sign_up_requires_code';
+```
+
+After the account exists:
+
+```sql
+UPDATE app_setting SET value = 'true' WHERE key = 'sign_up_requires_code';
+```
+
+From then on, use the admin console's **Sign-up** switch, which records each change in the audit log.
+
 ## Remove the admin role
 
 Remove the role, then end every session that account has:

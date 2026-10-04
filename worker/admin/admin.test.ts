@@ -1,17 +1,17 @@
-import { applyD1Migrations, env } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { desc, eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { database } from "../db/client";
 import { adminAuditLog, passkey, session, user } from "../db/schema";
 import { devOutbox } from "../email/outbox";
 import app from "../index";
-import { PASSWORD, signUpConfirmed, visitor, type Visitor } from "../test/visitor";
+import { PASSWORD, signUpConfirmed, visitor, type Visitor, setUpDatabase } from "../test/visitor";
 import { ADMIN_IDLE_MS, ADMIN_MAX_MS, hasFreshPasskey, type AdminContext } from "./requireAdmin";
 
 const db = () => database(env.DB);
 
 beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await setUpDatabase();
 });
 
 /** A stand-in for the built files: answers with the path it was asked for. */

@@ -1,12 +1,19 @@
-import { applyD1Migrations, env } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { devOutbox } from "../email/outbox";
 import app from "../index";
-import { ORIGIN, PASSWORD as password, linkInLatestEmail, signUp, visitor } from "../test/visitor";
+import {
+  ORIGIN,
+  PASSWORD as password,
+  linkInLatestEmail,
+  signUp,
+  visitor,
+  setUpDatabase,
+} from "../test/visitor";
 import { signInMethods } from "./auth";
 
 beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+  await setUpDatabase();
 });
 
 describe("sign-up and email verification", () => {
@@ -134,7 +141,12 @@ describe("sign-in methods", () => {
 
   it("is published for the app", async () => {
     const res = await visitor().request("/api/sign-in-methods");
-    expect(await res.json()).toEqual({ email: true, google: false, apple: false });
+    expect(await res.json()).toEqual({
+      email: true,
+      google: false,
+      apple: false,
+      signUpCodeRequired: false,
+    });
   });
 });
 

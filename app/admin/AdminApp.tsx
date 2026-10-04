@@ -6,6 +6,7 @@ import {
   type AdminState,
   type AuditRow,
 } from "./client";
+import { CodesSection, SignUpSwitch } from "./CodesSection";
 import styles from "./admin.module.css";
 
 const ACTION_NAMES: Record<string, string> = {
@@ -13,6 +14,10 @@ const ACTION_NAMES: Record<string, string> = {
   "admin.passkey_registered": "Added a passkey",
   "admin.role_changed": "Admin role changed (database)",
   "admin.passkey_removed": "Passkey removed (database)",
+  "code.created": "Created a code",
+  "code.updated": "Changed a code",
+  "code.disabled": "Turned off a code",
+  "setting.changed": "Changed invite-only sign-up",
 };
 
 function time(iso: string | null): string {
@@ -284,6 +289,8 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
       <h1 className={styles.title} tabIndex={-1}>
         Admin console
       </h1>
+      <CodesSection />
+      <SignUpSwitch />
       <section className={styles.card} aria-labelledby="you-title">
         <h2 id="you-title">Signed in as {me.name}</h2>
         <dl className={styles.details}>
@@ -329,7 +336,7 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
                 <tr>
                   <th scope="col">When</th>
                   <th scope="col">What</th>
-                  <th scope="col">How</th>
+                  <th scope="col">Details</th>
                   <th scope="col">From</th>
                 </tr>
               </thead>
@@ -338,7 +345,7 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
                   <tr key={row.id}>
                     <td>{time(row.createdAt)}</td>
                     <td>{ACTION_NAMES[row.action] ?? row.action}</td>
-                    <td>{row.details?.method ?? ""}</td>
+                    <td>{row.details?.method ?? row.details?.code ?? ""}</td>
                     <td>{[row.details?.ip, row.details?.country].filter(Boolean).join(", ")}</td>
                   </tr>
                 ))}

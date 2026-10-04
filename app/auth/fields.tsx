@@ -3,7 +3,7 @@ import styles from "./auth.module.css";
 
 type FieldProps = InputHTMLAttributes<HTMLInputElement> & {
   label: string;
-  hint?: string;
+  hint?: string | undefined;
   /** Shown on the label's right, for example "Forgot password?". */
   aside?: ReactNode;
 };

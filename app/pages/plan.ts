@@ -28,7 +28,6 @@ function formatDate(iso: string): string {
 export function planName(e: Entitlements): string {
   if (e.tier === "free") return "Free";
   const kind = e.tier === "household" ? "Household" : "Individual";
-  if (e.source === "beta_grant") return `Premium ${kind} (beta)`;
   if (e.trialing) return `Premium ${kind} (trial)`;
   return `Premium ${kind}`;
 }
@@ -37,6 +36,8 @@ export function planName(e: Entitlements): string {
 export function planStatus(e: Entitlements): string | null {
   if (e.past_due)
     return "Your last payment didn't go through. We'll try again; nothing changes meanwhile.";
+  if (e.ends_at && e.source === "promo_code")
+    return `Included with your code until ${formatDate(e.ends_at)}. After that you're on Free, and nothing is deleted.`;
   if (e.ends_at) return `Premium until ${formatDate(e.ends_at)}, then Free. Nothing is deleted.`;
   return null;
 }

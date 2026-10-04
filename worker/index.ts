@@ -7,12 +7,14 @@ import { adminAreaAllowedOn, isAdminPath, isStaticFile, onAdminHost } from "./ad
 import { recentAdminActions } from "./admin/audit";
 import { accessContext, checkAdmin, passkeyCount, requireAdmin } from "./admin/requireAdmin";
 import { createAuth, signInMethods } from "./auth/auth";
+import { adminCodeRoutes, codeRoutes } from "./codes/routes";
 import { database, databaseStatus } from "./db/client";
 import { passkey, user } from "./db/schema";
 import { devOutbox } from "./email/outbox";
 import { householdEntitlements } from "./entitlements/entitlements";
 import { householdSummary } from "./household/household";
 import { requireHousehold } from "./household/requireHousehold";
+import { readSetting } from "./settings/settings";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
@@ -93,8 +95,17 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   return auth.handler(c.req.raw);
 });
 
-// Which sign-in buttons the app should show on this deployment.
-app.get("/api/sign-in-methods", (c) => c.json(signInMethods(c.env)));
+// Which sign-in buttons the app should show on this deployment, and whether creating an account
+// needs an invite code right now.
+app.get("/api/sign-in-methods", async (c) =>
+  c.json({
+    ...signInMethods(c.env),
+    signUpCodeRequired: await readSetting(database(c.env.DB), "sign_up_requires_code"),
+  }),
+);
+
+// Invite and promo codes: at sign-up and from the Account page.
+app.route("/", codeRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {
@@ -144,6 +155,9 @@ app.get("/api/admin/audit", requireAdmin, async (c) => {
     })),
   );
 });
+
+// Codes and the invite-only switch (phase B5).
+app.route("/api/admin", adminCodeRoutes);
 
 app.all("/api/admin/*", (c) => c.json({ error: "not_found" }, 404));
 

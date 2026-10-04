@@ -1,3 +1,7 @@
+import { SIGN_UP_CODE_ERRORS } from "../../shared/codes";
+
+const INVITE_ONLY = "Fennl is invite-only for now: create an account with your invite code.";
+
 /** Turns a Better Auth error into plain English for the person at the keyboard. */
 export function authErrorMessage(error: { code?: string | undefined; status?: number } | null) {
   if (!error) return "Something went wrong. Please try again.";
@@ -16,6 +20,10 @@ export function authErrorMessage(error: { code?: string | undefined; status?: nu
       return "That doesn't look like an email address.";
     case "INVALID_TOKEN":
       return "That link has expired or was already used. Please ask for a new one.";
+    case SIGN_UP_CODE_ERRORS.required:
+      return INVITE_ONLY;
+    case SIGN_UP_CODE_ERRORS.invalid:
+      return "That code can't be used to create an account. Check it, or ask for a new invite.";
     default:
       return "Something went wrong. Please try again.";
   }
@@ -29,6 +37,10 @@ export function linkErrorMessage(code: string | null): string | null {
       return "That email already has a Fennl account. Sign in with your password first, then you can use Google or Apple too.";
     case "access_denied":
       return "Sign-in was cancelled.";
+    case SIGN_UP_CODE_ERRORS.required:
+      return `There's no Fennl account for that sign-in yet. ${INVITE_ONLY}`;
+    case SIGN_UP_CODE_ERRORS.invalid:
+      return "That code can't be used to create an account. Check it, or ask for a new invite.";
     case "invalid_token":
     case "INVALID_TOKEN":
     case "token_expired":

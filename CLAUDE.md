@@ -85,9 +85,11 @@ The **subscription attaches to the household** (Stripe plugin with organization 
 
 **Beta grants (Decided for the beta).** Entitlements are derived from the household's subscription **or from a beta grant**. A beta grant comes from an invite code and gives a household Premium for a set period. It is one more input to the same entitlement computation, not a separate code path. When a grant expires and there is no subscription, the household falls back to Free.
 
+**Invite and promo codes (Decided 2026-10-04, built in B5, `worker/codes/`).** Beta invites and promo codes are the same thing: a `promo_code` that gives a household free Premium (Individual or Household) either **until a set date** (moving the date moves it for everyone who used the code) or **for a number of days** from each use. Each use is a `premium_grant` row; the household's best active grant is the grant input above (`source: promo_code`). A code may or may not allow creating an account. **Sign-up is invite-only during the beta** (the `sign_up_requires_code` switch in `app_setting`, changed from the admin console); Better Auth's user-creation hook enforces it for every sign-in method. **Price discounts are Stripe promotion codes** (Stage I), never Fennl codes: Fennl codes never touch money.
+
 Derived entitlement fields (computed server-side by `householdEntitlements` in `worker/entitlements/`, never trusted from the client; built in B4):
 
-- `tier`: `free` | `individual` | `household`, plus `source` (`free`, `subscription`, `beta_grant`), `trialing`, `past_due`, and `ends_at`
+- `tier`: `free` | `individual` | `household`, plus `source` (`free`, `subscription`, `promo_code`), `trialing`, `past_due`, and `ends_at`
 - `max_members`: 1 or 2
 - `max_devices`: 1 for free, a cap for Premium
 - `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
@@ -138,7 +140,9 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `admin_audit_log` | Every admin action. Append-only (database triggers), copied to the R2 bucket `fennl-audit` under a 365-day lock | `id`, `admin_user_id`, `action`, `target_user_id`, `reason`, `details`, `created_at` |
 | `household_plan_contribution` | Each partner's contributed plan value when combining, used for the split math (Stage I) | `household_id`, `user_id`, `contributed_value_cents`, `currency`, `source_subscription_id`, `combined_at`, `settled_at` |
 | `feedback` | Messages sent from the in-app feedback form (phase B8) | `id`, `user_id`, `household_id`, message, page, app version, device, status, `created_at` |
-| `beta_invite` | Invite codes that grant Premium during the beta | `code`, `created_by`, `max_uses`, `uses`, grant duration, `expires_at`, `created_at` |
+| `promo_code` | Invite and promo codes that give free Premium (B5; replaces the planned `beta_invite`) | `id`, `code`, `label`, `tier`, `access_until` or `access_days`, `allows_sign_up`, `max_uses`, `uses`, `redeem_by`, `disabled_at`, `created_by`, `created_at`, `updated_at` |
+| `premium_grant` | Premium a household got from a code, one row per person per code | `id`, `household_id`, `user_id`, `promo_code_id`, `tier`, `starts_at`, `ends_at` (null: the code's `access_until`), `revoked_at`, `created_at` |
+| `app_setting` | App-wide switches the admin console changes without a deploy (for now, invite-only sign-up) | `key`, `value`, `updated_at`, `updated_by` |
 
 Columns marked with a description rather than a name are settled in the phase that builds the table (see `spec.md`). Category and photo rows are synced like recipes, so the sync columns may move with the recipe store if recipes end up in a Durable Object.
 

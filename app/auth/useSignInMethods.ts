@@ -4,6 +4,8 @@ export interface SignInMethods {
   email: boolean;
   google: boolean;
   apple: boolean;
+  /** Creating an account needs an invite code (invite-only sign-up, switched in the admin console). */
+  signUpCodeRequired: boolean;
 }
 
 /** Asks the server which sign-in buttons this deployment supports. */
@@ -12,6 +14,7 @@ export function useSignInMethods(): SignInMethods {
     email: true,
     google: false,
     apple: false,
+    signUpCodeRequired: true,
   });
   useEffect(() => {
     const controller = new AbortController();

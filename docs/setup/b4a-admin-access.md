@@ -69,6 +69,7 @@ The next deploy to production picks these up and creates the admin address.
 Use a **separate account** for admin work, not your everyday one.
 
 1. On the app (beta.fennl.app), create an account with an email address used for nothing else (for example a `+admin` version of yours, if your email provider supports that). Confirm it.
+   - Once B5 is live, sign-up is invite-only, and invite codes come from the admin console you're setting up. For this first account, open sign-up for a minute from the database: see "Before the first admin exists" in `docs/runbooks/grant-admin-role.md`.
 2. Give it the admin role with the database command in `docs/runbooks/grant-admin-role.md`.
 3. Open your admin address. Cloudflare Access asks for your email and sends you a code.
 4. Fennl's admin sign-in appears. Choose **Sign in with password** with the admin account, then **Add a passkey**. Your phone or computer asks you to confirm (Face ID, fingerprint or PIN), or use a hardware security key.

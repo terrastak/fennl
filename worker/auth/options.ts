@@ -3,6 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { passkey } from "@better-auth/passkey";
 import { admin, organization } from "better-auth/plugins";
 import { adminAccessControl, adminRoles } from "../admin/roles";
+import { checkSignUp, grantSignUpCode } from "../codes/signUp";
 import type { Database } from "../db/client";
 import * as schema from "../db/schema";
 import type { SendEmail } from "../email/email";
@@ -112,6 +113,18 @@ export function authOptions(settings: AuthSettings) {
       }),
     ],
     databaseHooks: {
+      user: {
+        create: {
+          // Every new account, however it's made (email, Google, Apple), passes the invite and
+          // promo code check (worker/codes/signUp.ts).
+          before: async (_user, ctx) => {
+            await checkSignUp(settings.db, ctx);
+          },
+          after: async (user, ctx) => {
+            await grantSignUpCode(settings.db, user.id, ctx);
+          },
+        },
+      },
       session: {
         create: {
           // Every new session starts in the person's household (created on first sign-in), and

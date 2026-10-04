@@ -29,7 +29,12 @@ export interface AuditRow {
   id: string;
   action: string;
   createdAt: string;
-  details: { method?: string; ip?: string | null; country?: string | null } | null;
+  details: {
+    method?: string;
+    code?: string;
+    ip?: string | null;
+    country?: string | null;
+  } | null;
 }
 
 /** Asks the server what the admin console should show (the checks live in worker/admin). */
