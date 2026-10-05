@@ -28,7 +28,7 @@ const FREE: Entitlements = {
 const HOUSEHOLD: Entitlements = {
   ...FREE,
   tier: "household",
-  source: "beta_grant",
+  source: "promo_code",
   ends_at: "2027-01-05T12:00:00.000Z",
   max_members: 2,
   max_recipes: null,
@@ -60,9 +60,15 @@ describe("plan display", () => {
     ]);
   });
 
-  it("describes a beta grant", () => {
-    expect(planName(HOUSEHOLD)).toBe("Premium Household (beta)");
+  it("describes Premium from a code", () => {
+    expect(planName(HOUSEHOLD)).toBe("Premium Household");
     expect(planStatus(HOUSEHOLD)).toMatch(
+      /^Included with your code until .*2027\. After that you're on Free, and nothing is deleted\.$/,
+    );
+    expect(planStatus({ ...HOUSEHOLD, ends_at: null })).toBe(
+      "Included with your code, with no end date.",
+    );
+    expect(planStatus({ ...HOUSEHOLD, source: "subscription" })).toMatch(
       /^Premium until .*2027, then Free\. Nothing is deleted\.$/,
     );
     expect(planDetails(HOUSEHOLD)).toContainEqual({ label: "Recipes", value: "Unlimited" });

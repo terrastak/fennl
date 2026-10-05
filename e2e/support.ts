@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { expect, type APIRequestContext, type BrowserContext } from "@playwright/test";
 
 /** Browser tests start signed in as this account (made by auth.setup.ts). */
@@ -63,4 +64,43 @@ export async function useOwnAccount(context: BrowserContext, baseURL: string): P
   await context.clearCookies();
   await useFreshAddress(context);
   return signUpConfirmed(context, baseURL);
+}
+
+/** Runs SQL on the local test database, the way the runbooks do it on the real one. */
+export function runLocalSql(sql: string): void {
+  execFileSync(
+    "npx",
+    ["wrangler", "d1", "execute", "DB", "--local", "--config", "wrangler.jsonc", "--command", sql],
+    { stdio: "ignore" },
+  );
+}
+
+/**
+ * Switches invite-only sign-up on or off for the local test database. Browser tests run with it
+ * off, so they can make accounts; the server-side tests cover invite-only sign-up itself.
+ */
+export function setInviteOnly(on: boolean): void {
+  runLocalSql(
+    `INSERT INTO app_setting (key, value, updated_at) VALUES ('sign_up_requires_code', '${on}', ${Date.now()}) ` +
+      `ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+  );
+}
+
+/** Makes a code straight in the local test database. Returns the code. */
+export function makeCode(options: {
+  tier: "individual" | "household";
+  until?: Date;
+  days?: number;
+  allowsSignUp: boolean;
+}): string {
+  const code = `E2E-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+  const now = Date.now();
+  runLocalSql(
+    "INSERT INTO promo_code (id, code, label, tier, access_until, access_days, allows_sign_up, " +
+      "max_uses, uses, created_at, updated_at) VALUES " +
+      `('${crypto.randomUUID()}', '${code}', 'Browser test', '${options.tier}', ` +
+      `${options.until ? options.until.getTime() : "NULL"}, ${options.days ?? "NULL"}, ` +
+      `${options.allowsSignUp ? 1 : 0}, NULL, 0, ${now}, ${now})`,
+  );
+  return code;
 }

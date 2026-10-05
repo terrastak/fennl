@@ -270,13 +270,13 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Goal**: One server-side function that answers "what is this household allowed to do?"
 - **Steps**:
   1. Compute the derived fields from `CLAUDE.md` (`tier`, `max_members`, `max_devices`, `images_enabled`, `import_structured_enabled`, `import_ai_enabled`, quotas...).
-  2. Inputs for now: beta grant or nothing (free). Stripe subscription is added in Stage I.
+  2. Inputs for now: a code's grant (B5) or nothing (free). Stripe subscription is added in Stage I.
   3. Limits come from the `plan_limits` table plus per-account `limit_override` rows (an unexpired override wins), not from code. They're seeded with: Free 100 recipes and 3 MB text, a per-recipe cap of about 256 KB on all tiers, and Premium text caps of 50 MB Individual and 100 MB Household. Other quotas are placeholders. Limits are cached briefly, so admin changes take effect within about a minute.
   4. Account page shows the current plan and limits.
 - **You check**: A fresh account shows "Free".
 - **Done when**: Unit tests cover every tier and status combination we know about.
 - **Built (2026-10-03)**:
-  - **`computeEntitlements`** (`worker/entitlements/compute.ts`) is one pure function. It takes a subscription (Stage I) and a beta grant (B5) and returns every field in `CLAUDE.md`. Today both inputs are empty, so every household is Free.
+  - **`computeEntitlements`** (`worker/entitlements/compute.ts`) is one pure function. It takes a subscription (Stage I) and a beta grant (B5) and returns every field in `CLAUDE.md`. When B4 was built both inputs were empty; B5 added grants from codes.
     - **Subscription statuses:**
       - Active: Premium.
       - Trialing: Premium, with the "trial" image quotas.
@@ -310,18 +310,45 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Sign in as a normal test account (refused).
   - Receive the sign-in alert email.
 - **Done when**: Tests prove non-admins, non-passkey sessions, and requests without Access are refused, and every admin action writes a log row.
-- **Decisions**: Approve adding `@better-auth/passkey` (an auth dependency).
+- **Decisions**: Approve adding `@better-auth/passkey` (an auth dependency). Approved with the phase (2026-10-04).
+- **Built (2026-10-04)**: owner setup in `docs/setup/b4a-admin-access.md`; the admin role runbook in `docs/runbooks/grant-admin-role.md`.
+  - **Where the admin area lives**: the admin console is its own page (`admin.html`, `app/admin/`) at `/admin`. Every request now reaches the Worker first (`run_worker_first: true`), which keeps the admin area to its place:
+    - In production, it exists only on `ADMIN_HOSTNAME` (a GitHub variable, never committed). Without the variable, the admin area is switched off.
+    - On the app's address, admin paths are 404s. The admin address serves only the console, its API, sign-in and the built files; any other path redirects to `/admin`.
+    - In previews and locally, the console is at `/admin`.
+  - **Cloudflare Access**: checked in the Worker as well as at the edge. A request passes if Cloudflare's `ctx.access` names one of our applications, or if it carries a valid `Cf-Access-Jwt-Assertion` token. The token check means RS256 against the team's published keys (refreshed when keys rotate), our team as issuer, one of our audience tags, and not expired. With no Access settings everything is closed, except `ACCESS_DEV_BYPASS` on localhost for local development.
+  - **The admin role**: Better Auth's admin plugin adds `user.role`. Its HTTP endpoints are closed, and its permissions leave out `set-role`, so the role comes only from a database command. The database writes every role change into the audit log by itself.
+  - **Passkeys** (`@better-auth/passkey`) work only in the admin area, behind Access.
+    - Only admins can register one. An admin with no passkey may add a first one from a password session (to set up), and after that only from a passkey session. The console has "Add a backup passkey".
+    - Each session records how it was signed in (`session.auth_method`), and the admin API accepts only passkey sessions.
+  - **Short sessions**: admin sessions end after 30 minutes without use (`session.last_active_at`) or 8 hours after sign-in; an expired session is deleted. `hasFreshPasskey` (sign-in within 5 minutes) is ready for B7's sensitive actions.
+  - **Alerts**: every admin sign-in and new passkey is emailed to `ADMIN_ALERT_EMAIL`, with IP, country and browser.
+  - **Audit log**: `admin_audit_log` refuses updates and deletes (database triggers). Each entry the Worker writes is also copied to the `fennl-audit` R2 bucket, which CI locks so objects can't be changed or deleted for 365 days. The console shows recent activity.
+  - **Previews**: GitHub Actions uses an Access service token (`CF_ACCESS_CLIENT_ID/SECRET`) to check previews once they're behind Access.
+  - **Tests**: Access tokens (valid, wrong audience, wrong team, expired, other keys, tampered, the local switch), the admin address rules, every admin check in order, idle and 8-hour expiry, passkey registration rules, the closed role endpoints, and the audit log (written, copied, alerted, append-only, and the database-side entries). A browser test runs the real flow with a software passkey: password sign-in, add a passkey, console, sign out, then passkey sign-in.
 
-### B5. Beta invites
-- **Goal**: You can invite testers who get Premium free.
+### B5. Invite and promo codes
+- **Goal**: You can invite testers who get Premium free, and give promo codes that add free Premium for a while.
 - **Steps**:
-  1. `beta_invite` table: code, created by, max uses, Premium duration, expiry.
-  2. An admin page (inside B4a's secure admin area) to create codes, see who used them, and disable them.
-  3. Sign-up (or Account page) accepts a code and grants the household Premium.
-  4. Optionally: invite-only sign-up (no code, no account) during the beta.
-- **You check**: Create a code, sign up a second test account with it, see "Premium (beta)".
+  1. `promo_code` table: code, name, plan (Individual or Household), how long Premium lasts, whether it can create an account, how many people can use it, last day to use it, turned off. `premium_grant` records each use.
+  2. An admin page (inside B4a's secure admin area) to create codes, change them, see who used them, and turn them off.
+  3. Sign-up accepts a code and gives the household Premium. The Account page takes codes too.
+  4. Invite-only sign-up during the beta, as a switch in the admin console.
+- **You check**: Create a code, sign up a second test account with it, and see Premium on its Account page. Move the code's date and see the account's date follow.
 - **Done when**: Grants show up in the entitlement service; expired grants fall back to Free.
-- **Decisions**: Should sign-up require an invite code during the beta? How long does a beta grant last?
+- **Decisions (2026-10-04)**:
+  - Sign-up needs an invite code during the beta (invite-only). The admin console has the switch, for public launch.
+  - A code gives Premium either **until a set date** (beta codes: everyone who used it keeps Premium until then, and moving the date moves it for all of them, so the beta's length can be decided later) or **for a number of days** from when each person uses it (promo codes), or with **no end date** (free Premium for good, for example for family; added 2026-10-05). Any code's Premium can be ended by turning the code off.
+  - **Discounts on the price** (percent or amount off, months free then paid) are **Stripe promotion codes**, set up in the Stripe dashboard and typed on Stripe's checkout page (Stage I). Fennl's codes only give free Premium; they never touch money. Checked 2026-10-04 against Stripe's and Better Auth's docs: Stripe codes need a subscription (so they can't serve the beta), last a number of months rather than days, and Better Auth's Stripe plugin enables them with one setting (`allow_promotion_codes`).
+- **Built (2026-10-04)**:
+  - **Tables** (migration `0007`): `promo_code`, `premium_grant` (one row per person per code; a date code's grants follow the code's date, a days code's grants have their own end, and a code with neither has no end), and `app_setting` (app-wide switches; `0008` seeds invite-only sign-up **on**).
+  - **Codes**: random codes look like `K7QX-M4TR-9WAZ` (no 0/O or 1/I, 60 bits). An admin can choose one instead, such as `SPRING-2027`. Matching ignores case and spaces. Codes are never deleted, only turned off.
+  - **Using a code** takes one use with a single conditional update, so two people can't both take a code's last use, and each person can use a code once.
+  - **Sign-up**: the page asks for the code first (`POST /api/sign-up/code` checks it and keeps it in a 30-minute cookie). Better Auth's "before creating a user" hook checks it again, whichever way the account is made (email, Google or Apple), so the check can't be skipped. Without a usable invite, no account is made. With sign-up open, the field is an optional promo code. Invite links can fill it in: `/sign-up?code=…`.
+  - **Account page**: "Have a code?" (`POST /api/codes/redeem`). Code tries are limited to 10 per 10 minutes per visitor (sign-up) or account.
+  - **Entitlements**: the household's best active grant (higher plan, then later end) is the `grant` input of `computeEntitlements`; `source` is `promo_code`. The plan card says "Included with your code until …".
+  - **Admin console**: "Invite and promo codes" (list, new code, details with who used it, change the name, date, number of uses or last day, turn off with or without ending everyone's Premium) and "Sign-up" (the invite-only switch). Every change is in the audit log first.
+  - **Tests**: 29 server tests (invite-only refusals, every code problem, the second check at account creation, the Google/Apple path, the last use, open sign-up, the Account page, best grant, expiry, rate limits, and every admin tool with its audit entry). Browser tests sign up with a code, use one on the Account page, and make one in the admin console (with accessibility checks).
 
 ### B6. Device registry and the one-device rule
 - **Goal**: Free accounts work on one browser at a time; Premium on several.
@@ -799,7 +826,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 Not detailed yet on purpose. Each becomes its own set of phases later.
 
-1. Stripe billing: Individual and Household plans, Stripe Tax, checkout, customer portal, trials with a card up front, dunning (past due), cancel and resubscribe (`CLAUDE.md` unverified item 4). Includes the household billing rules in `CLAUDE.md`: payer keeps the plan, a joiner's value converts by money, and splits are proportional then equal, via Stripe credit balance. Also the impersonation billing limits (cancel and downgrade only).
+1. Stripe billing: Individual and Household plans, Stripe Tax, checkout (with Stripe promotion codes for discounts, decided in B5), customer portal, trials with a card up front, dunning (past due), cancel and resubscribe (`CLAUDE.md` unverified item 4). Includes the household billing rules in `CLAUDE.md`: payer keeps the plan, a joiner's value converts by money, and splits are proportional then equal, via Stripe credit balance. Also the impersonation billing limits (cancel and downgrade only).
 2. Lapsed subscriptions: the over-limit rules and 90-day photo grace period are decided (built in C11 and D3 for expiring beta grants). Remaining: anything specific to paid lapses.
 3. Moving beta testers onto paid plans.
 4. Paste-a-link web import (reuses E3 and E8).
@@ -820,7 +847,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | --- | --- | --- |
 | 1 | ~~Domain and subdomain for the app~~ Decided: `beta.fennl.app`, stored only in `APP_HOSTNAME` | A1 |
 | 2 | ~~Email-sending service~~ Decided: Resend, behind a swappable function | B2 |
-| 3 | Invite-only sign-up during beta? Beta grant length? | B5 |
+| 3 | ~~Invite-only sign-up during beta? Beta grant length?~~ Decided 2026-10-04: invite-only; each code sets its own length (until a date, or a number of days) | B5 |
 | 4 | D1 vs. Durable Object for recipe storage | C1 |
 | 5 | ~~Trash retention days~~ Decided: 30 days, then auto-expunge | C9 |
 | 6 | Beta image quotas | D1 |
@@ -863,6 +890,8 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B1 | Done 2026-10-03 (merged; staging and production databases created by CI) |
 | B2 | Done 2026-10-03 (merged; live on the beta site with Resend email. Google and Apple wait on their setup steps) |
 | B3 | Done 2026-10-03 (merged; live on the beta site) |
-| B4 | Approved 2026-10-03; built, waiting on review |
-| B4a | Next; awaiting approval |
+| B4 | Done 2026-10-03 (merged; live on the beta site) |
+| B4a | Approved 2026-10-04; built, waiting on review and the owner's Access setup |
+| B5 | Approved 2026-10-04; built, waiting on review (needs B4a merged first) |
+| B6 | Next; awaiting approval |
 | All others | Not started |

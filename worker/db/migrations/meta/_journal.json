@@ -36,6 +36,34 @@
       "when": 1791070861206,
       "tag": "0004_seed_plan_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1791071710127,
+      "tag": "0005_admin",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791071710933,
+      "tag": "0006_audit_log_append_only",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791073824721,
+      "tag": "0007_promo_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1791073825535,
+      "tag": "0008_seed_app_settings",
+      "breakpoints": true
     }
   ]
 }

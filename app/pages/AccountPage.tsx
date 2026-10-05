@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import type { Entitlements } from "../../shared/entitlements";
 import { authClient, useSession } from "../auth/client";
+import { codeErrorMessage } from "../auth/signUpCode";
 import { navigate } from "../navigation";
 import { PageHeader } from "./PageHeader";
 import { planDetails, planName, planStatus } from "./plan";
@@ -77,6 +78,7 @@ export function AccountPage() {
         </button>
       </section>
       {plan ? <PlanSection plan={plan} /> : null}
+      <CodeSection onUsed={setPlan} />
     </>
   );
 }
@@ -101,6 +103,74 @@ function PlanSection({ plan }: { plan: Entitlements }) {
           </div>
         ))}
       </dl>
+    </section>
+  );
+}
+
+/** "Have a code?": an invite or promo code that gives this household Premium. */
+function CodeSection({ onUsed }: { onUsed: (plan: Entitlements) => void }) {
+  const id = useId();
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<{ kind: "error" | "success"; text: string } | null>(null);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/codes/redeem", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ code: code.trim() }),
+      });
+      const body = (await res.json().catch(() => ({}))) as unknown;
+      if (res.ok) {
+        const plan = body as Entitlements;
+        onUsed(plan);
+        setCode("");
+        setMessage({ kind: "success", text: `Done. You now have ${planName(plan)}.` });
+      } else {
+        setMessage({ kind: "error", text: codeErrorMessage(body, res.status) });
+      }
+    } catch {
+      setMessage({ kind: "error", text: "We couldn't reach Fennl. Check your connection." });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className={`${styles.card} ${styles.stacked}`} aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`}>Have a code?</h2>
+      <p>Invite and promo codes add Premium to your account.</p>
+      <form className={styles.codeForm} onSubmit={submit}>
+        <div className={styles.field}>
+          <label htmlFor={`${id}-code`}>Code</label>
+          <input
+            id={`${id}-code`}
+            className={styles.input}
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            spellCheck={false}
+            required
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
+        </div>
+        <button type="submit" className={styles.button} disabled={busy}>
+          {busy ? "Checking…" : "Use code"}
+        </button>
+      </form>
+      {message ? (
+        <p
+          role={message.kind === "error" ? "alert" : "status"}
+          className={message.kind === "error" ? styles.error : styles.success}
+        >
+          {message.text}
+        </p>
+      ) : null}
     </section>
   );
 }

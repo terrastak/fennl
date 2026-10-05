@@ -10,6 +10,7 @@ const ACCOUNT_PAGES = [
   "/forgot-password",
   "/reset-password?token=example",
   "/email-confirmed?error=invalid_token",
+  "/admin",
 ];
 const LOOKS = [
   { name: "Harbor light", scheme: "harbor", mode: "light" },
