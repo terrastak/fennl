@@ -145,6 +145,14 @@ describe.each(["individual", "household"] as const)("%s plan", (plan) => {
     });
     expect(compute({ grant: { tier: plan, endsAt: NOW } })).toMatchObject({ tier: "free" });
   });
+
+  it("a code with no end date: Premium with no end", () => {
+    expect(compute({ grant: { tier: plan, endsAt: null } })).toMatchObject({
+      ...premium,
+      source: "promo_code",
+      ends_at: null,
+    });
+  });
 });
 
 describe("a plan and a code together", () => {

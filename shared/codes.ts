@@ -20,8 +20,8 @@ export const SIGN_UP_CODE_ERRORS = {
   invalid: "INVITE_CODE_INVALID",
 } as const;
 
-/** What a code gives, as the app and the admin console show it. */
-export type CodeAccess = { until: string } | { days: number };
+/** How long a code's Premium lasts: until a date, a number of days from each use, or no end. */
+export type CodeAccess = { until: string } | { days: number } | { forever: true };
 
 /** Plain English for a code problem, for the person who typed it. */
 export function codeProblemMessage(problem: CodeProblem | "rate_limited" | "invalid"): string {
@@ -67,7 +67,10 @@ export interface AdminCodeUse {
   name: string;
   email: string;
   usedAt: string;
-  /** When their Premium from this code ends (for "until a date" codes, the code's date). */
+  /**
+   * When their Premium from this code ends (for "until a date" codes, the code's date). Null for
+   * a code with no end date.
+   */
   endsAt: string | null;
   /** Ended early by an admin. */
   ended: boolean;

@@ -20,7 +20,9 @@ export function toAdminCode(code: PromoCode, now = new Date()): AdminCode {
     access:
       code.accessDays !== null
         ? { days: code.accessDays }
-        : { until: (code.accessUntil ?? now).toISOString() },
+        : code.accessUntil !== null
+          ? { until: code.accessUntil.toISOString() }
+          : { forever: true },
     allowsSignUp: code.allowsSignUp,
     maxUses: code.maxUses,
     uses: code.uses,
@@ -115,6 +117,8 @@ export function parseNewCode(body: unknown, now = new Date()): Parsed<NewCode> {
     const days = wholeNumber(access.days, 1, MAX_DAYS);
     if (days === null) return { ok: false, error: "invalid_access" };
     parsedAccess = { days };
+  } else if (access.forever === true) {
+    parsedAccess = { forever: true };
   } else {
     return { ok: false, error: "invalid_access" };
   }

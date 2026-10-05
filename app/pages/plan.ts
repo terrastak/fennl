@@ -36,6 +36,7 @@ export function planName(e: Entitlements): string {
 export function planStatus(e: Entitlements): string | null {
   if (e.past_due)
     return "Your last payment didn't go through. We'll try again; nothing changes meanwhile.";
+  if (e.source === "promo_code" && !e.ends_at) return "Included with your code, with no end date.";
   if (e.ends_at && e.source === "promo_code")
     return `Included with your code until ${formatDate(e.ends_at)}. After that you're on Free, and nothing is deleted.`;
   if (e.ends_at) return `Premium until ${formatDate(e.ends_at)}, then Free. Nothing is deleted.`;

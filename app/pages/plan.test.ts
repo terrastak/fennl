@@ -65,6 +65,9 @@ describe("plan display", () => {
     expect(planStatus(HOUSEHOLD)).toMatch(
       /^Included with your code until .*2027\. After that you're on Free, and nothing is deleted\.$/,
     );
+    expect(planStatus({ ...HOUSEHOLD, ends_at: null })).toBe(
+      "Included with your code, with no end date.",
+    );
     expect(planStatus({ ...HOUSEHOLD, source: "subscription" })).toMatch(
       /^Premium until .*2027, then Free\. Nothing is deleted\.$/,
     );

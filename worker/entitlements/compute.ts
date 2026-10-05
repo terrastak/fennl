@@ -29,7 +29,8 @@ export interface SubscriptionInput {
 /** Free Premium from a beta invite or promo code (phase B5, worker/codes). */
 export interface GrantInput {
   tier: PaidTier;
-  endsAt: Date;
+  /** Null: no end date. */
+  endsAt: Date | null;
 }
 
 /**
@@ -94,7 +95,7 @@ function fromSubscription(sub: SubscriptionInput, now: Date): Standing | null {
 }
 
 function fromGrant(grant: GrantInput, now: Date): Standing | null {
-  if (grant.endsAt <= now) return null;
+  if (grant.endsAt && grant.endsAt <= now) return null;
   return {
     tier: grant.tier,
     source: "promo_code",

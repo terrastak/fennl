@@ -83,6 +83,17 @@ test("an admin sets up a passkey, then signs in with it", async ({ page, context
   await codes.getByRole("button", { name: "Back to codes" }).click();
   await expectAccessible(page);
 
+  // A code with no end date (free Premium for good, for example for family).
+  await codes.getByRole("button", { name: "New code" }).click();
+  await codes.getByLabel("Name").fill("Family");
+  await codes.getByLabel("No end date").check();
+  await codes.getByRole("button", { name: "Create code" }).click();
+  await expect(codes.getByRole("status")).toHaveText(/^Created /);
+  const family = (await codes.getByRole("status").textContent())!.replace(/^Created |\.$/g, "");
+  await expect(codes.getByRole("row").filter({ hasText: family })).toContainText(
+    "Household, no end date",
+  );
+
   // The invite-only switch.
   const signUp = page.getByRole("region", { name: "Sign-up" });
   await expect(signUp.getByRole("status")).toHaveText(/^Open|^Invite-only/);

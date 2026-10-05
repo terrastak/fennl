@@ -79,9 +79,10 @@ export const adminAuditLog = sqliteTable("admin_audit_log", {
 
 /**
  * Codes that give a household free Premium (phase B5): beta invites and promo codes. A code gives
- * Premium either until a set date (access_until; everyone who used it keeps Premium until then,
- * and moving the date moves it for all of them) or for a number of days from when each person
- * uses it (access_days). Exactly one of the two is set. Codes are never deleted, only disabled.
+ * Premium until a set date (access_until; everyone who used it keeps Premium until then, and
+ * moving the date moves it for all of them), for a number of days from when each person uses it
+ * (access_days), or with no end date (neither set). At most one of the two is set. Codes are
+ * never deleted, only disabled.
  * Discounts on the price are Stripe promotion codes, not these (Stage I).
  */
 export const promoCode = sqliteTable("promo_code", {
@@ -110,7 +111,7 @@ export const promoCode = sqliteTable("promo_code", {
 /**
  * Premium a household got from a code: one row each time someone uses one. The entitlement
  * service reads these (worker/entitlements). ends_at is null for "until a date" codes, whose end
- * is always the code's current access_until.
+ * is always the code's current access_until, and for codes with no end date.
  */
 export const premiumGrant = sqliteTable(
   "premium_grant",

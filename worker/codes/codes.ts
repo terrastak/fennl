@@ -88,7 +88,10 @@ export async function releaseUse(db: Database, codeId: string): Promise<void> {
     .where(eq(promoCode.id, codeId));
 }
 
-/** When a grant from this code, used now, ends: null means "whenever the code's date is". */
+/**
+ * When a grant from this code, used now, ends. Null means "whenever the code's date is" for a
+ * date code, and never for a code with no end date.
+ */
 export function grantEnd(code: PromoCode, now: Date): Date | null {
   return code.accessDays !== null ? new Date(now.getTime() + code.accessDays * DAY_MS) : null;
 }
@@ -155,7 +158,8 @@ export async function redeemCode(
 const RANK: Record<PaidTier, number> = { individual: 1, household: 2 };
 
 /**
- * The best Premium a household has from codes right now: the higher tier, then the later end.
+ * The best Premium a household has from codes right now: the higher tier, then the later end
+ * (no end date beats any date).
  * Grants from "until a date" codes end on the code's current date, so moving it moves them.
  */
 export async function activeGrant(
@@ -175,14 +179,16 @@ export async function activeGrant(
     .where(and(eq(premiumGrant.householdId, householdId), isNull(premiumGrant.revokedAt)))
     .all();
 
+  // A null end means no end date, which beats any date.
+  const later = (a: Date | null, b: Date | null) => (a === null ? b !== null : b !== null && a > b);
   let best: GrantInput | null = null;
   for (const row of rows) {
     const endsAt = row.endsAt ?? row.accessUntil;
-    if (!isPaidTier(row.tier) || !endsAt || endsAt <= now || row.startsAt > now) continue;
+    if (!isPaidTier(row.tier) || (endsAt && endsAt <= now) || row.startsAt > now) continue;
     if (
       !best ||
       RANK[row.tier] > RANK[best.tier] ||
-      (RANK[row.tier] === RANK[best.tier] && endsAt > best.endsAt)
+      (RANK[row.tier] === RANK[best.tier] && later(endsAt, best.endsAt))
     ) {
       best = { tier: row.tier, endsAt };
     }

@@ -58,9 +58,9 @@ function dateValue(iso: string | null): string {
 
 function gives(code: AdminCode): string {
   const plan = code.tier === "household" ? "Household" : "Individual";
-  return "until" in code.access
-    ? `${plan}, until ${day(code.access.until)}`
-    : `${plan}, ${code.access.days} days each`;
+  if ("until" in code.access) return `${plan}, until ${day(code.access.until)}`;
+  if ("days" in code.access) return `${plan}, ${code.access.days} days each`;
+  return `${plan}, no end date`;
 }
 
 const STATUS: Record<AdminCode["status"], string> = {
@@ -236,7 +236,7 @@ function NewCodeForm({ onDone }: { onDone: (message: string | null) => Promise<v
   const [label, setLabel] = useState("");
   const [code, setCode] = useState("");
   const [tier, setTier] = useState<"household" | "individual">("household");
-  const [kind, setKind] = useState<"until" | "days">("until");
+  const [kind, setKind] = useState<"until" | "days" | "forever">("until");
   const [until, setUntil] = useState("");
   const [days, setDays] = useState("30");
   const [allowsSignUp, setAllowsSignUp] = useState(true);
@@ -255,7 +255,12 @@ function NewCodeForm({ onDone }: { onDone: (message: string | null) => Promise<v
     const input: NewCode = {
       label,
       tier,
-      access: kind === "until" ? { until: endOfDay(until) } : { days: Number(days) },
+      access:
+        kind === "until"
+          ? { until: endOfDay(until) }
+          : kind === "days"
+            ? { days: Number(days) }
+            : { forever: true },
       allowsSignUp,
       maxUses: maxUses ? Number(maxUses) : null,
       redeemBy: redeemBy ? endOfDay(redeemBy) : null,
@@ -362,8 +367,19 @@ function NewCodeForm({ onDone }: { onDone: (message: string | null) => Promise<v
             onChange={(e) => setDays(e.target.value)}
           />
         </div>
+        <div className={styles.choice}>
+          <input
+            id={`${id}-forever-kind`}
+            type="radio"
+            name={`${id}-kind`}
+            checked={kind === "forever"}
+            onChange={() => setKind("forever")}
+          />
+          <label htmlFor={`${id}-forever-kind`}>No end date</label>
+        </div>
         <p className={styles.hint}>
-          A date can be moved later, and it moves for everyone who used the code.
+          A date can be moved later, and it moves for everyone who used the code. Premium from any
+          code can be ended by turning the code off.
         </p>
       </fieldset>
       <label className={styles.choice}>
@@ -637,7 +653,7 @@ function CodeDetail({
                   </td>
                   <td>{day(use.usedAt)}</td>
                   <td>
-                    {day(use.endsAt)}
+                    {use.endsAt ? day(use.endsAt) : "No end date"}
                     {use.ended ? " (ended early)" : ""}
                   </td>
                 </tr>

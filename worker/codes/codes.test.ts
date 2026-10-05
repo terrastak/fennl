@@ -38,6 +38,7 @@ async function makeCode(
     tier?: "individual" | "household";
     until?: Date;
     days?: number;
+    forever?: boolean;
     allowsSignUp?: boolean;
     maxUses?: number | null;
     redeemBy?: Date | null;
@@ -50,8 +51,9 @@ async function makeCode(
       code,
       label: "Test code",
       tier: options.tier ?? "household",
-      access:
-        options.days !== undefined
+      access: options.forever
+        ? { forever: true }
+        : options.days !== undefined
           ? { days: options.days }
           : { until: (options.until ?? new Date(Date.now() + 90 * DAY)).toISOString() },
       allowsSignUp: options.allowsSignUp ?? true,
@@ -346,6 +348,28 @@ describe("using a code from the Account page", () => {
     });
   });
 
+  it("gives Premium with no end date, which beats any date", async () => {
+    await inviteOnly(false);
+    const v = await signUpConfirmed(email("forever"));
+    await redeem(
+      v,
+      (await makeCode({ tier: "household", until: new Date(Date.now() + 9 * DAY) })).code,
+    );
+    const forever = await makeCode({ tier: "household", forever: true });
+    expect((await redeem(v, forever.code)).status).toBe(200);
+    expect(await entitlements(v)).toMatchObject({
+      tier: "household",
+      source: "promo_code",
+      ends_at: null,
+    });
+    const householdId = (await v.session())!.session.activeOrganizationId!;
+    // Still there in a hundred years.
+    expect(await activeGrant(db(), householdId, new Date(Date.now() + 36500 * DAY))).toEqual({
+      tier: "household",
+      endsAt: null,
+    });
+  });
+
   it("goes back to Free when the Premium ends", async () => {
     await inviteOnly(false);
     const v = await signUpConfirmed(email("ends"));
@@ -461,6 +485,40 @@ describe("the admin console's code tools", () => {
     expect(list.map((c) => c.code)).toContain(code.code);
   });
 
+  it("make a code with no end date, and end it by turning the code off", async () => {
+    const made = await call("/api/admin/codes", {
+      body: {
+        label: "Family",
+        tier: "household",
+        access: { forever: true },
+        allowsSignUp: true,
+        maxUses: 1,
+        redeemBy: null,
+      },
+    });
+    expect(made.status).toBe(201);
+    const code = made.body as AdminCode;
+    expect(code).toMatchObject({ access: { forever: true }, status: "active" });
+
+    const friend = await signUpConfirmed(email("friend"));
+    await friend.request("/api/codes/redeem", { body: { code: code.code } });
+    expect(await entitlements(friend)).toMatchObject({ tier: "household", ends_at: null });
+    const detail = (await call(`/api/admin/codes/${code.id}`)).body as { uses: AdminCodeUse[] };
+    expect(detail.uses[0]).toMatchObject({ endsAt: null, ended: false });
+    // There's no date to move.
+    expect(
+      (
+        await call(`/api/admin/codes/${code.id}`, {
+          method: "PATCH",
+          body: { accessUntil: new Date(Date.now() + DAY).toISOString() },
+        })
+      ).body,
+    ).toEqual({ error: "not_a_date_code" });
+
+    await call(`/api/admin/codes/${code.id}/disable`, { body: { endAccess: true } });
+    expect(await entitlements(friend)).toMatchObject({ tier: "free" });
+  });
+
   it("take a chosen code, once", async () => {
     const body = {
       code: "spring-2027",
@@ -502,6 +560,7 @@ describe("the admin console's code tools", () => {
       "invalid_access",
     );
     expect(await errorFor({ access: {} })).toBe("invalid_access");
+    expect(await errorFor({ access: { forever: "yes" } })).toBe("invalid_access");
     expect(await errorFor({ maxUses: 0 })).toBe("invalid_max_uses");
     expect(await errorFor({ redeemBy: "yesterday" })).toBe("invalid_redeem_by");
     expect(await errorFor({ code: "x" })).toBe("invalid_code");
