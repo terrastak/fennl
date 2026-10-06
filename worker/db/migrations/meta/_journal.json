@@ -64,6 +64,13 @@
       "when": 1791073825535,
       "tag": "0008_seed_app_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1791309760546,
+      "tag": "0009_devices",
+      "breakpoints": true
     }
   ]
 }

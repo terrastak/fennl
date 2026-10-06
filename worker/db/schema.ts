@@ -152,3 +152,37 @@ export const appSetting = sqliteTable("app_setting", {
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
   updatedBy: text("updated_by").references(() => user.id, { onDelete: "set null" }),
 });
+
+/**
+ * The browsers someone uses Fennl in (phase B6). A device is a browser profile, not a physical
+ * device: the app makes a random ID on first run and keeps it in the browser's storage, so a
+ * private window or cleared site data is a new device (CLAUDE.md, "Tables"). The household's
+ * max_devices entitlement caps how many are active at once; revoked rows are kept for history.
+ */
+export const device = sqliteTable(
+  "device",
+  {
+    /** Made by the browser. Unique per person (two accounts can share one browser). */
+    id: text("id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    /** "Safari on iPhone", from the browser's user agent. */
+    label: text("label").notNull(),
+    /** The sign-in session this browser last used, so signing the device out can end it. */
+    sessionId: text("session_id"),
+    firstSeenAt: integer("first_seen_at", { mode: "timestamp_ms" }).notNull(),
+    lastSeenAt: integer("last_seen_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    /** Why: "taken_over", "signed_out" (from the device list) or "replaced" (same browser, new ID). */
+    revokedReason: text("revoked_reason"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.id] }),
+    index("device_household_idx").on(table.householdId),
+    index("device_session_idx").on(table.sessionId),
+  ],
+);

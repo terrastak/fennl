@@ -125,7 +125,7 @@ Better Auth owns user, session, account, verification, organization, member, and
 
 | Table | Purpose | Key columns |
 | --- | --- | --- |
-| `device` | Device registry for the one-device free limit and Premium cap | `id` (client-generated, random), `household_id`, `user_id`, `label`, `first_seen_at`, `last_seen_at`, `revoked_at` |
+| `device` | Device registry for the one-device free limit and Premium cap (built in B6, `worker/devices/`) | `id` (client-generated, random; primary key with `user_id`), `household_id`, `user_id`, `label`, `session_id`, `first_seen_at`, `last_seen_at`, `revoked_at`, `revoked_reason` |
 | `household_usage` | Quota tracking (a shared household's quota is the sum of its members' owned images) | `household_id`, `image_bytes`, `image_count`, `updated_at` |
 | `image` | One row per stored image per owner | `hash` (content hash), `owner_user_id`, `bytes`, `content_type`, `created_at`, `deleted_at` |
 | `recipe` | Recipe records (if stored in D1; see Sync architecture) | `id` (UUID), `owner_user_id`, `copied_from`, fields..., `updated_by_user_id`, `updated_at`, `deleted_at`, `server_seq` |
@@ -196,6 +196,7 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 | --- | --- | --- |
 | `POST /api/devices/register` | Register the browser's device ID | Under `max_devices`, else return takeover options |
 | `POST /api/devices/takeover` | Make this browser the active device, revoke the previous one (free) or revoke a chosen one (Premium) | Authenticated member of the household |
+| `GET /api/devices`, `POST /api/devices/:id/sign-out` | Settings › Devices: list active devices, sign another one out | Authenticated; only the caller's own devices can be signed out |
 | `POST /api/sync/push` | Submit changes `{deviceId, schemaVersion, changes[]}` | Device not revoked; free tier rejects queued/offline-batched pushes beyond a small size |
 | `GET /api/sync/pull?since=<cursor>` | Fetch changes after the cursor | Device not revoked |
 | `POST /api/images/upload` (or `/upload-url`) | Upload an image via the Worker or a short-lived signed URL | `images_enabled`, per-file size, total quota |
