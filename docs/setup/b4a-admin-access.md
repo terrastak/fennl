@@ -45,7 +45,7 @@ A policy says who may pass Access. You'll make one and use it everywhere.
 3. Fill it in:
    - **Policy name:** `Fennl owner`
    - **Action:** **Allow**
-   - **Session duration:** **8 hours**
+   - **Session duration:** **Same as application session duration**
    - **Add include:** selector **Emails**, value: the email address you sign in to Cloudflare with
 4. Select **Save**.
 
@@ -64,7 +64,7 @@ When Access asks who you are, it offers **Cloudflare** (sign in with your Cloudf
 4. Fill in the rest:
    - **Application name** (if asked): `Fennl admin`
    - **Access policies:** select **Fennl owner**
-   - **Session duration:** **8 hours**
+   - **Session duration:** **6 hours**, or the nearest option to 8 hours. This only sets how often Cloudflare asks you to sign in again. Fennl's own admin limits (30 minutes without use, 8 hours at most) apply regardless.
 5. Select **Create**.
 
 Don't use the **Access** tab on the `fennl` Worker (Workers & Pages › fennl). That would put the whole beta site, app included, behind Access.
