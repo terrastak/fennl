@@ -110,6 +110,15 @@ export function hasFreshPasskey(admin: AdminContext, now = new Date()): boolean 
   return now.getTime() - admin.signedInAt.getTime() < FRESH_PASSKEY_MS;
 }
 
+/**
+ * Sensitive admin actions (password changes and limit changes, CLAUDE.md "Admin console") need
+ * the passkey again: a passkey sign-in in the last 5 minutes. The console answers
+ * "passkey_reconfirm" by asking for the passkey, which starts a fresh session, and retries.
+ */
+export function freshPasskeyProblem(admin: AdminContext, now = new Date()) {
+  return hasFreshPasskey(admin, now) ? null : { error: "passkey_reconfirm" as const };
+}
+
 /** Hono middleware for /api/admin routes: the checks above, then c.var.admin. */
 export const requireAdmin = createMiddleware<{
   Bindings: Env;

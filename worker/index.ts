@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isColorScheme } from "../shared/appearance";
 import { healthStatus } from "../shared/health";
+import { adminAccountRoutes } from "./admin/accountRoutes";
+import { accountNames } from "./admin/accounts";
 import { passedAccess } from "./admin/access";
 import { adminAreaAllowedOn, isAdminPath, isStaticFile, onAdminHost } from "./admin/area";
 import { recentAdminActions } from "./admin/audit";
@@ -123,6 +125,38 @@ app.get("/api/entitlements", requireHousehold, async (c) => {
   return c.json(await householdEntitlements(db, household.householdId));
 });
 
+// Choosing a new password, required after a temporary one from support (phase B7). Not behind
+// requireHousehold, which refuses until this is done.
+app.post("/api/account/password", async (c) => {
+  const auth = await createAuth(c.env, c.req.raw);
+  const result = await auth.api.getSession({ headers: c.req.raw.headers });
+  if (!result) return c.json({ error: "unauthorized" }, 401);
+  const body = (await c.req.json().catch(() => null)) as {
+    currentPassword?: unknown;
+    newPassword?: unknown;
+  } | null;
+  const currentPassword = body?.currentPassword;
+  const newPassword = body?.newPassword;
+  if (typeof currentPassword !== "string" || typeof newPassword !== "string") {
+    return c.json({ error: "invalid" }, 400);
+  }
+  if (currentPassword === newPassword) return c.json({ error: "SAME_PASSWORD" }, 400);
+  try {
+    await auth.api.changePassword({
+      body: { currentPassword, newPassword, revokeOtherSessions: false },
+      headers: c.req.raw.headers,
+    });
+  } catch (error) {
+    const code = (error as { body?: { code?: string } }).body?.code ?? "FAILED";
+    return c.json({ error: code }, 400);
+  }
+  await database(c.env.DB)
+    .update(user)
+    .set({ mustChangePassword: false })
+    .where(eq(user.id, result.user.id));
+  return c.json({ ok: true });
+});
+
 // The account's color scheme, which follows the person to every device.
 app.put("/api/account/appearance", requireHousehold, async (c) => {
   const body = await c.req.json<unknown>().catch(() => null);
@@ -150,11 +184,18 @@ app.get("/api/admin/me", requireAdmin, async (c) => {
   });
 });
 
+// The activity log, newest first; ?account=<user id> shows only actions by or about that account.
 app.get("/api/admin/audit", requireAdmin, async (c) => {
-  const rows = await recentAdminActions(c.env, 50);
+  const rows = await recentAdminActions(c.env, 100, c.req.query("account") || undefined);
+  const names = await accountNames(
+    c.var.admin.db,
+    [...new Set(rows.flatMap((r) => [r.adminUserId, r.targetUserId ?? ""]))].filter(Boolean),
+  );
   return c.json(
     rows.map((row) => ({
       ...row,
+      adminEmail: names.get(row.adminUserId) ?? null,
+      targetEmail: row.targetUserId ? (names.get(row.targetUserId) ?? null) : null,
       details: row.details ? (JSON.parse(row.details) as unknown) : null,
     })),
   );
@@ -162,6 +203,9 @@ app.get("/api/admin/audit", requireAdmin, async (c) => {
 
 // Codes and the invite-only switch (phase B5).
 app.route("/api/admin", adminCodeRoutes);
+
+// Account lookup, password help, overrides and tier limits (phase B7).
+app.route("/api/admin", adminAccountRoutes);
 
 app.all("/api/admin/*", (c) => c.json({ error: "not_found" }, 404));
 

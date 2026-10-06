@@ -1,4 +1,5 @@
 import type { BetterAuthOptions } from "better-auth";
+import { eq } from "drizzle-orm";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { passkey } from "@better-auth/passkey";
 import { admin, organization } from "better-auth/plugins";
@@ -76,6 +77,13 @@ export function authOptions(settings: AuthSettings) {
       maxPasswordLength: 128,
       resetPasswordTokenExpiresIn: 60 * 60,
       revokeSessionsOnPasswordReset: true,
+      // A new password from the reset email replaces a temporary one from support (phase B7).
+      onPasswordReset: async ({ user: person }) => {
+        await settings.db
+          .update(schema.user)
+          .set({ mustChangePassword: false })
+          .where(eq(schema.user.id, person.id));
+      },
       sendResetPassword: async ({ user, url }) => {
         await settings.sendEmail(passwordResetEmail(user, url));
       },
@@ -97,6 +105,14 @@ export function authOptions(settings: AuthSettings) {
         // PUT /api/account/appearance changes it, after checking the value; Better Auth's own
         // update-user endpoint can't (input: false).
         colorScheme: { type: "string", required: false, input: false },
+        // Set when an admin gives a temporary password (phase B7): the app asks for a new one
+        // before anything else, and household routes refuse until it's changed.
+        mustChangePassword: {
+          type: "boolean",
+          required: false,
+          input: false,
+          defaultValue: false,
+        },
       },
     },
     plugins: [

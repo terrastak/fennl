@@ -77,3 +77,24 @@ ${paragraphs.map((p) => `<p style="margin:0 0 8px">${escapeHtml(p)}</p>`).join("
 </html>`,
   };
 }
+
+/**
+ * Tells someone that Fennl support set a temporary password on their account (phase B7). The
+ * password itself is never emailed; support gives it to the person directly.
+ */
+export function temporaryPasswordEmail(
+  to: { email: string; name: string },
+  signInUrl: string,
+): EmailMessage {
+  const lines = [
+    greeting(to.name),
+    "Fennl support has set a temporary password on your account, as you asked. When you next sign in with it, you'll choose a new password of your own.",
+    "If you didn't ask for help with your password, reply to this email so we can look into it.",
+  ];
+  return {
+    to: to.email,
+    subject: "Your Fennl password was reset by support",
+    text: `${lines.join("\n\n")}\n\nSign in: ${signInUrl}\n`,
+    html: layout(lines, { label: "Sign in to Fennl", url: signInUrl }),
+  };
+}

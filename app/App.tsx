@@ -1,6 +1,7 @@
 import { useEffect, type ComponentType } from "react";
 import { useAccountSchemeSync } from "./appearance/accountScheme";
 import { AuthLayout } from "./auth/AuthLayout";
+import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
 import { TakeoverScreen } from "./devices/TakeoverScreen";
 import { useDeviceGate } from "./devices/useDeviceGate";
@@ -50,11 +51,12 @@ function Redirect({ to }: { to: string }) {
 
 export function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
-  const { data: session, isPending } = useSession();
+  const { data: session, isPending, refetch } = useSession();
   useAccountSchemeSync();
   // Every app start registers this browser; over the plan's device limit, the takeover screen
   // shows instead of the app (phase B6).
-  const { gate, takeOver } = useDeviceGate(session?.session.id);
+  const mustChangePassword = Boolean(session?.user.mustChangePassword);
+  const { gate, takeOver } = useDeviceGate(mustChangePassword ? undefined : session?.session.id);
 
   const accountRoute = ACCOUNT_ROUTES[path];
   if (accountRoute) {
@@ -78,6 +80,13 @@ export function App() {
     // Keep an error from an email link (for example ?error=invalid_token) so sign-in can explain it.
     const error = new URLSearchParams(window.location.search).get("error");
     return <Redirect to={error ? `/sign-in?error=${encodeURIComponent(error)}` : "/sign-in"} />;
+  }
+  if (mustChangePassword) {
+    return (
+      <AuthLayout path={path} title="Choose a new password">
+        <ChangePasswordScreen onChanged={() => void refetch()} />
+      </AuthLayout>
+    );
   }
   if (gate.kind === "over_limit") {
     return (

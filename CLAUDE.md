@@ -257,7 +257,7 @@ An admin console exists before the beta, **including impersonation**. Admin secu
 - Admin sessions: 30 minutes idle and 8 hours maximum. Re-confirm with the passkey for impersonation, password changes, and limit changes. Email alerts go to the owner on every admin sign-in and impersonation start.
 - `admin_audit_log` is append-only and continuously copied to separate storage the console can't write to.
 - Must-have tools: account lookup, password help, tier-limit editing, per-account overrides, invite codes, and a feedback inbox.
-  - Password help defaults to a reset email. The fallback is a temporary password that must be changed at the next sign-in (not built into Better Auth, so a small custom flag). Admins never see or choose a user's lasting password.
+  - Password help defaults to a reset email. The fallback is a temporary password that must be changed at the next sign-in (not built into Better Auth, so a small custom flag: `user.must_change_password`, built in B7). Admins never see or choose a user's lasting password.
 - **Impersonation is silent to the user**, so abuse can be investigated without alerting them. It never appears in their activity, devices, or sign-in history, and sends no sign-in emails. A reason is required, stored only in `admin_audit_log`.
   - The admin has **at least the user's full abilities**, and every change is attributed to the admin in the log.
   - Leaning safeguards:

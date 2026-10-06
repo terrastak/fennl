@@ -387,6 +387,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - See all of it in the log.
 - **Done when**: Every tool is tested, and every action is logged with who, what, and when.
 - **Later admin tools (not scheduled)**: revoke devices, mark an email verified, disable an account, delete on request, export on someone's behalf, stats, a site-wide announcement banner.
+- **Built (2026-10-06)** (`worker/admin/accounts.ts`, `accountRoutes.ts`, `app/admin/`):
+  - **Console sections**: Accounts, Codes and sign-up, Plan limits, Activity, Your admin account.
+  - **Find an account** by part of its email or name (`GET /api/admin/accounts?q=`). Its page shows email and whether it's confirmed, sign-up and last-seen dates, sign-in methods, plan (and codes used), household and members, active devices, exceptions, and its own admin activity. Recipe count and storage say "counted once the recipe box exists" until Stage C. Opening an account is itself recorded (`account.viewed`).
+  - **Password help**: a reset email (Better Auth's own, linking to the app's address even from the admin address: `APP_HOSTNAME` is now passed to the Worker), or a temporary password. Either can sign the account out everywhere (sessions ended, devices let go).
+  - **Temporary password**: random, shown to the admin once, never logged or emailed. The person gets a "your password was reset by support" email. `user.must_change_password` (migration `0010`) makes the app show "Choose a new password" before anything else, and household routes refuse with `password_change_required` until `POST /api/account/password` succeeds. A reset from the email link clears it too. Admin accounts can't be given one.
+  - **Limits**: tier limits (`plan_limits`, byte limits typed in MB, blank = no limit) and per-account exceptions (`limit_override`, with an optional end date and note). Other Worker instances pick up a tier change within a minute.
+  - **Passkey again**: temporary passwords and every limit change need a passkey sign-in from the last 5 minutes; otherwise the console asks for the passkey (a fresh sign-in, which also sends the usual admin sign-in alert) and retries.
+  - **Activity log**: newest 100, with admin and account emails; `?account=` shows one account's.
+  - **Tests**: 12 server tests (admins only, search incl. literal "%", the account page and its audit, reset email and signing out everywhere, the app address for links, temporary password end to end incl. the forced change, passkey re-confirmation, admin accounts refused, a reset clearing the flag, exceptions, tier limits, the filtered log). A browser test runs the whole flow with a software passkey: find an account, add an exception, set a temporary password, the person changes it, and change a plan limit (with accessibility checks).
 
 ### B8. Feedback: in-app form and admin inbox
 - **Goal**: Testers can tell you what's wrong or what they'd like, and you can read and track it in the admin console. (Owner's choice, 2026-10-03: a phase of its own, not part of B7.)
@@ -905,6 +914,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B4 | Done 2026-10-03 (merged; live on the beta site) |
 | B4a | Done 2026-10-05 (merged with B5; live). Owner's Access setup and admin accounts done 2026-10-06 |
 | B5 | Done 2026-10-05 (merged with B4a; live, sign-up invite-only) |
-| B6 | Approved 2026-10-06 (current device limits); built, waiting on review |
-| B7 | Next; awaiting approval |
+| B6 | Done 2026-10-06 (merged; tested on the preview) |
+| B7 | Approved 2026-10-06; built, waiting on review |
+| B8 | Next; awaiting approval |
 | All others | Not started |
