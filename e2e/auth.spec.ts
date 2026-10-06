@@ -20,7 +20,7 @@ test("signed-out visitors are sent to sign in", async ({ page }) => {
   await expect(page).toHaveTitle("Sign in · Fennl");
 });
 
-test("create an account, confirm the email, sign out and sign back in", async ({ page }) => {
+test("create an account, verify the email, sign out and sign back in", async ({ page }) => {
   const email = uniqueEmail("signup");
   await page.goto("/sign-in");
   await page.getByRole("link", { name: "Create an account" }).click();
@@ -35,7 +35,7 @@ test("create an account, confirm the email, sign out and sign back in", async ({
   await expect(page.getByText("check your spam or junk folder")).toBeVisible();
 
   await page.goto(await linkFromLatestEmail(page.request, email));
-  await expect(page.getByRole("heading", { name: "Your email is confirmed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your email is verified" })).toBeVisible();
   await page.getByRole("link", { name: "Go to your recipes" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
 
@@ -70,7 +70,7 @@ test("a wrong password gets a clear message", async ({ page, baseURL }) => {
   );
 });
 
-test("signing in before confirming sends a fresh link, and it can be sent again", async ({
+test("signing in before verifying sends a fresh link, and it can be sent again", async ({
   page,
 }) => {
   const email = uniqueEmail("unconfirmed");
@@ -93,7 +93,7 @@ test("signing in before confirming sends a fresh link, and it can be sent again"
   const link = await linkFromLatestEmail(page.request, email, 3);
 
   await page.goto(link);
-  await expect(page.getByRole("heading", { name: "Your email is confirmed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your email is verified" })).toBeVisible();
 });
 
 test("reset a forgotten password", async ({ page, baseURL }) => {

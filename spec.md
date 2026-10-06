@@ -389,13 +389,34 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Later admin tools (not scheduled)**: revoke devices, mark an email verified, disable an account, delete on request, export on someone's behalf, stats, a site-wide announcement banner.
 - **Built (2026-10-06)** (`worker/admin/accounts.ts`, `accountRoutes.ts`, `app/admin/`):
   - **Console sections**: Accounts, Codes and sign-up, Plan limits, Activity, Your admin account.
-  - **Find an account** by part of its email or name (`GET /api/admin/accounts?q=`). Its page shows email and whether it's confirmed, sign-up and last-seen dates, sign-in methods, plan (and codes used), household and members, active devices, exceptions, and its own admin activity. Recipe count and storage say "counted once the recipe box exists" until Stage C. Opening an account is itself recorded (`account.viewed`).
+  - **Find an account** by part of its email or name (`GET /api/admin/accounts?q=`). Its page shows email and whether it's verified, sign-up and last-seen dates, sign-in methods, plan (and codes used), household and members, active devices, exceptions, and its own admin activity. Recipe count and storage say "counted once the recipe box exists" until Stage C. Opening an account is itself recorded (`account.viewed`).
   - **Password help**: a reset email (Better Auth's own, linking to the app's address even from the admin address: `APP_HOSTNAME` is now passed to the Worker), or a temporary password. Either can sign the account out everywhere (sessions ended, devices let go).
   - **Temporary password**: random, shown to the admin once, never logged or emailed. The person gets a "your password was reset by support" email. `user.must_change_password` (migration `0010`) makes the app show "Choose a new password" before anything else, and household routes refuse with `password_change_required` until `POST /api/account/password` succeeds. A reset from the email link clears it too. Admin accounts can't be given one.
   - **Limits**: tier limits (`plan_limits`, byte limits typed in MB, blank = no limit) and per-account exceptions (`limit_override`, with an optional end date and note). Other Worker instances pick up a tier change within a minute.
   - **Passkey again**: temporary passwords and every limit change need a passkey sign-in from the last 5 minutes; otherwise the console asks for the passkey (a fresh sign-in, which also sends the usual admin sign-in alert) and retries.
   - **Activity log**: newest 100, with admin and account emails; `?account=` shows one account's.
   - **Tests**: 12 server tests (admins only, search incl. literal "%", the account page and its audit, reset email and signing out everywhere, the app address for links, temporary password end to end incl. the forced change, passkey re-confirmation, admin accounts refused, a reset clearing the flag, exceptions, tier limits, the filtered log). A browser test runs the whole flow with a software passkey: find an account, add an exception, set a temporary password, the person changes it, and change a plan limit (with accessibility checks).
+
+### B7a. Email changes, verified dates, and clearing out unverified accounts
+- **Goal**: People can change their email safely; support can see every change and undo a takeover; mistyped sign-ups don't linger. (Owner's request, 2026-10-06, built ahead of H1 and H2.)
+- **Decisions (owner, 2026-10-06)**:
+  - An address someone types is always verified by a link before it's used. Addresses from Google and Apple were verified by them.
+  - Every change is kept. An admin can put back an earlier address; that also signs the account out everywhere and sends a password reset email there.
+  - An admin's change also waits for the link sent to the new address. Admin changes and restores ask for the passkey again.
+  - An account never verified is removed 24 hours after sign-up. An email change that isn't verified within 24 hours expires, and the account keeps its address.
+  - The wording is "verified" throughout, not "confirmed".
+- **You check**:
+  - In Settings › Email, change a test account's email. The account keeps its address until you open the link sent to the new one; then the old address gets a notice.
+  - In the admin console, find that account. Search and its page say "Verified on <date>". Its "Email address" section lists the change; put the old address back.
+  - (The hourly clean-up of unverified accounts runs on the live site only; the server tests cover it.)
+- **Built (2026-10-06)** (`worker/account/`, `app/account/`, `app/auth/VerifyEmailChangePage.tsx`, `app/admin/AccountsSection.tsx`):
+  - **Fennl's own email change** (Better Auth's stays off). `email_change` (migration `0011`) keeps every change: old and new address, who started it (the person or an admin), when, and whether it was verified, cancelled or replaced, or expired. A change waits for the link sent to the new address (24 hours); only the newest request works, and only while the account still has the address it started from. The link's secret is stored only as a hash.
+  - **Settings › Email** (`POST /api/account/email`, `DELETE /api/account/email/pending`): shows the address and when it was verified, starts a change, cancels a waiting one. Needs a sign-in from the last day (otherwise: sign out and back in), 5 tries an hour, not while an admin is acting as the person. An address another account uses gets the same answer but no email, so it can't reveal who has an account.
+  - **The link** opens `/verify-email-change`, which finishes the change (`POST /api/account/email/verify`, no sign-in needed: having the link proves the person reads the new address). The old address then gets "Your Fennl email address was changed", showing only part of the new address.
+  - **Verified dates**: `user.email_verified_at`, set by every way an address gets verified (the sign-up link, Google or Apple, an email change). Existing Google and Apple accounts use their sign-up date; other existing accounts show "Verified (date not recorded)". Admin search results and account pages show "Verified on <date>" or "Not verified".
+  - **Admin tools** (each recorded in the audit log first): change an account's email (`account.email_change_started`, waits for the link), cancel a waiting change (`account.email_change_cancelled`), put back an earlier address (`account.email_restored`). Admin accounts are refused. The account page shows the waiting change and the full history.
+  - **Clearing out unverified accounts**: a Cron Trigger runs every hour (`wrangler.jsonc` "triggers"). It removes email-and-password accounts never verified 24 hours after sign-up, with their personal household (and any Premium from a code), sessions and devices, and gives their invite code's use back. Accounts that also sign in with Google or Apple, admins, and accounts with a waiting email change are left alone. Removals are written to the Worker's logs.
+  - **Tests**: 15 server tests and 1 app test (verified dates; the change waits, switches and notifies; address checks; a taken address answers the same and sends nothing; taken while waiting; expiry; only the newest request; cancel; a fresh sign-in; unknown links; admin search; admin change, cancel and restore with sign-out and reset email; refusals and the passkey; removal after 24 hours with the code's use returned; what's left alone). Browser tests: changing your email from Settings and opening the link, a used link, and an admin putting back an earlier email (with accessibility checks).
 
 ### B8. Feedback: in-app form and admin inbox
 - **Goal**: Testers can tell you what's wrong or what they'd like, and you can read and track it in the admin console. (Owner's choice, 2026-10-03: a phase of its own, not part of B7.)
@@ -827,19 +848,11 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### H1. Abuse limits
 - Rate limits on sign-up, sign-in, takeover, import, and uploads. Confirm the C11 limits are set correctly in production. Email verification required.
-- **Clear out unconfirmed accounts** (open question 20; added 2026-10-06, details settled when we get here, and small enough to build sooner). Email-and-password sign-ups whose address is never confirmed (usually a typo) stay in the database, show up in the admin console's account search, and hold the address so its real owner can't sign up with it. A scheduled job (a Cloudflare Cron Trigger) deletes them after a set time. To settle then:
-  - The wait. The confirmation link lasts 24 hours, but signing in before confirming sends a fresh one, so a short wait can cut off a slow tester.
-  - Everything that goes with the account: its personal household, sessions, devices, and any sign-up code use (returned to the code, so a typo doesn't use up an invite).
-  - Google and Apple accounts are confirmed by the provider, so they're never affected.
-  - Recording each clear-out (not as an admin action, since no admin did it), and meanwhile marking unconfirmed accounts in the admin search.
-- Full security review of sign-in, the admin console, impersonation, the access rule, and photo access, with findings fixed. Consider an outside penetration test before the public launch.
+- Accounts never verified are removed after 24 hours (built early, in B7a).
 
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
-- **Change email address** (open question 19; added 2026-10-06, details settled when we get here, and could move earlier). In Settings, a person changes their email and confirms the new address before it takes effect; the old address gets a security notice (CLAUDE.md requires the standard email for email changes, including during impersonation). To settle then:
-  - What Better Auth's own change-email support covers (**Unverified**; check its current docs).
-  - Accounts that sign in with Google or Apple.
-  - The passkey re-confirmation when an admin does it while acting as the user (C12).
+- Changing the account email was built early, in B7a.
 
 ### H3. Backups
 - Checked 2026-10-03: D1 Time Travel restores to any minute in the last 30 days on **Workers Paid** (7 days on Free), but it overwrites the whole database. So the nightly per-household text export to R2 is required, since it's the only way to restore one account. A tested restore drill on staging.
@@ -893,8 +906,8 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 16 | Free structured import vs. the 100-recipe limit: a free user importing a 1,240-recipe Paprika library. Import up to the remaining allowance, with a clear message? (Suggest: yes, show the rest in the preview as "needs Premium".) | E3, E13 |
 | 17 | ~~Is the Cloudflare account on Workers Paid ($5/month)?~~ Yes: switched on 2026-10-03 (B2 setup, step 1) | H3 (before H5) |
 | 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
-| 19 | Changing an account's email address: confirm the new address first, notify the old one. Details in H2 | H2, or sooner |
-| 20 | How long before an account whose email was never confirmed is deleted? (Owner suggested about 24 hours.) Details in H1 | H1, or sooner |
+| 19 | ~~Changing an account's email address~~ Decided 2026-10-06: verify the new address first, notify the old one, keep every change so support can restore an earlier address. Built in B7a | B7a |
+| 20 | ~~How long before an account never verified is removed?~~ Decided 2026-10-06: 24 hours from sign-up. An unverified email change simply expires after 24 hours. Built in B7a | B7a |
 
 ## Notes: AI provider research (2026-10-01)
 
@@ -927,5 +940,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B5 | Done 2026-10-05 (merged with B4a; live, sign-up invite-only) |
 | B6 | Done 2026-10-06 (merged; tested on the preview) |
 | B7 | Approved 2026-10-06; built, waiting on review |
+| B7a | Approved 2026-10-06; built, waiting on review (separate pull request, after B7) |
 | B8 | Next; awaiting approval |
 | All others | Not started |

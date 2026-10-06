@@ -142,6 +142,7 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `feedback` | Messages sent from the in-app feedback form (phase B8) | `id`, `user_id`, `household_id`, message, page, app version, device, status, `created_at` |
 | `promo_code` | Invite and promo codes that give free Premium (B5; replaces the planned `beta_invite`) | `id`, `code`, `label`, `tier`, `access_until` or `access_days` (neither: no end date), `allows_sign_up`, `max_uses`, `uses`, `redeem_by`, `disabled_at`, `created_by`, `created_at`, `updated_at` |
 | `premium_grant` | Premium a household got from a code, one row per person per code | `id`, `household_id`, `user_id`, `promo_code_id`, `tier`, `starts_at`, `ends_at` (null: the code's `access_until`, or no end), `revoked_at`, `created_at` |
+| `email_change` | Every change to an account's email (B7a, `worker/account/`): waits for the link sent to the new address; admins can restore an earlier address | `id`, `user_id`, `kind` (change or restore), `old_email`, `old_email_verified_at`, `new_email`, `admin_user_id`, `token_hash`, `created_at`, `expires_at`, `completed_at`, `cancelled_at` |
 | `app_setting` | App-wide switches the admin console changes without a deploy (for now, invite-only sign-up) | `key`, `value`, `updated_at`, `updated_by` |
 
 Columns marked with a description rather than a name are settled in the phase that builds the table (see `spec.md`). Category and photo rows are synced like recipes, so the sync columns may move with the recipe store if recipes end up in a Durable Object.
@@ -288,6 +289,7 @@ Other current thinking:
 ## Free-tier abuse and operations
 
 - Email verification, rate limits, and a retention policy for long-inactive free accounts.
+- **Decided (2026-10-06, built in B7a):** an email-and-password account never verified is removed 24 hours after sign-up (hourly Cron Trigger, `worker/account/purge.ts`), giving back its invite code's use. Changing an account's email always waits for the link sent to the new address (24 hours, then it expires and nothing changes); the old address is told; every change is kept so an admin can restore an earlier address. `user.email_verified_at` records when the current address was verified.
 - Privacy policy and account deletion flow.
 - Free-tier text cap: 3 MB per account, plus the 100-recipe limit (see "Free").
 

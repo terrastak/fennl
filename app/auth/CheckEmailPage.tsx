@@ -37,7 +37,7 @@ export function CheckEmailPage() {
           ) : (
             "We sent you a link."
           )}{" "}
-          Open it to confirm your address and finish setting up your account.
+          Open it to verify your address and finish setting up your account.
         </p>
       </AuthHeader>
       <p className={styles.body}>

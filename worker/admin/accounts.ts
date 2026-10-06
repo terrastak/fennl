@@ -20,6 +20,7 @@ import {
   session,
   user,
 } from "../db/schema";
+import { emailHistory, previousEmails, waitingEmailChange } from "../account/emailChange";
 import { activeDevices } from "../devices/devices";
 import { forgetCachedPlanLimits, householdEntitlements } from "../entitlements/entitlements";
 
@@ -40,7 +41,14 @@ export async function searchAccounts(db: Database, query: string): Promise<Accou
   if (q.length < 2) return [];
   const pattern = likePattern(q);
   const rows = await db
-    .select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+    .select({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      emailVerified: user.emailVerified,
+      emailVerifiedAt: user.emailVerifiedAt,
+      createdAt: user.createdAt,
+    })
     .from(user)
     .where(
       or(
@@ -51,7 +59,11 @@ export async function searchAccounts(db: Database, query: string): Promise<Accou
     .orderBy(desc(user.createdAt))
     .limit(25)
     .all();
-  return rows.map((row) => ({ ...row, createdAt: row.createdAt.toISOString() }));
+  return rows.map((row) => ({
+    ...row,
+    emailVerifiedAt: row.emailVerifiedAt?.toISOString() ?? null,
+    createdAt: row.createdAt.toISOString(),
+  }));
 }
 
 /** The household an account works in, without creating one (unlike activeHouseholdFor). */
@@ -74,46 +86,50 @@ export async function accountDetail(db: Database, userId: string): Promise<Accou
   if (!person) return null;
   const household = await accountHousehold(db, userId);
 
-  const [methods, sessionSeen, deviceSeen, grants, members] = await Promise.all([
-    db
-      .select({ providerId: account.providerId })
-      .from(account)
-      .where(eq(account.userId, userId))
-      .all(),
-    db
-      .select({ at: max(session.updatedAt) })
-      .from(session)
-      .where(eq(session.userId, userId))
-      .get(),
-    db
-      .select({ at: max(device.lastSeenAt) })
-      .from(device)
-      .where(eq(device.userId, userId))
-      .get(),
-    db
-      .select({
-        code: promoCode.code,
-        label: promoCode.label,
-        tier: premiumGrant.tier,
-        usedAt: premiumGrant.createdAt,
-        endsAt: premiumGrant.endsAt,
-        accessUntil: promoCode.accessUntil,
-        revokedAt: premiumGrant.revokedAt,
-      })
-      .from(premiumGrant)
-      .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
-      .where(eq(premiumGrant.userId, userId))
-      .orderBy(desc(premiumGrant.createdAt))
-      .all(),
-    household
-      ? db
-          .select({ name: user.name, email: user.email })
-          .from(member)
-          .innerJoin(user, eq(member.userId, user.id))
-          .where(eq(member.organizationId, household.id))
-          .all()
-      : Promise.resolve([]),
-  ]);
+  const [methods, sessionSeen, deviceSeen, grants, members, waiting, previous, history] =
+    await Promise.all([
+      db
+        .select({ providerId: account.providerId })
+        .from(account)
+        .where(eq(account.userId, userId))
+        .all(),
+      db
+        .select({ at: max(session.updatedAt) })
+        .from(session)
+        .where(eq(session.userId, userId))
+        .get(),
+      db
+        .select({ at: max(device.lastSeenAt) })
+        .from(device)
+        .where(eq(device.userId, userId))
+        .get(),
+      db
+        .select({
+          code: promoCode.code,
+          label: promoCode.label,
+          tier: premiumGrant.tier,
+          usedAt: premiumGrant.createdAt,
+          endsAt: premiumGrant.endsAt,
+          accessUntil: promoCode.accessUntil,
+          revokedAt: premiumGrant.revokedAt,
+        })
+        .from(premiumGrant)
+        .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
+        .where(eq(premiumGrant.userId, userId))
+        .orderBy(desc(premiumGrant.createdAt))
+        .all(),
+      household
+        ? db
+            .select({ name: user.name, email: user.email })
+            .from(member)
+            .innerJoin(user, eq(member.userId, user.id))
+            .where(eq(member.organizationId, household.id))
+            .all()
+        : Promise.resolve([]),
+      waitingEmailChange(db, userId),
+      previousEmails(db, userId, person.email),
+      emailHistory(db, userId),
+    ]);
 
   const seen = [sessionSeen?.at, deviceSeen?.at]
     .filter((d): d is Date => d instanceof Date)
@@ -124,6 +140,16 @@ export async function accountDetail(db: Database, userId: string): Promise<Accou
     name: person.name,
     email: person.email,
     emailVerified: person.emailVerified,
+    emailVerifiedAt: person.emailVerifiedAt?.toISOString() ?? null,
+    pendingEmailChange: waiting?.expiresAt
+      ? {
+          email: waiting.newEmail,
+          expiresAt: waiting.expiresAt.toISOString(),
+          bySupport: waiting.adminUserId !== null,
+        }
+      : null,
+    previousEmails: [...previous.keys()],
+    emailHistory: history,
     role: person.role ?? null,
     createdAt: person.createdAt.toISOString(),
     lastSeenAt: seen?.toISOString() ?? null,

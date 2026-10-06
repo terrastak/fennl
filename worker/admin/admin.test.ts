@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { database } from "../db/client";
 import { adminAuditLog, passkey, session, user } from "../db/schema";
 import { devOutbox } from "../email/outbox";
-import app from "../index";
+import { app } from "../index";
 import { PASSWORD, signUpConfirmed, visitor, type Visitor, setUpDatabase } from "../test/visitor";
 import { ADMIN_IDLE_MS, ADMIN_MAX_MS, hasFreshPasskey, type AdminContext } from "./requireAdmin";
 

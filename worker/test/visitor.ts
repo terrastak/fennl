@@ -2,7 +2,7 @@ import { applyD1Migrations, env } from "cloudflare:test";
 import { expect } from "vitest";
 import { database } from "../db/client";
 import { devOutbox } from "../email/outbox";
-import app from "../index";
+import { app } from "../index";
 import { writeSetting } from "../settings/settings";
 
 // Helpers for Worker tests that sign people up and act as them.

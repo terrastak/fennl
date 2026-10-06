@@ -27,6 +27,11 @@
   "observability": {
     "enabled": true,
   },
+  // Scheduled work (the "scheduled" handler in worker/index.ts): every hour, at 17 minutes past,
+  // remove accounts whose email was never verified (worker/account/purge.ts).
+  "triggers": {
+    "crons": ["17 * * * *"],
+  },
   // Secrets (BETTER_AUTH_SECRET, email, Google, Apple) are set by CI and listed with the bindings
   // in worker/env.d.ts. They're deliberately not declared here: declaring them makes local
   // development ignore every optional setting in .dev.vars.

@@ -33,7 +33,7 @@ test("signing up with a code gives Premium", async ({ page }) => {
   await expect(page.getByRole("heading", { level: 1, name: "Check your email" })).toBeVisible();
 
   await page.goto(await linkFromLatestEmail(page.request, email));
-  await expect(page.getByRole("heading", { name: "Your email is confirmed" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Your email is verified" })).toBeVisible();
   await page.goto("/account");
   await expect(page.getByRole("heading", { name: "Your plan: Premium Household" })).toBeVisible();
   await expect(page.getByText(/^Included with your code until /)).toBeVisible();

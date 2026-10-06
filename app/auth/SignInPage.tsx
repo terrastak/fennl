@@ -21,13 +21,13 @@ export function SignInPage() {
     setBusy(true);
     setError(null);
     // No callbackURL: with one, Better Auth's client would jump there after signing in. A fresh
-    // confirmation link (sent below for unconfirmed accounts) then leads to the recipes page.
+    // verification link (sent below for unverified accounts) then leads to the recipes page.
     const { error: failure } = await authClient.signIn.email({ email, password });
     setBusy(false);
     if (!failure) {
       navigate("/", { replace: true });
     } else if (failure.code === "EMAIL_NOT_VERIFIED") {
-      // Better Auth has just emailed a fresh confirmation link.
+      // Better Auth has just emailed a fresh verification link.
       rememberPendingEmail(email);
       navigate("/check-email");
     } else {

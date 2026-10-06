@@ -6,7 +6,7 @@ import { useSession } from "./client";
 import { linkErrorMessage } from "./messages";
 import styles from "./auth.module.css";
 
-/** Where the link in a confirmation email lands, signed in (or with an error in the address). */
+/** Where the link in a verification email lands, signed in (or with an error in the address). */
 export function EmailConfirmedPage() {
   const [error] = useState(() => linkErrorMessage(queryParam("error")));
   const { data: session, isPending } = useSession();
@@ -26,7 +26,7 @@ export function EmailConfirmedPage() {
 
   return (
     <>
-      <AuthHeader title="Your email is confirmed" note="You're all set">
+      <AuthHeader title="Your email is verified" note="You're all set">
         <p>Thanks{session ? `, ${session.user.name}` : ""}. Your Fennl account is ready.</p>
       </AuthHeader>
       {isPending ? null : (
