@@ -66,13 +66,21 @@ export async function useOwnAccount(context: BrowserContext, baseURL: string): P
   return signUpConfirmed(context, baseURL);
 }
 
-/** Runs SQL on the local test database, the way the runbooks do it on the real one. */
+/**
+ * Runs SQL on the local test database, the way the runbooks do it on the real one. Tests run in
+ * parallel and share that one database file, so a command can find it busy: try a few times.
+ */
 export function runLocalSql(sql: string): void {
-  execFileSync(
-    "npx",
-    ["wrangler", "d1", "execute", "DB", "--local", "--config", "wrangler.jsonc", "--command", sql],
-    { stdio: "ignore" },
-  );
+  const args = ["wrangler", "d1", "execute", "DB", "--local", "--config", "wrangler.jsonc"];
+  for (let attempt = 1; ; attempt++) {
+    try {
+      execFileSync("npx", [...args, "--command", sql], { stdio: "pipe" });
+      return;
+    } catch (error) {
+      if (attempt >= 5) throw error;
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 300 * attempt);
+    }
+  }
 }
 
 /**

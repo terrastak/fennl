@@ -75,3 +75,21 @@ test("a code can be used from the Account page", async ({ page, context, baseURL
   await section.getByRole("button", { name: "Use code" }).click();
   await expect(section.getByRole("alert")).toHaveText("You've already used that code.");
 });
+
+test("sign-up doesn't insist on a code before the server says one is needed", async ({ page }) => {
+  await page.context().clearCookies();
+  await useFreshAddress(page.context());
+  // A slow answer from the server: the form must still work, and the server does the checking.
+  await page.route("**/api/sign-in-methods", async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 4000));
+    await route.continue();
+  });
+  await page.goto("/sign-up");
+  await page.getByLabel("Your name").fill("Rose Lee");
+  await page.getByLabel("Email").fill(uniqueEmail("slow"));
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Check your email" })).toBeVisible({
+    timeout: 3000,
+  });
+});

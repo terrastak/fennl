@@ -12,7 +12,11 @@ import { useSignInMethods } from "./useSignInMethods";
 import styles from "./auth.module.css";
 
 export function SignUpPage() {
-  const { signUpCodeRequired } = useSignInMethods();
+  const methods = useSignInMethods();
+  const { signUpCodeRequired } = methods;
+  // Only insist on a code here once the server has said one is needed. Before that, the server's
+  // own check answers (it refuses sign-up without a code while sign-up is invite-only).
+  const codeMandatory = signUpCodeRequired && methods.loaded;
   const [code, setCode] = useState(() => queryParam("code") ?? "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,7 +27,7 @@ export function SignUpPage() {
 
   /** Checks the code with the server first. False (with a message shown) if it can't be used. */
   const codeReady = async (): Promise<boolean> => {
-    if (signUpCodeRequired && !code.trim()) {
+    if (codeMandatory && !code.trim()) {
       setError("Fennl is invite-only for now. Enter your invite code to create an account.");
       return false;
     }
@@ -67,7 +71,7 @@ export function SignUpPage() {
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          required={signUpCodeRequired}
+          required={codeMandatory}
           hint={
             signUpCodeRequired
               ? "Fennl is invite-only for now. Your code is in your invite."
