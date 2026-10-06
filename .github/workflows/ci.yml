@@ -172,14 +172,16 @@ jobs:
               echo "Preview is up: $URL"
               exit 0
             fi
-            # Behind Access without CI's service token: the preview answers with Access's sign-in
-            # redirect. That shows it's up, but not its health, so say how to fix it.
-            if [ ${#access[@]} -eq 0 ]; then
-              location=$(curl -sS --max-time 10 -o /dev/null -w '%{redirect_url}' "$URL/api/health" || true)
-              if [[ "$location" == *".cloudflareaccess.com/"* ]]; then
+            # Access answering with its sign-in redirect means the preview is up but CI wasn't let
+            # through. Say why straight away instead of waiting out the attempts.
+            location=$(curl -sS --max-time 10 "${access[@]}" -o /dev/null -w '%{redirect_url}' "$URL/api/health" || true)
+            if [[ "$location" == *".cloudflareaccess.com/"* ]]; then
+              if [ ${#access[@]} -eq 0 ]; then
                 echo "::warning::The preview is behind Cloudflare Access, and CI has no service token to check it. Add CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET (docs/setup/b4a-admin-access.md, Part C)."
                 exit 0
               fi
+              echo "::error::Cloudflare Access didn't accept CI's service token for the preview. Check that the fennl-preview Access application has a Service Auth policy for the fennl-ci token, and that CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET match it (docs/setup/b4a-admin-access.md, Part C2)."
+              exit 1
             fi
             echo "Attempt $attempt: not ready yet"
             sleep 10
