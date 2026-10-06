@@ -22,6 +22,7 @@ export const user = sqliteTable("user", {
   mustChangePassword: integer("must_change_password", {
     mode: "boolean",
   }).default(false),
+  emailVerifiedAt: integer("email_verified_at", { mode: "timestamp_ms" }),
 });
 
 export const session = sqliteTable(

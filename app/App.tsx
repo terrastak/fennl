@@ -11,6 +11,7 @@ import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./auth/ResetPasswordPage";
 import { SignInPage } from "./auth/SignInPage";
 import { SignUpPage } from "./auth/SignUpPage";
+import { VerifyEmailChangePage } from "./auth/VerifyEmailChangePage";
 import { navigate, usePath } from "./navigation";
 import { AccountPage } from "./pages/AccountPage";
 import { ImportPage } from "./pages/ImportPage";
@@ -34,7 +35,8 @@ const ACCOUNT_ROUTES: Record<string, Route> = {
   "/sign-in": { title: "Sign in", Page: SignInPage },
   "/sign-up": { title: "Create your account", Page: SignUpPage },
   "/check-email": { title: "Check your email", Page: CheckEmailPage },
-  "/email-confirmed": { title: "Email confirmed", Page: EmailConfirmedPage },
+  "/email-confirmed": { title: "Email verified", Page: EmailConfirmedPage },
+  "/verify-email-change": { title: "Verify your new email", Page: VerifyEmailChangePage },
   "/forgot-password": { title: "Reset your password", Page: ForgotPasswordPage },
   "/reset-password": { title: "Choose a new password", Page: ResetPasswordPage },
 };

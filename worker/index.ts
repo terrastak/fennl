@@ -2,6 +2,8 @@ import { eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isColorScheme } from "../shared/appearance";
 import { healthStatus } from "../shared/health";
+import { removeUnverifiedAccounts } from "./account/purge";
+import { accountRoutes } from "./account/routes";
 import { adminAccountRoutes } from "./admin/accountRoutes";
 import { accountNames } from "./admin/accounts";
 import { passedAccess } from "./admin/access";
@@ -21,7 +23,7 @@ import { readSetting } from "./settings/settings";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
-const app = new Hono<{ Bindings: Env }>();
+export const app = new Hono<{ Bindings: Env }>();
 
 /** The app's "Page not found" screen, with a real 404 status. */
 async function appNotFound(c: Context<{ Bindings: Env }>) {
@@ -157,6 +159,9 @@ app.post("/api/account/password", async (c) => {
   return c.json({ ok: true });
 });
 
+// Changing the account's email address (phase B7a).
+app.route("/", accountRoutes);
+
 // The account's color scheme, which follows the person to every device.
 app.put("/api/account/appearance", requireHousehold, async (c) => {
   const body = await c.req.json<unknown>().catch(() => null);
@@ -235,4 +240,16 @@ app.notFound((c) => {
   return c.env.ASSETS.fetch(c.req.raw);
 });
 
-export default app;
+/**
+ * Scheduled work (wrangler.jsonc "triggers"). Every hour: remove accounts whose email was never
+ * verified (worker/account/purge.ts).
+ */
+async function scheduled(_controller: ScheduledController, env: Env) {
+  const removed = await removeUnverifiedAccounts(database(env.DB));
+  if (removed.length > 0) {
+    // Kept in the Worker's logs (no admin did this, so it isn't in the admin audit log).
+    console.log(`Removed ${removed.length} account(s) never verified: ${removed.join(", ")}`);
+  }
+}
+
+export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Env>;

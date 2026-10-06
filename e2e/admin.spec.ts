@@ -1,6 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { PASSWORD, runLocalSql, signUpConfirmed, useFreshAddress } from "./support";
+import {
+  PASSWORD,
+  linkFromLatestEmail,
+  runLocalSql,
+  signUpConfirmed,
+  uniqueEmail,
+  useFreshAddress,
+} from "./support";
 
 // The admin console, locally at /admin (ACCESS_DEV_BYPASS stands in for Cloudflare Access).
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -192,6 +199,57 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   await table.getByLabel("Text per recipe for Individual").fill("0.25");
   await table.getByRole("button", { name: "Save" }).click();
   await expect(table.getByRole("status")).toHaveText("Text per recipe for Individual: 0.25 MB.");
+});
+
+test("an admin puts back an account's earlier email after someone changed it", async ({
+  page,
+  context,
+  browser,
+  baseURL,
+}) => {
+  // The account's own browser: it changes its email (as someone who took it over might).
+  const person = await browser.newContext({
+    baseURL: baseURL!,
+    storageState: { cookies: [], origins: [] },
+  });
+  await useFreshAddress(person);
+  const original = await signUpConfirmed(person, baseURL!, "Omar Haddad");
+  const taken = uniqueEmail("taken");
+  const started = await person.request.post("/api/account/email", {
+    headers: { origin: baseURL! },
+    data: { newEmail: taken },
+  });
+  expect(started.ok()).toBe(true);
+  const link = await linkFromLatestEmail(person.request, taken);
+  const verified = await person.request.post("/api/account/email/verify", {
+    headers: { origin: baseURL! },
+    data: { token: new URL(`http://x${link}`).searchParams.get("token") },
+  });
+  expect(await verified.json()).toEqual({ result: "done" });
+  await person.close();
+
+  const email = await signUpConfirmed(context, baseURL!, "Support");
+  grantAdmin(email);
+  await context.clearCookies();
+  await addVirtualAuthenticator(context, page);
+  await signInWithPassword(page, email);
+  await page.getByRole("button", { name: "Add a passkey" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Admin console" })).toBeVisible();
+
+  // Search shows whether each address is verified.
+  await page.getByLabel("Email or name").fill(taken);
+  await page.getByRole("button", { name: "Search" }).click();
+  await expect(page.getByRole("list", { name: "Matching accounts" })).toContainText("Verified on");
+  await page.getByRole("button", { name: "Omar Haddad" }).click();
+
+  const tools = page.getByRole("region", { name: "Email address" });
+  await expect(tools.getByRole("table")).toContainText(original);
+  await expectAccessible(page);
+  await tools.getByRole("button", { name: `Put back ${original}` }).click();
+  await expect(tools.getByRole("status")).toContainText(`Put back ${original}`);
+  await expect(page.locator("dd").filter({ hasText: original }).first()).toBeVisible();
+  const log = page.getByRole("region", { name: "Admin activity for this account" });
+  await expect(log.getByText("Put back an earlier email").first()).toBeVisible();
 });
 
 test("an ordinary account can't use the admin area", async ({ page, context, baseURL }) => {

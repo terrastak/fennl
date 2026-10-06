@@ -24,6 +24,9 @@ const ACTION_NAMES: Record<string, string> = {
   "account.password_reset_sent": "Sent a password reset email",
   "account.temporary_password_set": "Set a temporary password",
   "account.signed_out_everywhere": "Signed an account out everywhere",
+  "account.email_change_started": "Started an email change",
+  "account.email_change_cancelled": "Cancelled an email change",
+  "account.email_restored": "Put back an earlier email",
   "limit.override_set": "Set an account's limit",
   "limit.override_removed": "Removed an account's limit",
   "limit.tier_changed": "Changed a plan limit",
@@ -34,7 +37,8 @@ function detailText(row: ActivityRow): string {
   const parts = [d.method, d.code, d.key, d.tier]
     .filter((v) => typeof v === "string" && v)
     .map(String);
-  if ("to" in d) parts.push(`→ ${d.to === null ? "no limit" : String(d.to)}`);
+  if (typeof d.from === "string" && typeof d.to === "string") parts.push(`${d.from} → ${d.to}`);
+  else if ("to" in d) parts.push(`→ ${d.to === null ? "no limit" : String(d.to)}`);
   if (typeof d.value !== "undefined" && !("to" in d)) {
     parts.push(`= ${d.value === null ? "no limit" : String(d.value)}`);
   }

@@ -3,6 +3,7 @@
  * Dates are ISO strings.
  */
 import type { DeviceSummary } from "./devices";
+import type { EmailHistoryEntry } from "./email";
 import type { Entitlements, LimitKey } from "./entitlements";
 
 /** One row of an account search. */
@@ -10,6 +11,9 @@ export interface AccountMatch {
   id: string;
   name: string;
   email: string;
+  emailVerified: boolean;
+  /** Null when not verified, or verified before the date was recorded (B7a). */
+  emailVerifiedAt: string | null;
   createdAt: string;
 }
 
@@ -39,6 +43,14 @@ export interface AccountDetail {
   name: string;
   email: string;
   emailVerified: boolean;
+  /** Null when not verified, or verified before the date was recorded (B7a). */
+  emailVerifiedAt: string | null;
+  /** A change waiting for the link sent to the new address. */
+  pendingEmailChange: { email: string; expiresAt: string; bySupport: boolean } | null;
+  /** Addresses the account used before, which an admin can put back. */
+  previousEmails: string[];
+  /** Every change to the account's email, newest first. */
+  emailHistory: EmailHistoryEntry[];
   role: string | null;
   createdAt: string;
   /** The latest of its sessions and devices; null if it never signed in. */

@@ -7,6 +7,7 @@ import {
   type TextSize,
 } from "../../shared/appearance";
 import { useAppearance } from "../appearance/appearance";
+import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { DevicesSection } from "../devices/DevicesSection";
 import { PageHeader } from "./PageHeader";
@@ -136,6 +137,8 @@ export function SettingsPage() {
           </div>
         </fieldset>
       </section>
+
+      <EmailSection />
 
       <DevicesSection />
 

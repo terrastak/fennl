@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { devOutbox } from "../email/outbox";
-import app from "../index";
+import { app } from "../index";
 import {
   ORIGIN,
   PASSWORD as password,
@@ -23,8 +23,8 @@ describe("sign-up and email verification", () => {
     expect(await v.session()).toBeNull();
 
     const [mail] = devOutbox.list(email);
-    expect(mail?.subject).toBe("Confirm your email for Fennl");
-    expect(mail?.html).toContain("Confirm my email");
+    expect(mail?.subject).toBe("Verify your email for Fennl");
+    expect(mail?.html).toContain("Verify my email");
 
     const early = await v.request("/api/auth/sign-in/email", { body: { email, password } });
     expect(early.status).toBe(403);

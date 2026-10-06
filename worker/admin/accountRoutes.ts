@@ -1,5 +1,13 @@
 import { Hono } from "hono";
+import { normalizeEmail } from "../../shared/email";
 import { isLimitKey } from "../../shared/entitlements";
+import {
+  cancelEmailChange,
+  emailInUse,
+  restoreEmail,
+  startEmailChange,
+} from "../account/emailChange";
+import { emailChangeLink, sendEmailChangeLink } from "../account/routes";
 import { createAuth } from "../auth/auth";
 import { generateCode } from "../codes/codes";
 import { createEmailSender } from "../email/email";
@@ -136,6 +144,94 @@ adminAccountRoutes.post("/accounts/:id/sign-out-everywhere", async (c) => {
     c.req.raw,
   );
   return c.json({ sessionsEnded: await signOutEverywhere(admin.db, person.id) });
+});
+
+/**
+ * Changing someone's email for them (phase B7a). Like their own change, it waits for the link sent
+ * to the new address; the account keeps its address until then. Admin accounts are refused.
+ */
+adminAccountRoutes.post("/accounts/:id/email", async (c) => {
+  const admin = c.var.admin;
+  const reconfirm = freshPasskeyProblem(admin);
+  if (reconfirm) return c.json(reconfirm, 403);
+  const person = await findAccount(admin.db, c.req.param("id"));
+  if (!person) return c.json({ error: "not_found" }, 404);
+  if (person.role === "admin") return c.json({ error: "target_is_admin" }, 403);
+  const newEmail = normalizeEmail((await body(c.req.raw)).newEmail);
+  if (!newEmail) return c.json({ error: "invalid_email" }, 400);
+  if (newEmail === person.email) return c.json({ error: "same_email" }, 400);
+  // Admins may know the address is taken: it's in the console anyway.
+  if (await emailInUse(admin.db, newEmail, person.id)) {
+    return c.json({ error: "email_in_use" }, 409);
+  }
+  await recordAdminAction(
+    c.env,
+    {
+      adminUserId: admin.userId,
+      action: "account.email_change_started",
+      targetUserId: person.id,
+      details: { from: person.email, to: newEmail },
+    },
+    c.req.raw,
+  );
+  const { token } = await startEmailChange(admin.db, person, newEmail, admin.userId);
+  const link = emailChangeLink(appOrigin(c.env, c.req.raw), token);
+  await sendEmailChangeLink(c.env, { email: newEmail, name: person.name }, link, true);
+  return c.json(await accountDetail(admin.db, person.id));
+});
+
+adminAccountRoutes.delete("/accounts/:id/email-change", async (c) => {
+  const admin = c.var.admin;
+  const person = await findAccount(admin.db, c.req.param("id"));
+  if (!person) return c.json({ error: "not_found" }, 404);
+  await recordAdminAction(
+    c.env,
+    {
+      adminUserId: admin.userId,
+      action: "account.email_change_cancelled",
+      targetUserId: person.id,
+    },
+    c.req.raw,
+  );
+  if (!(await cancelEmailChange(admin.db, person.id))) return c.json({ error: "not_found" }, 404);
+  return c.json(await accountDetail(admin.db, person.id));
+});
+
+/**
+ * Puts back an address the account used before, at once (it was verified then), for when someone
+ * else took the account over. The account is signed out everywhere and the restored address gets
+ * a password reset email, since whoever changed the email probably has the password too.
+ */
+adminAccountRoutes.post("/accounts/:id/email/restore", async (c) => {
+  const admin = c.var.admin;
+  const reconfirm = freshPasskeyProblem(admin);
+  if (reconfirm) return c.json(reconfirm, 403);
+  const person = await findAccount(admin.db, c.req.param("id"));
+  if (!person) return c.json({ error: "not_found" }, 404);
+  if (person.role === "admin") return c.json({ error: "target_is_admin" }, 403);
+  const email = normalizeEmail((await body(c.req.raw)).email);
+  if (!email) return c.json({ error: "invalid_email" }, 400);
+  if (await emailInUse(admin.db, email, person.id)) return c.json({ error: "email_in_use" }, 409);
+
+  await recordAdminAction(
+    c.env,
+    {
+      adminUserId: admin.userId,
+      action: "account.email_restored",
+      targetUserId: person.id,
+      details: { from: person.email, to: email },
+    },
+    c.req.raw,
+  );
+  const result = await restoreEmail(admin.db, person, email, admin.userId);
+  if (result === "not_previous") return c.json({ error: "not_previous" }, 400);
+  if (result === "email_in_use") return c.json({ error: "email_in_use" }, 409);
+
+  const sessionsEnded = await signOutEverywhere(admin.db, person.id);
+  const origin = appOrigin(c.env, c.req.raw);
+  const auth = await createAuth(c.env, new Request(origin));
+  await auth.api.requestPasswordReset({ body: { email, redirectTo: `${origin}/reset-password` } });
+  return c.json({ detail: await accountDetail(admin.db, person.id), sessionsEnded });
 });
 
 /** A per-account exception to one limit (limit_override), with an optional end and a note. */

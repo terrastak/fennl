@@ -186,3 +186,36 @@ export const device = sqliteTable(
     index("device_session_idx").on(table.sessionId),
   ],
 );
+
+/**
+ * Every change to an account's email address (phase B7a), kept so support can see the history and
+ * put back an earlier address after a takeover. A change waits for the link sent to the new
+ * address (token_hash, until expires_at); the address changes only when it's opened. Restores by
+ * an admin take effect at once and have no token. Never deleted while the account exists.
+ */
+export const emailChange = sqliteTable(
+  "email_change",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** "change" (waits for the new address to be verified) or "restore" (by an admin, at once). */
+    kind: text("kind").notNull(),
+    oldEmail: text("old_email").notNull(),
+    /** When the old address had been verified, so a restore can put that date back. */
+    oldEmailVerifiedAt: integer("old_email_verified_at", { mode: "timestamp_ms" }),
+    newEmail: text("new_email").notNull(),
+    /** The admin who started it; null when the person did it themselves. */
+    adminUserId: text("admin_user_id"),
+    /** SHA-256 of the link's secret. The secret itself is only ever in the email. */
+    tokenHash: text("token_hash").unique(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    expiresAt: integer("expires_at", { mode: "timestamp_ms" }),
+    /** When the new address took effect. */
+    completedAt: integer("completed_at", { mode: "timestamp_ms" }),
+    /** When a newer request, a restore or a cancel replaced this one before it was used. */
+    cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [index("email_change_user_idx").on(table.userId)],
+);

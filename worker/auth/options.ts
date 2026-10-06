@@ -90,7 +90,7 @@ export function authOptions(settings: AuthSettings) {
     },
     emailVerification: {
       sendOnSignUp: true,
-      // Signing in before confirming sends a fresh link.
+      // Signing in before verifying sends a fresh link.
       sendOnSignIn: true,
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60 * 24,
@@ -113,7 +113,13 @@ export function authOptions(settings: AuthSettings) {
           input: false,
           defaultValue: false,
         },
+        // When the current email address was verified (phase B7a). Set by the hooks below for
+        // every way an address gets verified, and by Fennl's own email change
+        // (worker/account/emailChange.ts). Null on older accounts: "date not recorded".
+        emailVerifiedAt: { type: "date", required: false, input: false },
       },
+      // Better Auth's own email change is off (the default): Fennl runs its own, which keeps
+      // every change so support can restore an earlier address (worker/account/emailChange.ts).
     },
     plugins: [
       // Households are Better Auth organizations (CLAUDE.md, "Entitlements model"). Their HTTP
@@ -146,12 +152,23 @@ export function authOptions(settings: AuthSettings) {
         create: {
           // Every new account, however it's made (email, Google, Apple), passes the invite and
           // promo code check (worker/codes/signUp.ts).
-          before: async (_user, ctx) => {
+          before: async (newUser, ctx) => {
             await checkSignUp(settings.db, ctx);
+            // Google and Apple hand over addresses they've already verified.
+            return newUser.emailVerified
+              ? { data: { ...newUser, emailVerifiedAt: new Date() } }
+              : undefined;
           },
           after: async (user, ctx) => {
             await grantSignUpCode(settings.db, user.id, ctx);
           },
+        },
+        update: {
+          // The link in a verification email, or Google or Apple joining an unverified account.
+          before: async (data) =>
+            data.emailVerified === true && !("emailVerifiedAt" in data)
+              ? { data: { ...data, emailVerifiedAt: new Date() } }
+              : undefined,
         },
       },
       session: {
@@ -178,7 +195,7 @@ export function authOptions(settings: AuthSettings) {
       },
     },
     account: {
-      // Google and Apple confirm the email address, so signing in with them joins an existing
+      // Google and Apple verify the email address, so signing in with them joins an existing
       // account with the same email instead of making a second one.
       accountLinking: { enabled: true, trustedProviders: ["google", "apple"] },
     },

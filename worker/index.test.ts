@@ -1,6 +1,6 @@
 import { env } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
-import app from "./index";
+import { app } from "./index";
 
 describe("worker API", () => {
   it("answers the health check, including the database", async () => {

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import type { AccountDetail, AccountMatch } from "../../shared/adminAccounts";
+import type { EmailHistoryEntry } from "../../shared/email";
 import type { LimitKey } from "../../shared/entitlements";
+import { verifiedText } from "../account/verified";
 import { planName, planStatus } from "../pages/plan";
 import { ActivityTable, type ActivityRow } from "./ActivitySection";
 import { adminRequest, errorOf } from "./api";
@@ -76,7 +78,8 @@ export function AccountsSection() {
                 {m.name || "(no name)"}
               </button>{" "}
               <span className={styles.muted}>
-                {m.email} · joined {when(m.createdAt)}
+                {m.email} · {verifiedText(m.emailVerified, m.emailVerifiedAt)} · joined{" "}
+                {when(m.createdAt)}
               </span>
             </li>
           ))}
@@ -144,7 +147,7 @@ function AccountPage({ id, onBack }: { id: string; onBack: () => void }) {
               <div>
                 <dt>Email</dt>
                 <dd>
-                  {detail.email} {detail.emailVerified ? "(confirmed)" : "(not confirmed)"}
+                  {detail.email} ({verifiedText(detail.emailVerified, detail.emailVerifiedAt)})
                 </dd>
               </div>
               <div>
@@ -238,6 +241,7 @@ function AccountPage({ id, onBack }: { id: string; onBack: () => void }) {
           </section>
 
           <Overrides detail={detail} onChange={changed} />
+          <EmailTools detail={detail} onChange={changed} />
           <PasswordHelp detail={detail} onChange={changed} />
 
           <section className={styles.card} aria-labelledby="account-activity-title">
@@ -530,6 +534,191 @@ function PasswordHelp({
           Sign out everywhere now
         </button>
       </div>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+
+const EMAIL_ERRORS: Record<string, string> = {
+  invalid_email: "That doesn't look like an email address.",
+  same_email: "That's already their email.",
+  email_in_use: "Another account already uses that address.",
+  target_is_admin: "Admin accounts' email can't be changed here.",
+  not_previous: "That address isn't one this account used before.",
+};
+
+function historyStatus(entry: EmailHistoryEntry): string {
+  if (entry.kind === "restore") return "Put back by support";
+  if (entry.completedAt) return `Verified ${when(entry.completedAt)}`;
+  if (entry.cancelledAt) return "Cancelled or replaced";
+  if (entry.expiresAt && new Date(entry.expiresAt) <= new Date()) return "Expired, not verified";
+  return `Waiting until ${when(entry.expiresAt)}`;
+}
+
+/** Changing the account's email, and putting back an earlier one (phase B7a). */
+function EmailTools({
+  detail,
+  onChange,
+}: {
+  detail: AccountDetail;
+  onChange: (next: AccountDetail | null) => Promise<void>;
+}) {
+  const id = useId();
+  const [newEmail, setNewEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const base = `/api/admin/accounts/${encodeURIComponent(detail.id)}`;
+
+  const run = async (
+    path: string,
+    init: { method?: string; body?: unknown },
+    success: (body: unknown) => string,
+    detailOf: (body: unknown) => AccountDetail = (body) => body as AccountDetail,
+  ) => {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    const result = await adminRequest<unknown>(`${base}${path}`, init);
+    setBusy(false);
+    if (!result.ok) {
+      setError(EMAIL_ERRORS[errorOf(result) ?? ""] ?? "That didn't work. Try again.");
+      return;
+    }
+    setMessage(success(result.body));
+    await onChange(detailOf(result.body));
+  };
+
+  const change = async (event: FormEvent) => {
+    event.preventDefault();
+    const address = newEmail.trim();
+    await run("/email", { body: { newEmail: address } }, () => {
+      setNewEmail("");
+      return `Sent a verification link to ${address}. The email changes when they open it.`;
+    });
+  };
+
+  const restore = (email: string) =>
+    run(
+      "/email/restore",
+      { body: { email } },
+      (body) =>
+        `Put back ${email}. Signed out of ${(body as { sessionsEnded: number }).sessionsEnded} session(s), and sent a password reset email there.`,
+      (body) => (body as { detail: AccountDetail }).detail,
+    );
+
+  const isAdmin = detail.role === "admin";
+  return (
+    <section className={styles.card} aria-labelledby="email-tools-title">
+      <h2 id="email-tools-title">Email address</h2>
+      <p className={styles.muted}>
+        A change sends a link to the new address and takes effect when they open it. Putting back an
+        earlier address works at once, signs them out everywhere, and sends a password reset email
+        there. Both ask for your passkey again.
+      </p>
+      {message ? (
+        <p role="status" className={styles.notice}>
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      ) : null}
+
+      {detail.pendingEmailChange ? (
+        <div className={styles.row}>
+          <p>
+            Waiting for <strong>{detail.pendingEmailChange.email}</strong> to be verified, until{" "}
+            {when(detail.pendingEmailChange.expiresAt)}
+            {detail.pendingEmailChange.bySupport ? " (started by support)" : ""}.
+          </p>
+          <button
+            type="button"
+            className={styles.secondary}
+            disabled={busy}
+            onClick={() =>
+              void run("/email-change", { method: "DELETE" }, () => "Cancelled the change.")
+            }
+          >
+            Cancel the change
+          </button>
+        </div>
+      ) : null}
+
+      {isAdmin ? (
+        <p className={styles.muted}>Admin accounts&rsquo; email can&rsquo;t be changed here.</p>
+      ) : (
+        <form className={styles.row} onSubmit={change} aria-label="Change their email">
+          <div className={styles.field}>
+            <label htmlFor={`${id}-email`}>New email address</label>
+            <input
+              id={`${id}-email`}
+              type="email"
+              required
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+            />
+          </div>
+          <button type="submit" className={styles.button} disabled={busy}>
+            Send verification link
+          </button>
+        </form>
+      )}
+
+      {!isAdmin && detail.previousEmails.length > 0 ? (
+        <>
+          <h3>Earlier addresses</h3>
+          <ul className={styles.results}>
+            {detail.previousEmails.map((email) => (
+              <li key={email}>
+                {email}{" "}
+                <button
+                  type="button"
+                  className={styles.linkButton}
+                  disabled={busy}
+                  onClick={() => void restore(email)}
+                >
+                  Put back<span className="visually-hidden"> {email}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      ) : null}
+
+      <h3>History</h3>
+      {detail.emailHistory.length === 0 ? (
+        <p className={styles.muted}>The email has never been changed.</p>
+      ) : (
+        <div className={styles.tableWrap}>
+          <table className={styles.table}>
+            <caption className="visually-hidden">Changes to this account&rsquo;s email</caption>
+            <thead>
+              <tr>
+                <th scope="col">Requested</th>
+                <th scope="col">From</th>
+                <th scope="col">To</th>
+                <th scope="col">By</th>
+                <th scope="col">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detail.emailHistory.map((h) => (
+                <tr key={`${h.requestedAt}-${h.newEmail}`}>
+                  <td>{when(h.requestedAt)}</td>
+                  <td>{h.oldEmail}</td>
+                  <td>{h.newEmail}</td>
+                  <td>{h.adminEmail ?? "Them"}</td>
+                  <td>{historyStatus(h)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }
