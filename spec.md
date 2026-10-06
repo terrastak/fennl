@@ -827,10 +827,19 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### H1. Abuse limits
 - Rate limits on sign-up, sign-in, takeover, import, and uploads. Confirm the C11 limits are set correctly in production. Email verification required.
+- **Clear out unconfirmed accounts** (open question 20; added 2026-10-06, details settled when we get here, and small enough to build sooner). Email-and-password sign-ups whose address is never confirmed (usually a typo) stay in the database, show up in the admin console's account search, and hold the address so its real owner can't sign up with it. A scheduled job (a Cloudflare Cron Trigger) deletes them after a set time. To settle then:
+  - The wait. The confirmation link lasts 24 hours, but signing in before confirming sends a fresh one, so a short wait can cut off a slow tester.
+  - Everything that goes with the account: its personal household, sessions, devices, and any sign-up code use (returned to the code, so a typo doesn't use up an invite).
+  - Google and Apple accounts are confirmed by the provider, so they're never affected.
+  - Recording each clear-out (not as an admin action, since no admin did it), and meanwhile marking unconfirmed accounts in the admin search.
 - Full security review of sign-in, the admin console, impersonation, the access rule, and photo access, with findings fixed. Consider an outside penetration test before the public launch.
 
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
+- **Change email address** (open question 19; added 2026-10-06, details settled when we get here, and could move earlier). In Settings, a person changes their email and confirms the new address before it takes effect; the old address gets a security notice (CLAUDE.md requires the standard email for email changes, including during impersonation). To settle then:
+  - What Better Auth's own change-email support covers (**Unverified**; check its current docs).
+  - Accounts that sign in with Google or Apple.
+  - The passkey re-confirmation when an admin does it while acting as the user (C12).
 
 ### H3. Backups
 - Checked 2026-10-03: D1 Time Travel restores to any minute in the last 30 days on **Workers Paid** (7 days on Free), but it overwrites the whole database. So the nightly per-household text export to R2 is required, since it's the only way to restore one account. A tested restore drill on staging.
@@ -884,6 +893,8 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 16 | Free structured import vs. the 100-recipe limit: a free user importing a 1,240-recipe Paprika library. Import up to the remaining allowance, with a clear message? (Suggest: yes, show the rest in the preview as "needs Premium".) | E3, E13 |
 | 17 | ~~Is the Cloudflare account on Workers Paid ($5/month)?~~ Yes: switched on 2026-10-03 (B2 setup, step 1) | H3 (before H5) |
 | 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
+| 19 | Changing an account's email address: confirm the new address first, notify the old one. Details in H2 | H2, or sooner |
+| 20 | How long before an account whose email was never confirmed is deleted? (Owner suggested about 24 hours.) Details in H1 | H1, or sooner |
 
 ## Notes: AI provider research (2026-10-01)
 
