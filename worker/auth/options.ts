@@ -35,6 +35,19 @@ export interface AuthSettings {
 }
 
 export const AUTH_BASE_PATH = "/api/auth";
+
+/**
+ * Which addresses a passkey works on. A passkey is tied to this "relying party ID". Every preview
+ * link is its own address (pr-15-fennl-preview.<account>.workers.dev), so on workers.dev it's the
+ * account's subdomain (<account>.workers.dev), and an admin's passkey works on every preview.
+ * Elsewhere (the admin address, localhost) it's the exact address.
+ */
+export function passkeyRpId(hostname: string): string {
+  const labels = hostname.split(".");
+  return hostname.endsWith(".workers.dev") && labels.length > 3
+    ? labels.slice(-3).join(".")
+    : hostname;
+}
 export const MIN_PASSWORD_LENGTH = 8;
 
 /**
@@ -102,7 +115,7 @@ export function authOptions(settings: AuthSettings) {
       }),
       // Passkeys, used only in the admin area for now (worker/admin/).
       passkey({
-        rpID: origin.hostname,
+        rpID: passkeyRpId(origin.hostname),
         rpName: "Fennl",
         origin: origin.origin,
         registration: {

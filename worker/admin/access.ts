@@ -5,8 +5,11 @@
  *
  * A request passes if either:
  *  - Cloudflare says Access authenticated it (ctx.access, with an audience tag we expect), or
- *  - it carries a valid Access token (the Cf-Access-Jwt-Assertion header: RS256, signed by the
- *    team's current keys, issued by our team, for one of our audience tags, not expired).
+ *  - it carries a valid Access token (the Cf-Access-Jwt-Assertion header, or else the
+ *    CF_Authorization cookie Access sets: RS256, signed by the team's current keys, issued by our
+ *    team, for one of our audience tags, not expired).
+ * Fennl's Worker serves static assets, and Cloudflare doesn't pass ctx.access to such Workers
+ * (checked 2026-10-06), so in practice the token is what's checked.
  * In local development only, ACCESS_DEV_BYPASS=true lets requests to localhost through.
  */
 interface AccessJwk extends JsonWebKey {
@@ -106,6 +109,17 @@ export async function verifyAccessToken(
   );
 }
 
+/** The CF_Authorization cookie Cloudflare Access sets after sign-in. */
+function accessCookie(request: Request): string | null {
+  const cookie = request.headers.get("cookie");
+  if (!cookie) return null;
+  for (const part of cookie.split(/;\s*/)) {
+    const [name, ...value] = part.split("=");
+    if (name === "CF_Authorization" && value.length > 0) return value.join("=");
+  }
+  return null;
+}
+
 function isLocalhost(url: URL): boolean {
   return url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
 }
@@ -119,7 +133,7 @@ export async function passedAccess(
   const settings = accessSettings(env);
   if (settings) {
     if (access && settings.audiences.includes(access.aud)) return true;
-    const token = request.headers.get("cf-access-jwt-assertion");
+    const token = request.headers.get("cf-access-jwt-assertion") ?? accessCookie(request);
     if (token) {
       try {
         return await verifyAccessToken(token, settings);

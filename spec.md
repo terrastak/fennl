@@ -324,7 +324,8 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - **Short sessions**: admin sessions end after 30 minutes without use (`session.last_active_at`) or 8 hours after sign-in; an expired session is deleted. `hasFreshPasskey` (sign-in within 5 minutes) is ready for B7's sensitive actions.
   - **Alerts**: every admin sign-in and new passkey is emailed to `ADMIN_ALERT_EMAIL`, with IP, country and browser.
   - **Audit log**: `admin_audit_log` refuses updates and deletes (database triggers). Each entry the Worker writes is also copied to the `fennl-audit` R2 bucket, which CI locks so objects can't be changed or deleted for 365 days. The console shows recent activity.
-  - **Previews**: GitHub Actions uses an Access service token (`CF_ACCESS_CLIENT_ID/SECRET`) to check previews once they're behind Access.
+  - **Previews**: GitHub Actions uses an Access service token (`CF_ACCESS_CLIENT_ID/SECRET`) to check previews once they're behind Access. Without the token, the check accepts Access's sign-in redirect with a warning.
+  - **Fixes from the owner's setup (2026-10-06)**: the Worker serves static assets, so Cloudflare doesn't pass it `ctx.access`. It now also reads Access's `CF_Authorization` cookie, as well as the `Cf-Access-Jwt-Assertion` header. Passkeys on `*.workers.dev` use the account subdomain as their relying-party ID, so one passkey works on every preview link.
   - **Tests**: Access tokens (valid, wrong audience, wrong team, expired, other keys, tampered, the local switch), the admin address rules, every admin check in order, idle and 8-hour expiry, passkey registration rules, the closed role endpoints, and the audit log (written, copied, alerted, append-only, and the database-side entries). A browser test runs the real flow with a software passkey: password sign-in, add a passkey, console, sign out, then passkey sign-in.
 
 ### B5. Invite and promo codes
@@ -891,7 +892,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B2 | Done 2026-10-03 (merged; live on the beta site with Resend email. Google and Apple wait on their setup steps) |
 | B3 | Done 2026-10-03 (merged; live on the beta site) |
 | B4 | Done 2026-10-03 (merged; live on the beta site) |
-| B4a | Approved 2026-10-04; built, waiting on review and the owner's Access setup |
-| B5 | Approved 2026-10-04; built, waiting on review (needs B4a merged first) |
+| B4a | Done 2026-10-05 (merged with B5; live). Owner's Access setup in progress; guide rewritten 2026-10-06 |
+| B5 | Done 2026-10-05 (merged with B4a; live, sign-up invite-only) |
 | B6 | Next; awaiting approval |
 | All others | Not started |

@@ -134,6 +134,28 @@ describe("passing Access", () => {
     expect(await passedAccess(request(), configured, undefined)).toBe(false);
   });
 
+  it("also reads the token from the CF_Authorization cookie Access sets", async () => {
+    const token = await sign(goodClaims());
+    expect(
+      await passedAccess(
+        request({ cookie: `theme=dark; CF_Authorization=${token}` }),
+        configured,
+        undefined,
+      ),
+    ).toBe(true);
+    const wrongAudience = await sign({ ...goodClaims(), aud: ["other"] });
+    expect(
+      await passedAccess(
+        request({ cookie: `CF_Authorization=${wrongAudience}` }),
+        configured,
+        undefined,
+      ),
+    ).toBe(false);
+    expect(
+      await passedAccess(request({ cookie: "CF_Authorization=forged" }), configured, undefined),
+    ).toBe(false);
+  });
+
   it("lets the local-development switch work only on localhost, and only when unconfigured", async () => {
     const bypass = { ...env, ACCESS_DEV_BYPASS: "true" };
     expect(await passedAccess(request({}, "http://localhost:5173/admin"), bypass, undefined)).toBe(
