@@ -23,12 +23,6 @@ interface FennlEnv {
    * The admin console's own address in production (from the GitHub variable ADMIN_HOSTNAME,
    * set at build time). Unset in previews and local development, where /admin is used.
    */
-  /**
-   * The app's own address in production (from the GitHub variable APP_HOSTNAME, set at build
-   * time). Links in emails the admin console sends point here. Unset in previews and locally,
-   * where the app and admin console share one address.
-   */
-  APP_HOSTNAME?: string;
   ADMIN_HOSTNAME?: string;
   /** Cloudflare Access team domain, for example "fennl.cloudflareaccess.com". */
   ACCESS_TEAM_DOMAIN?: string;
