@@ -360,6 +360,17 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. Premium: a device list in Settings with "sign out this device".
 - **You check**: With a free account, sign in on your phone, then your laptop, and take over. With a beta account, use both at once.
 - **Done when**: Tests cover register, over-limit, takeover, revoke, and eviction recovery (device ID lost).
+- **Decisions (2026-10-06)**: keep the seeded limits for now: Free 1, Individual 5, Household 10 (`plan_limits`, editable from the admin console in B7).
+- **Built (2026-10-06)**:
+  - **`device` table** (migration `0009`): one row per person per browser (`id` is the browser's random ID; primary key with `user_id`), plus the household, a label like "Safari on iPhone" from the user agent, the sign-in session it last used, first and last seen, and `revoked_at` / `revoked_reason` (`taken_over`, `signed_out`, `replaced`). Revoked rows are kept.
+  - **The browser** makes its ID on first run and keeps it in local storage (in memory where storage isn't allowed). On every app start it calls `POST /api/devices/register`; the app opens only when that says "ok".
+  - **The limit** is the household's `max_devices` entitlement. Adding a device happens in one conditional statement (counting the household's active devices), so two new browsers can't both take the last place.
+  - **Takeover** (`POST /api/devices/takeover`) is instant: it revokes the person's other devices (Free) or the ones they chose (Premium), deletes those devices' sign-in sessions, then registers this one. Light rate limit: 10 per 10 minutes.
+  - **Eviction recovery**: a browser whose storage was cleared keeps its sign-in cookie, so a new ID arriving with a session that another active device row holds is the same browser. The old row is retired as `replaced`, with no takeover screen.
+  - **Screens**: "Use Fennl on this device?" (Free) or "Choose a device to sign out" (Premium), both with "Sign out here instead". Settings › Devices lists the household's active devices, marks "This device", and signs others out (`GET /api/devices`, `POST /api/devices/:id/sign-out`).
+  - **Admins using someone's account** (impersonation, C12) are never registered as a device.
+  - Only a person's own devices can be signed out. Once households can have two members (G1), the count is household-wide.
+  - **Tests**: 10 server tests (register, over-limit, takeover signing the other browser out, choosing to sign out instead, no cooldown, eviction, a kept ID after sign-out, two new browsers at once, Premium choice, the Settings list and its sign-out rules, rate limit, impersonation). Browser tests with two real browsers for both plans, with an accessibility check of the takeover screen.
 
 ### B7. Admin console: account tools
 - **Goal**: You can help users and manage limits yourself.
@@ -892,7 +903,8 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B2 | Done 2026-10-03 (merged; live on the beta site with Resend email. Google and Apple wait on their setup steps) |
 | B3 | Done 2026-10-03 (merged; live on the beta site) |
 | B4 | Done 2026-10-03 (merged; live on the beta site) |
-| B4a | Done 2026-10-05 (merged with B5; live). Owner's Access setup in progress; guide rewritten 2026-10-06 |
+| B4a | Done 2026-10-05 (merged with B5; live). Owner's Access setup and admin accounts done 2026-10-06 |
 | B5 | Done 2026-10-05 (merged with B4a; live, sign-up invite-only) |
-| B6 | Next; awaiting approval |
+| B6 | Approved 2026-10-06 (current device limits); built, waiting on review |
+| B7 | Next; awaiting approval |
 | All others | Not started |

@@ -8,6 +8,7 @@ import { recentAdminActions } from "./admin/audit";
 import { accessContext, checkAdmin, passkeyCount, requireAdmin } from "./admin/requireAdmin";
 import { createAuth, signInMethods } from "./auth/auth";
 import { adminCodeRoutes, codeRoutes } from "./codes/routes";
+import { deviceRoutes } from "./devices/routes";
 import { database, databaseStatus } from "./db/client";
 import { passkey, user } from "./db/schema";
 import { devOutbox } from "./email/outbox";
@@ -106,6 +107,9 @@ app.get("/api/sign-in-methods", async (c) =>
 
 // Invite and promo codes: at sign-up and from the Account page.
 app.route("/", codeRoutes);
+
+// The browsers each household uses, and the device limit (phase B6).
+app.route("/", deviceRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {

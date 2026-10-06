@@ -8,6 +8,7 @@ import {
 } from "../../shared/appearance";
 import { useAppearance } from "../appearance/appearance";
 import { saveAccountScheme } from "../appearance/accountScheme";
+import { DevicesSection } from "../devices/DevicesSection";
 import { PageHeader } from "./PageHeader";
 import styles from "./SettingsPage.module.css";
 
@@ -135,6 +136,8 @@ export function SettingsPage() {
           </div>
         </fieldset>
       </section>
+
+      <DevicesSection />
 
       <section aria-labelledby="about-title" className={styles.section}>
         <h2 id="about-title">About</h2>

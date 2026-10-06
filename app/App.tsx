@@ -2,6 +2,8 @@ import { useEffect, type ComponentType } from "react";
 import { useAccountSchemeSync } from "./appearance/accountScheme";
 import { AuthLayout } from "./auth/AuthLayout";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
+import { TakeoverScreen } from "./devices/TakeoverScreen";
+import { useDeviceGate } from "./devices/useDeviceGate";
 import { useSession } from "./auth/client";
 import { EmailConfirmedPage } from "./auth/EmailConfirmedPage";
 import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
@@ -50,6 +52,9 @@ export function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
   const { data: session, isPending } = useSession();
   useAccountSchemeSync();
+  // Every app start registers this browser; over the plan's device limit, the takeover screen
+  // shows instead of the app (phase B6).
+  const { gate, takeOver } = useDeviceGate(session?.session.id);
 
   const accountRoute = ACCOUNT_ROUTES[path];
   if (accountRoute) {
@@ -73,6 +78,23 @@ export function App() {
     // Keep an error from an email link (for example ?error=invalid_token) so sign-in can explain it.
     const error = new URLSearchParams(window.location.search).get("error");
     return <Redirect to={error ? `/sign-in?error=${encodeURIComponent(error)}` : "/sign-in"} />;
+  }
+  if (gate.kind === "over_limit") {
+    return (
+      <AuthLayout
+        path={path}
+        title={gate.max === 1 ? "Use Fennl on this device?" : "Choose a device to sign out"}
+      >
+        <TakeoverScreen max={gate.max} devices={gate.devices} takeOver={takeOver} />
+      </AuthLayout>
+    );
+  }
+  if (gate.kind !== "ok") {
+    return (
+      <p role="status" className="visually-hidden">
+        Loading Fennl…
+      </p>
+    );
   }
 
   const { title, Page } = ROUTES[path] ?? NOT_FOUND;

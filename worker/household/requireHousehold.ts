@@ -7,6 +7,10 @@ export interface SignedIn {
   db: Database;
   userId: string;
   household: HouseholdAccess;
+  /** The sign-in session making this request. */
+  sessionId: string;
+  /** An admin is using this account (phase C12): it never registers as a device. */
+  impersonating: boolean;
 }
 
 /**
@@ -29,6 +33,12 @@ export const requireHousehold = createMiddleware<{
     result.session.id,
     result.session.activeOrganizationId,
   );
-  c.set("signedIn", { db, userId: result.user.id, household });
+  c.set("signedIn", {
+    db,
+    userId: result.user.id,
+    household,
+    sessionId: result.session.id,
+    impersonating: Boolean(result.session.impersonatedBy),
+  });
   await next();
 });

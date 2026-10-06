@@ -69,6 +69,8 @@ test("the color scheme follows the account to another device", async ({
   await otherPage.getByLabel("Email").fill(email);
   await otherPage.getByLabel("Password").fill(PASSWORD);
   await otherPage.getByRole("button", { name: "Sign in" }).click();
+  // A free account uses one device at a time (phase B6): this one takes over.
+  await otherPage.getByRole("button", { name: "Use Fennl on this device" }).click();
   await expect(otherPage.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
 
   // The scheme comes along; light or dark stays per device.
