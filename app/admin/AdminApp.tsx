@@ -1,24 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
-import {
-  adminAuthClient,
-  loadAdminState,
-  type AdminMe,
-  type AdminState,
-  type AuditRow,
-} from "./client";
+import { adminAuthClient, loadAdminState, type AdminMe, type AdminState } from "./client";
+import { AccountsSection } from "./AccountsSection";
+import { ActivitySection } from "./ActivitySection";
 import { CodesSection, SignUpSwitch } from "./CodesSection";
+import { LimitsSection } from "./LimitsSection";
 import styles from "./admin.module.css";
-
-const ACTION_NAMES: Record<string, string> = {
-  "admin.sign_in": "Signed in",
-  "admin.passkey_registered": "Added a passkey",
-  "admin.role_changed": "Admin role changed (database)",
-  "admin.passkey_removed": "Passkey removed (database)",
-  "code.created": "Created a code",
-  "code.updated": "Changed a code",
-  "code.disabled": "Turned off a code",
-  "setting.changed": "Changed invite-only sign-up",
-};
 
 function time(iso: string | null): string {
   return iso ? new Date(iso).toLocaleString() : "";
@@ -275,85 +261,83 @@ function AddBackupPasskey({ refresh }: { refresh: () => Promise<void> }) {
   );
 }
 
-function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
-  const [rows, setRows] = useState<AuditRow[] | null>(null);
-  useEffect(() => {
-    fetch("/api/admin/audit")
-      .then((res) => (res.ok ? (res.json() as Promise<AuditRow[]>) : []))
-      .then(setRows)
-      .catch(() => setRows([]));
-  }, []);
+const SECTIONS = [
+  { id: "accounts", name: "Accounts" },
+  { id: "codes", name: "Codes and sign-up" },
+  { id: "limits", name: "Plan limits" },
+  { id: "activity", name: "Activity" },
+  { id: "you", name: "Your admin account" },
+] as const;
 
+type SectionId = (typeof SECTIONS)[number]["id"];
+
+function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
+  const [section, setSection] = useState<SectionId>("accounts");
   return (
     <>
       <h1 className={styles.title} tabIndex={-1}>
         Admin console
       </h1>
-      <CodesSection />
-      <SignUpSwitch />
-      <section className={styles.card} aria-labelledby="you-title">
-        <h2 id="you-title">Signed in as {me.name}</h2>
-        <dl className={styles.details}>
-          <div>
-            <dt>Account</dt>
-            <dd>{me.email}</dd>
-          </div>
-          <div>
-            <dt>Signed in</dt>
-            <dd>{time(me.signedInAt)}</dd>
-          </div>
-          <div>
-            <dt>Session ends</dt>
-            <dd>{time(me.expiresAt)} (30 minutes without use, 8 hours at most)</dd>
-          </div>
-          <div>
-            <dt>Passkeys</dt>
-            <dd>
-              {me.passkeys.length
-                ? me.passkeys.map((p) => `${p.name ?? "Passkey"} (${time(p.createdAt)})`).join(", ")
-                : "None"}
-            </dd>
-          </div>
-        </dl>
-        {me.passkeys.length < 2 ? (
-          <p className={styles.muted}>
-            Add a second passkey (another device, or a security key) so losing one doesn&rsquo;t
-            lock you out.
-          </p>
-        ) : null}
-        <AddBackupPasskey refresh={refresh} />
-      </section>
-      <section className={styles.card} aria-labelledby="activity-title">
-        <h2 id="activity-title">Recent admin activity</h2>
-        {rows === null ? (
-          <p role="status">Loading…</p>
-        ) : rows.length === 0 ? (
-          <p className={styles.muted}>Nothing yet.</p>
-        ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th scope="col">When</th>
-                  <th scope="col">What</th>
-                  <th scope="col">Details</th>
-                  <th scope="col">From</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td>{time(row.createdAt)}</td>
-                    <td>{ACTION_NAMES[row.action] ?? row.action}</td>
-                    <td>{row.details?.method ?? row.details?.code ?? ""}</td>
-                    <td>{[row.details?.ip, row.details?.country].filter(Boolean).join(", ")}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+      <nav aria-label="Admin sections" className={styles.nav}>
+        {SECTIONS.map((s) => (
+          <button
+            key={s.id}
+            type="button"
+            className={styles.navButton}
+            aria-current={section === s.id ? "page" : undefined}
+            onClick={() => setSection(s.id)}
+          >
+            {s.name}
+          </button>
+        ))}
+      </nav>
+      {section === "accounts" ? <AccountsSection /> : null}
+      {section === "codes" ? (
+        <>
+          <CodesSection />
+          <SignUpSwitch />
+        </>
+      ) : null}
+      {section === "limits" ? <LimitsSection /> : null}
+      {section === "activity" ? <ActivitySection /> : null}
+      {section === "you" ? <You me={me} refresh={refresh} /> : null}
     </>
+  );
+}
+
+function You({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
+  return (
+    <section className={styles.card} aria-labelledby="you-title">
+      <h2 id="you-title">Signed in as {me.name}</h2>
+      <dl className={styles.details}>
+        <div>
+          <dt>Account</dt>
+          <dd>{me.email}</dd>
+        </div>
+        <div>
+          <dt>Signed in</dt>
+          <dd>{time(me.signedInAt)}</dd>
+        </div>
+        <div>
+          <dt>Session ends</dt>
+          <dd>{time(me.expiresAt)} (30 minutes without use, 8 hours at most)</dd>
+        </div>
+        <div>
+          <dt>Passkeys</dt>
+          <dd>
+            {me.passkeys.length
+              ? me.passkeys.map((p) => `${p.name ?? "Passkey"} (${time(p.createdAt)})`).join(", ")
+              : "None"}
+          </dd>
+        </div>
+      </dl>
+      {me.passkeys.length < 2 ? (
+        <p className={styles.muted}>
+          Add a second passkey (another device, or a security key) so losing one doesn&rsquo;t lock
+          you out.
+        </p>
+      ) : null}
+      <AddBackupPasskey refresh={refresh} />
+    </section>
   );
 }

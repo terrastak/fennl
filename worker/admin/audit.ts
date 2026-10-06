@@ -1,4 +1,4 @@
-import { desc } from "drizzle-orm";
+import { desc, eq, or } from "drizzle-orm";
 import { database } from "../db/client";
 import { adminAuditLog } from "../db/schema";
 
@@ -52,10 +52,16 @@ export async function recordAdminAction(
   ]);
 }
 
-export async function recentAdminActions(env: Env, limit = 50) {
+/** The newest admin actions, optionally only those by or about one account. */
+export async function recentAdminActions(env: Env, limit = 50, accountId?: string) {
   return database(env.DB)
     .select()
     .from(adminAuditLog)
+    .where(
+      accountId
+        ? or(eq(adminAuditLog.targetUserId, accountId), eq(adminAuditLog.adminUserId, accountId))
+        : undefined,
+    )
     .orderBy(desc(adminAuditLog.createdAt))
     .limit(limit)
     .all();

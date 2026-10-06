@@ -387,6 +387,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - See all of it in the log.
 - **Done when**: Every tool is tested, and every action is logged with who, what, and when.
 - **Later admin tools (not scheduled)**: revoke devices, mark an email verified, disable an account, delete on request, export on someone's behalf, stats, a site-wide announcement banner.
+- **Built (2026-10-06)** (`worker/admin/accounts.ts`, `accountRoutes.ts`, `app/admin/`):
+  - **Console sections**: Accounts, Codes and sign-up, Plan limits, Activity, Your admin account.
+  - **Find an account** by part of its email or name (`GET /api/admin/accounts?q=`). Its page shows email and whether it's confirmed, sign-up and last-seen dates, sign-in methods, plan (and codes used), household and members, active devices, exceptions, and its own admin activity. Recipe count and storage say "counted once the recipe box exists" until Stage C. Opening an account is itself recorded (`account.viewed`).
+  - **Password help**: a reset email (Better Auth's own, linking to the app's address even from the admin address: `APP_HOSTNAME` is now passed to the Worker), or a temporary password. Either can sign the account out everywhere (sessions ended, devices let go).
+  - **Temporary password**: random, shown to the admin once, never logged or emailed. The person gets a "your password was reset by support" email. `user.must_change_password` (migration `0010`) makes the app show "Choose a new password" before anything else, and household routes refuse with `password_change_required` until `POST /api/account/password` succeeds. A reset from the email link clears it too. Admin accounts can't be given one.
+  - **Limits**: tier limits (`plan_limits`, byte limits typed in MB, blank = no limit) and per-account exceptions (`limit_override`, with an optional end date and note). Other Worker instances pick up a tier change within a minute.
+  - **Passkey again**: temporary passwords and every limit change need a passkey sign-in from the last 5 minutes; otherwise the console asks for the passkey (a fresh sign-in, which also sends the usual admin sign-in alert) and retries.
+  - **Activity log**: newest 100, with admin and account emails; `?account=` shows one account's.
+  - **Tests**: 12 server tests (admins only, search incl. literal "%", the account page and its audit, reset email and signing out everywhere, the app address for links, temporary password end to end incl. the forced change, passkey re-confirmation, admin accounts refused, a reset clearing the flag, exceptions, tier limits, the filtered log). A browser test runs the whole flow with a software passkey: find an account, add an exception, set a temporary password, the person changes it, and change a plan limit (with accessibility checks).
 
 ### B8. Feedback: in-app form and admin inbox
 - **Goal**: Testers can tell you what's wrong or what they'd like, and you can read and track it in the admin console. (Owner's choice, 2026-10-03: a phase of its own, not part of B7.)
@@ -818,10 +827,19 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### H1. Abuse limits
 - Rate limits on sign-up, sign-in, takeover, import, and uploads. Confirm the C11 limits are set correctly in production. Email verification required.
+- **Clear out unconfirmed accounts** (open question 20; added 2026-10-06, details settled when we get here, and small enough to build sooner). Email-and-password sign-ups whose address is never confirmed (usually a typo) stay in the database, show up in the admin console's account search, and hold the address so its real owner can't sign up with it. A scheduled job (a Cloudflare Cron Trigger) deletes them after a set time. To settle then:
+  - The wait. The confirmation link lasts 24 hours, but signing in before confirming sends a fresh one, so a short wait can cut off a slow tester.
+  - Everything that goes with the account: its personal household, sessions, devices, and any sign-up code use (returned to the code, so a typo doesn't use up an invite).
+  - Google and Apple accounts are confirmed by the provider, so they're never affected.
+  - Recording each clear-out (not as an admin action, since no admin did it), and meanwhile marking unconfirmed accounts in the admin search.
 - Full security review of sign-in, the admin console, impersonation, the access rule, and photo access, with findings fixed. Consider an outside penetration test before the public launch.
 
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
+- **Change email address** (open question 19; added 2026-10-06, details settled when we get here, and could move earlier). In Settings, a person changes their email and confirms the new address before it takes effect; the old address gets a security notice (CLAUDE.md requires the standard email for email changes, including during impersonation). To settle then:
+  - What Better Auth's own change-email support covers (**Unverified**; check its current docs).
+  - Accounts that sign in with Google or Apple.
+  - The passkey re-confirmation when an admin does it while acting as the user (C12).
 
 ### H3. Backups
 - Checked 2026-10-03: D1 Time Travel restores to any minute in the last 30 days on **Workers Paid** (7 days on Free), but it overwrites the whole database. So the nightly per-household text export to R2 is required, since it's the only way to restore one account. A tested restore drill on staging.
@@ -875,6 +893,8 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 16 | Free structured import vs. the 100-recipe limit: a free user importing a 1,240-recipe Paprika library. Import up to the remaining allowance, with a clear message? (Suggest: yes, show the rest in the preview as "needs Premium".) | E3, E13 |
 | 17 | ~~Is the Cloudflare account on Workers Paid ($5/month)?~~ Yes: switched on 2026-10-03 (B2 setup, step 1) | H3 (before H5) |
 | 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
+| 19 | Changing an account's email address: confirm the new address first, notify the old one. Details in H2 | H2, or sooner |
+| 20 | How long before an account whose email was never confirmed is deleted? (Owner suggested about 24 hours.) Details in H1 | H1, or sooner |
 
 ## Notes: AI provider research (2026-10-01)
 
@@ -905,6 +925,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B4 | Done 2026-10-03 (merged; live on the beta site) |
 | B4a | Done 2026-10-05 (merged with B5; live). Owner's Access setup and admin accounts done 2026-10-06 |
 | B5 | Done 2026-10-05 (merged with B4a; live, sign-up invite-only) |
-| B6 | Approved 2026-10-06 (current device limits); built, waiting on review |
-| B7 | Next; awaiting approval |
+| B6 | Done 2026-10-06 (merged; tested on the preview) |
+| B7 | Approved 2026-10-06; built, waiting on review |
+| B8 | Next; awaiting approval |
 | All others | Not started |

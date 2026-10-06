@@ -30,7 +30,8 @@ function productionConfig() {
       { pattern: app, custom_domain: true },
       ...(admin ? [{ pattern: admin, custom_domain: true }] : []),
     ],
-    vars: { ADMIN_HOSTNAME: admin ?? "admin-area-off.invalid" },
+    // APP_HOSTNAME: emails sent from the admin address (password help, B7) link to the app.
+    vars: { ADMIN_HOSTNAME: admin ?? "admin-area-off.invalid", APP_HOSTNAME: app },
   };
 }
 

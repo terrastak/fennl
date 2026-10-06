@@ -5,7 +5,14 @@ import { createAuthClient } from "better-auth/react";
 export const authClient = createAuthClient({
   basePath: "/api/auth",
   // Mirrors the extra account fields in worker/auth/options.ts, so they're typed here too.
-  plugins: [inferAdditionalFields({ user: { colorScheme: { type: "string", required: false } } })],
+  plugins: [
+    inferAdditionalFields({
+      user: {
+        colorScheme: { type: "string", required: false },
+        mustChangePassword: { type: "boolean", required: false },
+      },
+    }),
+  ],
 });
 
 export const { useSession } = authClient;

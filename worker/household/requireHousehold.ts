@@ -25,6 +25,8 @@ export const requireHousehold = createMiddleware<{
   const auth = await createAuth(c.env, c.req.raw);
   const result = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!result) return c.json({ error: "unauthorized" }, 401);
+  // A temporary password from support must be replaced before anything else (phase B7).
+  if (result.user.mustChangePassword) return c.json({ error: "password_change_required" }, 403);
 
   const db = database(c.env.DB);
   const household = await householdForSession(
