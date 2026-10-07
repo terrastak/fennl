@@ -21,6 +21,7 @@ import { householdEntitlements } from "./entitlements/entitlements";
 import { householdSummary } from "./household/household";
 import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
+import { syncRoutes } from "./sync/routes";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
@@ -115,6 +116,9 @@ app.route("/", codeRoutes);
 
 // The browsers each household uses, and the device limit (phase B6).
 app.route("/", deviceRoutes);
+
+// Sending and fetching recipe changes (phase C3).
+app.route("/", syncRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {
