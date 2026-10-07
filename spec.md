@@ -475,6 +475,14 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Open the test page on your own phone and computer and send me the results it shows.
 - **Done when**: Results are recorded here, and SQLite/OPFS is confirmed or we switch to the fallback (IndexedDB via Dexie).
 - **Decisions**: Approve the SQLite WASM library choice. Checked 2026-10-03: SQLite's official build with the `opfs-sahpool` storage mode needs no special server headers, works on Safari 16.4+, and is the fastest option. It allows one connection per database, so step 3's two-tab test decides how tabs share it.
+- **Built (2026-10-07)** (`/storage-trial`, `app/trial/`, `storage-trial.html`):
+  - Approved with the phase: SQLite's official browser build, `@sqlite.org/sqlite-wasm` 3.53.4 (no other packages), on the origin private file system through `opfs-sahpool`, in a background worker. Checked: its build includes full-text search (FTS5), and accent-insensitive matching works ("jalapeno" finds "jalapeño").
+  - The page needs no sign-in and never touches an account. It writes made-up recipes about the size of real ones (2 to 3 KB of text each; 10,000 by default) with a full-text index, then times writing, five searches (words, a phrase, an accent, a word start), listing 50 by title and opening one. It also shows the browser, whether it was opened from the home screen, storage used and available, and whether the browser will keep the storage, with an "Ask to keep this storage" button, "Copy results", and "Delete the test recipes".
+  - It has its own home-screen app description, so it can be installed to an iPhone or Android home screen and tested there.
+  - A reload shows the recipes saved earlier. A second tab is refused ("Another tab has the test open") until the first closes, which confirms the one-connection limit; C4's "one tab runs sync" follows from it.
+  - Baseline in this project's automated Chromium (not a real device): 10,000 recipes (23.5 MB of text) written in about 15 s; searches 6 to 12 ms; listing 50 by title 1 ms; opening one recipe under 1 ms.
+  - **Tests**: a browser test (computer and phone sizes) writes 300 recipes, checks the searches including accents, the reload, the second-tab refusal and recovery, deleting, and accessibility.
+  - Results from the owner's devices go in `docs/research/2026-10-07-storage-trial.md`.
 
 ### C3. Server recipe storage and sync endpoints
 - **Goal**: The server can accept and hand out recipe changes.
@@ -966,5 +974,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B7 | Done 2026-10-06 (merged; live) |
 | B7a | Done 2026-10-06 (merged as #19; live) |
 | B8 | Done 2026-10-07 (merged; live) |
-| C1 | Approved 2026-10-07 after a detailed discussion; built, waiting on review |
+| C1 | Done 2026-10-07 (merged) |
+| C2 | Approved 2026-10-07; test page built, waiting on results from the owner's devices |
 | All others | Not started |
