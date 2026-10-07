@@ -500,6 +500,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   5. Free tier: reject large offline batches, per `CLAUDE.md`.
 - **You check**: Nothing visible; tests only.
 - **Done when**: Tests cover conflicts, deletes, batching, revoked devices, and wrong household.
+- **Built (2026-10-07)** (`worker/sync/`, `shared/sync.ts`, migration `0013`):
+  - **Tables**: `recipe`, `recipe_opinion`, `recipe_made`, `category`, `recipe_category`, and `sync_counter` (the last `server_seq` handed out). `recipe_photo` waits for images (D2) and `recipe_version` for history. Every row carries the recipe owner, so devices fetch per owner and access is "the owner is in your household".
+  - **Sending** (`POST /api/sync/push`): up to 100 changes per push (4 MB): create or edit a recipe, Trash and restore, your own rating/favorite/note, "made it" (and taking it back), categories, and filing recipes in them. Each change is checked on its own; good ones are kept even if others in the same push are refused, and the answer says what became of each: kept, unchanged (the server had it or something newer), or refused (with the reason).
+  - **Last change wins, field by field.** Each change says when it was made; the server corrects for a device whose clock is wrong (the push says when it was sent, by the same clock) and never accepts a time later than now. A field is kept only if its change is newer and different, inside one SQL statement per change, and a push runs as one batch, so there's no read-decide-write and sending the same push twice changes nothing.
+  - **Ownership**: a new recipe or category belongs to its creator. A partner may create a category for the recipe owner (filing the owner's recipe under a category they don't have). A recipe can only be filed under its owner's categories, and a category's parent must have the same owner.
+  - **Fetching** (`GET /api/sync/pull`): one cursor per person in the household; someone new starts at 0, and anyone who left is no longer listed. Pages of up to 500 rows (100 recipes, about 4 MB), with `more` saying to ask again. Tombstones (Trash, taken-back "made it", unfiled) come through like any other change.
+  - **Refused**: no registered device, or one signed out or replaced (`device_revoked`); an app too old (`upgrade_required`) or newer than the server (`server_behind`); and, **without offline editing (Free), any change made more than 2 minutes before it was sent** (`offline_not_allowed`): Free saves go straight to the server, so an older change can only come from an offline queue. (This replaces "reject large offline batches": a size cap would also block Free's bulk category changes in C7.)
+  - Plan limits (recipe count, text and per-recipe size) are C11's; an admin acting as a user (C12) syncs without a device.
+  - **Tests**: 16 server tests (devices, versions, malformed and oversized pushes; create and fetch once; per-change checks; field-by-field conflicts and repeated pushes; a wrong device clock; Trash and restore; Free's offline rule; another household can't see, change or claim; a shared household's edits, opinions, categories and "made it"; 250 recipes in pages) and 7 for the shared checks.
 
 ### C4. Client sync engine
 - **Goal**: The browser keeps its local copy in step with the server.
@@ -983,4 +992,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B8 | Done 2026-10-07 (merged; live) |
 | C1 | Done 2026-10-07 (merged) |
 | C2 | Done 2026-10-07 (merged; tested on the owner's Mac, iPhone and Windows PC: SQLite on OPFS confirmed) |
+| C3 | Approved 2026-10-07; built, waiting for review |
 | All others | Not started |

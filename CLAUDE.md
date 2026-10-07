@@ -130,13 +130,14 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `device` | Device registry for the one-device free limit and Premium cap (built in B6, `worker/devices/`) | `id` (client-generated, random; primary key with `user_id`), `household_id`, `user_id`, `label`, `session_id`, `first_seen_at`, `last_seen_at`, `revoked_at`, `revoked_reason` |
 | `household_usage` | Quota tracking (a shared household's quota is the sum of its members' owned images) | `household_id`, `image_bytes`, `image_count`, `updated_at` |
 | `image` | One row per stored image per owner | `hash` (content hash), `owner_user_id`, `bytes`, `content_type`, `created_at`, `deleted_at` |
-| `recipe` | Recipe records (C1: `shared/recipe.ts`, `docs/design/recipe-model.md`; table built in C3). Ingredients and directions are lists inside the record, every line with its own ID | `id` (UUID), `owner_user_id`, `copied_from`, the `RECIPE_FIELDS`, import provenance, `created_at`, `updated_by_user_id`, `updated_at`, `deleted_at`, `server_seq` |
-| `recipe_opinion` | One person's rating, favorite and signed note on a recipe; shown to the household | `recipe_id`, `user_id`, `rating`, `favorite`, `note`, `updated_at`, `deleted_at`, `server_seq` |
-| `recipe_made` | "Made it" records; the latest is the household's "last made" | `id`, `recipe_id`, `user_id`, `made_on`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe` | Recipe records (C1: `shared/recipe.ts`, `docs/design/recipe-model.md`; built in C3, `worker/sync/`). Ingredients and directions are lists inside the record (JSON), every line with its own ID | `id` (UUID), `owner_user_id`, `copied_from`, one column per `RECIPE_FIELDS` field, `import`, `field_times` (when each field last changed), `created_at`, `updated_by_user_id`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_opinion` | One person's rating, favorite and signed note on a recipe; shown to the household (C3) | `recipe_id`, `user_id`, `owner_user_id` (the recipe's), `rating`, `favorite`, `note`, `field_times`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_made` | "Made it" records; the latest is the household's "last made" (C3) | `id`, `recipe_id`, `user_id`, `owner_user_id` (the recipe's), `made_on`, `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_version` | Premium version history | `id`, `recipe_id`, `snapshot`, `created_at`, `author_user_id` |
-| `category` | Nested categories, owned per user and merged by name in the household view | `id` (UUID), `owner_user_id`, `parent_id`, `name`, sort order, `updated_at`, `deleted_at`, `server_seq` |
-| `recipe_category` | Recipe-to-category links (many per recipe) | `recipe_id`, `category_id`, `updated_at`, `deleted_at`, `server_seq` |
-| `recipe_photo` | Photos on a recipe, incl. kept import originals | `id` (UUID), `recipe_id`, `image_hash`, role (cover, photo, import original), sort order, `updated_at`, `deleted_at`, `server_seq` |
+| `category` | Nested categories, owned per user and merged by name in the household view (C3) | `id` (UUID), `owner_user_id`, `parent_id`, `name`, `sort_order`, `field_times`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_category` | Recipe-to-category links (many per recipe) (C3) | `recipe_id`, `category_id`, `owner_user_id` (the recipe's), `field_times`, `updated_at`, `deleted_at`, `server_seq` |
+| `sync_counter` | One row: the last `server_seq` handed out, shared by every synced table (C3) | `id`, `value` |
+| `recipe_photo` | Photos on a recipe, incl. kept import originals (built with D2, since it needs images) | `id` (UUID), `recipe_id`, `image_hash`, role (cover, photo, import original), sort order, `updated_at`, `deleted_at`, `server_seq` |
 | `import_job` | One row per import attempt | `id`, `household_id`, `user_id`, source type, status, draft, provenance, resulting `recipe_id`, `created_at` |
 | `ai_usage` | Metering for every AI call | `id`, `household_id`, `import_job_id`, provider, model, input/output tokens, estimated cost, `created_at` |
 | `plan_limits` | Every tier limit (recipe count, text caps, device caps, image quotas), editable without a deploy | `tier`, `key`, `value`, `updated_at`, `updated_by` |
@@ -172,7 +173,7 @@ The look is recorded in `docs/design/design-direction.md` and implemented as CSS
 - **Trash (Decided 2026-10-03):** deleted recipes stay in Trash for 30 days, then a nightly job expunges them. Expunging wipes content, versions, and orphaned photos, but keeps a minimal tombstone (id, owner, `deleted_at`, `server_seq`).
 - D1 has no interactive transactions (Better Auth uses `batch()` for atomicity). Sync writes must be batched or conditional updates, not read-decide-write inside a transaction.
 - Images are stored and referenced by **content hash**.
-- Conflict resolution: **per-field last-write-wins by default**, over the fields in `RECIPE_FIELDS` (`shared/recipe.ts`). The ingredient and direction lists are one field each for now; line-by-line merging is wanted later (every line already has an ID). Other Premium "smart merging" for households is to be designed (Open).
+- Conflict resolution: **per-field last-write-wins by default**, over the fields in `RECIPE_FIELDS` (`shared/recipe.ts`). Built in C3: each change carries the device's time, corrected on arrival for a wrong device clock (the push says when it was sent); a field is kept only if its change is newer than the stored `field_times` entry, all inside one SQL statement per change, so there's no read-decide-write. Moving to Trash and back counts as one more field. The ingredient and direction lists are one field each for now; line-by-line merging is wanted later (every line already has an ID). Other Premium "smart merging" for households is to be designed (Open).
 - **Ingredients and directions are edited as text** (one box each) and stored as lines; `shared/recipeLines.ts` converts between the two and keeps line IDs stable across edits. The text as written is always the master copy; how a line was read (amount, unit) is derived and re-read when the text changes.
 - Server migrations run before new code is deployed, so every migration must stay compatible with the code already running (add first; drop or rename only in a later change). Never edit a merged migration.
 - Client schema migrations are required, since local databases live on user devices. The sync protocol carries a client schema version and rejects incompatible clients with an upgrade prompt.
@@ -203,8 +204,8 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 | `POST /api/devices/register` | Register the browser's device ID | Under `max_devices`, else return takeover options |
 | `POST /api/devices/takeover` | Make this browser the active device, revoke the previous one (free) or revoke a chosen one (Premium) | Authenticated member of the household |
 | `GET /api/devices`, `POST /api/devices/:id/sign-out` | Settings › Devices: list active devices, sign another one out | Authenticated; only the caller's own devices can be signed out |
-| `POST /api/sync/push` | Submit changes `{deviceId, schemaVersion, changes[]}` | Device not revoked; free tier rejects queued/offline-batched pushes beyond a small size |
-| `GET /api/sync/pull?since=<cursor>` | Fetch changes after the cursor | Device not revoked |
+| `POST /api/sync/push` | Submit changes `{deviceId, schemaVersion, sentAt, changes[]}` (built in C3; shapes in `shared/sync.ts`) | Device registered and not revoked; app schema version; without `offline_enabled`, every change must be under 2 minutes old when sent |
+| `GET /api/sync/pull?deviceId=&schemaVersion=&since=<owner>:<seq>,...` | Fetch changes after each owner's cursor, in pages (C3) | Device registered and not revoked; only owners in the caller's household |
 | `POST /api/images/upload` (or `/upload-url`) | Upload an image via the Worker or a short-lived signed URL | `images_enabled`, per-file size, total quota |
 | `GET /api/images/:hash` | Serve an image | Caller's household owns it; never public bucket URLs |
 | `GET /api/export` | Full-library export | Always allowed, including lapsed accounts |

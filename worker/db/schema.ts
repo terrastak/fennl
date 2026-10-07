@@ -256,3 +256,173 @@ export const feedback = sqliteTable(
     index("feedback_user_idx").on(table.userId),
   ],
 );
+
+// ---------------------------------------------------------------------------------------------
+// Recipes and what hangs off them (phase C3). The shape is shared/recipe.ts; how devices send
+// and fetch changes is shared/sync.ts and worker/sync/.
+//
+// Every row here syncs, so every row has updated_at, deleted_at (rows are never deleted while
+// the account exists; deleting fills deleted_at) and server_seq. server_seq comes from the one
+// sync_counter row: every accepted change takes the next number, so a device asks for "changes
+// after N". field_times keeps, per field, when that field was last changed (milliseconds, in the
+// server's clock): a change to a field is kept only if it was made later than the one stored
+// ("last change wins", field by field).
+//
+// Every row carries owner_user_id: the person who owns the recipe it belongs to, which never
+// changes. Devices fetch changes per owner (one cursor for each person in the household), and
+// access is "the owner is in the caller's household" (CLAUDE.md, "Data model rules").
+// ---------------------------------------------------------------------------------------------
+
+/** One row: the last server_seq handed out. */
+export const syncCounter = sqliteTable("sync_counter", {
+  id: integer("id").primaryKey(),
+  value: integer("value").notNull(),
+});
+
+/**
+ * A recipe. Each field of shared/recipe.ts's RecipeContent is one column; lists and groups of
+ * values (ingredients, times, source...) are JSON text.
+ */
+export const recipe = sqliteTable(
+  "recipe",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** A copy kept after a household split: the recipe it was copied from (phase G1c). */
+    copiedFrom: text("copied_from"),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    /** JSON: IngredientLine[]. */
+    ingredients: text("ingredients").notNull(),
+    /** JSON: DirectionStep[]. */
+    directions: text("directions").notNull(),
+    /** JSON: RecipeTimes. */
+    times: text("times").notNull(),
+    /** JSON: RecipeServings. */
+    servings: text("servings").notNull(),
+    /** JSON: RecipeSource. */
+    source: text("source").notNull(),
+    notes: text("notes").notNull(),
+    difficulty: text("difficulty"),
+    difficultyText: text("difficulty_text"),
+    /** JSON: RecipeNutrition, or null. */
+    nutrition: text("nutrition"),
+    /** JSON: RecipeImport, or null. Set when the recipe is created. */
+    import: text("import"),
+    /** JSON: when each field last changed, { "title": 1791331703372, ... }. */
+    fieldTimes: text("field_times").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    /** Who last changed it (the owner or their partner). Null if that account was deleted. */
+    updatedByUserId: text("updated_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    /** In Trash since then (phase C9). */
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [index("recipe_owner_seq_idx").on(table.ownerUserId, table.serverSeq)],
+);
+
+/** One person's rating, favorite and signed note on a recipe (shared/recipe.ts RecipeOpinion). */
+export const recipeOpinion = sqliteTable(
+  "recipe_opinion",
+  {
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipe.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The recipe's owner (copied from the recipe; never changes). */
+    ownerUserId: text("owner_user_id").notNull(),
+    rating: integer("rating"),
+    favorite: integer("favorite", { mode: "boolean" }).notNull(),
+    note: text("note").notNull(),
+    fieldTimes: text("field_times").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recipeId, table.userId] }),
+    index("recipe_opinion_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
+  ],
+);
+
+/** "Made it" on a day, by someone in the household (shared/recipe.ts RecipeMade). */
+export const recipeMade = sqliteTable(
+  "recipe_made",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipe.id, { onDelete: "cascade" }),
+    /** Who made it. */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The recipe's owner (copied from the recipe; never changes). */
+    ownerUserId: text("owner_user_id").notNull(),
+    /** "2026-10-03", in the person's own calendar. */
+    madeOn: text("made_on").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [
+    index("recipe_made_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
+    index("recipe_made_recipe_idx").on(table.recipeId),
+  ],
+);
+
+/**
+ * A category, owned by one person (shared/recipe.ts Category). parent_id points at another of
+ * the same person's categories; it isn't a database reference, so a parent and child created
+ * together can arrive in either order.
+ */
+export const category = sqliteTable(
+  "category",
+  {
+    id: text("id").primaryKey(),
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    parentId: text("parent_id"),
+    name: text("name").notNull(),
+    sortOrder: integer("sort_order").notNull(),
+    fieldTimes: text("field_times").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [index("category_owner_seq_idx").on(table.ownerUserId, table.serverSeq)],
+);
+
+/**
+ * A recipe filed in a category. The category is always one of the recipe owner's (CLAUDE.md,
+ * "Recipe ownership in households"). Removing it from the category fills deleted_at.
+ */
+export const recipeCategory = sqliteTable(
+  "recipe_category",
+  {
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipe.id, { onDelete: "cascade" }),
+    categoryId: text("category_id")
+      .notNull()
+      .references(() => category.id, { onDelete: "cascade" }),
+    /** The recipe's owner, who also owns the category. */
+    ownerUserId: text("owner_user_id").notNull(),
+    fieldTimes: text("field_times").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.recipeId, table.categoryId] }),
+    index("recipe_category_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
+  ],
+);
