@@ -58,3 +58,6 @@ declare namespace Cloudflare {
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- used by cloudflare:test
   interface Env extends FennlEnv {}
 }
+
+/** Which build this is (vite.config.ts "define"): the commit's short ID. Not set in tests. */
+declare const __APP_VERSION__: string | undefined;

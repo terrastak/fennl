@@ -57,6 +57,12 @@ app.get("/api/health", async (c) => {
   return c.json(health, health.status === "ok" ? 200 : 503);
 });
 
+// Which build the server runs, so an open app can tell when a newer release is live (phase C4).
+// Tests run without a build, so there's no version there.
+app.get("/api/version", (c) =>
+  c.json({ version: typeof __APP_VERSION__ === "string" ? __APP_VERSION__ : "dev" }),
+);
+
 // Better Auth's household (organization) endpoints stay closed until sharing is built (phase G1):
 // people must not create, delete, rename or switch households on their own.
 app.all("/api/auth/organization/*", (c) => c.json({ error: "not_found" }, 404));

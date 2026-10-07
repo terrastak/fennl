@@ -195,6 +195,8 @@ Durable Object facts (from Cloudflare docs, verify before depending on them): SQ
 
 **Both**: flush pending changes on page hide or close (`fetch` with `keepalive` or `sendBeacon`). Request persistent storage (`navigator.storage.persist()`) for Premium users.
 
+Built in C4 (`app/sync/`): one outbox and one code path for both; `offline_enabled` decides whether changes may wait (Premium) or editing pauses while a save can't go through (Free). One tab owns the local copy (Web Locks) and the others go through it (BroadcastChannel). The app asks `GET /api/version` and offers a reload when a newer release is live.
+
 ## API sketch
 
 All routes require a valid Better Auth session. Every route resolves the caller's household entitlement first.

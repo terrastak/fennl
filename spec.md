@@ -524,6 +524,19 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   9. Wording that makes clear recipes live in your account, not the browser.
 - **You check**: Edit on laptop, see it on phone (beta account). Go offline on a beta account, edit, reconnect, watch it sync. Go offline on a free account and see the banner.
 - **Done when**: End-to-end tests cover both paths and a "local storage wiped" recovery.
+- **Built (2026-10-07)** (`app/sync/`):
+  - **The local copy**: SQLite (C2's choice) in a background worker, one database file per account. Each synced row is kept as the server's last copy plus the changes made here that the server hasn't confirmed, applied on top; when a newer copy arrives the waiting changes are applied to it again, so nothing typed here is lost. Local schema changes are numbered steps (`PRAGMA user_version`); if the recipe shape changes (`RECIPE_SCHEMA_VERSION`), the copy is downloaded again.
+  - **Saving**: every change is written here and queued, then sent a moment later (a burst goes in one push); fetching follows. One code path for both plans; the `offline_enabled` flag decides the rest:
+    - **Without it (Free)**: editing pauses, with a notice, while the browser is offline or a save is failing; it resumes when the save goes through. A change that had to wait is sent as made now (there's one device and editing was paused, so nothing newer can exist), which keeps C3's 2-minute rule for real offline queues.
+    - **With it (Premium)**: changes wait while offline and go when the connection returns, retrying after 2 s, doubling to a minute. The browser is asked to keep the copy (`persist()`).
+  - **Fetching**: on opening, when the app comes back into view, when the connection returns, and every minute while visible.
+  - **Tabs**: the tabs agree through the browser's Web Locks which one owns the local copy; it runs syncing and the others ask it over a BroadcastChannel and hear when anything changes. When it closes, the next tab takes over (waiting for the files to be let go).
+  - **Closing the page**: changes not yet sent go out with a `keepalive` request (up to 64 KB); the server ignores repeats, so they're simply sent again and confirmed next time.
+  - **Status** in the app's frame: Connecting…, Saved to cloud, Saving N…, N changes waiting, Offline · N changes waiting. Notices for: a new version (`GET /api/version` compared with the page's own build, on opening, on coming back into view, and every 10 minutes; also when the server says the app is too old), Free editing paused, signed out, and a browser that can't keep a copy.
+  - **Settings › This browser's copy**: what's kept here, and for Premium where the browser hasn't promised to keep it (and the app isn't installed), how to install it.
+  - **Recipes page**: for now a simple list to try syncing: add a recipe by title, rename, move to Trash. C5 and C6 replace it with recipe pages and the editor.
+  - **Not yet**: opening the app with no connection at all (no offline app files yet; an already-open app keeps working offline). Signing out leaves this account's copy in the browser (each account has its own file; signing in as someone else never shows it).
+  - **Tests**: 7 for the merge logic; browser tests at computer and phone sizes: a recipe added on one device appears on another and an edit comes back; Premium offline changes wait and sync; Free pauses editing offline with a notice; a wiped browser gets everything back; two tabs share one copy and the second carries on when the first closes.
 
 ### C5. Recipe list and recipe page (reading)
 - **Goal**: Browse and read recipes.
@@ -992,5 +1005,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B8 | Done 2026-10-07 (merged; live) |
 | C1 | Done 2026-10-07 (merged) |
 | C2 | Done 2026-10-07 (merged; tested on the owner's Mac, iPhone and Windows PC: SQLite on OPFS confirmed) |
-| C3 | Approved 2026-10-07; built, waiting for review |
+| C3 | Done 2026-10-07 (merged; live) |
+| C4 | Approved 2026-10-07; built, waiting for review and the owner's device check |
 | All others | Not started |

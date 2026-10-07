@@ -1,0 +1,64 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+.dot[data-tone="busy"] {
+  background: var(--color-accent);
+}
+
+.dot[data-tone="waiting"] {
+  background: var(--color-warm);
+}
+
+.dot[data-tone="problem"] {
+  background: var(--color-danger);
+}
+
+.notices {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 44rem;
+  margin-bottom: var(--space-6);
+}
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  border-left: 4px solid var(--color-warm);
+  background: var(--color-surface);
+}
+
+.notice p {
+  flex: 1 1 16rem;
+  margin: 0;
+}
+
+.notice button {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
