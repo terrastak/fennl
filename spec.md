@@ -485,7 +485,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Results from the owner's devices go in `docs/research/2026-10-07-storage-trial.md`.
 - **Results (2026-10-07)**: Chrome on Mac, Safari on iPhone (iOS 27, home screen app), Firefox on Mac, Edge on Windows 11. **SQLite on OPFS is confirmed**; no fallback to Dexie. Details: `docs/research/2026-10-07-storage-trial.md`.
   - Every device wrote 10,000 recipes in 1 to 2 s, searched in under 15 ms at 20,000 recipes, and kept them after closing (on the iPhone, after a force-close).
-  - A second tab was refused while the first had the database, and took over once it closed (Chrome and Firefox).
+  - A second tab was refused while the first had the database, and took over once it closed (Chrome, Firefox and Edge).
   - Keeping storage: granted in Chrome, in Firefox (after its own prompt) and in the iPhone home screen app; **not granted in Edge** in a tab. A browser tab can't count on it.
   - Not covered: Safari on Mac, Safari on iPhone in a tab, Android. Same engines as devices that passed; checked again in C4's device testing.
   - Carried into C4: one tab owns the database and the others work through it; encourage installing for Premium; a "new version is ready" prompt, since a home screen app has no reload button.

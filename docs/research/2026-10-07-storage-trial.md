@@ -13,7 +13,7 @@ The question: does SQLite in the browser (`@sqlite.org/sqlite-wasm`, `opfs-sahpo
 | Chrome on Mac, tab | 1.6 s | 3 to 6 ms | 5 to 11 ms | Yes (reload) | Yes, and took over after the first closed | Yes |
 | Safari on iPhone (iOS 27), home screen app | 0.8 s | 1 to 3 ms | 3 to 6 ms | Yes (app force-closed) | Not applicable (one window) | Yes |
 | Firefox on Mac, tab | 2.2 s | 4 to 8 ms | 6 to 13 ms | Yes | Yes, "Try again" worked after the first closed | Yes, after Firefox's own permission prompt |
-| Edge on Windows 11, tab | 1.7 s | 2 to 5 ms | 4 to 9 ms | Yes | Not reported | **No** |
+| Edge on Windows 11, tab | 1.7 s | 2 to 5 ms | 4 to 9 ms | Yes | Yes, "Try again" worked after the first closed | **No** |
 
 Listing 50 by title and opening one recipe took under 1 ms everywhere (Safari and Firefox round their timers to whole milliseconds, so "0.0 ms" means under 1 ms).
 
@@ -155,6 +155,8 @@ Asked to keep storage: granted
 ```
 
 ### Edge on Windows 11 (browser tab)
+
+A second tab showed "Another tab has the test open"; after the first tab closed, "Try again" opened it.
 
 ```
 Fennl storage test, 10/7/2026, 3:21:32 PM
