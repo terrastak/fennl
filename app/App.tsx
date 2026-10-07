@@ -20,6 +20,7 @@ import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AppShell } from "./shell/AppShell";
+import { syncClientFor } from "./sync/useSync";
 
 type Route = { title: string; Page: ComponentType };
 
@@ -109,6 +110,10 @@ export function App() {
       </p>
     );
   }
+
+  // Keep this browser's copy of the recipe box in step with the account (phase C4). Starts
+  // once per account; the same client is returned on every render.
+  syncClientFor(session.user.id);
 
   const { title, Page } = ROUTES[path] ?? NOT_FOUND;
   return (

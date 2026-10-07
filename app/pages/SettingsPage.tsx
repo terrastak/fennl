@@ -10,6 +10,7 @@ import { useAppearance } from "../appearance/appearance";
 import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { DevicesSection } from "../devices/DevicesSection";
+import { LocalCopySection } from "../sync/LocalCopySection";
 import { PageHeader } from "./PageHeader";
 import styles from "./SettingsPage.module.css";
 
@@ -141,6 +142,8 @@ export function SettingsPage() {
       <EmailSection />
 
       <DevicesSection />
+
+      <LocalCopySection />
 
       <section aria-labelledby="about-title" className={styles.section}>
         <h2 id="about-title">About</h2>

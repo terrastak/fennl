@@ -1,5 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Link } from "../router";
+import { SyncNotices } from "../sync/SyncNotices";
+import { SyncStatusLine } from "../sync/SyncStatusLine";
 import styles from "./AppShell.module.css";
 import { AccountIcon, FeedbackIcon, ImportIcon, RecipesIcon, SettingsIcon } from "./icons";
 import { Logo } from "./Logo";
@@ -65,6 +67,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
         <Link href="/" className={styles.logoLink} aria-label="Fennl, go to recipes">
           <Logo />
         </Link>
+        <SyncStatusLine className={styles.sideStatus} />
         <nav aria-label="Main" className={styles.sideNav}>
           <ul className={styles.navList}>
             {PRIMARY_NAV.map((item) => (
@@ -93,6 +96,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
         <Link href="/" className={styles.logoLink} aria-label="Fennl, go to recipes">
           <Logo />
         </Link>
+        <SyncStatusLine className={styles.topStatus} />
         <Link
           href={feedbackHref(path)}
           className={styles.topBarLink}
@@ -104,6 +108,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
       </header>
 
       <main id="main" ref={mainRef} tabIndex={-1} className={styles.main}>
+        <SyncNotices />
         {children}
       </main>
 
