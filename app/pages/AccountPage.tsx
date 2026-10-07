@@ -3,6 +3,7 @@ import type { Entitlements } from "../../shared/entitlements";
 import { authClient, useSession } from "../auth/client";
 import { codeErrorMessage } from "../auth/signUpCode";
 import { navigate } from "../navigation";
+import { Link } from "../router";
 import { PageHeader } from "./PageHeader";
 import { planDetails, planName, planStatus } from "./plan";
 import styles from "./pages.module.css";
@@ -79,6 +80,13 @@ export function AccountPage() {
       </section>
       {plan ? <PlanSection plan={plan} /> : null}
       <CodeSection onUsed={setPlan} />
+      <section className={`${styles.card} ${styles.stacked}`} aria-labelledby="feedback-title">
+        <h2 id="feedback-title">Help shape Fennl</h2>
+        <p>Found something broken, or have an idea? We read every message.</p>
+        <Link href="/feedback?from=%2Faccount" className={styles.button}>
+          Send feedback
+        </Link>
+      </section>
     </>
   );
 }

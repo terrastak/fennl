@@ -35,8 +35,15 @@ function productionConfig() {
   };
 }
 
+/**
+ * Which build this is, sent with feedback (phase B8): the commit's short ID in CI (GitHub sets
+ * GITHUB_SHA), "dev" locally.
+ */
+const APP_VERSION = (process.env.GITHUB_SHA ?? "dev").slice(0, 7);
+
 export default defineConfig({
   plugins: [react(), cloudflare({ config: productionConfig() })],
+  define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   environments: {
     client: {
       build: {

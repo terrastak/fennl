@@ -252,6 +252,72 @@ test("an admin puts back an account's earlier email after someone changed it", a
   await expect(log.getByText("Put back an earlier email").first()).toBeVisible();
 });
 
+test("an admin reads feedback, replies by email, and marks it done", async ({
+  page,
+  context,
+  browser,
+  baseURL,
+}) => {
+  // A tester sends feedback from their own browser.
+  const tester = await browser.newContext({
+    baseURL: baseURL!,
+    storageState: { cookies: [], origins: [] },
+  });
+  await useFreshAddress(tester);
+  const testerEmail = await signUpConfirmed(tester, baseURL!, "Lena Park");
+  const message = `Could cook mode keep the screen on? ${Date.now()}`;
+  const sent = await tester.request.post("/api/feedback", {
+    headers: { origin: baseURL! },
+    data: { message, page: "/", appVersion: "test" },
+  });
+  expect(sent.ok()).toBe(true);
+  await tester.close();
+
+  const email = await signUpConfirmed(context, baseURL!, "Support");
+  grantAdmin(email);
+  await context.clearCookies();
+  await addVirtualAuthenticator(context, page);
+  await signInWithPassword(page, email);
+  await page.getByRole("button", { name: "Add a passkey" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Admin console" })).toBeVisible();
+
+  const nav = page.getByRole("navigation", { name: "Admin sections" });
+  await expect(nav.getByRole("button", { name: /^Feedback \(\d+ new\)$/ })).toBeVisible();
+  await nav.getByRole("button", { name: /^Feedback/ }).click();
+  const inbox = page.getByRole("region", { name: "Feedback" });
+  const item = inbox.getByRole("listitem").filter({ hasText: message });
+  await expect(item).toContainText("New");
+  await expectAccessible(page);
+
+  // Opening it marks it read.
+  await item.getByRole("button", { expanded: false }).click();
+  await expect(item).toContainText("Read on");
+  await expect(item).toContainText(testerEmail);
+  const reply = item.getByRole("link", { name: "Reply by email" });
+  await expect(reply).toHaveAttribute("href", new RegExp(`^mailto:${testerEmail}\\?subject=`));
+  await expectAccessible(page);
+
+  // Replied (and undone), a private note, then done.
+  await item.getByRole("button", { name: "Mark as replied" }).click();
+  await expect(item).toContainText("Replied on");
+  await item.getByRole("button", { name: "Undo “replied”" }).click();
+  await expect(item.getByRole("button", { name: "Mark as replied" })).toBeVisible();
+  await item.getByLabel("Private note (only admins see it)").fill("Asked which phone she uses");
+  await item.getByRole("button", { name: "Save note" }).click();
+  await expect(item.getByRole("status")).toHaveText("Note saved.");
+  await item.getByRole("button", { name: "Mark done" }).click();
+  await expect(item).toContainText("Done on");
+
+  await inbox.getByRole("button", { name: /^Done/ }).click();
+  await expect(inbox.getByRole("listitem").filter({ hasText: message })).toBeVisible();
+
+  // Straight to the sender's account page.
+  const done = inbox.getByRole("listitem").filter({ hasText: message });
+  await done.getByRole("button", { expanded: false }).click();
+  await done.getByRole("button", { name: "Open their account" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "Lena Park" })).toBeVisible();
+});
+
 test("an ordinary account can't use the admin area", async ({ page, context, baseURL }) => {
   const email = await signUpConfirmed(context, baseURL!);
   await context.clearCookies();

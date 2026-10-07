@@ -289,3 +289,107 @@
 .table th[scope="row"] {
   font-weight: var(--weight-semibold);
 }
+
+/* The feedback inbox (phase B8). */
+a.button,
+a.secondary {
+  text-decoration: none;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.filters .navButton[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.feedbackList {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.feedbackItem {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.unread {
+  border-color: var(--color-accent);
+  box-shadow: inset 4px 0 0 var(--color-accent);
+}
+
+.feedbackSummary {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  padding: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.feedbackSummary:hover {
+  background: var(--color-surface-sunken);
+}
+
+.feedbackHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.feedbackFrom {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.badge {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+  font-size: var(--text-sm);
+}
+
+.feedbackSnippet {
+  overflow-wrap: anywhere;
+}
+
+.feedbackDetail {
+  display: grid;
+  gap: var(--space-4);
+  padding: 0 var(--space-4) var(--space-4);
+}
+
+.feedbackMessage {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-border-strong);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

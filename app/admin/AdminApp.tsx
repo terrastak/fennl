@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import type { FeedbackInbox } from "../../shared/feedback";
+import { adminRequest } from "./api";
 import { adminAuthClient, loadAdminState, type AdminMe, type AdminState } from "./client";
 import { AccountsSection } from "./AccountsSection";
 import { ActivitySection } from "./ActivitySection";
+import { FeedbackSection } from "./FeedbackSection";
 import { CodesSection, SignUpSwitch } from "./CodesSection";
 import { LimitsSection } from "./LimitsSection";
 import styles from "./admin.module.css";
@@ -263,6 +266,7 @@ function AddBackupPasskey({ refresh }: { refresh: () => Promise<void> }) {
 
 const SECTIONS = [
   { id: "accounts", name: "Accounts" },
+  { id: "feedback", name: "Feedback" },
   { id: "codes", name: "Codes and sign-up" },
   { id: "limits", name: "Plan limits" },
   { id: "activity", name: "Activity" },
@@ -273,6 +277,25 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 
 function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
   const [section, setSection] = useState<SectionId>("accounts");
+  // An account opened from the feedback inbox.
+  const [account, setAccount] = useState<string | null>(null);
+  const [newFeedback, setNewFeedback] = useState<number | null>(null);
+  const onCounts = useCallback((counts: FeedbackInbox["counts"]) => setNewFeedback(counts.new), []);
+
+  useEffect(() => {
+    let cancelled = false;
+    void adminRequest<FeedbackInbox>("/api/admin/feedback?status=new").then((result) => {
+      if (!cancelled && result.ok) setNewFeedback((result.body as FeedbackInbox).counts.new);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const show = (next: SectionId) => {
+    setAccount(null);
+    setSection(next);
+  };
   return (
     <>
       <h1 className={styles.title} tabIndex={-1}>
@@ -285,13 +308,23 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
             type="button"
             className={styles.navButton}
             aria-current={section === s.id ? "page" : undefined}
-            onClick={() => setSection(s.id)}
+            onClick={() => show(s.id)}
           >
             {s.name}
+            {s.id === "feedback" && newFeedback ? ` (${newFeedback} new)` : ""}
           </button>
         ))}
       </nav>
-      {section === "accounts" ? <AccountsSection /> : null}
+      {section === "accounts" ? <AccountsSection key={account ?? ""} open={account} /> : null}
+      {section === "feedback" ? (
+        <FeedbackSection
+          onCounts={onCounts}
+          onOpenAccount={(userId) => {
+            setAccount(userId);
+            setSection("accounts");
+          }}
+        />
+      ) : null}
       {section === "codes" ? (
         <>
           <CodesSection />

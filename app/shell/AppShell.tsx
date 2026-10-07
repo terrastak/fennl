@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Link } from "../router";
 import styles from "./AppShell.module.css";
-import { AccountIcon, ImportIcon, RecipesIcon, SettingsIcon } from "./icons";
+import { AccountIcon, FeedbackIcon, ImportIcon, RecipesIcon, SettingsIcon } from "./icons";
 import { Logo } from "./Logo";
 
 interface NavItem {
@@ -19,6 +19,15 @@ const SECONDARY_NAV: NavItem[] = [
   { href: "/settings", label: "Settings", icon: SettingsIcon },
   { href: "/account", label: "Account", icon: AccountIcon },
 ];
+
+const FEEDBACK_PATH = "/feedback";
+
+/** The feedback page, told which page the person was on (phase B8). */
+function feedbackHref(path: string): string {
+  return path === FEEDBACK_PATH
+    ? FEEDBACK_PATH
+    : `${FEEDBACK_PATH}?from=${encodeURIComponent(path)}`;
+}
 
 interface AppShellProps {
   path: string;
@@ -63,6 +72,16 @@ export function AppShell({ path, title, children }: AppShellProps) {
             ))}
           </ul>
           <ul className={`${styles.navList} ${styles.navListBottom}`}>
+            <li>
+              <Link
+                href={feedbackHref(path)}
+                className={styles.navLink}
+                aria-current={path === FEEDBACK_PATH ? "page" : undefined}
+              >
+                <FeedbackIcon />
+                Send feedback
+              </Link>
+            </li>
             {SECONDARY_NAV.map((item) => (
               <NavLink key={item.href} item={item} path={path} />
             ))}
@@ -73,6 +92,14 @@ export function AppShell({ path, title, children }: AppShellProps) {
       <header className={styles.topBar}>
         <Link href="/" className={styles.logoLink} aria-label="Fennl, go to recipes">
           <Logo />
+        </Link>
+        <Link
+          href={feedbackHref(path)}
+          className={styles.topBarLink}
+          aria-current={path === FEEDBACK_PATH ? "page" : undefined}
+        >
+          <FeedbackIcon />
+          Feedback
         </Link>
       </header>
 

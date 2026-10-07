@@ -29,11 +29,12 @@ function endOfDay(value: string): string {
 
 // ---------------------------------------------------------------------------------------------
 
-export function AccountsSection() {
+/** Search, and one account's page. `open` starts on that account (from the feedback inbox). */
+export function AccountsSection({ open = null }: { open?: string | null }) {
   const id = useId();
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<AccountMatch[] | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(open);
 
   const search = async (event: FormEvent) => {
     event.preventDefault();

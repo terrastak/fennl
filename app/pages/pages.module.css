@@ -120,6 +120,7 @@
   color: var(--color-text);
   font: inherit;
   font-weight: var(--weight-semibold);
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -183,5 +184,46 @@
 
 .card .success {
   margin-top: var(--space-3);
+  color: var(--color-text);
+}
+
+.stackForm {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.stackForm .button {
+  justify-self: start;
+}
+
+.textarea {
+  width: 100%;
+  min-height: 8rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.textarea:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 1px;
+  border-color: var(--color-accent);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.card .hint {
+  margin: 0;
+}
+
+.success {
   color: var(--color-text);
 }

@@ -13,6 +13,7 @@ import { accessContext, checkAdmin, passkeyCount, requireAdmin } from "./admin/r
 import { createAuth, signInMethods } from "./auth/auth";
 import { adminCodeRoutes, codeRoutes } from "./codes/routes";
 import { deviceRoutes } from "./devices/routes";
+import { adminFeedbackRoutes, feedbackRoutes } from "./feedback/routes";
 import { database, databaseStatus } from "./db/client";
 import { passkey, user } from "./db/schema";
 import { devOutbox } from "./email/outbox";
@@ -159,6 +160,9 @@ app.post("/api/account/password", async (c) => {
   return c.json({ ok: true });
 });
 
+// Sending feedback from the app (phase B8).
+app.route("/", feedbackRoutes);
+
 // Changing the account's email address (phase B7a).
 app.route("/", accountRoutes);
 
@@ -211,6 +215,9 @@ app.route("/api/admin", adminCodeRoutes);
 
 // Account lookup, password help, overrides and tier limits (phase B7).
 app.route("/api/admin", adminAccountRoutes);
+
+// The feedback inbox (phase B8).
+app.route("/api/admin", adminFeedbackRoutes);
 
 app.all("/api/admin/*", (c) => c.json({ error: "not_found" }, 404));
 
