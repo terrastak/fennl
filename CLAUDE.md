@@ -28,7 +28,7 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
 | Recipe store | D1, same database as accounts for now; per-owner databases if recipe data nears a few GB (`docs/research/2026-10-07-recipe-storage.md`) | Decided (C1, 2026-10-07) |
 | Live updates between devices | Durable Object per household as a coordinator only, never the store | Open (sync Phase 2) |
-| Local data layer in the browser | SQLite compiled to WASM on OPFS, or IndexedDB via Dexie | Leaning (SQLite/OPFS, for real SQL and full-text search) |
+| Local data layer in the browser | SQLite compiled to WASM (`@sqlite.org/sqlite-wasm`, `opfs-sahpool`) on OPFS, in a worker, with full-text search. Only one tab can open it at a time | Decided (C2, 2026-10-07; tested on real devices, `docs/research/2026-10-07-storage-trial.md`) |
 | AI recipe reading (photos, PDFs, pages without structured data) | Anthropic Claude API, starting with Claude Haiku, called only from the Worker, behind a swappable provider interface | Leaning (see "AI import") |
 | Sync framework | LiveStore | Open, not adopted. Beta-stage, event-sourced, would reshape the whole data layer. Revisit if it matures |
 
@@ -302,7 +302,7 @@ Other current thinking:
 
 1. Whether Paddle or Polar have maintained Better Auth integrations (only matters if the merchant-of-record option is revisited).
 2. ~~Point-in-time restore for D1 and Durable Objects.~~ Checked 2026-10-03; see "Backups and durability". Needs Workers Paid for 30 days.
-3. Browser eviction behavior on Safari, and how reliably `navigator.storage.persist()` is granted. Partly checked 2026-10-03: Safari deletes script-writable storage after 7 days of Safari use without visiting the site. Home Screen apps are exempt, and `persist()` is granted heuristically (e.g. Home Screen). OPFS specifics still need real-device tests (C2).
+3. Browser eviction behavior on Safari, and how reliably `navigator.storage.persist()` is granted. Partly checked 2026-10-03: Safari deletes script-writable storage after 7 days of Safari use without visiting the site. Home Screen apps are exempt, and `persist()` is granted heuristically (e.g. Home Screen). Tested on real devices 2026-10-07 (C2): `persist()` was granted in Chrome, Firefox (after its prompt) and an iPhone Home Screen app, but not in Edge in a tab, so a browser tab can't count on it. The 7-day removal can't be tested in one sitting.
 4. Whether the Better Auth Stripe plugin's organization-customer flow handles cancel and resubscribe cleanly for our flat-seat-limit plans. Docs checked 2026-10-03: organization billing (`customerType: "organization"`), cancel, and restore exist, but there's no credit or plan-time transfer support. Still needs a hands-on test in Stage I.
 5. Final prices, device cap for Premium, image quotas. (Photo grace period: decided, 90 days.)
 6. ~~Whether to gate the free tier by recipe count.~~ Decided: 100 recipes and a 3 MB text cap, plus the one-device limit.
