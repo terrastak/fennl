@@ -219,3 +219,40 @@ export const emailChange = sqliteTable(
   },
   (table) => [index("email_change_user_idx").on(table.userId)],
 );
+
+/**
+ * Messages sent from the app's feedback page (phase B8), read in the admin console's inbox. Kept
+ * for the beta; the person who sent one can't delete it. Where a message stands follows the
+ * dates (shared/feedback.ts): read when an admin first opens it, replied when they reply (or
+ * mark it), done when nothing more is needed.
+ */
+export const feedback = sqliteTable(
+  "feedback",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    householdId: text("household_id").references(() => organization.id, {
+      onDelete: "set null",
+    }),
+    message: text("message").notNull(),
+    /** The page they were on, for example "/settings". */
+    page: text("page"),
+    appVersion: text("app_version"),
+    /** "Safari on iPhone", from the browser's user agent (kept too, for looking into bugs). */
+    device: text("device").notNull(),
+    userAgent: text("user_agent"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    readAt: integer("read_at", { mode: "timestamp_ms" }),
+    repliedAt: integer("replied_at", { mode: "timestamp_ms" }),
+    doneAt: integer("done_at", { mode: "timestamp_ms" }),
+    /** A private note, only for admins. */
+    note: text("note"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("feedback_created_idx").on(table.createdAt),
+    index("feedback_user_idx").on(table.userId),
+  ],
+);

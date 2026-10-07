@@ -14,6 +14,7 @@ import { SignUpPage } from "./auth/SignUpPage";
 import { VerifyEmailChangePage } from "./auth/VerifyEmailChangePage";
 import { navigate, usePath } from "./navigation";
 import { AccountPage } from "./pages/AccountPage";
+import { FeedbackPage } from "./pages/FeedbackPage";
 import { ImportPage } from "./pages/ImportPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
@@ -28,6 +29,7 @@ const ROUTES: Record<string, Route> = {
   "/import": { title: "Import", Page: ImportPage },
   "/settings": { title: "Settings", Page: SettingsPage },
   "/account": { title: "Account", Page: AccountPage },
+  "/feedback": { title: "Send feedback", Page: FeedbackPage },
 };
 
 /** Account screens, open to everyone. */

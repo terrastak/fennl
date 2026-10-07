@@ -428,6 +428,12 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Send feedback from a test account on your phone, find it in the inbox, open the sender's account, and mark it done.
 - **Done when**: Sending, the inbox, status changes and the rate limit are tested.
 - **Decisions**: Should each new message also email you (perhaps as a daily summary)? Replying from the inbox by email, and attaching screenshots (needs photo storage from Stage D), can come later.
+- **Decided (owner, 2026-10-07)**: no emails to the owner; the inbox is where feedback is tracked. Replies go from the owner's own email app: "Reply by email" opens it with the sender's address, a subject and their message quoted. Each message shows where it stands: New, Read on (when first opened), Replied on (when "Reply by email" is clicked, with an undo, or marked by hand), Done.
+- **Built (2026-10-07)** (`worker/feedback/`, `app/pages/FeedbackPage.tsx`, `app/admin/FeedbackSection.tsx`):
+  - **Sending**: a "Send feedback" link in the sidebar on computers and "Feedback" in the top bar on phones (so every page), plus a card on the Account page. The page they came from, the app version (the commit's short ID, set at build time) and their browser go with the message (`POST /api/feedback`, behind `requireHousehold`). Up to 5,000 characters, 10 messages an hour per person; not while an admin is acting as the person.
+  - **`feedback` table** (migration `0012`): sender, household, message, page, app version, browser (label and user agent), and `read_at`, `replied_at`, `done_at`, a private note. Where a message stands follows those dates (`shared/feedback.ts`).
+  - **Inbox** (admin console › Feedback, `GET /api/admin/feedback?status=`): newest first, filters New / Read / Replied / Done / All with counts, and "Feedback (N new)" in the console's menu. New messages are highlighted with a dot. Opening one marks it read (`POST …/:id/read`). Each shows the details, **Reply by email** (a `mailto:` link that also marks it replied, with Undo), **Copy email address**, **Open their account**, Mark as replied / Undo, Mark done / Move back to the inbox, and a private note (`PATCH …/:id`). Each change is recorded in the audit log first (`feedback.read`, `feedback.updated`).
+  - **Tests**: 7 server tests (saved with its details; sign-in and length checks; the hourly limit; admins only; new → read → replied (undo, first date kept) → done; replying or finishing counts as reading; bad changes refused) and 3 for the reply link and statuses. Browser tests: sending from a page (computer and phone), and the admin flow from the inbox to the sender's account, with accessibility checks.
 
 ## Stage C: The recipe core
 
@@ -939,7 +945,8 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B4a | Done 2026-10-05 (merged with B5; live). Owner's Access setup and admin accounts done 2026-10-06 |
 | B5 | Done 2026-10-05 (merged with B4a; live, sign-up invite-only) |
 | B6 | Done 2026-10-06 (merged; tested on the preview) |
-| B7 | Approved 2026-10-06; built, waiting on review |
-| B7a | Approved 2026-10-06; built, waiting on review (separate pull request, after B7) |
-| B8 | Next; awaiting approval |
+| B7 | Done 2026-10-06 (merged; live) |
+| B7a | Done 2026-10-06 (merged as #19; live) |
+| B8 | Approved 2026-10-07; built, waiting on review |
+| C1 | Next; awaiting approval |
 | All others | Not started |

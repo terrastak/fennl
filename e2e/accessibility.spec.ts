@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
-const PAGES = ["/", "/import", "/settings", "/account", "/not-a-page"];
+const PAGES = ["/", "/import", "/settings", "/account", "/feedback", "/not-a-page"];
 // Account screens, checked signed out.
 const ACCOUNT_PAGES = [
   "/sign-in",

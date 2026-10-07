@@ -30,6 +30,8 @@ const ACTION_NAMES: Record<string, string> = {
   "limit.override_set": "Set an account's limit",
   "limit.override_removed": "Removed an account's limit",
   "limit.tier_changed": "Changed a plan limit",
+  "feedback.read": "Read feedback",
+  "feedback.updated": "Updated feedback",
 };
 
 function detailText(row: ActivityRow): string {
