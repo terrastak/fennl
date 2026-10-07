@@ -1,0 +1,16 @@
+{
+  "id": "/storage-trial",
+  "name": "Fennl storage test",
+  "short_name": "Storage test",
+  "description": "Checks how well this device keeps a copy of a recipe box.",
+  "start_url": "/storage-trial",
+  "scope": "/storage-trial",
+  "display": "standalone",
+  "background_color": "#f6f5f0",
+  "theme_color": "#f6f5f0",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

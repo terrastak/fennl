@@ -44,12 +44,17 @@ const APP_VERSION = (process.env.GITHUB_SHA ?? "dev").slice(0, 7);
 export default defineConfig({
   plugins: [react(), cloudflare({ config: productionConfig() })],
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
+  // SQLite's browser build loads its own .wasm file; Vite must not pre-bundle it (its README),
+  // and its background worker uses modern imports.
+  optimizeDeps: { exclude: ["@sqlite.org/sqlite-wasm"] },
+  worker: { format: "es" },
   environments: {
     client: {
       build: {
         rollupOptions: {
-          // The app, and the admin console (served only in the admin area; see worker/admin).
-          input: { main: "index.html", admin: "admin.html" },
+          // The app, the admin console (served only in the admin area; see worker/admin), and
+          // the browser storage trial (phase C2, /storage-trial).
+          input: { main: "index.html", admin: "admin.html", storageTrial: "storage-trial.html" },
         },
       },
     },
