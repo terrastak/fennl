@@ -62,7 +62,7 @@ These are recommendations. Each one is confirmed in the phase that first needs i
 | Web app | React single-page app built with Vite | A local-first app does its work in the browser, so a plain single-page app fits better than a server-rendering framework. Widely known, so less debugging | A2 |
 | Server | One Cloudflare Worker that serves the app files and the `/api` routes, using the small Hono routing library | Simplest deployment: one thing to deploy | A2 |
 | Database access | **Drizzle** (works with Better Auth and D1). Decided 2026-10-03 | Typed queries and migration files | B1 |
-| Local browser database | SQLite (WASM) on OPFS, with full-text search | Already the `CLAUDE.md` leaning. Must be tested on real phones first (phase C2) | C2 |
+| Local browser database | SQLite (WASM) on OPFS, with full-text search | Confirmed on real devices in C2 (2026-10-07) | C2 |
 | Recipe storage on server | **Open**: D1, or a Durable Object per household | `CLAUDE.md` open question 7. Decided in phase C1 after checking current Cloudflare limits | C1 |
 | Email (verification, password reset, invites) | **Decided**: Resend, called only through one swappable "send email" function in the Worker. The API key is a Worker secret | Simple HTTP API; free tier (3,000 emails/month, 100/day) covers the beta. Postmark and Cloudflare Email Sending (beta as of 2026-10-03) were compared and stay as later options; switching means rewriting that one function | B2 |
 | AI | Anthropic Claude API (Haiku to start) with vision, called only from the server, behind a swappable provider interface | Owner's choice. One call reads a photo or PDF and returns a structured recipe, so no separate OCR service is needed. API key never reaches the browser | E7 |
@@ -483,6 +483,12 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Baseline in this project's automated Chromium (not a real device): 10,000 recipes (23.5 MB of text) written in about 15 s; searches 6 to 12 ms; listing 50 by title 1 ms; opening one recipe under 1 ms.
   - **Tests**: a browser test (computer and phone sizes) writes 300 recipes, checks the searches including accents, the reload, the second-tab refusal and recovery, deleting, and accessibility.
   - Results from the owner's devices go in `docs/research/2026-10-07-storage-trial.md`.
+- **Results (2026-10-07)**: Chrome on Mac, Safari on iPhone (iOS 27, home screen app), Firefox on Mac, Edge on Windows 11. **SQLite on OPFS is confirmed**; no fallback to Dexie. Details: `docs/research/2026-10-07-storage-trial.md`.
+  - Every device wrote 10,000 recipes in 1 to 2 s, searched in under 15 ms at 20,000 recipes, and kept them after closing (on the iPhone, after a force-close).
+  - A second tab was refused while the first had the database, and took over once it closed (Chrome, Firefox and Edge).
+  - Keeping storage: granted in Chrome, in Firefox (after its own prompt) and in the iPhone home screen app; **not granted in Edge** in a tab. A browser tab can't count on it.
+  - Not covered: Safari on Mac, Safari on iPhone in a tab, Android. Same engines as devices that passed; checked again in C4's device testing.
+  - Carried into C4: one tab owns the database and the others work through it; encourage installing for Premium; a "new version is ready" prompt, since a home screen app has no reload button.
 
 ### C3. Server recipe storage and sync endpoints
 - **Goal**: The server can accept and hand out recipe changes.
@@ -502,10 +508,11 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Free path: save goes to the server first (1 to 2 second debounce); offline shows a banner and blocks edits.
   3. Premium path: save locally, add to an outbox, push in the background with retries.
   4. Pull on open, on focus, and on a timer.
-  5. Only one tab runs sync at a time.
-  6. Flush on page close; request persistent storage for Premium.
-  7. Sync status indicator ("Saved to cloud" / "3 changes waiting").
-  8. Wording that makes clear recipes live in your account, not the browser.
+  5. Only one tab runs sync at a time. Only one tab can open the local database (C2), so that tab owns it and other tabs work through it, with ownership passing on when it closes.
+  6. Flush on page close; request persistent storage for Premium, and suggest installing to the home screen or dock where the browser won't promise to keep it (C2: Edge in a tab said no).
+  7. A "new version is ready" prompt when a release is deployed, since a home screen app has no reload button (C2).
+  8. Sync status indicator ("Saved to cloud" / "3 changes waiting").
+  9. Wording that makes clear recipes live in your account, not the browser.
 - **You check**: Edit on laptop, see it on phone (beta account). Go offline on a beta account, edit, reconnect, watch it sync. Go offline on a free account and see the banner.
 - **Done when**: End-to-end tests cover both paths and a "local storage wiped" recovery.
 
@@ -975,5 +982,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B7a | Done 2026-10-06 (merged as #19; live) |
 | B8 | Done 2026-10-07 (merged; live) |
 | C1 | Done 2026-10-07 (merged) |
-| C2 | Approved 2026-10-07; test page built, waiting on results from the owner's devices |
+| C2 | Done 2026-10-07 (merged; tested on the owner's Mac, iPhone and Windows PC: SQLite on OPFS confirmed) |
 | All others | Not started |
