@@ -26,7 +26,8 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Workers plan | Workers Paid ($5/month): password hashing needs about 90 ms of CPU, the free plan allows 10 ms per request, and 30-day database backups need it | Decided (switched 2026-10-03) |
 | Database access and migrations | Drizzle (schema in `worker/db/schema.ts`, migrations in `worker/db/migrations`, applied by Wrangler) | Decided (B1) |
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
-| Per-household live sync / recipe store | Durable Object (SQLite-backed) per household | Open (see "Sync architecture") |
+| Recipe store | D1, same database as accounts for now; per-owner databases if recipe data nears a few GB (`docs/research/2026-10-07-recipe-storage.md`) | Decided (C1, 2026-10-07) |
+| Live updates between devices | Durable Object per household as a coordinator only, never the store | Open (sync Phase 2) |
 | Local data layer in the browser | SQLite compiled to WASM on OPFS, or IndexedDB via Dexie | Leaning (SQLite/OPFS, for real SQL and full-text search) |
 | AI recipe reading (photos, PDFs, pages without structured data) | Anthropic Claude API, starting with Claude Haiku, called only from the Worker, behind a swappable provider interface | Leaning (see "AI import") |
 | Sync framework | LiveStore | Open, not adopted. Beta-stage, event-sourced, would reshape the whole data layer. Revisit if it matures |
@@ -106,6 +107,7 @@ Subscription statuses to handle: active, trialing, past_due (dunning: do not rem
 - **A household is a sharing group, not a container.** Members see the union of all members' recipes as one recipe box. Joining or leaving changes visibility only; no recipe rows are moved or rewritten.
 - **Equal partners:** either member can edit any recipe. Deleting a partner's recipe moves it to Trash, where either member can restore it.
 - **Subtle ownership:** "Added by <name>" on the recipe page, and an optional Mine / Partner's / All filter.
+- **Personal opinions (Decided 2026-10-07):** rating, favorite and a signed note are stored per person (`recipe_opinion`) and shown to the whole household only when present ("★★★★ Brian · ★★★ Sarah"). "Last made" is shared, with who made it (`recipe_made`).
 - **Categories merge by name:** same-named categories (case-insensitive, full path such as "Desserts › Cakes") show as one. A recipe's category links always point to the *recipe owner's* categories. Tagging a partner's recipe uses the owner's category of that name, creating it if missing.
 - **Splitting:** each person leaves with the recipes they own. Before the split completes, each can choose partner recipes to keep a **copy** of: a new recipe with a new ID, owned by the keeper, recording `copied_from`. Photos are copied with it.
 - A user belongs to at most one shared household at a time. While shared, their active household is the shared one and their personal household is dormant. After a split they return to their personal household.
@@ -128,7 +130,9 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `device` | Device registry for the one-device free limit and Premium cap (built in B6, `worker/devices/`) | `id` (client-generated, random; primary key with `user_id`), `household_id`, `user_id`, `label`, `session_id`, `first_seen_at`, `last_seen_at`, `revoked_at`, `revoked_reason` |
 | `household_usage` | Quota tracking (a shared household's quota is the sum of its members' owned images) | `household_id`, `image_bytes`, `image_count`, `updated_at` |
 | `image` | One row per stored image per owner | `hash` (content hash), `owner_user_id`, `bytes`, `content_type`, `created_at`, `deleted_at` |
-| `recipe` | Recipe records (if stored in D1; see Sync architecture) | `id` (UUID), `owner_user_id`, `copied_from`, fields..., `updated_by_user_id`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe` | Recipe records (C1: `shared/recipe.ts`, `docs/design/recipe-model.md`; table built in C3). Ingredients and directions are lists inside the record, every line with its own ID | `id` (UUID), `owner_user_id`, `copied_from`, the `RECIPE_FIELDS`, import provenance, `created_at`, `updated_by_user_id`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_opinion` | One person's rating, favorite and signed note on a recipe; shown to the household | `recipe_id`, `user_id`, `rating`, `favorite`, `note`, `updated_at`, `deleted_at`, `server_seq` |
+| `recipe_made` | "Made it" records; the latest is the household's "last made" | `id`, `recipe_id`, `user_id`, `made_on`, `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_version` | Premium version history | `id`, `recipe_id`, `snapshot`, `created_at`, `author_user_id` |
 | `category` | Nested categories, owned per user and merged by name in the household view | `id` (UUID), `owner_user_id`, `parent_id`, `name`, sort order, `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_category` | Recipe-to-category links (many per recipe) | `recipe_id`, `category_id`, `updated_at`, `deleted_at`, `server_seq` |
@@ -168,7 +172,8 @@ The look is recorded in `docs/design/design-direction.md` and implemented as CSS
 - **Trash (Decided 2026-10-03):** deleted recipes stay in Trash for 30 days, then a nightly job expunges them. Expunging wipes content, versions, and orphaned photos, but keeps a minimal tombstone (id, owner, `deleted_at`, `server_seq`).
 - D1 has no interactive transactions (Better Auth uses `batch()` for atomicity). Sync writes must be batched or conditional updates, not read-decide-write inside a transaction.
 - Images are stored and referenced by **content hash**.
-- Conflict resolution: **per-field last-write-wins by default** (title, ingredients, notes, etc.). Premium "smart merging" for households is a feature to be designed (Open).
+- Conflict resolution: **per-field last-write-wins by default**, over the fields in `RECIPE_FIELDS` (`shared/recipe.ts`). The ingredient and direction lists are one field each for now; line-by-line merging is wanted later (every line already has an ID). Other Premium "smart merging" for households is to be designed (Open).
+- **Ingredients and directions are edited as text** (one box each) and stored as lines; `shared/recipeLines.ts` converts between the two and keeps line IDs stable across edits. The text as written is always the master copy; how a line was read (amount, unit) is derived and re-read when the text changes.
 - Server migrations run before new code is deployed, so every migration must stay compatible with the code already running (add first; drop or rename only in a later change). Never edit a merged migration.
 - Client schema migrations are required, since local databases live on user devices. The sync protocol carries a client schema version and rejects incompatible clients with an upgrade prompt.
 
@@ -301,7 +306,7 @@ Other current thinking:
 4. Whether the Better Auth Stripe plugin's organization-customer flow handles cancel and resubscribe cleanly for our flat-seat-limit plans. Docs checked 2026-10-03: organization billing (`customerType: "organization"`), cancel, and restore exist, but there's no credit or plan-time transfer support. Still needs a hands-on test in Stage I.
 5. Final prices, device cap for Premium, image quotas. (Photo grace period: decided, 90 days.)
 6. ~~Whether to gate the free tier by recipe count.~~ Decided: 100 recipes and a 3 MB text cap, plus the one-device limit.
-7. Whether to use a Durable Object per household or keep recipes in D1 for Phase 1. The ownership model (data keyed by owner, households only grant visibility) favors D1 as the store. A per-household Durable Object would then be a live-update coordinator only.
+7. ~~Whether to use a Durable Object per household or keep recipes in D1 for Phase 1.~~ Decided 2026-10-07: D1 (see "Stack"). Checked: D1 databases hold 10 GB, 50,000 per account; Workers with a Durable Object get no preview (version) URLs.
 8. Design of household "smart merge" beyond per-field last-write-wins.
 9. LiveStore: revisit only if its maturity improves; adopting it means rewriting the data layer around events.
 10. Current Claude Haiku model name, price, image and PDF limits, and the Anthropic API data-retention terms. The 2026-10-01 research used third-party roundups, not vendor pages. Check official docs before building the AI layer.

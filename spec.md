@@ -448,6 +448,22 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Read a one-page plain-English description of a recipe record and say if anything is missing.
 - **Done when**: Types, validation rules, and the decision are merged.
 - **Decisions**: D1 vs. Durable Object per household (I'll bring a recommendation with verified facts).
+- **Decided (owner, 2026-10-07)**, after a detailed discussion (the full description is `docs/design/recipe-model.md`):
+  - Ingredients and directions are **edited as one text box each** and come back exactly as left. Behind the scenes each line has its own ID, its text as written (the master copy), and how the ingredient reader understood it (E2).
+  - Pasted bullets and step numbers are cleaned off. **Headings**: a line ending in a colon with no amount, a short ALL-CAPS line with no amount, or the heading button (which wins).
+  - Sub-recipe links attach to a line and stay with it through light edits.
+  - **Per person, shown to the whole household when present**: rating, favorite, and a signed note. One Notes section shows the recipe's notes, then each person's signed note.
+  - **"Last made"** is in the beta: one tap at the end of cook mode, or "Made it" on the recipe page; one date for the household, with who made it.
+  - Categories cover everything (cuisine, course, status such as "Untested"). **Diet labels** are categories under **"Diet"**, added automatically by imports that list them. No equipment or make-ahead fields.
+  - Paprika notes import as the importing person's signed notes. The owner's ingredient lines may be used in automated tests.
+  - **Line-by-line merging** of ingredient and direction lists is wanted later (Stage I); line IDs make it possible without changing data.
+  - **Recipes live in D1** (open question 4, `CLAUDE.md` open question 7), in the same database as accounts for now, moving to per-owner databases if recipe data nears a few GB. Facts and reasoning: `docs/research/2026-10-07-recipe-storage.md`. The Paprika export format: `docs/research/2026-10-07-paprika-export.md`.
+- **Built (2026-10-07)** (`shared/recipe.ts`, `shared/recipeLines.ts`):
+  - Types for the recipe and its parts, per-person opinions (`RecipeOpinion`), "made it" records (`RecipeMade`), categories, recipe-category links and photos, all with the sync columns. `RECIPE_SCHEMA_VERSION` for the sync protocol, and `RECIPE_FIELDS`, the units "last change wins" applies to.
+  - Validation (`recipeIssues`) reporting every problem by path; the per-recipe size limit is passed in from the plan limits, never hard-coded.
+  - The text box ↔ lines conversion: cleaning, headings, and keeping IDs, heading choices, links and parsed readings for lines that are still there (unchanged, moved, or lightly edited).
+  - Tables come in C3; nothing here changes the database yet.
+  - **Tests**: 14, using real ingredient and direction text from the owner's Paprika library.
 
 ### C2. Local database trial on real devices
 - **Goal**: Prove SQLite-in-the-browser works where your users are, before building on it.
@@ -489,7 +505,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Goal**: Browse and read recipes.
 - **Steps**:
   1. Recipe list with title, cover photo placeholder, categories; sort options.
-  2. Recipe page: all fields laid out for reading, including section headings.
+  2. Recipe page: all fields laid out for reading, including section headings, everyone's ratings, favorites and signed notes (only when present), and "Last made … by …" with a **Made it** button (C1).
   3. Empty state as in `docs/design/design-direction.md` ("Empty states"): a faint ghosted grid, a short welcome, **Add recipe** and **Import**. Import is shown to everyone; what it offers depends on the flags.
   4. A few sample recipes you can add to try it out.
 - **You check**: Add the sample recipes; browse on phone and desktop.
@@ -499,7 +515,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **Goal**: Create and edit recipes by hand.
 - **Steps**:
   1. Fields for everything in C1 except photos, links, and nutrition (later phases).
-  2. Ingredient and direction editors that handle section headings and pasting a block of text (split into lines).
+  2. Ingredient and direction editors: one text box each (C1), with a heading button and a live preview showing how each line was understood.
   3. Autosave through the sync engine; in-session undo.
   4. Keyboard-efficient: no mouse needed to add, reorder, or remove lines.
 - **You check**: Write one of your real recipes from scratch on desktop, then fix a typo on your phone.
@@ -632,8 +648,9 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **Steps**:
   1. Read Schema.org recipe data (JSON-LD, then microdata).
   2. Clean up text: fractions, temperatures, section headings, line breaks, attribution.
-  3. Pick up to 3 likely photos, with the best one as the cover.
-  4. Run against saved copies of the test-set pages (no live fetching in tests).
+  3. Diet labels the page lists (Schema.org `suitableForDiet`, or keywords like "gluten-free") become categories under **Diet** (C1).
+  4. Pick up to 3 likely photos, with the best one as the cover.
+  5. Run against saved copies of the test-set pages (no live fetching in tests).
 - **You check**: Read the quality report for the web pages.
 - **Done when**: Structured-data pages score at an agreed level on the scorecard.
 
@@ -736,7 +753,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### E13. Paprika 3 import
 - **Goal**: Move a whole Paprika library into Fennl, losing nothing.
 - **Steps**:
-  1. Read the `.paprikarecipes` export file (**Unverified**: format to be confirmed against your real export).
+  1. Read the `.paprikarecipes` export file: a zip of gzipped JSON recipes, checked against a real export on 2026-10-07 (`docs/research/2026-10-07-paprika-export.md`). Still to check with the owner's files: how subcategories and the owner's own (or several) photos export. Paprika notes become the importing person's signed notes.
   2. Map every field, categories (including nested), photos, and ratings; keep Paprika's IDs so re-importing updates rather than duplicates.
   3. Preview: "1,240 recipes, 980 photos, 45 categories. 3 problems found."
   4. Import in batches, with progress, that can resume if the tab closes.
@@ -800,6 +817,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   2. Ingredients used in each step shown with that step, with amounts (scaled if scaling is on).
   3. Tap a time in a step ("bake 25 minutes") to start a timer; several timers at once.
   4. Check off ingredients and steps.
+  5. At the last step, one tap answers "Made it today?" (C1's "last made").
 - **You check**: Cook a real recipe from your phone.
 - **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop.
 
@@ -886,7 +904,7 @@ Not detailed yet on purpose. Each becomes its own set of phases later.
 9. Grocery list and meal planner.
 10. Automatic nutrition calculation.
 11. Live updates between household devices (Durable Object WebSocket, `CLAUDE.md` Phase 2).
-12. Household "smart merge" beyond per-field last-write-wins.
+12. Household "smart merge" beyond per-field last-write-wins, starting with line-by-line merging of ingredient and direction lists (owner's request, 2026-10-07; line IDs from C1 make it possible).
 
 ## Open questions tracked by this plan
 
@@ -897,7 +915,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 1 | ~~Domain and subdomain for the app~~ Decided: `beta.fennl.app`, stored only in `APP_HOSTNAME` | A1 |
 | 2 | ~~Email-sending service~~ Decided: Resend, behind a swappable function | B2 |
 | 3 | ~~Invite-only sign-up during beta? Beta grant length?~~ Decided 2026-10-04: invite-only; each code sets its own length (until a date, or a number of days) | B5 |
-| 4 | D1 vs. Durable Object for recipe storage | C1 |
+| 4 | ~~D1 vs. Durable Object for recipe storage~~ Decided 2026-10-07: D1 (`docs/research/2026-10-07-recipe-storage.md`) | C1 |
 | 5 | ~~Trash retention days~~ Decided: 30 days, then auto-expunge | C9 |
 | 6 | Beta image quotas | D1 |
 | 7 | Quality test set contents and target scores | E1 |
@@ -947,6 +965,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | B6 | Done 2026-10-06 (merged; tested on the preview) |
 | B7 | Done 2026-10-06 (merged; live) |
 | B7a | Done 2026-10-06 (merged as #19; live) |
-| B8 | Approved 2026-10-07; built, waiting on review |
-| C1 | Next; awaiting approval |
+| B8 | Done 2026-10-07 (merged; live) |
+| C1 | Approved 2026-10-07 after a detailed discussion; built, waiting on review |
 | All others | Not started |
