@@ -1022,6 +1022,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
+- **Acceptable use and illegal imagery (owner's request, 2026-10-08)**: the privacy policy and terms must include an acceptable-use section covering what may be uploaded (recipe-related photos only, no illegal content), that Fennl may remove content and suspend accounts that break the rules, how content is reported and removed, and what Fennl does about illegal imagery, including image scanning and legal reporting. The wording depends on the outcome of open question 21, so settle that first. Also state what photos are sent to third parties (the AI vendor, see the data-retention note above).
 - Changing the account email was built early, in B7a.
 
 ### H3. Backups
@@ -1078,6 +1079,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
 | 19 | ~~Changing an account's email address~~ Decided 2026-10-06: verify the new address first, notify the old one, keep every change so support can restore an earlier address. Built in B7a | B7a |
 | 20 | ~~How long before an account never verified is removed?~~ Decided 2026-10-06: 24 hours from sign-up. An unverified email change simply expires after 24 hours. Built in B7a | B7a |
+| 21 | Illegal imagery in stored photos (researched 2026-10-08). Cloudflare's free CSAM Scanning Tool compares images served through the Cloudflare cache against known-material lists (fuzzy hashing, so near-copies match), emails the owner daily, and blocks serving with an HTTP 451. Limits: it is unconfirmed whether images served by a Worker from R2 are scanned (the docs only say "served through the Cloudflare cache"); it scans only when an image is served, not at upload; it stops serving but does not delete the file from R2 or the `image` table; it only finds known material; and the legal duty to report stays with Fennl. To settle before public launch: (a) ask Cloudflare support whether Worker-served R2 images are covered, and turn the tool on either way; (b) if not covered, decide whether to check uploads against a hash-matching service instead; (c) an admin action to remove an image and suspend an account, recorded in `admin_audit_log` (admin console, C12 style); (d) legal advice on reporting duties. Not needed for the invite-only beta | Before public launch (H2) |
 
 ## Notes: AI provider research (2026-10-01)
 
