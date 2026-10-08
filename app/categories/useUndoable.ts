@@ -3,16 +3,17 @@ import type { SyncChange } from "../../shared/sync";
 import { saveChanges } from "../sync/useSync";
 import { restamp, type Plan } from "./tree";
 
-// The last category change, and how to take it back (shown by UndoBar.tsx).
+// The last change made on a page (categories, filing, a recipe moved to Trash), and how to take
+// it back (shown by UndoBar.tsx).
 
 export interface Done {
   message: string;
   undo: SyncChange[];
 }
 
-/** Saves a plan, and remembers how to take it back. */
-export function useUndoable() {
-  const [done, setDone] = useState<Done | null>(null);
+/** Saves a plan, and remembers how to take it back. `first` is something done before it opened. */
+export function useUndoable(first: () => Done | null = () => null) {
+  const [done, setDone] = useState<Done | null>(first);
   const [failed, setFailed] = useState(false);
 
   const run = async (plan: Plan, message: string): Promise<boolean> => {

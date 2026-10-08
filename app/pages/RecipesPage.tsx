@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { underPath } from "../categories/tree";
@@ -7,6 +7,7 @@ import { useUndoable } from "../categories/useUndoable";
 import { navigate, queryParam } from "../navigation";
 import { minutesText } from "../recipes/format";
 import { Highlight } from "../recipes/Highlight";
+import { forgetTrashed, recentlyTrashed } from "../recipes/trashNotice";
 import styles from "../recipes/recipes.module.css";
 import { SAMPLE_COUNT, sampleRecipeChanges } from "../recipes/samples";
 import { Link } from "../router";
@@ -232,7 +233,9 @@ export function RecipesPage() {
   const [addingSamples, setAddingSamples] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
-  const { done, failed, run, undo } = useUndoable();
+  // A recipe just moved to Trash from its page can be put back from here (phase C9).
+  const { done, failed, run, undo } = useUndoable(recentlyTrashed);
+  useEffect(forgetTrashed, []);
 
   const chooseSort = (value: SortBy) => {
     setSortBy(value);
@@ -417,6 +420,9 @@ export function RecipesPage() {
             <Link href="/categories" className={styles.toolbarLink}>
               Categories
             </Link>
+            <Link href="/trash" className={styles.toolbarLink}>
+              Trash
+            </Link>
           </div>
         </div>
       ) : null}
@@ -508,7 +514,8 @@ export function RecipesPage() {
         />
       )}
       <p className={`${styles.hint} ${styles.footnote}`}>
-        Your recipes are stored in your account. This browser keeps a copy for speed.
+        Your recipes are stored in your account. This browser keeps a copy for speed. Deleted
+        recipes stay in <Link href="/trash">Trash</Link> for 30 days.
       </p>
     </>
   );

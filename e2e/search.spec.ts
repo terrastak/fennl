@@ -87,6 +87,7 @@ test("Search finds changes straight away, and works with the filters", async ({
   const yours = page.getByRole("region", { name: "Yours" });
   await yours.getByRole("radio", { name: "5 stars" }).check({ force: true });
   await yours.getByLabel("Your note").fill("Grandma used Meyer lemons");
+  await expect(yours.locator("[data-note-status]")).toHaveText("Saved.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: "All recipes" }).click();
   await searchBox(page).fill("meyer");

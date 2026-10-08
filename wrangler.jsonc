@@ -28,7 +28,8 @@
     "enabled": true,
   },
   // Scheduled work (the "scheduled" handler in worker/index.ts): every hour, at 17 minutes past,
-  // remove accounts whose email was never verified (worker/account/purge.ts).
+  // remove accounts whose email was never verified (worker/account/purge.ts) and delete recipes
+  // in Trash for more than 30 days for good (worker/sync/trash.ts).
   "triggers": {
     "crons": ["17 * * * *"],
   },

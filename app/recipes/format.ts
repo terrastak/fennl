@@ -1,4 +1,10 @@
-import type { RecipeMade, RecipeServings, RecipeSource, RecipeTime } from "../../shared/recipe";
+import {
+  TRASH_DAYS,
+  type RecipeMade,
+  type RecipeServings,
+  type RecipeSource,
+  type RecipeTime,
+} from "../../shared/recipe";
 
 // How recipe details read on screen (phase C5).
 
@@ -72,4 +78,12 @@ export function sourceLine(source: RecipeSource): string | null {
 /** The first name, for "Added by June" and signed notes. */
 export function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/** When a recipe in Trash goes for good (phase C9): "Deleted for good in 30 days". */
+export function trashText(deletedAt: string, now = new Date()): string {
+  const left = Date.parse(deletedAt) + TRASH_DAYS * 86_400_000 - now.getTime();
+  const days = Math.ceil(left / 86_400_000);
+  if (days <= 0) return "Deleted for good within the hour";
+  return `Deleted for good in ${days} ${days === 1 ? "day" : "days"}`;
 }

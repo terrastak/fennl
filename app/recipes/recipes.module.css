@@ -709,3 +709,93 @@ label.card {
   gap: var(--space-3) var(--space-4);
   margin-top: var(--space-6);
 }
+
+/* --- Trash (phase C9) -------------------------------------------------------------------- */
+
+.trashMessage {
+  min-height: 1.5em;
+  margin: 0 0 var(--space-4);
+}
+
+.trashTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.trashList {
+  display: grid;
+  max-width: 48rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trashItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.trashText {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.trashTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+
+.trashButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.confirm {
+  display: grid;
+  gap: var(--space-3);
+  flex-basis: 100%;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.confirm p {
+  margin: 0;
+}
+
+.confirm .trashButtons {
+  justify-content: flex-start;
+}
+
+.dangerButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-danger);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.dangerButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}

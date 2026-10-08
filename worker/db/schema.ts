@@ -321,6 +321,11 @@ export const recipe = sqliteTable(
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
     /** In Trash since then (phase C9). */
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    /**
+     * Deleted for good (phase C9): 30 days in Trash, or Trash emptied. Its content is wiped and it
+     * can't come back; the row stays so every device removes it too.
+     */
+    expungedAt: integer("expunged_at", { mode: "timestamp_ms" }),
     serverSeq: integer("server_seq").notNull(),
   },
   (table) => [index("recipe_owner_seq_idx").on(table.ownerUserId, table.serverSeq)],

@@ -18,6 +18,7 @@ import type {
   OutboxEntry,
   RecipeDetail,
   RecipeSummary,
+  TrashItem,
 } from "./dbProtocol";
 import { MIGRATIONS } from "./schema";
 import { indexRecipe, searchRecipes, unindexRecords } from "./search";
@@ -119,9 +120,25 @@ function recompute(kind: RecordKind, key: string, ctx: ApplyContext) {
             owner_user_id = excluded.owner_user_id, data = excluded.data`,
     bind: [kind, key, owner, serverText ?? null, value ? JSON.stringify(value) : null],
   });
+  // Deleted for good (phase C9): what belonged to it goes from this copy too.
+  if (kind === "recipe" && (value as Recipe | null)?.expungedAt) dropRelated(d, key);
   // Keep search up to date (phase C8): a recipe's own words, and its signed notes.
   if (kind === "recipe") indexRecipe(d, key);
   if (kind === "opinion") indexRecipe(d, key.split("|")[0] ?? "");
+}
+
+/** Ratings, notes, "made it" days and category links of a recipe deleted for good. */
+function dropRelated(d: Database, recipeId: string) {
+  d.exec({
+    sql: `delete from record where kind in ('opinion', 'recipeCategory')
+          and key > ?1 || '|' and key < ?1 || '|~'`,
+    bind: [recipeId],
+  });
+  d.exec({
+    sql: `delete from record where kind = 'made'
+          and json_extract(coalesce(data, server_data), '$.recipeId') = ?`,
+    bind: [recipeId],
+  });
 }
 
 function snapshot(): DbResults["snapshot"] {
@@ -345,6 +362,20 @@ function getCategories(): CategoryData {
   };
 }
 
+/** What's in Trash (phase C9), most recently deleted first. */
+function listTrash(): TrashItem[] {
+  const names = new Map(members().map((m) => [m.userId, m.name]));
+  return values<Recipe>("recipe")
+    .filter((recipe) => recipe.deletedAt && !recipe.expungedAt)
+    .map((recipe) => ({
+      id: recipe.id,
+      title: recipe.title,
+      deletedAt: recipe.deletedAt ?? "",
+      addedBy: recipe.ownerUserId === userId ? null : (names.get(recipe.ownerUserId) ?? null),
+    }))
+    .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
+}
+
 function wipe() {
   database().exec(
     `delete from record; delete from cursor; delete from member; delete from outbox;
@@ -393,6 +424,9 @@ scope.onmessage = (event) => {
           break;
         case "getCategories":
           value = getCategories();
+          break;
+        case "listTrash":
+          value = listTrash();
           break;
         case "search":
           value = searchRecipes(database(), request.query, recipeCategories());

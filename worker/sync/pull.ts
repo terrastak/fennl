@@ -53,6 +53,7 @@ function toRecipe(row: typeof recipe.$inferSelect): Recipe {
     difficulty: row.difficulty as Difficulty | null,
     difficultyText: row.difficultyText,
     nutrition: row.nutrition ? (JSON.parse(row.nutrition) as Recipe["nutrition"]) : null,
+    expungedAt: iso(row.expungedAt),
     ...sync(row),
   };
 }

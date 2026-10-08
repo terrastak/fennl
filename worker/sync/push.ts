@@ -24,7 +24,7 @@ export interface PushCaller {
   householdId: string;
 }
 
-interface Statement {
+export interface Statement {
   sql: string;
   params: unknown[];
 }
@@ -44,11 +44,11 @@ function members(p: Params, caller: PushCaller): string {
 }
 
 /** The server_seq for the k-th statement of a batch; the batch's last statement moves the counter. */
-function seq(k: number): string {
+export function seq(k: number): string {
   return `((select value from sync_counter where id = 1) + ${k})`;
 }
 
-function bump(n: number): Statement {
+export function bump(n: number): Statement {
   return { sql: "update sync_counter set value = value + ?1 where id = 1", params: [n] };
 }
 
@@ -155,7 +155,8 @@ function recipeStatement(
     const u = update("recipe");
     return {
       sql: `update recipe set ${u.set}
-        where id = ${p.add(change.id)} and owner_user_id in ${members(p, caller)} and ${u.newer}
+        where id = ${p.add(change.id)} and owner_user_id in ${members(p, caller)}
+          and expunged_at is null and ${u.newer}
         returning id`,
       params: p.values,
     };
@@ -175,7 +176,8 @@ function recipeStatement(
         ${p.add(Date.parse(change.create.createdAt))}, ${who}, ${at}, ${value("deleted")}, ${seq(k)}
       where true
       on conflict (id) do update set ${u.set}
-      where recipe.owner_user_id in ${members(p, caller)} and ${u.newer}
+      where recipe.owner_user_id in ${members(p, caller)} and recipe.expunged_at is null
+        and ${u.newer}
       returning id`,
     params: p.values,
   };
@@ -220,6 +222,7 @@ function opinionStatement(
           t,
         )}, ${at}, null, ${seq(k)}
       from recipe r where r.id = ${recipeId} and r.owner_user_id in ${visible}
+        and r.expunged_at is null
       on conflict (recipe_id, user_id) do update set
         ${[...lww.set, lww.fieldTimes, `updated_at = ${at}`, `server_seq = ${seq(k)}`].join(", ")}
       where recipe_opinion.owner_user_id in ${visible} and ${lww.newer}
@@ -253,6 +256,7 @@ function madeStatement(
       select ${p.add(change.id)}, r.id, ${p.add(caller.userId)}, r.owner_user_id,
         ${p.add(change.madeOn)}, ${p.add(now)}, null, ${seq(k)}
       from recipe r where r.id = ${recipeId} and r.owner_user_id in ${members(p, caller)}
+        and r.expunged_at is null
       on conflict (id) do nothing
       returning id`,
     params: p.values,
@@ -343,7 +347,7 @@ function recipeCategoryStatement(
         ${deletedAt}, ${seq(k)}
       from recipe r join category c on c.owner_user_id = r.owner_user_id
       where r.id = ${p.add(change.recipeId)} and c.id = ${p.add(change.categoryId)}
-        and r.owner_user_id in ${visible}
+        and r.owner_user_id in ${visible} and r.expunged_at is null
       on conflict (recipe_id, category_id) do update set
         ${[...lww.set, lww.fieldTimes, `updated_at = ${at}`, `server_seq = ${seq(k)}`].join(", ")}
       where recipe_category.owner_user_id in ${visible} and ${lww.newer}

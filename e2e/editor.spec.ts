@@ -256,6 +256,7 @@ test("Your rating, favorite and note are kept, and only you set them", async ({
   await expect(yours.getByRole("radio", { name: "5 stars" })).toBeChecked();
   await yours.getByLabel("A favorite of mine").check();
   await yours.getByLabel("Your note").fill("Mom's, with extra raisins.");
+  await expect(yours.locator("[data-note-status]")).toHaveText("Saved.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await noAccessibilityProblems(page);
 
