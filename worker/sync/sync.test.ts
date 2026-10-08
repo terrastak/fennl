@@ -241,7 +241,7 @@ describe("saving and fetching recipes", () => {
   it("creates a recipe owned by its creator, and hands it out once", async () => {
     const june = await person();
     const recipeId = id();
-    expect((await push(june, [create(recipeId, "Green chile stew")])).body).toEqual({
+    expect((await push(june, [create(recipeId, "Green chile stew")])).body).toMatchObject({
       results: [applied],
     });
 

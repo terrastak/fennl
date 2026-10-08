@@ -8,6 +8,7 @@ import {
   parseCursors,
   schemaVersionProblem,
   type ChangeResult,
+  type PullResponse,
   type PushResponse,
   type SyncChange,
   type SyncError,
@@ -16,6 +17,7 @@ import type { Database } from "../db/client";
 import { device } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
+import { householdUsage, usageWithLimits } from "../limits/usage";
 import { pullChanges } from "./pull";
 import { applyChanges } from "./push";
 
@@ -111,17 +113,26 @@ syncRoutes.post("/api/sync/push", async (c) => {
     return refuse(c, "offline_not_allowed");
   }
 
+  const householdId = signedIn.household.householdId;
   const applied = await applyChanges(
     signedIn.db,
-    { userId: signedIn.userId, householdId: signedIn.household.householdId },
+    { userId: signedIn.userId, householdId },
     valid.map((v) => v.change),
     valid.map((v) => v.time),
     now,
+    {
+      maxRecipes: plan.max_recipes,
+      maxTextBytes: plan.max_text_bytes,
+      maxRecipeBytes: plan.max_recipe_bytes,
+    },
   );
   valid.forEach((v, i) => {
     results[v.index] = applied[i] ?? { status: "rejected", reason: "failed" };
   });
-  const response: PushResponse = { results: results as ChangeResult[] };
+  const response: PushResponse = {
+    results: results as ChangeResult[],
+    usage: usageWithLimits(await householdUsage(signedIn.db, householdId), plan),
+  };
   return c.json(response);
 });
 
@@ -135,7 +146,12 @@ syncRoutes.get("/api/sync/pull", async (c) => {
   if (problem) return refuse(c, problem);
   const since = parseCursors(c.req.query("since"));
   if (!since) return refuse(c, "invalid_request");
-  return c.json(
-    await pullChanges(signedIn.db, signedIn.household.householdId, signedIn.userId, since),
-  );
+  const householdId = signedIn.household.householdId;
+  const [page, plan, counts] = await Promise.all([
+    pullChanges(signedIn.db, householdId, signedIn.userId, since),
+    householdEntitlements(signedIn.db, householdId),
+    householdUsage(signedIn.db, householdId),
+  ]);
+  const response: PullResponse = { ...page, usage: usageWithLimits(counts, plan) };
+  return c.json(response);
 });

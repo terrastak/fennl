@@ -67,6 +67,7 @@
 }
 
 .primary:disabled,
+.primary[aria-disabled="true"],
 .secondary:disabled {
   cursor: not-allowed;
   opacity: 0.6;

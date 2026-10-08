@@ -675,6 +675,18 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - Editing and export still work.
   - Delete one recipe and you can add again.
 - **Done when**: Limit, override, and over-limit cases are tested.
+- **Built (2026-10-08)** (`shared/limits.ts`, `worker/sync/push.ts`, `worker/limits/`, `app/limits/`):
+  - **The limits** come from the household's entitlements (`plan_limits`, then `limit_override`), never from code: Free starts at 100 recipes, 3 MB of recipe text and 256 KB per recipe. **Recipes** counts those not in Trash. **Recipe text** counts every recipe's text, Trash included, until it's deleted for good. In a shared household both people's recipes count together.
+  - **What's blocked**: only adding. A new recipe needs fewer recipes than the limit and text under the limit; putting one back from Trash needs room in the count (its text counted all along). Editing, rating, "made it", categories, moving to Trash and downloading always work, however far over. So an account that drops to Free keeps everything and can change everything; it just can't add until it's back under. Imports (Stage E) and photos (Stage D) will use the same rule.
+  - **Each recipe's size**: a recipe can't grow past the per-recipe cap (a recipe already over it can still be edited, as long as it doesn't grow). The editor says "This recipe is unusually large, so changes can't be saved. Shorten it, or split it into two recipes." and keeps what's typed until it's shorter.
+  - **Server** (`POST /api/sync/push`): a refused addition gets the answer `limit` (with which limit), and so does anything else sent for a new recipe that was turned away. Text is measured by the database itself: a computed column, `recipe.text_bytes` (migration `0015_usage.sql`), adds up each field as stored, the way `recipeBytes` does, and an index makes a household's totals quick to read. Both push and pull answers now carry the household's usage and limits.
+  - **App**: knows the usage from every sync (and remembers it for the next start).
+    - **Settings › Recipe storage**: "87 of 100 recipes" and "1.2 MB of 3 MB of recipe text" as bars, and why adding is blocked when it is.
+    - **Beside "Add recipe"**, from 80% of a limit: the bar and a "Recipe storage" link. When full or over, "Add recipe" explains instead of opening the editor ("You have 100 recipes, as many as your plan includes. To add another, move one you don't need to Trash. Everything you have stays yours to read, change and download."). The same goes for the empty page's buttons, a new recipe's address, and **Put back** in Trash and on a recipe's page.
+  - **A recipe in Trash can be read in full** on its page (ingredients, method, notes and the rest), since it may have to wait there for room; before, its page showed only the title. Nothing on it can be changed until it's put back.
+  - **Nothing typed is lost**: if the server turns away a new recipe anyway (the limit changed while it was being written, or a partner added one meanwhile), the device keeps it, marked "Not synced yet", with a notice that it's saved as soon as there's room. It goes as soon as there is.
+  - The admin console's limit editing (B7) already changes all of this without a deploy. Tier limits are cached for up to a minute per server instance; household overrides apply at once.
+  - **Tests**: server tests for the count (with Trash, putting back, Premium unlimited, an override, a shared household), text (measured as `recipeBytes` measures it; Trash counting until deleted for good), over the limits (everything editable, adding refused until there's room) and the per-recipe cap (including a recipe already over it); unit tests for the rules, the wording and the editor's size cap; browser tests at computer and phone sizes for the owner's check (limit of 5: the bar warns, then blocks; editing and download still work; Trash makes room; putting back needs room), an account over its limit, a new recipe turned away and kept until there's room, and an unusually large recipe, with accessibility checks.
 
 ### C12. Admin: act as user (impersonation)
 - **Goal**: Help users and investigate abuse by seeing and acting exactly as they do.
@@ -1083,5 +1095,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C7 | Done 2026-10-08 (merged; live; the owner set up categories and filed recipes on the preview) |
 | C8 | Done 2026-10-08 (merged; live; the owner searched by an ingredient, a note and part of a title on the preview) |
 | C9 | Done 2026-10-08 (merged; live; the owner deleted on one device and put back on another, on the preview) |
-| C10 | Approved 2026-10-08; built, waiting for review |
+| C10 | Done 2026-10-08 (merged; live) |
+| C11 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

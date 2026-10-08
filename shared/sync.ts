@@ -17,6 +17,7 @@ import {
   type RecipeMade,
   type RecipeOpinion,
 } from "./recipe";
+import type { AddLimit, Usage } from "./limits";
 
 /**
  * How devices send and fetch recipe changes (phase C3, CLAUDE.md "Sync architecture"). The
@@ -138,17 +139,24 @@ export interface PushRequest {
  * - rejected: not allowed or not valid; it will never be kept, so the device drops it.
  *   not_found: no such recipe or category in the caller's household (or never was).
  *   wrong_owner: a category belonging to someone other than the recipe's owner.
- *   invalid: see issues.
+ *   invalid: see issues. A recipe bigger than the plan's per-recipe cap is invalid, with the
+ *     issue { path: "", problem: "too_large" } (phase C11).
+ *   limit: adding this recipe (or putting it back from Trash) would go past a plan limit
+ *     (phase C11), and so would changes to a new recipe that was turned away. Nothing about it
+ *     is wrong: it can be sent again once there's room.
  *   failed: the server couldn't save it; send it again later.
  */
 export type ChangeResult =
   | { status: "applied" }
   | { status: "unchanged" }
   | { status: "rejected"; reason: "not_found" | "wrong_owner" | "failed" }
-  | { status: "rejected"; reason: "invalid"; issues: RecipeIssue[] };
+  | { status: "rejected"; reason: "invalid"; issues: RecipeIssue[] }
+  | { status: "rejected"; reason: "limit"; limit: AddLimit };
 
 export interface PushResponse {
   results: ChangeResult[];
+  /** The household's usage and limits once these changes are in (phase C11). */
+  usage: Usage;
 }
 
 /** Errors for a whole push or pull (with the HTTP status the server uses). */
@@ -181,6 +189,8 @@ export interface PullResponse {
   cursors: Cursors;
   /** More changes are waiting: ask again straight away. */
   more: boolean;
+  /** The household's usage and limits (phase C11). */
+  usage: Usage;
 }
 
 /** Cursors as the pull's `since` parameter: "userA:812,userB:0". */

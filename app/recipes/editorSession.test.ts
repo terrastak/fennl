@@ -213,3 +213,36 @@ describe("when editing is paused", () => {
     expect(state().save).toBe("saved");
   });
 });
+
+describe("the plan's per-recipe size (phase C11)", () => {
+  it("holds back a recipe that grows past it, and saves once it's shorter", async () => {
+    const { session, saves, state } = setUp(existing());
+    session.setMaxBytes(600);
+    session.set({ notes: "x".repeat(700) });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(saves).toHaveLength(0);
+    expect(state()).toMatchObject({ save: "too_large", tooLarge: true });
+
+    session.set({ notes: "x".repeat(100) });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(saves).toEqual([expect.objectContaining({ fields: { notes: "x".repeat(100) } })]);
+    expect(state()).toMatchObject({ save: "saved", tooLarge: false });
+  });
+
+  it("lets a recipe already over it shrink, and saves held changes when the limit goes up", async () => {
+    const big = { ...existing(), notes: "y".repeat(2000) };
+    const { session, saves, state } = setUp(big);
+    session.setMaxBytes(1000);
+    session.set({ notes: "y".repeat(1500) });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(saves).toHaveLength(1);
+
+    session.set({ notes: "y".repeat(1800) });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(state().save).toBe("too_large");
+    session.setMaxBytes(null);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(saves).toHaveLength(2);
+    expect(state().save).toBe("saved");
+  });
+});

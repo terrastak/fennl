@@ -319,9 +319,20 @@ export function isId(value: unknown): value is string {
   return typeof value === "string" && UUID.test(value);
 }
 
-/** Bytes a recipe's content takes, the way the text limits count it (UTF-8 JSON). */
+const utf8 = new TextEncoder();
+
+/**
+ * Bytes one field takes as stored: text as it is, lists and groups as JSON, nothing for null.
+ * The server's recipe.text_bytes column counts the same way (phase C11).
+ */
+export function fieldBytes(value: unknown): number {
+  if (value === null || value === undefined) return 0;
+  return utf8.encode(typeof value === "string" ? value : JSON.stringify(value)).length;
+}
+
+/** Bytes a recipe's text takes, the way the text limits count it: its fields as stored. */
 export function recipeBytes(content: RecipeContent): number {
-  return new TextEncoder().encode(JSON.stringify(content)).length;
+  return RECIPE_FIELDS.reduce((total, field) => total + fieldBytes(content[field]), 0);
 }
 
 type Check = (path: string, problem: RecipeProblem) => void;

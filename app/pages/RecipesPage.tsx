@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { underPath } from "../categories/tree";
+import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
+import { UsageNote } from "../limits/Usage";
+import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { navigate, queryParam } from "../navigation";
@@ -144,6 +147,9 @@ function EmptyState({
   onSamples: () => void;
   addingSamples: boolean;
 }) {
+  // Even with no recipes, text left in Trash can fill the plan (phase C11).
+  const usage = useUsage();
+  const blocked = useAddBlocked();
   return (
     <section className={styles.empty} aria-labelledby="empty-title">
       <div className={styles.ghosts} aria-hidden="true">
@@ -154,8 +160,18 @@ function EmptyState({
       <div className={styles.emptyText}>
         <h2 id="empty-title">Your recipe box is empty, for now</h2>
         <p>Write down a family favorite, or bring in recipes you already have.</p>
+        {blocked && usage ? (
+          <p className={styles.hint}>
+            {addBlockedText(blocked, usage)} {NOTHING_LOST}
+          </p>
+        ) : null}
         <div className={styles.buttons}>
-          <button type="button" className={styles.primary} onClick={onAdd} disabled={disabled}>
+          <button
+            type="button"
+            className={styles.primary}
+            onClick={onAdd}
+            disabled={disabled || blocked !== null}
+          >
             Add recipe
           </button>
           <Link href="/import" className={styles.secondary}>
@@ -166,7 +182,7 @@ function EmptyState({
           type="button"
           className={styles.textButton}
           onClick={onSamples}
-          disabled={disabled || addingSamples}
+          disabled={disabled || addingSamples || blocked !== null}
         >
           {addingSamples
             ? "Adding sample recipes…"
@@ -223,7 +239,11 @@ export function RecipesPage() {
   const recipes = useRecipeList();
   const tree = useCategoryTree();
   const editable = canEdit(status);
-  const add = () => navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
+  // Over a plan limit (phase C11), "Add recipe" says why instead of opening the editor.
+  const addBlocked = useAddBlocked();
+  const limitNote = useRef<HTMLParagraphElement>(null);
+  const add = () =>
+    addBlocked ? limitNote.current?.focus() : navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
   const [filter, setFilter] = useState(filterFromAddress);
   const [rating, setRating] = useState<RatingFilter>(ratingFromAddress);
@@ -353,7 +373,14 @@ export function RecipesPage() {
       {list.length > 0 ? (
         <div className={styles.toolbar}>
           <div className={styles.toolbarStart}>
-            <button type="button" className={styles.primary} onClick={add} disabled={!editable}>
+            <button
+              type="button"
+              className={styles.primary}
+              onClick={add}
+              disabled={!editable}
+              aria-disabled={addBlocked ? true : undefined}
+              aria-describedby={addBlocked ? "add-blocked" : undefined}
+            >
               Add recipe
             </button>
             <button
@@ -426,6 +453,8 @@ export function RecipesPage() {
           </div>
         </div>
       ) : null}
+
+      {list.length > 0 ? <UsageNote id="add-blocked" ref={limitNote} /> : null}
 
       {selecting && tree ? (
         <section className={styles.bulk} aria-label="Selected recipes">

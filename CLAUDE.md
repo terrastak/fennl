@@ -48,7 +48,7 @@ UI copy should say: recipes are stored in your account, and the browser keeps a 
 
 - Single user, **one active device**.
 - Text-only recipes. **No image uploads, no R2 access.**
-- **Limits (Decided 2026-10-03):** 100 recipes (Trash doesn't count) and a **3 MB hard cap on recipe text** per account (Trash counts). Every tier has a per-recipe size cap (about 256 KB, Leaning). Premium text caps: 50 MB Individual, 100 MB Household. All limits live in the D1 `plan_limits` table, with per-account exceptions in `limit_override`. Both are editable from the admin console without a deploy. **Never hard-code limits.** Effective limit = an unexpired account override, else the tier limit.
+- **Limits (Decided 2026-10-03):** 100 recipes (Trash doesn't count) and a **3 MB hard cap on recipe text** per account (Trash counts). Every tier has a per-recipe size cap (about 256 KB, Leaning). Premium text caps: 50 MB Individual, 100 MB Household. All limits live in the D1 `plan_limits` table, with per-account exceptions in `limit_override`. Both are editable from the admin console without a deploy. **Never hard-code limits.** Effective limit = an unexpired account override, else the tier limit. Built in C11 (`shared/limits.ts`, checked in `worker/sync/push.ts`): only adding is ever blocked (a new recipe, or one put back from Trash, and later imports and photos); edits never are, and a recipe can't grow past the per-recipe cap.
 - Server-first writes: a save goes to the server immediately; the local store is a read cache. Editing requires a connection.
 - No offline edit queue, no multi-device sync.
 - Basic in-session undo only.
@@ -130,7 +130,7 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `device` | Device registry for the one-device free limit and Premium cap (built in B6, `worker/devices/`) | `id` (client-generated, random; primary key with `user_id`), `household_id`, `user_id`, `label`, `session_id`, `first_seen_at`, `last_seen_at`, `revoked_at`, `revoked_reason` |
 | `household_usage` | Quota tracking (a shared household's quota is the sum of its members' owned images) | `household_id`, `image_bytes`, `image_count`, `updated_at` |
 | `image` | One row per stored image per owner | `hash` (content hash), `owner_user_id`, `bytes`, `content_type`, `created_at`, `deleted_at` |
-| `recipe` | Recipe records (C1: `shared/recipe.ts`, `docs/design/recipe-model.md`; built in C3, `worker/sync/`). Ingredients and directions are lists inside the record (JSON), every line with its own ID | `id` (UUID), `owner_user_id`, `copied_from`, one column per `RECIPE_FIELDS` field, `import`, `field_times` (when each field last changed), `created_at`, `updated_by_user_id`, `updated_at`, `deleted_at`, `expunged_at` (C9), `server_seq` |
+| `recipe` | Recipe records (C1: `shared/recipe.ts`, `docs/design/recipe-model.md`; built in C3, `worker/sync/`). Ingredients and directions are lists inside the record (JSON), every line with its own ID | `id` (UUID), `owner_user_id`, `copied_from`, one column per `RECIPE_FIELDS` field, `import`, `field_times` (when each field last changed), `created_at`, `updated_by_user_id`, `updated_at`, `deleted_at`, `expunged_at` (C9), `server_seq`, `text_bytes` (C11: computed by the database, the recipe's text size as `recipeBytes` counts it) |
 | `recipe_opinion` | One person's rating, favorite and signed note on a recipe; shown to the household (C3) | `recipe_id`, `user_id`, `owner_user_id` (the recipe's), `rating`, `favorite`, `note`, `field_times`, `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_made` | "Made it" records; the latest is the household's "last made" (C3) | `id`, `recipe_id`, `user_id`, `owner_user_id` (the recipe's), `made_on`, `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_version` | Premium version history | `id`, `recipe_id`, `snapshot`, `created_at`, `author_user_id` |
@@ -206,8 +206,8 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 | `POST /api/devices/register` | Register the browser's device ID | Under `max_devices`, else return takeover options |
 | `POST /api/devices/takeover` | Make this browser the active device, revoke the previous one (free) or revoke a chosen one (Premium) | Authenticated member of the household |
 | `GET /api/devices`, `POST /api/devices/:id/sign-out` | Settings › Devices: list active devices, sign another one out | Authenticated; only the caller's own devices can be signed out |
-| `POST /api/sync/push` | Submit changes `{deviceId, schemaVersion, sentAt, changes[]}` (built in C3; shapes in `shared/sync.ts`) | Device registered and not revoked; app schema version; without `offline_enabled`, every change must be under 2 minutes old when sent |
-| `GET /api/sync/pull?deviceId=&schemaVersion=&since=<owner>:<seq>,...` | Fetch changes after each owner's cursor, in pages (C3) | Device registered and not revoked; only owners in the caller's household |
+| `POST /api/sync/push` | Submit changes `{deviceId, schemaVersion, sentAt, changes[]}` (built in C3; shapes in `shared/sync.ts`); the answer carries the household's usage and limits (C11) | Device registered and not revoked; app schema version; without `offline_enabled`, every change must be under 2 minutes old when sent; a new recipe (or one put back from Trash) needs room under `max_recipes` and `max_text_bytes`, and no recipe may grow past `max_recipe_bytes` (C11) |
+| `GET /api/sync/pull?deviceId=&schemaVersion=&since=<owner>:<seq>,...` | Fetch changes after each owner's cursor, in pages (C3), with the household's usage and limits (C11) | Device registered and not revoked; only owners in the caller's household |
 | `POST /api/images/upload` (or `/upload-url`) | Upload an image via the Worker or a short-lived signed URL | `images_enabled`, per-file size, total quota |
 | `GET /api/images/:hash` | Serve an image | Caller's household owns it; never public bucket URLs |
 | `GET /api/export` | Full-library export: a .zip of web pages plus `fennl-recipes.json` (built in C10, `worker/export/`; format in `shared/exportFormat.ts`) | Always allowed, including lapsed accounts |
@@ -280,7 +280,7 @@ An admin console exists before the beta, **including impersonation**. Admin secu
 
 ## Lapsed subscriptions and over-limit accounts
 
-**Decided (2026-10-03):** when an account drops to Free (a beta grant expiring, a downgrade, a lapse, or a household split) and is over the free limits, **nothing is deleted or hidden**. Everything stays readable, editable, and exportable. **New additions are blocked** (new recipes, imports, anything that grows storage) until usage is back under the limits. Show a **storage usage bar** in Settings and next to the blocked action. **Photos:** 90 days of full view and download access, with reminder emails, then deletion. Resubscribing within the window cancels deletion. Recipe text is never deleted.
+**Decided (2026-10-03; recipe limits built in C11):** when an account drops to Free (a beta grant expiring, a downgrade, a lapse, or a household split) and is over the free limits, **nothing is deleted or hidden**. Everything stays readable, editable, and exportable. **New additions are blocked** (new recipes, imports, anything that grows storage) until usage is back under the limits. Show a **storage usage bar** in Settings and next to the blocked action. **Photos:** 90 days of full view and download access, with reminder emails, then deletion. Resubscribing within the window cancels deletion. Recipe text is never deleted.
 
 Other current thinking:
 

@@ -9,6 +9,7 @@
  * in ./auth-schema.ts, which `npm run auth:generate` writes from worker/auth/options.ts. Rerun it
  * after changing Better Auth's settings or version, then `npm run db:generate`.
  */
+import { sql } from "drizzle-orm";
 import {
   index,
   integer,
@@ -283,6 +284,21 @@ export const syncCounter = sqliteTable("sync_counter", {
  * A recipe. Each field of shared/recipe.ts's RecipeContent is one column; lists and groups of
  * values (ingredients, times, source...) are JSON text.
  */
+/** The columns holding a recipe's text (RECIPE_FIELDS), counted by text_bytes. */
+const TEXT_COLUMNS = [
+  "title",
+  "description",
+  "ingredients",
+  "directions",
+  "times",
+  "servings",
+  "source",
+  "notes",
+  "difficulty",
+  "difficulty_text",
+  "nutrition",
+];
+
 export const recipe = sqliteTable(
   "recipe",
   {
@@ -327,8 +343,23 @@ export const recipe = sqliteTable(
      */
     expungedAt: integer("expunged_at", { mode: "timestamp_ms" }),
     serverSeq: integer("server_seq").notNull(),
+    /**
+     * Bytes of recipe text (phase C11): every RECIPE_FIELDS column as stored, the way
+     * recipeBytes (shared/recipe.ts) counts it; 0 once deleted for good. Worked out by the
+     * database, so no write can forget it.
+     */
+    textBytes: integer("text_bytes").generatedAlwaysAs(
+      sql`case when expunged_at is null then ${sql.raw(
+        TEXT_COLUMNS.map((c) => `coalesce(length(cast(${c} as blob)), 0)`).join(" + "),
+      )} else 0 end`,
+      { mode: "virtual" },
+    ),
   },
-  (table) => [index("recipe_owner_seq_idx").on(table.ownerUserId, table.serverSeq)],
+  (table) => [
+    index("recipe_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
+    // A household's recipe count and text size, read from the index alone (phase C11).
+    index("recipe_owner_usage_idx").on(table.ownerUserId, table.deletedAt, table.textBytes),
+  ],
 );
 
 /** One person's rating, favorite and signed note on a recipe (shared/recipe.ts RecipeOpinion). */

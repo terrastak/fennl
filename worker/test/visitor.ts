@@ -1,6 +1,8 @@
 import { applyD1Migrations, env } from "cloudflare:test";
 import { expect } from "vitest";
+import type { LimitKey } from "../../shared/entitlements";
 import { database } from "../db/client";
+import { limitOverride } from "../db/schema";
 import { devOutbox } from "../email/outbox";
 import { app } from "../index";
 import { writeSetting } from "../settings/settings";
@@ -97,4 +99,28 @@ export async function signUpConfirmed(email: string, name = "June Lee"): Promise
   const confirm = await v.request(linkInLatestEmail(email));
   expect(confirm.status).toBe(302);
   return v;
+}
+
+/** The visitor's household. */
+export async function householdOf(v: Visitor): Promise<string> {
+  const res = await v.request("/api/household");
+  return ((await res.json()) as { id: string }).id;
+}
+
+/** A per-household limit, as an admin sets it (limit_override). Null: no limit. */
+export async function overrideLimit(v: Visitor, key: LimitKey, value: number | null) {
+  await database(env.DB)
+    .insert(limitOverride)
+    .values({
+      id: crypto.randomUUID(),
+      householdId: await householdOf(v),
+      key,
+      value,
+      note: "Test",
+      createdAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [limitOverride.householdId, limitOverride.key],
+      set: { value },
+    });
 }

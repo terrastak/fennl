@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
+import { useAddBlocked } from "../limits/useLimits";
 import { PageHeader } from "../pages/PageHeader";
 import { Link } from "../router";
 import type { TrashItem } from "../sync/dbProtocol";
@@ -73,7 +75,13 @@ export function TrashPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Putting one back needs room under the plan's recipe limit (phase C11).
+  const restoreBlocked = useAddBlocked(true);
   const restore = async (item: TrashItem) => {
+    if (restoreBlocked && status.usage) {
+      setMessage(`${restoreBlockedText(status.usage)} ${NOTHING_LOST}`);
+      return;
+    }
     setMessage(
       (await putBack(item))
         ? `Put “${item.title || "Untitled"}” back in your recipes.`
