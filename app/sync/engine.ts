@@ -11,6 +11,7 @@ import {
 } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import { LocalDb, LocalDbError } from "./dbClient";
+import type { SearchResults } from "./search";
 import type { OutboxEntry, RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { batches, stampedAsSent } from "./records";
 import type { SyncPhase, SyncStatus } from "./status";
@@ -240,6 +241,10 @@ export class SyncEngine {
 
   getCategories(): Promise<CategoryData> {
     return this.db.call({ op: "getCategories" });
+  }
+
+  search(query: string): Promise<SearchResults> {
+    return this.db.call({ op: "search", query });
   }
 
   /** Sends what's waiting, then fetches what's new. One at a time; a request meanwhile runs after. */

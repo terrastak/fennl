@@ -6,19 +6,28 @@ import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { navigate, queryParam } from "../navigation";
 import { minutesText } from "../recipes/format";
+import { Highlight } from "../recipes/Highlight";
 import styles from "../recipes/recipes.module.css";
 import { SAMPLE_COUNT, sampleRecipeChanges } from "../recipes/samples";
 import { Link } from "../router";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
-import { activeSyncClient, useCategoryTree, useRecipeList, useSyncStatus } from "../sync/useSync";
+import type { SearchHit } from "../sync/search";
+import {
+  activeSyncClient,
+  useCategoryTree,
+  useRecipeList,
+  useSearch,
+  useSyncStatus,
+} from "../sync/useSync";
 import { greetingFor } from "./greeting";
 import { PageHeader } from "./PageHeader";
 
 // The recipe list (phase C5): cards from this browser's copy, sorting, the empty state from
 // docs/design/design-direction.md, and sample recipes to try. "Add recipe" opens the editor
-// (phase C6) on a new recipe. Phase C7 adds the category filter (kept in the address as
-// ?category=) and Select, for filing many recipes at once.
+// (phase C6) on a new recipe. Phase C7 adds the category filter and Select, for filing many
+// recipes at once. Phase C8 adds search (app/sync/search.ts) and the rating filter. The search
+// and filters are kept in the address (?q=, ?category=, ?rating=).
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -59,11 +68,17 @@ function RecipeCard({
   selecting,
   selected,
   onSelect,
+  terms,
+  hit,
 }: {
   recipe: RecipeSummary;
   selecting: boolean;
   selected: boolean;
   onSelect: (selected: boolean) => void;
+  /** What's being searched for, to mark in the card (phase C8). */
+  terms: string[];
+  /** Where the search found it, when not in the title. */
+  hit: SearchHit | undefined;
 }) {
   const meta = [
     recipe.categories.join(", "),
@@ -77,8 +92,14 @@ function RecipeCard({
       </span>
       <span className={styles.cardBody}>
         <span id={titleId} className={styles.cardTitle}>
-          {recipe.title}
+          <Highlight text={recipe.title} terms={terms} />
         </span>
+        {hit ? (
+          <span className={styles.cardHit}>
+            <span className={styles.cardHitField}>{hit.field}:</span>{" "}
+            <Highlight text={hit.text} terms={terms} />
+          </span>
+        ) : null}
         {recipe.addedBy ? <span className={styles.cardBy}>{recipe.addedBy}</span> : null}
         {meta.length > 0 ? <span className={styles.cardMeta}>{meta.join(" · ")}</span> : null}
         {recipe.waiting ? <span className={styles.cardMeta}>Not synced yet</span> : null}
@@ -163,6 +184,33 @@ function filterFromAddress(): string {
   return category ? category.toLocaleLowerCase() : "";
 }
 
+type RatingFilter = "" | "favorite" | "5" | "4" | "3" | "none";
+
+const RATINGS: { value: RatingFilter; label: string }[] = [
+  { value: "", label: "Any rating" },
+  { value: "favorite", label: "My favorites" },
+  { value: "5", label: "5 stars" },
+  { value: "4", label: "4 stars and up" },
+  { value: "3", label: "3 stars and up" },
+  { value: "none", label: "Not rated yet" },
+];
+
+/** Your own rating and favorite (CLAUDE.md: opinions are per person). */
+function rated(recipe: RecipeSummary, rating: RatingFilter): boolean {
+  if (!rating) return true;
+  if (rating === "favorite") return recipe.favorite;
+  if (rating === "none") return recipe.myRating === null;
+  return (recipe.myRating ?? 0) >= Number(rating);
+}
+
+function ratingFromAddress(): RatingFilter {
+  const value = queryParam("rating");
+  return RATINGS.some((r) => r.value === value) ? (value as RatingFilter) : "";
+}
+
+/** Recipes shown at a time; more on request, so a big recipe box stays quick. */
+const PAGE = 100;
+
 function matches(recipe: RecipeSummary, filter: string): boolean {
   if (!filter) return true;
   if (filter === UNFILED) return recipe.categories.length === 0;
@@ -177,6 +225,10 @@ export function RecipesPage() {
   const add = () => navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
   const [filter, setFilter] = useState(filterFromAddress);
+  const [rating, setRating] = useState<RatingFilter>(ratingFromAddress);
+  const [query, setQuery] = useState(() => queryParam("q") ?? "");
+  const [limit, setLimit] = useState(PAGE);
+  const search = useSearch(query);
   const [addingSamples, setAddingSamples] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -191,12 +243,41 @@ export function RecipesPage() {
     }
   };
 
+  /** Search and filters go in the address too, so they survive a reload and can be shared. */
+  const remember = (next: { q?: string; category?: string; rating?: RatingFilter }) => {
+    const params = new URLSearchParams();
+    const q = next.q ?? query;
+    const path = tree?.byKey.get(next.category ?? filter)?.path;
+    const r = next.rating ?? rating;
+    if (q.trim()) params.set("q", q);
+    if (path) params.set("category", path);
+    if (r) params.set("rating", r);
+    const search = params.toString();
+    window.history.replaceState(null, "", search ? `/?${search}` : "/");
+    setLimit(PAGE);
+  };
+
   const chooseFilter = (value: string) => {
     setFilter(value);
-    // In the address too, so it can be shared, bookmarked, and kept on reload.
-    const path = tree?.byKey.get(value)?.path;
-    const url = path ? `/?category=${encodeURIComponent(path)}` : "/";
-    window.history.replaceState(null, "", url);
+    remember({ category: value });
+  };
+
+  const chooseRating = (value: RatingFilter) => {
+    setRating(value);
+    remember({ rating: value });
+  };
+
+  const typeQuery = (value: string) => {
+    setQuery(value);
+    remember({ q: value });
+  };
+
+  const clearAll = () => {
+    setQuery("");
+    setFilter("");
+    setRating("");
+    window.history.replaceState(null, "", "/");
+    setLimit(PAGE);
   };
 
   const addSamples = async () => {
@@ -208,10 +289,28 @@ export function RecipesPage() {
   };
 
   const list = recipes ?? [];
-  const shown = sorted(
-    list.filter((recipe) => matches(recipe, filter)),
-    sortBy,
-  );
+  const searching = query.trim() !== "";
+  const narrowed = list.filter((recipe) => matches(recipe, filter) && rated(recipe, rating));
+  let shown: RecipeSummary[];
+  if (!searching) shown = sorted(narrowed, sortBy);
+  else if (!search) shown = [];
+  else {
+    // Recipes with every word in the title first, then the rest; each in the chosen order.
+    const found = new Set(search.ids);
+    const inTitle = new Set(search.titleIds);
+    const hits = narrowed.filter((recipe) => found.has(recipe.id));
+    shown = [
+      ...sorted(
+        hits.filter((recipe) => inTitle.has(recipe.id)),
+        sortBy,
+      ),
+      ...sorted(
+        hits.filter((recipe) => !inTitle.has(recipe.id)),
+        sortBy,
+      ),
+    ];
+  }
+  const narrowing = searching || filter !== "" || rating !== "";
   const chosen = shown.filter((recipe) => selected.has(recipe.id)).map((recipe) => recipe.id);
   const select = (id: string, on: boolean) =>
     setSelected((before) => {
@@ -231,6 +330,23 @@ export function RecipesPage() {
   return (
     <>
       <PageHeader title="Your recipes" note={greetingFor(new Date())} />
+      {list.length > 0 ? (
+        <form role="search" className={styles.search} onSubmit={(e) => e.preventDefault()}>
+          <label htmlFor="recipe-search" className={styles.searchLabel}>
+            Search recipes
+          </label>
+          <input
+            id="recipe-search"
+            type="search"
+            className={styles.searchInput}
+            value={query}
+            placeholder="A title, an ingredient, a word in the notes…"
+            autoComplete="off"
+            enterKeyHint="search"
+            onChange={(e) => typeQuery(e.target.value)}
+          />
+        </form>
+      ) : null}
       {list.length > 0 ? (
         <div className={styles.toolbar}>
           <div className={styles.toolbarStart}>
@@ -268,6 +384,20 @@ export function RecipesPage() {
                 </select>
               </label>
             ) : null}
+            <label className={styles.sort}>
+              Rating
+              <select
+                className={styles.select}
+                value={rating}
+                onChange={(e) => chooseRating(e.target.value as RatingFilter)}
+              >
+                {RATINGS.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             {list.length > 1 ? (
               <label className={styles.sort}>
                 Sort by
@@ -321,29 +451,53 @@ export function RecipesPage() {
           <h2 id="list-title" className="visually-hidden">
             {shown.length} {shown.length === 1 ? "recipe" : "recipes"}
           </h2>
-          {filter ? (
-            <p className={styles.filterNote}>
-              {shown.length === 0
-                ? filter === UNFILED
-                  ? "Every recipe is in a category."
-                  : `No recipes in ${filterName}.`
-                : `Showing ${shown.length} of ${list.length}: ${filterName}.`}{" "}
-              <button type="button" className={styles.textButton} onClick={() => chooseFilter("")}>
+          <p className={styles.filterNote}>
+            <span aria-live="polite">
+              {!narrowing
+                ? ""
+                : searching && !search
+                  ? "Searching…"
+                  : shown.length === 0
+                    ? filter === UNFILED && !searching && !rating
+                      ? "Every recipe is in a category."
+                      : "No recipes found."
+                    : `Showing ${shown.length} of ${list.length}${
+                        search && search.titleIds.length > 0 && shown.length > 1
+                          ? "; titles with every word come first"
+                          : ""
+                      }.`}
+            </span>{" "}
+            {narrowing ? (
+              <button type="button" className={styles.textButton} onClick={clearAll}>
                 Show all recipes
               </button>
-            </p>
-          ) : null}
+            ) : null}
+          </p>
           <ul className={styles.grid}>
-            {shown.map((recipe) => (
+            {shown.slice(0, limit).map((recipe) => (
               <RecipeCard
                 key={recipe.id}
                 recipe={recipe}
                 selecting={selecting}
                 selected={selected.has(recipe.id)}
                 onSelect={(on) => select(recipe.id, on)}
+                terms={searching ? (search?.terms ?? []) : []}
+                hit={searching ? search?.hits[recipe.id] : undefined}
               />
             ))}
           </ul>
+          {shown.length > limit ? (
+            <div className={styles.more}>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => setLimit(limit + PAGE)}
+              >
+                Show {Math.min(PAGE, shown.length - limit)} more
+              </button>
+              <span className={styles.hint}>{shown.length - limit} more to see</span>
+            </div>
+          ) : null}
         </section>
       ) : (
         <EmptyState

@@ -3,6 +3,7 @@ import type { SyncChange } from "../../shared/sync";
 import { deviceId } from "../devices/deviceId";
 import { categoryTree, type CategoryTree } from "../categories/tree";
 import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
+import type { SearchResults } from "./search";
 import { STARTING, type SyncStatus } from "./status";
 import { SyncClient } from "./tabs";
 
@@ -126,4 +127,38 @@ export async function saveChanges(changes: SyncChange[]): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Search results for what's typed (phase C8), read again whenever the local copy changes. Null
+ * with nothing typed, or until the first answer.
+ */
+export function useSearch(query: string): SearchResults | null {
+  const client = activeSyncClient();
+  const [results, setResults] = useState<{ query: string; value: SearchResults } | null>(null);
+  const wanted = query.trim();
+  useEffect(() => {
+    if (!client || !wanted) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .search(wanted)
+        .then((value) => {
+          if (call === latest) setResults({ query: wanted, value });
+        })
+        .catch(() => undefined);
+    };
+    // A moment after typing stops.
+    const timer = setTimeout(load, 120);
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [client, wanted]);
+  if (!wanted) return null;
+  // While a new answer is coming, the last one stays (so the list doesn't flash empty).
+  return results?.value ?? null;
 }

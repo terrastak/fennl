@@ -19,6 +19,8 @@ import type {
   RecipeDetail,
   RecipeSummary,
 } from "./dbProtocol";
+import { MIGRATIONS } from "./schema";
+import { indexRecipe, searchRecipes, unindexRecords } from "./search";
 import {
   keyOf,
   ownerOfRecord,
@@ -36,34 +38,6 @@ import {
 //
 // This copy is a cache. The account on the server is what counts (CLAUDE.md, "Core principle"):
 // if the browser clears it, the next sync downloads everything again.
-
-/**
- * The local tables, one step per schema version (PRAGMA user_version). A device may have any
- * older version, so steps are only ever added, never changed.
- */
-const MIGRATIONS = [
-  `create table meta (key text primary key, value text not null);
-   create table cursor (owner_user_id text primary key, seq integer not null);
-   create table member (user_id text primary key, name text not null, position integer not null);
-   create table record (
-     kind text not null,
-     key text not null,
-     owner_user_id text not null,
-     server_data text,
-     data text,
-     primary key (kind, key)
-   );
-   create index record_owner on record (owner_user_id);
-   create table outbox (
-     seq integer primary key autoincrement,
-     kind text not null,
-     key text not null,
-     change text not null,
-     created_at integer not null
-   );
-   create index outbox_record on outbox (kind, key);
-   create table recheck (kind text not null, key text not null, primary key (kind, key));`,
-];
 
 let db: Database | null = null;
 let userId = "";
@@ -85,7 +59,9 @@ function migrate(d: Database) {
   // The server's record shape changed since this copy was made: download it all again.
   const shape = d.selectValue("select value from meta where key = 'recipe_schema'");
   if (shape !== undefined && Number(shape) !== RECIPE_SCHEMA_VERSION) {
-    d.exec("delete from record; delete from cursor; delete from recheck;");
+    d.exec(
+      "delete from record; delete from cursor; delete from recheck; delete from recipe_search;",
+    );
   }
   d.exec({
     sql: "insert or replace into meta (key, value) values ('recipe_schema', ?)",
@@ -131,7 +107,9 @@ function recompute(kind: RecordKind, key: string, ctx: ApplyContext) {
   ).map((text) => JSON.parse(text) as SyncChange);
   const value = withPending(server, pending, ctx);
   if (!server && !value) {
+    if (kind === "recipe") unindexRecords(d, "key = ?", [key]);
     d.exec({ sql: "delete from record where kind = ? and key = ?", bind: [kind, key] });
+    if (kind === "opinion") indexRecipe(d, key.split("|")[0] ?? "");
     return;
   }
   const owner = ownerOfRecord(kind, (value ?? server) as RecordValue, ctx);
@@ -141,6 +119,9 @@ function recompute(kind: RecordKind, key: string, ctx: ApplyContext) {
             owner_user_id = excluded.owner_user_id, data = excluded.data`,
     bind: [kind, key, owner, serverText ?? null, value ? JSON.stringify(value) : null],
   });
+  // Keep search up to date (phase C8): a recipe's own words, and its signed notes.
+  if (kind === "recipe") indexRecipe(d, key);
+  if (kind === "opinion") indexRecipe(d, key.split("|")[0] ?? "");
 }
 
 function snapshot(): DbResults["snapshot"] {
@@ -233,6 +214,7 @@ function applyPull(page: PullResponse, now: string) {
       sql: `delete from cursor where owner_user_id not in (${placeholders})`,
       bind: members,
     });
+    unindexRecords(d, `owner_user_id not in (${placeholders}, '')`, members);
     d.exec({
       sql: `delete from record where owner_user_id not in (${placeholders}, '')`,
       bind: members,
@@ -294,6 +276,11 @@ function listRecipes(): RecipeSummary[] {
   );
   const categories = recipeCategories();
   const names = new Map(members().map((m) => [m.userId, m.name]));
+  const mine = new Map(
+    values<RecipeOpinion>("opinion", "and key like ?", [`%|${userId}`])
+      .filter((o) => !o.deletedAt)
+      .map((o) => [o.recipeId, o]),
+  );
   return values<Recipe>("recipe")
     .filter((recipe) => !recipe.deletedAt)
     .map((recipe) => ({
@@ -306,6 +293,8 @@ function listRecipes(): RecipeSummary[] {
       categories: categories.get(recipe.id) ?? [],
       addedBy: recipe.ownerUserId === userId ? null : (names.get(recipe.ownerUserId) ?? null),
       waiting: waiting.has(recipe.id),
+      myRating: mine.get(recipe.id)?.rating ?? null,
+      favorite: mine.get(recipe.id)?.favorite ?? false,
     }))
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 }
@@ -358,7 +347,8 @@ function getCategories(): CategoryData {
 
 function wipe() {
   database().exec(
-    "delete from record; delete from cursor; delete from member; delete from outbox; delete from recheck;",
+    `delete from record; delete from cursor; delete from member; delete from outbox;
+     delete from recheck; delete from recipe_search;`,
   );
 }
 
@@ -403,6 +393,9 @@ scope.onmessage = (event) => {
           break;
         case "getCategories":
           value = getCategories();
+          break;
+        case "search":
+          value = searchRecipes(database(), request.query, recipeCategories());
           break;
         case "wipe":
           wipe();

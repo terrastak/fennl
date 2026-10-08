@@ -660,3 +660,52 @@ label.card {
   outline: 3px solid var(--color-accent);
   outline-offset: -1px;
 }
+
+/* --- Search (phase C8) ------------------------------------------------------------------- */
+
+.search {
+  display: grid;
+  gap: var(--space-2);
+  max-width: 40rem;
+  margin-bottom: var(--space-5);
+}
+
+.searchLabel {
+  font-weight: var(--weight-semibold);
+}
+
+.searchInput {
+  width: 100%;
+  min-height: calc(var(--tap-target) + var(--space-2));
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-lg);
+}
+
+.cardHit {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.cardHitField {
+  font-weight: var(--weight-semibold);
+}
+
+.card mark {
+  border-radius: var(--radius-sm);
+  background: var(--color-warm-soft);
+  color: inherit;
+}
+
+.more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--space-6);
+}

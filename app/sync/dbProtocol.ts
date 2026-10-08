@@ -1,6 +1,7 @@
 import type { Recipe, RecipeMade, RecipeOpinion } from "../../shared/recipe";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
+import type { SearchResults } from "./search";
 
 /**
  * Messages between a tab and its local database worker (phase C4). Each message also carries
@@ -22,6 +23,9 @@ export interface RecipeSummary {
   addedBy: string | null;
   /** Changed here, and the server hasn't confirmed it yet. */
   waiting: boolean;
+  /** The signed-in person's own rating and favorite (phase C8's filter). */
+  myRating: number | null;
+  favorite: boolean;
 }
 
 /** A person in the household. */
@@ -59,6 +63,7 @@ export type DbRequest =
   | { op: "listRecipes" }
   | { op: "getRecipe"; recipeId: string }
   | { op: "getCategories" }
+  | { op: "search"; query: string }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -71,6 +76,7 @@ export interface DbResults {
   listRecipes: RecipeSummary[];
   getRecipe: RecipeDetail | null;
   getCategories: CategoryData;
+  search: SearchResults;
   wipe: null;
 }
 
