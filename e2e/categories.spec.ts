@@ -203,6 +203,8 @@ test("Premium: category changes sync between devices", async ({
   await page.goto("/categories");
   await page.getByLabel("New category").fill("Holidays > Thanksgiving");
   await page.getByRole("button", { name: "Add" }).click();
+  // Saved here first (the bar says so), then sent.
+  await expect(undoStatus(page)).toHaveText("Added Holidays › Thanksgiving.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
   const phone = await signInElsewhere(browser, baseURL!, email);
@@ -210,6 +212,7 @@ test("Premium: category changes sync between devices", async ({
   await phone.getByRole("button", { name: "Rename Holidays › Thanksgiving" }).click();
   await phone.getByLabel("New name for Thanksgiving").fill("Friendsgiving");
   await phone.getByRole("button", { name: "Save" }).click();
+  await expect(undoStatus(phone)).toHaveText("Renamed Thanksgiving to Friendsgiving.");
   await expect(syncStatus(phone)).toHaveText("Saved to cloud");
   await phone.context().close();
 
