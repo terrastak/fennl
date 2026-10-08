@@ -10,6 +10,7 @@ import { useAppearance } from "../appearance/appearance";
 import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { DevicesSection } from "../devices/DevicesSection";
+import { ExportSection } from "../export/ExportSection";
 import { LocalCopySection } from "../sync/LocalCopySection";
 import { PageHeader } from "./PageHeader";
 import styles from "./SettingsPage.module.css";
@@ -142,6 +143,8 @@ export function SettingsPage() {
       <EmailSection />
 
       <DevicesSection />
+
+      <ExportSection />
 
       <LocalCopySection />
 
