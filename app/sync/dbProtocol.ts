@@ -28,6 +28,16 @@ export interface RecipeSummary {
   favorite: boolean;
 }
 
+/** A recipe in Trash (phase C9). */
+export interface TrashItem {
+  id: string;
+  title: string;
+  /** When it went to Trash: it's deleted for good 30 days later. */
+  deletedAt: string;
+  /** Who added it, when that's someone else in the household. */
+  addedBy: string | null;
+}
+
 /** A person in the household. */
 export interface Member {
   userId: string;
@@ -64,6 +74,7 @@ export type DbRequest =
   | { op: "getRecipe"; recipeId: string }
   | { op: "getCategories" }
   | { op: "search"; query: string }
+  | { op: "listTrash" }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -77,6 +88,7 @@ export interface DbResults {
   getRecipe: RecipeDetail | null;
   getCategories: CategoryData;
   search: SearchResults;
+  listTrash: TrashItem[];
   wipe: null;
 }
 

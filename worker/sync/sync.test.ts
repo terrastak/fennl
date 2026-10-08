@@ -618,3 +618,93 @@ describe("large libraries", () => {
     expect(new Set(seqs).size).toBe(seqs.length);
   });
 });
+
+describe("Trash, and deleting for good (phase C9)", () => {
+  async function inTrash(p: Person, title: string, deletedAgo = 0) {
+    const recipeId = id();
+    expect((await push(p, [create(recipeId, title)])).body.results).toEqual([applied]);
+    const opinion = {
+      kind: "opinion",
+      recipeId,
+      fields: { rating: 5, note: "Grandma's" },
+      changedAt: Date.now(),
+    };
+    expect((await push(p, [opinion])).body.results).toEqual([applied]);
+    const trash = {
+      kind: "recipe",
+      id: recipeId,
+      fields: {},
+      deleted: true,
+      changedAt: Date.now(),
+    };
+    expect((await push(p, [trash])).body.results).toEqual([applied]);
+    if (deletedAgo) {
+      await db()
+        .update(recipe)
+        .set({ deletedAt: new Date(Date.now() - deletedAgo) })
+        .where(eq(recipe.id, recipeId));
+    }
+    return recipeId;
+  }
+
+  it("empties the household's Trash: content wiped, devices told, no coming back", async () => {
+    const june = await person();
+    await premium(june);
+    const phone = await anotherDevice(june);
+    const { cursors } = await pullAll(phone);
+    const gone = await inTrash(june, "Old fruitcake");
+    const kept = id();
+    expect((await push(june, [create(kept, "Pozole")])).body.results).toEqual([applied]);
+
+    const res = await june.v.request("/api/trash/empty", { body: {} });
+    expect(await res.json()).toEqual({ expunged: 1 });
+    const row = await stored(gone);
+    expect(row).toMatchObject({ title: "", ingredients: "[]", notes: "" });
+    expect(row?.expungedAt).toBeInstanceOf(Date);
+    expect((await stored(kept))?.title).toBe("Pozole");
+
+    // The other device learns it's gone, with nothing of its content.
+    const later = await pullAll(phone, cursors);
+    const tombstone = later.recipes.find((r) => r.id === gone);
+    expect(tombstone).toMatchObject({ title: "", expungedAt: expect.any(String) });
+    // Its rating and note were wiped too (a device that fetches them now gets nothing of them).
+    for (const opinion of later.pages.flatMap((p) => p.opinions)) {
+      if (opinion.recipeId === gone) expect(opinion).toMatchObject({ note: "", rating: null });
+    }
+
+    // Restoring or rating it now changes nothing.
+    const restore = { kind: "recipe", id: gone, fields: {}, deleted: false, changedAt: Date.now() };
+    expect((await push(phone, [restore])).body.results).toEqual([unchanged]);
+    const rate = { kind: "opinion", recipeId: gone, fields: { rating: 4 }, changedAt: Date.now() };
+    expect((await push(phone, [rate])).body.results).toEqual([unchanged]);
+    expect((await stored(gone))?.deletedAt).toBeInstanceOf(Date);
+  });
+
+  it("empties only the recipes named, and never someone else's", async () => {
+    const june = await person();
+    const sam = await person("Sam Ortiz");
+    const a = await inTrash(june, "A");
+    const b = await inTrash(june, "B");
+    const theirs = await inTrash(sam, "Sam's");
+
+    const res = await june.v.request("/api/trash/empty", { body: { recipeIds: [a, theirs] } });
+    expect(await res.json()).toEqual({ expunged: 1 });
+    expect((await stored(a))?.expungedAt).toBeInstanceOf(Date);
+    expect((await stored(b))?.expungedAt).toBeNull();
+    expect((await stored(theirs))?.expungedAt).toBeNull();
+    const bad = await june.v.request("/api/trash/empty", { body: { recipeIds: ["nope"] } });
+    expect(bad.status).toBe(400);
+  });
+
+  it("deletes for good, hourly, what's been in Trash more than 30 days", async () => {
+    const june = await person();
+    const DAY = 24 * 60 * MINUTE;
+    const old = await inTrash(june, "Thirty-one days", 31 * DAY);
+    const recent = await inTrash(june, "Twenty-nine days", 29 * DAY);
+    const { expungeOldTrash } = await import("./trash");
+    expect(await expungeOldTrash(db())).toBeGreaterThanOrEqual(1);
+    expect((await stored(old))?.expungedAt).toBeInstanceOf(Date);
+    expect((await stored(recent))?.expungedAt).toBeNull();
+    expect((await stored(recent))?.title).toBe("Twenty-nine days");
+  });
+});

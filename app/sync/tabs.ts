@@ -1,6 +1,6 @@
 import type { SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
-import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
+import type { RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
 import type { SearchResults } from "./search";
 import { SyncEngine } from "./engine";
 import { STARTING, type SyncStatus } from "./status";
@@ -16,6 +16,8 @@ interface Calls {
   saveMany: { args: [SyncChange[]]; result: undefined };
   getCategories: { args: []; result: CategoryData };
   search: { args: [string]; result: SearchResults };
+  listTrash: { args: []; result: TrashItem[] };
+  emptyTrash: { args: [string[] | undefined]; result: number };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
   syncNow: { args: []; result: undefined };
@@ -116,6 +118,14 @@ export class SyncClient {
     return this.call("search", [query]);
   }
 
+  listTrash() {
+    return this.call("listTrash", []);
+  }
+
+  emptyTrash(recipeIds?: string[]) {
+    return this.call("emptyTrash", [recipeIds]);
+  }
+
   getRecipe(id: string) {
     return this.call("getRecipe", [id]);
   }
@@ -169,6 +179,10 @@ export class SyncClient {
         return engine.getCategories();
       case "search":
         return engine.search(args[0] as string);
+      case "listTrash":
+        return engine.listTrash();
+      case "emptyTrash":
+        return engine.emptyTrash(args[0] as string[] | undefined);
       case "getRecipe":
         return engine.getRecipe(args[0] as string);
       case "syncNow":

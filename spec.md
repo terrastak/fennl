@@ -638,6 +638,14 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Trash is emptied automatically after **30 days** (decided). Each item shows "deleted forever in N days", with an "Empty trash now" button. Expunging wipes content and photos but keeps a minimal tombstone so every device removes it.
 - **You check**: Delete a recipe on one device, see it go to Trash on the other, restore it.
 - **Done when**: Deletes and restores sync correctly.
+- **Built (2026-10-08)** (`worker/sync/trash.ts`, `app/recipes/TrashPage.tsx`):
+  - **Moving to Trash and back** is the synced "deleted" change from C3. After **Move to Trash**, the recipe list says "Moved “Pozole” to Trash." with **Undo**. A recipe's page, while it's in Trash, says so, says when it will be deleted for good, and offers **Put back**.
+  - **Trash page** (`/trash`, linked from the recipe list): each recipe with when it was moved and "Deleted for good in N days", **Put back**, and **Delete for good**; **Empty Trash** for all of them. Deleting for good always asks first ("This can't be undone") and needs a connection (the server does it). Anything waiting to be sent goes first, so a recipe just put back isn't deleted.
+  - **Deleting for good** (`expunged_at`, migration `0014_trash.sql`): the recipe's content is wiped, and so are the household's ratings, notes, "made it" days and category links for it. The row stays as a tombstone with a new `server_seq`, so every device learns of it and drops its copy. Changes to it afterwards are refused. Photos and version history will be wiped too once they exist (D2, F-stage).
+  - **After 30 days**: the existing hourly scheduled job (`wrangler.jsonc` triggers) now also deletes for good what's been in Trash more than 30 days.
+  - Either partner can empty the household's Trash, as either can move recipes to it.
+  - **Also**: "Your note" on a recipe's page now says "Saving…" and "Saved." (a browser test reloaded the page before the note's one-second save; people deserve to see it too).
+  - **Tests**: emptying Trash (content wiped, other devices told, no coming back, ratings and notes wiped), emptying only named recipes and never another household's, and the 30-day job (server); the days-left wording (unit); browser tests at computer and phone sizes for Undo on the list, putting back from a recipe's page and from Trash, deleting one and all after a question, the deleted recipe's old address, and a recipe deleted on one device appearing in Trash on another and put back there, with accessibility checks.
 
 ### C10. Full-library export
 - **Goal**: Users can always take their recipes with them.
@@ -1065,5 +1073,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C5 | Done 2026-10-08 (merged; live) |
 | C6 | Done 2026-10-08 (merged; the owner wrote a recipe on a computer and fixed a typo on a phone, on the preview) |
 | C7 | Done 2026-10-08 (merged; live; the owner set up categories and filed recipes on the preview) |
-| C8 | Approved 2026-10-08; built, waiting for review |
+| C8 | Done 2026-10-08 (merged; live; the owner searched by an ingredient, a note and part of a title on the preview) |
+| C9 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

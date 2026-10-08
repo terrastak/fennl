@@ -22,6 +22,7 @@ import { householdSummary } from "./household/household";
 import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
 import { syncRoutes } from "./sync/routes";
+import { expungeOldTrash, trashRoutes } from "./sync/trash";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
@@ -125,6 +126,7 @@ app.route("/", deviceRoutes);
 
 // Sending and fetching recipe changes (phase C3).
 app.route("/", syncRoutes);
+app.route("/", trashRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {
@@ -259,14 +261,18 @@ app.notFound((c) => {
 
 /**
  * Scheduled work (wrangler.jsonc "triggers"). Every hour: remove accounts whose email was never
- * verified (worker/account/purge.ts).
+ * verified (worker/account/purge.ts), and delete for good recipes in Trash for more than 30
+ * days (worker/sync/trash.ts).
  */
 async function scheduled(_controller: ScheduledController, env: Env) {
-  const removed = await removeUnverifiedAccounts(database(env.DB));
+  const db = database(env.DB);
+  const removed = await removeUnverifiedAccounts(db);
   if (removed.length > 0) {
     // Kept in the Worker's logs (no admin did this, so it isn't in the admin audit log).
     console.log(`Removed ${removed.length} account(s) never verified: ${removed.join(", ")}`);
   }
+  const expunged = await expungeOldTrash(db);
+  if (expunged > 0) console.log(`Deleted ${expunged} recipe(s) from Trash for good`);
 }
 
 export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Env>;

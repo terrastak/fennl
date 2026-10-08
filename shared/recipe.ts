@@ -209,7 +209,15 @@ export interface Recipe extends RecipeContent, SyncColumns {
   /** A copy kept after a household split: the recipe it was copied from. */
   copiedFrom: string | null;
   import: RecipeImport | null;
+  /**
+   * Deleted for good (phase C9): its content is wiped, and devices drop it. Absent from records
+   * made before C9.
+   */
+  expungedAt?: string | null;
 }
+
+/** Days a recipe stays in Trash before it's deleted for good (CLAUDE.md, "Data model rules"). */
+export const TRASH_DAYS = 30;
 
 /**
  * One person's opinion of a recipe. Stored per person, shown to the whole household when it has

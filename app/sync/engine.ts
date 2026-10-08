@@ -12,7 +12,7 @@ import {
 import type { CategoryData } from "../categories/tree";
 import { LocalDb, LocalDbError } from "./dbClient";
 import type { SearchResults } from "./search";
-import type { OutboxEntry, RecipeDetail, RecipeSummary } from "./dbProtocol";
+import type { OutboxEntry, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
 import { batches, stampedAsSent } from "./records";
 import type { SyncPhase, SyncStatus } from "./status";
 import { canEdit, STARTING } from "./status";
@@ -245,6 +245,34 @@ export class SyncEngine {
 
   search(query: string): Promise<SearchResults> {
     return this.db.call({ op: "search", query });
+  }
+
+  listTrash(): Promise<TrashItem[]> {
+    return this.db.call({ op: "listTrash" });
+  }
+
+  /**
+   * Deletes recipes in Trash for good (phase C9): all of them, or those named. Needs a
+   * connection. What's waiting is sent first, so a recipe just put back isn't deleted after all.
+   * Returns how many were deleted.
+   */
+  async emptyTrash(recipeIds?: string[]): Promise<number> {
+    // A sync may already be running (then sync() only asks for another): wait for it, briefly.
+    for (let i = 0; i < 20 && (this.running || this.outbox.length > 0); i++) {
+      await this.sync();
+      if (this.running || this.outbox.length > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (this.status.phase === "offline") break;
+    }
+    if (this.outbox.length > 0) throw new Error("Changes are still waiting to be sent.");
+    const answer = (await request("/api/trash/empty", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(recipeIds ? { recipeIds } : {}),
+    })) as { expunged: number };
+    await this.sync();
+    return answer.expunged;
   }
 
   /** Sends what's waiting, then fetches what's new. One at a time; a request meanwhile runs after. */

@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { deviceId } from "../devices/deviceId";
 import { categoryTree, type CategoryTree } from "../categories/tree";
-import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
+import type { RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
 import type { SearchResults } from "./search";
 import { STARTING, type SyncStatus } from "./status";
 import { SyncClient } from "./tabs";
@@ -161,4 +161,30 @@ export function useSearch(query: string): SearchResults | null {
   if (!wanted) return null;
   // While a new answer is coming, the last one stays (so the list doesn't flash empty).
   return results?.value ?? null;
+}
+
+/** What's in Trash (phase C9), read again whenever the local copy changes. Null while loading. */
+export function useTrash(): TrashItem[] | null {
+  const client = activeSyncClient();
+  const [items, setItems] = useState<TrashItem[] | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .listTrash()
+        .then((value) => {
+          if (call === latest) setItems(value);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client]);
+  return items;
 }

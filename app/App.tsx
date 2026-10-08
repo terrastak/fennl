@@ -22,6 +22,7 @@ import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { RecipeEditor } from "./recipes/RecipeEditor";
 import { RecipePage } from "./recipes/RecipePage";
+import { TrashPage } from "./recipes/TrashPage";
 import { AppShell } from "./shell/AppShell";
 import { syncClientFor } from "./sync/useSync";
 
@@ -32,6 +33,7 @@ const ROUTES: Record<string, Route> = {
   "/": { title: "Recipes", Page: RecipesPage },
   "/categories": { title: "Categories", Page: CategoriesPage },
   "/import": { title: "Import", Page: ImportPage },
+  "/trash": { title: "Trash", Page: TrashPage },
   "/settings": { title: "Settings", Page: SettingsPage },
   "/account": { title: "Account", Page: AccountPage },
   "/feedback": { title: "Send feedback", Page: FeedbackPage },

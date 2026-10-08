@@ -14,6 +14,7 @@ import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
+import { noteTrashed } from "./trashNotice";
 import {
   dayText,
   firstName,
@@ -24,6 +25,7 @@ import {
   sourceLine,
   stars,
   timeText,
+  trashText,
 } from "./format";
 import styles from "./recipes.module.css";
 
@@ -403,7 +405,10 @@ function OwnNote({
       <p id="own-note-hint" className={styles.hint}>
         {shared
           ? `Signed ${signature}, and shown to your household under the recipe's notes.`
-          : `Signed ${signature}. Saved as you type.`}
+          : `Signed ${signature}. Saved as you type.`}{" "}
+        <span data-note-status aria-live="polite">
+          {text === saved ? (text ? "Saved." : "") : "Saving…"}
+        </span>
       </p>
     </div>
   );
@@ -455,6 +460,48 @@ function Source({ recipe }: { recipe: Recipe }) {
   );
 }
 
+/** A recipe in Trash (phase C9): what happens to it, and putting it back. */
+function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean }) {
+  const [failed, setFailed] = useState(false);
+  const { recipe } = detail;
+  const restore = async () =>
+    setFailed(
+      !(await save({
+        kind: "recipe",
+        id: recipe.id,
+        fields: {},
+        deleted: false,
+        changedAt: Date.now(),
+      })),
+    );
+  return (
+    <>
+      <Link href="/trash" className={styles.back}>
+        ← Trash
+      </Link>
+      <h1 tabIndex={-1} className={styles.recipeTitle}>
+        {recipe.title || "Untitled"}
+      </h1>
+      <p>This recipe is in Trash. {trashText(recipe.deletedAt ?? "")}, unless you put it back.</p>
+      <div className={styles.actions}>
+        <button
+          type="button"
+          className={styles.primary}
+          disabled={!editable}
+          onClick={() => void restore()}
+        >
+          Put back
+        </button>
+      </div>
+      {failed ? (
+        <p role="alert" className={styles.error}>
+          Couldn&rsquo;t put it back just now. Please try again.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 export function RecipePage({ id }: { id: string }) {
   const detail = useRecipe(id);
   const status = useSyncStatus();
@@ -478,7 +525,7 @@ export function RecipePage({ id }: { id: string }) {
       </p>
     );
   }
-  if (detail === null || detail.recipe.deletedAt) {
+  if (detail === null || detail.recipe.expungedAt) {
     return (
       <>
         <Link href="/" className={styles.back}>
@@ -487,9 +534,16 @@ export function RecipePage({ id }: { id: string }) {
         <h1 tabIndex={-1} className={styles.recipeTitle}>
           This recipe isn&rsquo;t here
         </h1>
-        <p>It may have been moved to Trash, or it hasn&rsquo;t reached this device yet.</p>
+        <p>
+          {detail
+            ? "It was deleted for good after its time in Trash."
+            : "It may have been deleted, or it hasn’t reached this device yet."}
+        </p>
       </>
     );
+  }
+  if (detail.recipe.deletedAt) {
+    return <InTrash detail={detail} editable={editable} />;
   }
 
   const { recipe, members } = detail;
@@ -499,7 +553,10 @@ export function RecipePage({ id }: { id: string }) {
   const me = members[0]?.userId ?? "";
 
   const trash = async () => {
-    if (await save({ kind: "recipe", id, fields: {}, deleted: true, changedAt: Date.now() })) {
+    const changedAt = Date.now();
+    if (await save({ kind: "recipe", id, fields: {}, deleted: true, changedAt })) {
+      // The list says so, with Undo (phase C9).
+      noteTrashed(id, recipe.title, changedAt);
       navigate("/");
     }
   };

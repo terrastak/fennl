@@ -1,0 +1,1 @@
+ALTER TABLE `recipe` ADD `expunged_at` integer;

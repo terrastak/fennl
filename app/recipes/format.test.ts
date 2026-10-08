@@ -8,6 +8,7 @@ import {
   sourceLine,
   stars,
   timeText,
+  trashText,
 } from "./format";
 
 describe("recipe details as they read", () => {
@@ -54,5 +55,14 @@ describe("recipe details as they read", () => {
     expect(
       sourceLine({ kind: "person", name: "Nana", url: null, author: null, page: null }),
     ).toBeNull();
+  });
+});
+
+describe("time left in Trash", () => {
+  const now = new Date("2026-10-08T12:00:00Z");
+  it("counts down from 30 days", () => {
+    expect(trashText("2026-10-08T12:00:00Z", now)).toBe("Deleted for good in 30 days");
+    expect(trashText("2026-09-08T13:00:00Z", now)).toBe("Deleted for good in 1 day");
+    expect(trashText("2026-09-01T00:00:00Z", now)).toBe("Deleted for good within the hour");
   });
 });
