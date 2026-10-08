@@ -28,7 +28,7 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |
 | Recipe store | D1, same database as accounts for now; per-owner databases if recipe data nears a few GB (`docs/research/2026-10-07-recipe-storage.md`) | Decided (C1, 2026-10-07) |
 | Live updates between devices | Durable Object per household as a coordinator only, never the store | Open (sync Phase 2) |
-| Local data layer in the browser | SQLite compiled to WASM (`@sqlite.org/sqlite-wasm`, `opfs-sahpool`) on OPFS, in a worker, with full-text search. Only one tab can open it at a time | Decided (C2, 2026-10-07; tested on real devices, `docs/research/2026-10-07-storage-trial.md`) |
+| Local data layer in the browser | SQLite compiled to WASM (`@sqlite.org/sqlite-wasm`, `opfs-sahpool`) on OPFS, in a worker, with full-text search (FTS5; built in C8, `app/sync/search.ts`). Only one tab can open it at a time | Decided (C2, 2026-10-07; tested on real devices, `docs/research/2026-10-07-storage-trial.md`) |
 | AI recipe reading (photos, PDFs, pages without structured data) | Anthropic Claude API, starting with Claude Haiku, called only from the Worker, behind a swappable provider interface | Leaning (see "AI import") |
 | Sync framework | LiveStore | Open, not adopted. Beta-stage, event-sourced, would reshape the whole data layer. Revisit if it matures |
 

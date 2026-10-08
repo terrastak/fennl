@@ -621,6 +621,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   3. Works offline (Premium) and stays fast at 10,000 recipes.
 - **You check**: Search your recipes by an ingredient, a word in the notes, and part of a title.
 - **Done when**: Search performance test passes at 10,000 recipes.
+- **Built (2026-10-08)** (`app/sync/search.ts`, the recipe list):
+  - **On the device**: search runs on the browser's copy (SQLite full-text search, FTS5), so it works offline and needs no server. The index holds each recipe's title, headnote, ingredients, method, notes (the recipe's own and everyone's signed notes) and source, and is updated whenever a recipe or note changes here or arrives from the server. Categories are matched by their paths at search time, so renaming one doesn't re-index its recipes. Added as step 2 of the local schema (`app/sync/schema.ts`), which indexes what's already on a device once.
+  - **How it matches**: every word typed must be found somewhere in the recipe, as the start of a word ("chick" finds "chicken"), ignoring case and accents ("jalapeno" finds "jalapeño").
+  - **Ordering (predictable)**: recipes with every word in the title come first, then the rest; each group in the chosen sort order. Cards found elsewhere say where ("Ingredients: 1 teaspoon ground cumin"), with the words marked.
+  - **Filters**: Category (C7) and a new **Rating** filter (your own: favorites, 5 stars, 4 and up, 3 and up, not rated yet), together with the search. All three are kept in the address (`?q=`, `?category=`, `?rating=`), so a reload keeps them.
+  - **"Has a photo"** waits for photos (D2), where it will be added.
+  - **Big recipe boxes**: the list shows 100 recipes at a time, with "Show 100 more".
+  - **Speed** (the done-when test, `app/sync/search.test.ts`): 10,000 generated recipes, searched for very common words, two letters, three words and a word not there. Each search took 60–135 ms on the test machine (the test allows 300 ms); indexing all 10,000 took about 5 seconds, which on a device is spread across the first download.
+  - **Tests**: matching, accents, every-word, categories, title-first, where it matched, Trash and edits (unit, on the same SQLite build in memory); browser tests at computer and phone sizes for an ingredient, a note and part of a title, ordering, the address, a note written just now, the rating and category filters, and searching with no connection (Premium), with accessibility checks.
 
 ### C9. Trash and restore
 - **Goal**: Deleting is safe and reversible.
@@ -1055,5 +1064,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C4b | Done 2026-10-08 (merged; the owner opened Fennl offline on an iPhone and synced afterwards) |
 | C5 | Done 2026-10-08 (merged; live) |
 | C6 | Done 2026-10-08 (merged; the owner wrote a recipe on a computer and fixed a typo on a phone, on the preview) |
-| C7 | Approved 2026-10-08; built, waiting for review |
+| C7 | Done 2026-10-08 (merged; live; the owner set up categories and filed recipes on the preview) |
+| C8 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |
