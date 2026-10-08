@@ -23,6 +23,11 @@ export default defineConfig([
     extends: [reactHooks.configs.flat["recommended-latest"], reactRefresh.configs.vite],
   },
   {
+    // The service worker that keeps the app's files on the device (phase C4b).
+    files: ["app/offline/sw.js"],
+    languageOptions: { globals: globals.serviceworker },
+  },
+  {
     files: ["*.{js,ts}", "e2e/**/*.ts", "scripts/**/*.mjs"],
     languageOptions: { globals: globals.node },
   },

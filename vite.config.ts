@@ -1,6 +1,8 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { createHash } from "node:crypto";
+import { readFileSync, readdirSync } from "node:fs";
+import { defineConfig, type Plugin, type Rolldown } from "vite";
 
 const HOSTNAME = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
 
@@ -41,8 +43,72 @@ function productionConfig() {
  */
 const APP_VERSION = (process.env.GITHUB_SHA ?? "dev").slice(0, 7);
 
+/** Every file chunk reachable from an entry: its imports, lazy imports, styles and assets. */
+function reachable(bundle: Rolldown.OutputBundle, entry: string): Set<string> {
+  const found = new Set<string>();
+  const start = Object.values(bundle).find(
+    (file): file is Rolldown.OutputChunk =>
+      file.type === "chunk" && file.isEntry && file.name === entry,
+  );
+  const visit = (fileName: string) => {
+    if (found.has(fileName)) return;
+    found.add(fileName);
+    const file = bundle[fileName];
+    if (file?.type !== "chunk") return;
+    [...file.imports, ...file.dynamicImports].forEach(visit);
+    const meta = file.viteMetadata;
+    [...(meta?.importedCss ?? []), ...(meta?.importedAssets ?? [])].forEach((f) => found.add(f));
+  };
+  if (start) visit(start.fileName);
+  return found;
+}
+
+/** The files in public/ the app uses: fonts, icons and its manifest. */
+function publicAppFiles(): string[] {
+  const files = (dir: string): string[] =>
+    readdirSync(`public/${dir}`).map((name) => `/${dir}/${name}`);
+  return [...files("fonts"), ...files("icons"), "/manifest.webmanifest"];
+}
+
+/**
+ * Writes /sw.js (from app/offline/sw.js) with the list of the app's files, so the app can open
+ * with no connection (phase C4b). Everything the build made is listed except pages, settings
+ * files (".assetsignore", which is never served) and files only the admin console or the
+ * storage test use.
+ */
+function offlineAppFiles(): Plugin {
+  return {
+    name: "fennl-offline-app-files",
+    applyToEnvironment: (environment) => environment.name === "client",
+    generateBundle(_options, bundle) {
+      const app = reachable(bundle, "main");
+      const elsewhere = new Set([
+        ...reachable(bundle, "admin"),
+        ...reachable(bundle, "storageTrial"),
+      ]);
+      const built = Object.keys(bundle).filter(
+        (name) =>
+          !name.startsWith(".") &&
+          !name.endsWith(".html") &&
+          !name.endsWith(".map") &&
+          !name.endsWith(".webmanifest") &&
+          (app.has(name) || !elsewhere.has(name)),
+      );
+      const files = [...built.map((name) => `/${name}`), ...publicAppFiles()].sort();
+      const build = createHash("sha256").update(files.join("\n")).digest("hex").slice(0, 16);
+      this.emitFile({
+        type: "asset",
+        fileName: "sw.js",
+        source:
+          `const BUILD = ${JSON.stringify(build)};\nconst FILES = ${JSON.stringify(files)};\n` +
+          readFileSync("app/offline/sw.js", "utf8"),
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react(), cloudflare({ config: productionConfig() })],
+  plugins: [react(), cloudflare({ config: productionConfig() }), offlineAppFiles()],
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   // SQLite's browser build loads its own .wasm file; Vite must not pre-bundle it (its README),
   // and its background worker uses modern imports.

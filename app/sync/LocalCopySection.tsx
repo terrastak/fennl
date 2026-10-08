@@ -38,8 +38,10 @@ export function LocalCopySection() {
       <h2 id="copy-title">This browser&rsquo;s copy</h2>
       <p className={styles.help}>
         Your recipes are stored in your account. This browser keeps a copy so Fennl is fast
-        {status.offlineEnabled ? " and works while you’re offline" : ""}. If the browser clears it,
-        nothing is lost: it&rsquo;s downloaded again.
+        {status.offlineEnabled
+          ? " and opens and works while you’re offline"
+          : " and opens to read while you’re offline"}
+        . If the browser clears it, nothing is lost: it&rsquo;s downloaded again.
       </p>
       <p className={styles.help}>Right now: {statusText(status)}.</p>
       {status.offlineEnabled && kept === false && !installed() ? (

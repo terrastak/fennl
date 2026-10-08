@@ -57,6 +57,28 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   throw new SyncProblem("waiting");
 }
 
+/**
+ * Whether the plan allows offline editing, as last heard from the server, so an app opened with
+ * no connection (phase C4b) behaves as the plan does. The server still decides every push.
+ */
+const planKey = (userId: string) => `fennl:offline-editing:${userId}`;
+
+function rememberedPlan(userId: string): boolean {
+  try {
+    return localStorage.getItem(planKey(userId)) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function rememberPlan(userId: string, offlineEnabled: boolean) {
+  try {
+    localStorage.setItem(planKey(userId), String(offlineEnabled));
+  } catch {
+    // Not kept: an offline start then waits for the connection to allow editing.
+  }
+}
+
 export interface EngineEvents {
   status(status: SyncStatus): void;
   /** The local copy changed: lists should read it again. */
@@ -79,7 +101,9 @@ export class SyncEngine {
     private readonly userId: string,
     private readonly deviceId: string,
     private readonly events: EngineEvents,
-  ) {}
+  ) {
+    this.status = { ...STARTING, offlineEnabled: rememberedPlan(userId) };
+  }
 
   private setStatus(next: Partial<SyncStatus>) {
     this.status = { ...this.status, ...next, pending: this.outbox.length };
@@ -161,6 +185,7 @@ export class SyncEngine {
   private async loadPlan() {
     try {
       const plan = (await request("/api/entitlements")) as Entitlements;
+      rememberPlan(this.userId, plan.offline_enabled);
       if (plan.offline_enabled !== this.status.offlineEnabled) {
         this.setStatus({ offlineEnabled: plan.offline_enabled });
       }

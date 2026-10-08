@@ -150,31 +150,34 @@ export function RecipesPage() {
   return (
     <>
       <PageHeader title="Your recipes" note={greetingFor(new Date())} />
-      {recipes && recipes.length > 0 ? (
-        <section className={styles.card} aria-labelledby="list-title">
-          <h2 id="list-title">
-            {recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
-          </h2>
-          <ul className={styles.recipeList}>
-            {recipes.map((recipe) => (
-              <RecipeRow key={recipe.id} recipe={recipe} disabled={!editable} />
-            ))}
-          </ul>
-          <div className={styles.stacked}>
-            <AddRecipe disabled={!editable} />
-          </div>
-        </section>
-      ) : (
-        <section className={styles.card} aria-labelledby="empty-title">
-          <h2 id="empty-title">Your recipe box is empty, for now</h2>
-          <p>
-            Soon you&rsquo;ll be able to write full recipes here, bring them in from websites,
-            photograph family recipe cards and cookbook pages, and move over your Paprika library.
-            For now you can add recipes by their title, to try things out.
-          </p>
+      {/* One card either way, with the form in the same place, so typing isn't lost when the
+          list arrives from the local copy. */}
+      <section className={styles.card} aria-labelledby="list-title">
+        {recipes && recipes.length > 0 ? (
+          <>
+            <h2 id="list-title">
+              {recipes.length} {recipes.length === 1 ? "recipe" : "recipes"}
+            </h2>
+            <ul className={styles.recipeList}>
+              {recipes.map((recipe) => (
+                <RecipeRow key={recipe.id} recipe={recipe} disabled={!editable} />
+              ))}
+            </ul>
+          </>
+        ) : (
+          <>
+            <h2 id="list-title">Your recipe box is empty, for now</h2>
+            <p>
+              Soon you&rsquo;ll be able to write full recipes here, bring them in from websites,
+              photograph family recipe cards and cookbook pages, and move over your Paprika library.
+              For now you can add recipes by their title, to try things out.
+            </p>
+          </>
+        )}
+        <div className={styles.stacked}>
           <AddRecipe disabled={!editable} />
-        </section>
-      )}
+        </div>
+      </section>
       <p className={`${styles.hint} ${styles.stacked}`}>
         Your recipes are stored in your account. This browser keeps a copy for speed.
       </p>
