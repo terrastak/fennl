@@ -462,10 +462,16 @@ function Source({ recipe }: { recipe: Recipe }) {
   );
 }
 
-/** A recipe in Trash (phase C9): what happens to it, and putting it back. */
+/**
+ * A recipe in Trash (phase C9): what happens to it, putting it back, and the recipe itself to
+ * read (phase C11: it may have to wait there for room under the plan's limit). Nothing here
+ * changes it until it's back.
+ */
 function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean }) {
   const [failed, setFailed] = useState(false);
-  const { recipe } = detail;
+  const { recipe, members } = detail;
+  const names = new Map(members.map((m: Member) => [m.userId, firstName(m.name)]));
+  const name = (userId: string) => names.get(userId) ?? "Someone";
   // Putting it back needs room under the plan's recipe limit (phase C11).
   const usage = useUsage();
   const blocked = useAddBlocked(true);
@@ -483,10 +489,13 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
           })),
         );
   return (
-    <>
+    <article>
       <Link href="/trash" className={styles.back}>
         ← Trash
       </Link>
+      {recipe.source.kind === "person" && recipe.source.name ? (
+        <p className={styles.byPerson}>{recipe.source.name}</p>
+      ) : null}
       <h1 tabIndex={-1} className={styles.recipeTitle}>
         {recipe.title || "Untitled"}
       </h1>
@@ -509,7 +518,27 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
       <p role="status">
         {noRoom && blocked && usage ? `${restoreBlockedText(usage)} ${NOTHING_LOST}` : ""}
       </p>
-    </>
+
+      {recipe.description.trim() ? <p className={styles.headnote}>{recipe.description}</p> : null}
+      <Facts recipe={recipe} />
+      {detail.categories.length > 0 ? (
+        <ul className={styles.chips} aria-label="Categories">
+          {detail.categories.map((path) => (
+            <li key={path}>{path}</li>
+          ))}
+        </ul>
+      ) : null}
+      <div className={styles.columns}>
+        <Ingredients recipe={recipe} />
+        <Method recipe={recipe} />
+      </div>
+      {/* Everyone's signed notes, yours included: there's no "Yours" to edit here. */}
+      <Notes detail={detail} name={name} shared={members.length > 1} me="" />
+      <Nutrition recipe={recipe} />
+      <div className={styles.section}>
+        <Source recipe={recipe} />
+      </div>
+    </article>
   );
 }
 

@@ -53,9 +53,18 @@ test("Moved to Trash, then put back: from the list's Undo, and from Trash", asyn
   await expect(trashList(page)).toContainText("Deleted for good in 30 days");
   await noAccessibilityProblems(page);
 
-  // Its page says it's in Trash, and puts it back.
+  // Its page says it's in Trash, shows the whole recipe to read (phase C11: it may wait there
+  // for room), and puts it back.
   await trashList(page).getByRole("link", { name: "Buttermilk Pancakes" }).click();
   await expect(page.getByText("This recipe is in Trash.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Ingredients" })).toBeVisible();
+  await expect(page.getByText("2 cups all-purpose flour")).toBeVisible();
+  await expect(
+    page.getByText("Heat a buttered pan over medium heat.", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByText("No buttermilk?", { exact: false })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Edit recipe" })).toHaveCount(0);
+  await noAccessibilityProblems(page);
   await page.getByRole("button", { name: "Put back" }).click();
   await expect(page.getByRole("button", { name: "Move to Trash" })).toBeVisible();
   await page.getByRole("link", { name: "All recipes" }).click();
