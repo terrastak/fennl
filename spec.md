@@ -538,6 +538,22 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - **Not yet**: opening the app with no connection at all (no offline app files yet; an already-open app keeps working offline). Signing out leaves this account's copy in the browser (each account has its own file; signing in as someone else never shows it).
   - **Tests**: 7 for the merge logic; browser tests at computer and phone sizes: a recipe added on one device appears on another and an edit comes back; Premium offline changes wait and sync; Free pauses editing offline with a notice; a wiped browser gets everything back; two tabs share one copy and the second carries on when the first closes.
 
+### C4b. Opening the app with no connection
+- **Goal**: Fennl opens from the home screen (or a bookmark) with no connection, showing the recipes kept on the device. Added by the owner on 2026-10-07, after C4 left this open.
+- **Steps**:
+  1. Keep the app's own files (page, scripts, styles, fonts, icons) on the device with a service worker, refreshed with each release.
+  2. Remember who's signed in and whether the plan allows offline editing, for use only when the server can't be reached.
+- **You check**: Open Fennl on your phone, turn on Airplane mode, close it fully, and open it again: your recipes show. With Premium, add one, turn Airplane mode off, and watch it sync.
+- **Done when**: Browser tests open the app offline on Premium and Free.
+- **Built (2026-10-08)** (`app/offline/sw.js`, `vite.config.ts`, `app/auth/offlineSession.ts`):
+  - **The app's files**: each build writes `/sw.js` with the list of its files (everything the app uses; not the admin console or the storage test). Installing keeps them all; a new release's worker takes over at once and removes the old files, and an open page offers to reload (C4).
+  - **Pages** try the network first, so an online visit always gets the newest release; with no connection the kept page is used. The API, the admin area and the storage test never go through it.
+  - **Who's signed in**: the app remembers the person's ID, name and email (never the sign-in itself, which stays in its cookie) and uses them only when the server can't be reached. When the server answers, its answer counts; signing out forgets them.
+  - **The plan**: whether offline editing is allowed is remembered with the account, so an offline start lets Premium edit and keeps Free read-only. The server still decides every save.
+  - Settings › This browser's copy now says the app opens offline (to read, on Free).
+  - Fixed on the way: typing in "New recipe" right as the page opened could be lost when the list arrived.
+  - **Tests**: browser tests at computer and phone sizes open the app with no connection: Premium sees its recipes, opens another page, adds one and it syncs when back online; Free sees its recipes with editing paused.
+
 ### C5. Recipe list and recipe page (reading)
 - **Goal**: Browse and read recipes.
 - **Steps**:
@@ -1006,5 +1022,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C1 | Done 2026-10-07 (merged) |
 | C2 | Done 2026-10-07 (merged; tested on the owner's Mac, iPhone and Windows PC: SQLite on OPFS confirmed) |
 | C3 | Done 2026-10-07 (merged; live) |
-| C4 | Approved 2026-10-07; built, waiting for review and the owner's device check |
+| C4 | Done 2026-10-07 (merged; the owner checked syncing between a Mac and an iPhone) |
+| C4b | Approved 2026-10-07; built, waiting for review |
 | All others | Not started |

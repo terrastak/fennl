@@ -5,7 +5,7 @@ import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
 import { TakeoverScreen } from "./devices/TakeoverScreen";
 import { useDeviceGate } from "./devices/useDeviceGate";
-import { useSession } from "./auth/client";
+import { useAppSession } from "./auth/offlineSession";
 import { EmailConfirmedPage } from "./auth/EmailConfirmedPage";
 import { ForgotPasswordPage } from "./auth/ForgotPasswordPage";
 import { ResetPasswordPage } from "./auth/ResetPasswordPage";
@@ -56,7 +56,8 @@ function Redirect({ to }: { to: string }) {
 
 export function App() {
   const path = usePath().replace(/\/+$/, "") || "/";
-  const { data: session, isPending, refetch } = useSession();
+  // With no connection, the last signed-in person, so the app can open offline (phase C4b).
+  const { data: session, isPending, refetch } = useAppSession();
   useAccountSchemeSync();
   // Every app start registers this browser; over the plan's device limit, the takeover screen
   // shows instead of the app (phase B6).
