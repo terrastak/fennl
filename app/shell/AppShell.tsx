@@ -150,7 +150,7 @@ function NavLink({ item, path }: { item: NavItem; path: string }) {
 }
 
 function isCurrent(href: string, path: string): boolean {
-  // Recipe pages belong to Recipes.
-  if (href === "/") return path === "/" || path.startsWith("/recipes/");
+  // Recipe pages and categories belong to Recipes.
+  if (href === "/") return path === "/" || path.startsWith("/recipes/") || path === "/categories";
   return path === href || path.startsWith(`${href}/`);
 }

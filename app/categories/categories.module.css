@@ -1,0 +1,279 @@
+/* Categories (phase C7): the category page, the picker and the undo bar. Tokens only. */
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.field {
+  display: grid;
+  flex: 1 1 18rem;
+  gap: var(--space-2);
+}
+
+.field label,
+.combobox label {
+  font-weight: var(--weight-semibold);
+}
+
+.small {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.small:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* --- The category page ------------------------------------------------------------------- */
+
+.newForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  max-width: 40rem;
+  margin-bottom: var(--space-8);
+}
+
+.newForm > button {
+  margin-top: calc(var(--text-md) * 1.5 + var(--space-2));
+}
+
+.tree {
+  margin: 0;
+  padding: 0 0 0 var(--space-6);
+  list-style: none;
+}
+
+.tree.top {
+  max-width: 48rem;
+  padding-left: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: calc(var(--tap-target) + var(--space-2));
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.name {
+  font-weight: var(--weight-semibold);
+}
+
+.count {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.inline .input {
+  flex: 1 1 14rem;
+  width: auto;
+}
+
+.inline .hint {
+  flex-basis: 100%;
+}
+
+.confirm {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+/* --- The picker -------------------------------------------------------------------------- */
+
+.combobox {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.listbox {
+  position: absolute;
+  top: calc(1.5em + var(--space-2) + var(--tap-target) + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 16rem;
+  margin: 0;
+  padding: var(--space-1);
+  overflow-y: auto;
+  list-style: none;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-md);
+}
+
+.listbox[hidden] {
+  display: none;
+}
+
+.option {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.option[aria-selected="true"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.optionNew {
+  font-weight: var(--weight-semibold);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-sm);
+}
+
+.chipRemove {
+  display: grid;
+  place-items: center;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-lg);
+  cursor: pointer;
+}
+
+.chipRemove:hover {
+  color: var(--color-text);
+}
+
+/* --- Undo -------------------------------------------------------------------------------- */
+
+.undoBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  max-width: 48rem;
+  margin-bottom: var(--space-6);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.undoBar p {
+  margin: 0;
+}
+
+.undoButton {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* --- A recipe's categories, in the editor -------------------------------------------------- */
+
+.recipeCategories {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 40rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.recipeCategories .undoBar {
+  margin-bottom: 0;
+}
+
+/* --- Filing many recipes ----------------------------------------------------------------- */
+
+.bulkStep {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 36rem;
+}
+
+.bulkStep p {
+  margin: 0;
+}
+
+.bulkButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* A category's actions read as quiet links, so a row fits on one line, even on a phone. */
+.actions .small {
+  padding: 0 var(--space-2);
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+.actions {
+  gap: 0;
+}

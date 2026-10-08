@@ -582,3 +582,81 @@
 .danger {
   margin-top: var(--space-8);
 }
+
+/* Category chips on a recipe's page lead to the list, filtered (phase C7). */
+.chips a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.chips a:hover {
+  text-decoration: underline;
+}
+
+/* --- Category filter and Select (phase C7) ---------------------------------------------- */
+
+.toolbarStart,
+.toolbarEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+}
+
+.toolbarLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  font-weight: var(--weight-semibold);
+}
+
+.filterNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.bulk {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.bulkHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.bulkHead p {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+
+/* A card while choosing recipes: a checkbox in the corner. */
+label.card {
+  position: relative;
+  cursor: pointer;
+}
+
+.cardCheck {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--color-accent);
+}
+
+.cardSelected {
+  outline: 3px solid var(--color-accent);
+  outline-offset: -1px;
+}

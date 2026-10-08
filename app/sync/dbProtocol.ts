@@ -1,5 +1,6 @@
 import type { Recipe, RecipeMade, RecipeOpinion } from "../../shared/recipe";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
+import type { CategoryData } from "../categories/tree";
 
 /**
  * Messages between a tab and its local database worker (phase C4). Each message also carries
@@ -51,23 +52,25 @@ export interface OutboxEntry {
 export type DbRequest =
   | { op: "open"; userId: string }
   | { op: "snapshot" }
-  | { op: "enqueue"; change: SyncChange; now: string }
+  | { op: "enqueue"; changes: SyncChange[]; now: string }
   | { op: "ack"; seqs: number[] }
   | { op: "applyPull"; page: PullResponse; now: string }
   | { op: "recheck"; now: string }
   | { op: "listRecipes" }
   | { op: "getRecipe"; recipeId: string }
+  | { op: "getCategories" }
   | { op: "wipe" };
 
 export interface DbResults {
   open: null;
   snapshot: { cursors: Cursors; outbox: OutboxEntry[] };
-  enqueue: { seq: number };
+  enqueue: { seqs: number[] };
   ack: null;
   applyPull: null;
   recheck: null;
   listRecipes: RecipeSummary[];
   getRecipe: RecipeDetail | null;
+  getCategories: CategoryData;
   wipe: null;
 }
 
