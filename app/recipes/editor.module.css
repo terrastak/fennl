@@ -1,0 +1,236 @@
+/* The recipe editor (phase C6). Tokens only (docs/design/design-direction.md). */
+
+.editor {
+  max-width: 60rem;
+}
+
+/* Saving status, undo and Done stay in view while scrolling (under the phone's top bar). */
+.bar {
+  position: sticky;
+  top: 3.75rem;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 calc(-1 * var(--space-4)) var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (min-width: 900px) {
+  .bar {
+    top: 0;
+    margin: 0 0 var(--space-6);
+    padding: var(--space-4) 0;
+  }
+}
+
+.status {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.barButtons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.heading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+  outline: none;
+}
+
+.notice {
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-warm-soft);
+  color: var(--color-text);
+}
+
+/* Fieldsets used only to switch every field off at once, or to group a few. */
+.fields {
+  display: grid;
+  gap: var(--space-8);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.group {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.group legend {
+  margin-bottom: var(--space-4);
+  padding: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-xl);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.row > * {
+  flex: 1 1 12rem;
+}
+
+.row > .narrow {
+  flex: 0 1 9rem;
+}
+
+.field {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.field > label {
+  font-weight: var(--weight-semibold);
+}
+
+.titleInput {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-xl);
+}
+
+/* Text boxes grow with what's in them where the browser can do it. */
+.textarea {
+  min-height: 10rem;
+  line-height: var(--leading-normal);
+  resize: vertical;
+  field-sizing: content;
+}
+
+.textarea.short {
+  min-height: 4.5rem;
+}
+
+.problem {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+/* --- Ingredients and directions ---------------------------------------------------------- */
+
+.lines {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.linesHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.linesLabel {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-xl);
+}
+
+.small {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.small[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.small:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.linesBody {
+  display: grid;
+  gap: var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .linesBody {
+    grid-template-columns: 3fr 2fr;
+    align-items: start;
+  }
+}
+
+.preview {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-sm);
+}
+
+.previewTitle {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-semibold);
+}
+
+.previewList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.previewList li {
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.previewHeading {
+  margin-top: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.previewCurrent {
+  background: var(--color-surface);
+}
+
+.stepNumber {
+  display: inline-block;
+  min-width: 1.75rem;
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}
+
+.footer {
+  margin-top: var(--space-8);
+}

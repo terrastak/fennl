@@ -1,22 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Browser, type Page } from "@playwright/test";
-import { addRecipe, premium, recipeCard, syncStatus } from "./recipes";
-import { PASSWORD, useFreshAddress, useOwnAccount } from "./support";
+import { expect, test } from "@playwright/test";
+import { addRecipe, premium, recipeCard, signInElsewhere, syncStatus } from "./recipes";
+import { useOwnAccount } from "./support";
 
 // Phase C4: the browser's copy of the recipe box, kept in step with the account. Each "device"
 // is a separate browser context: its own storage and its own sign-in.
-
-async function signInElsewhere(browser: Browser, baseURL: string, email: string): Promise<Page> {
-  const context = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
-  await useFreshAddress(context);
-  const page = await context.newPage();
-  await page.goto("/sign-in");
-  await page.getByLabel("Email").fill(email);
-  await page.getByLabel("Password").fill(PASSWORD);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
-  return page;
-}
 
 const status = syncStatus;
 const recipe = recipeCard;
@@ -98,12 +86,11 @@ test("Free: editing pauses while offline, with a notice", async ({ page, context
 
   await context.setOffline(true);
   await expect(page.getByRole("alert")).toContainText("Editing is paused");
-  await expect(page.getByLabel("New recipe")).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Save recipe" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Add recipe" })).toBeDisabled();
 
   await context.setOffline(false);
   await expect(status(page)).toHaveText("Saved to cloud", { timeout: 15_000 });
-  await expect(page.getByLabel("New recipe")).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Add recipe" })).toBeEnabled();
   await expect(page.getByRole("alert")).toHaveCount(0);
 });
 

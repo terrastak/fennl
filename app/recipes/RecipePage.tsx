@@ -1,13 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   NUTRIENTS,
+  RECIPE_RULES,
   type DirectionStep,
   type IngredientLine,
   type Nutrient,
   type NutritionSource,
   type Recipe,
 } from "../../shared/recipe";
-import type { SyncChange } from "../../shared/sync";
+import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
@@ -28,7 +29,8 @@ import styles from "./recipes.module.css";
 
 // A recipe, laid out for reading (phase C5). Everyone's ratings, favorites and signed notes show
 // only when someone has given one (CLAUDE.md, "Recipe ownership in households"), and "Last made"
-// is shared by the household, with a "Made it" button.
+// is shared by the household, with a "Made it" button. Your own rating, favorite and note are
+// set in "Yours" (phase C6), and "Edit recipe" opens the editor.
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -99,9 +101,11 @@ function Facts({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function People({ detail, name, shared }: Props) {
-  const rated = detail.opinions.filter((o) => o.rating !== null);
-  const favorites = detail.opinions.filter((o) => o.favorite).map((o) => name(o.userId));
+/** Others' ratings and favorites (your own are in "Yours", below). */
+function People({ detail, name, shared, me }: Props & { me: string }) {
+  const others = detail.opinions.filter((o) => o.userId !== me);
+  const rated = others.filter((o) => o.rating !== null);
+  const favorites = others.filter((o) => o.favorite).map((o) => name(o.userId));
   if (!shared && rated.length === 0 && favorites.length === 0) return null;
   return (
     <ul className={styles.people}>
@@ -222,8 +226,9 @@ function Method({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function Notes({ detail, name }: Props) {
-  const signed = detail.opinions.filter((o) => o.note.trim());
+/** The recipe's notes, then the household's signed notes (yours is in "Yours", below). */
+function Notes({ detail, name, me }: Props & { me: string }) {
+  const signed = detail.opinions.filter((o) => o.userId !== me && o.note.trim());
   if (!detail.recipe.notes.trim() && signed.length === 0) return null;
   return (
     <section className={styles.section} aria-labelledby="notes-title">
@@ -238,6 +243,169 @@ function Notes({ detail, name }: Props) {
         </figure>
       ))}
     </section>
+  );
+}
+
+const RATINGS = [1, 2, 3, 4, 5];
+
+function saveOpinion(recipeId: string, fields: OpinionChange["fields"]): Promise<boolean> {
+  return save({ kind: "opinion", recipeId, fields, changedAt: Date.now() });
+}
+
+/** Your own rating, favorite and signed note (CLAUDE.md, "Recipe ownership in households"). */
+function Yours({
+  detail,
+  me,
+  myName,
+  shared,
+  editable,
+}: {
+  detail: RecipeDetail;
+  me: string;
+  myName: string;
+  shared: boolean;
+  editable: boolean;
+}) {
+  const recipeId = detail.recipe.id;
+  const mine = detail.opinions.find((o) => o.userId === me);
+  const stored = { rating: mine?.rating ?? null, favorite: mine?.favorite ?? false };
+  // Shown straight away when changed here; the local copy catches up a moment later.
+  const [shown, setShown] = useState(stored);
+  const [last, setLast] = useState(stored);
+  if (stored.rating !== last.rating || stored.favorite !== last.favorite) {
+    setLast(stored);
+    setShown(stored);
+  }
+  const rating = shown.rating;
+  const opinion = (fields: OpinionChange["fields"]) => saveOpinion(recipeId, fields);
+  const choose = (fields: { rating?: number | null; favorite?: boolean }) => {
+    setShown({ ...shown, ...fields });
+    void opinion(fields);
+  };
+
+  return (
+    <section className={styles.section} aria-labelledby="yours-title">
+      <h2 id="yours-title">Yours</h2>
+      <div className={styles.yours}>
+        <fieldset className={styles.rating} disabled={!editable}>
+          <legend>Your rating</legend>
+          <div className={styles.ratingStars}>
+            {RATINGS.map((n) => (
+              <label key={n} className={n <= (rating ?? 0) ? styles.starOn : styles.starOff}>
+                <input
+                  type="radio"
+                  name="rating"
+                  className="visually-hidden"
+                  checked={rating === n}
+                  onChange={() => choose({ rating: n })}
+                />
+                <span aria-hidden="true">★</span>
+                <span className="visually-hidden">
+                  {n} {n === 1 ? "star" : "stars"}
+                </span>
+              </label>
+            ))}
+            <label className={styles.noRating}>
+              <input
+                type="radio"
+                name="rating"
+                className="visually-hidden"
+                checked={rating === null}
+                onChange={() => choose({ rating: null })}
+              />
+              No rating
+            </label>
+          </div>
+        </fieldset>
+        <label className={styles.favorite}>
+          <input
+            type="checkbox"
+            checked={shown.favorite}
+            disabled={!editable}
+            onChange={(e) => choose({ favorite: e.target.checked })}
+          />
+          A favorite of mine
+        </label>
+      </div>
+      <OwnNote
+        key={recipeId}
+        note={mine?.note ?? ""}
+        signature={myName}
+        shared={shared}
+        editable={editable}
+        onSave={(note) => opinion({ note })}
+      />
+    </section>
+  );
+}
+
+/** Your signed note, saved as you type. */
+function OwnNote({
+  note,
+  signature,
+  shared,
+  editable,
+  onSave,
+}: {
+  note: string;
+  signature: string;
+  shared: boolean;
+  editable: boolean;
+  onSave: (note: string) => Promise<boolean>;
+}) {
+  const [text, setText] = useState(note);
+  // The note as last saved (or as it arrived from another device).
+  const [saved, setSaved] = useState(note);
+  const waiting = useRef<string | null>(null);
+  const saveNote = useRef(onSave);
+  useEffect(() => {
+    saveNote.current = onSave;
+  });
+  // A change from elsewhere, while nothing is being typed here: show it.
+  if (note !== saved && text === saved) {
+    setSaved(note);
+    setText(note);
+  }
+
+  useEffect(() => {
+    if (text === saved || !editable) return;
+    waiting.current = text;
+    const timer = setTimeout(() => {
+      waiting.current = null;
+      void saveNote.current(text).then((ok) => {
+        if (ok) setSaved(text);
+      });
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [text, saved, editable]);
+
+  // Leaving the page with typing not yet saved: save it now.
+  useEffect(
+    () => () => {
+      if (waiting.current !== null) void saveNote.current(waiting.current);
+    },
+    [],
+  );
+
+  return (
+    <div className={styles.ownNote}>
+      <label htmlFor="own-note">Your note</label>
+      <textarea
+        id="own-note"
+        className={styles.input}
+        rows={3}
+        value={text}
+        disabled={!editable}
+        maxLength={RECIPE_RULES.notesLength}
+        aria-describedby="own-note-hint"
+        onChange={(e) => setText(e.target.value)}
+      />
+      <p id="own-note-hint" className={styles.hint}>
+        {shared
+          ? `Signed ${signature}, and shown to your household under the recipe's notes.`
+          : `Signed ${signature}. Saved as you type.`}
+      </p>
+    </div>
   );
 }
 
@@ -350,7 +518,7 @@ export function RecipePage({ id }: { id: string }) {
         </h1>
         {recipe.description.trim() ? <p className={styles.headnote}>{recipe.description}</p> : null}
         <Facts recipe={recipe} />
-        <People detail={detail} name={name} shared={shared} />
+        <People detail={detail} name={name} shared={shared} me={me} />
         {detail.categories.length > 0 ? (
           <ul className={styles.chips} aria-label="Categories">
             {detail.categories.map((path) => (
@@ -358,7 +526,12 @@ export function RecipePage({ id }: { id: string }) {
             ))}
           </ul>
         ) : null}
-        <MadeIt detail={detail} name={name} shared={shared} me={me} editable={editable} />
+        <div className={styles.actions}>
+          <MadeIt detail={detail} name={name} shared={shared} me={me} editable={editable} />
+          <Link href={`/recipes/${id}/edit`} className={styles.secondary}>
+            Edit recipe
+          </Link>
+        </div>
         {detail.waiting ? (
           <p className={styles.hint}>Changes here haven&rsquo;t synced yet.</p>
         ) : null}
@@ -369,7 +542,8 @@ export function RecipePage({ id }: { id: string }) {
         <Method recipe={recipe} />
       </div>
 
-      <Notes detail={detail} name={name} shared={shared} />
+      <Notes detail={detail} name={name} shared={shared} me={me} />
+      <Yours detail={detail} me={me} myName={name(me)} shared={shared} editable={editable} />
       <Nutrition recipe={recipe} />
       <div className={styles.section}>
         <Source recipe={recipe} />
