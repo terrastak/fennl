@@ -1,6 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { deviceId } from "../devices/deviceId";
-import type { RecipeSummary } from "./dbProtocol";
+import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { STARTING, type SyncStatus } from "./status";
 import { SyncClient } from "./tabs";
 
@@ -59,4 +59,33 @@ export function useRecipeList(): RecipeSummary[] | null {
     };
   }, [client]);
   return list;
+}
+
+/**
+ * One recipe with everything its page shows, read again whenever the local copy changes.
+ * Undefined while loading; null when it isn't here (or is in Trash).
+ */
+export function useRecipe(id: string): RecipeDetail | null | undefined {
+  const client = activeSyncClient();
+  const [detail, setDetail] = useState<{ id: string; value: RecipeDetail | null } | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .getRecipe(id)
+        .then((value) => {
+          if (call === latest) setDetail({ id, value });
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client, id]);
+  return detail?.id === id ? detail.value : undefined;
 }

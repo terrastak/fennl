@@ -1,18 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
-import { PASSWORD, makeCode, useFreshAddress, useOwnAccount } from "./support";
+import { expect, test, type Browser, type Page } from "@playwright/test";
+import { addRecipe, premium, recipeCard, syncStatus } from "./recipes";
+import { PASSWORD, useFreshAddress, useOwnAccount } from "./support";
 
 // Phase C4: the browser's copy of the recipe box, kept in step with the account. Each "device"
 // is a separate browser context: its own storage and its own sign-in.
-
-async function premium(context: BrowserContext, baseURL: string) {
-  const code = makeCode({ tier: "individual", days: 30, allowsSignUp: false });
-  const used = await context.request.post("/api/codes/redeem", {
-    headers: { origin: baseURL },
-    data: { code },
-  });
-  expect(used.ok()).toBe(true);
-}
 
 async function signInElsewhere(browser: Browser, baseURL: string, email: string): Promise<Page> {
   const context = await browser.newContext({ baseURL, storageState: { cookies: [], origins: [] } });
@@ -26,16 +18,8 @@ async function signInElsewhere(browser: Browser, baseURL: string, email: string)
   return page;
 }
 
-/** The sync status in the app's frame (the sidebar's or the top bar's, whichever shows). */
-const status = (page: Page) => page.locator("[data-sync-status]").filter({ visible: true });
-
-async function addRecipe(page: Page, title: string) {
-  await page.getByLabel("New recipe").fill(title);
-  await page.getByRole("button", { name: "Add recipe" }).click();
-  await expect(page.getByRole("listitem").filter({ hasText: title })).toBeVisible();
-}
-
-const recipe = (page: Page, title: string) => page.getByRole("listitem").filter({ hasText: title });
+const status = syncStatus;
+const recipe = recipeCard;
 
 test("Premium: a recipe added on one device appears on another, and edits come back", async ({
   page,
@@ -52,16 +36,24 @@ test("Premium: a recipe added on one device appears on another, and edits come b
 
   const phone = await signInElsewhere(browser, baseURL!, email);
   await expect(recipe(phone, "Green chile stew")).toBeVisible();
-  await phone.getByRole("button", { name: "Rename Green chile stew" }).click();
-  await phone.getByLabel("New title for Green chile stew").fill("Red chile stew");
-  await phone.getByRole("button", { name: "Save" }).click();
-  await expect(recipe(phone, "Red chile stew")).toBeVisible();
+  await phone.getByRole("link", { name: /Green chile stew/ }).click();
+  await phone.getByRole("button", { name: "Made it today" }).click();
+  await expect(phone.getByText("Last made today")).toBeVisible();
   await expect(status(phone)).toHaveText("Saved to cloud");
 
   // The laptop fetches when it opens (and on focus, and every minute).
   await page.reload();
-  await expect(recipe(page, "Red chile stew")).toBeVisible();
-  await expect(recipe(page, "Green chile stew")).toHaveCount(0);
+  await page.getByRole("link", { name: /Green chile stew/ }).click();
+  await expect(page.getByText("Last made today")).toBeVisible();
+
+  // Moved to Trash on the phone: gone from the laptop's list.
+  await phone.getByRole("button", { name: "Move to Trash" }).click();
+  await expect(phone.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(status(phone)).toHaveText("Saved to cloud");
+  await page.goto("/");
+  await expect(
+    page.getByRole("heading", { name: "Your recipe box is empty, for now" }),
+  ).toBeVisible();
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
@@ -83,14 +75,14 @@ test("Premium: changes made offline wait, then sync when the connection is back"
 
   await context.setOffline(true);
   await addRecipe(page, "Offline posole");
-  await expect(recipe(page, "Offline posole")).toContainText("not synced yet");
+  await expect(recipe(page, "Offline posole")).toContainText(/not synced yet/i);
   await expect(status(page)).toHaveText("Offline · 1 change waiting");
   await addRecipe(page, "Offline tamales");
   await expect(status(page)).toHaveText("Offline · 2 changes waiting");
 
   await context.setOffline(false);
   await expect(status(page)).toHaveText("Saved to cloud", { timeout: 15_000 });
-  await expect(recipe(page, "Offline posole")).not.toContainText("not synced yet");
+  await expect(recipe(page, "Offline posole")).not.toContainText(/not synced yet/i);
 
   const other = await signInElsewhere(browser, baseURL!, email);
   await expect(recipe(other, "Offline posole")).toBeVisible();
@@ -107,7 +99,7 @@ test("Free: editing pauses while offline, with a notice", async ({ page, context
   await context.setOffline(true);
   await expect(page.getByRole("alert")).toContainText("Editing is paused");
   await expect(page.getByLabel("New recipe")).toBeDisabled();
-  await expect(page.getByRole("button", { name: "Rename Salsa macha" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Save recipe" })).toBeDisabled();
 
   await context.setOffline(false);
   await expect(status(page)).toHaveText("Saved to cloud", { timeout: 15_000 });

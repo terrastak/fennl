@@ -10,7 +10,7 @@ import {
   type SyncChange,
 } from "../../shared/sync";
 import { LocalDb, LocalDbError } from "./dbClient";
-import type { OutboxEntry, RecipeSummary } from "./dbProtocol";
+import type { OutboxEntry, RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { batches } from "./records";
 import type { SyncPhase, SyncStatus } from "./status";
 import { canEdit, STARTING } from "./status";
@@ -216,6 +216,10 @@ export class SyncEngine {
 
   listRecipes(): Promise<RecipeSummary[]> {
     return this.db.call({ op: "listRecipes" });
+  }
+
+  getRecipe(id: string): Promise<RecipeDetail | null> {
+    return this.db.call({ op: "getRecipe", recipeId: id });
   }
 
   /** Sends what's waiting, then fetches what's new. One at a time; a request meanwhile runs after. */
