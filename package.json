@@ -28,6 +28,7 @@
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
     "better-auth": "^1.7.7",
     "drizzle-orm": "^0.45.3",
+    "fflate": "^0.8.2",
     "hono": "^4.13.12",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

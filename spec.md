@@ -654,6 +654,14 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Works for every account, including free and expired.
 - **You check**: Export your library and open the file.
 - **Done when**: An export, re-imported into a test account, reproduces the library (round-trip test).
+- **Built (2026-10-08)** (`worker/export/`, `shared/exportFormat.ts`, Settings › Download your recipes):
+  - **`GET /api/export`** downloads `fennl-recipes-<date>.zip` of every recipe the household can see (not those in Trash). It's open to every signed-in account, whatever the plan, lapsed included. It's built and sent a batch of recipes at a time, so a large library never has to fit in the Worker's memory.
+  - **In the .zip**: `index.html` (every recipe, A to Z, with categories), a page per recipe in `recipes/` (plain HTML that opens in any browser and prints cleanly: headnote, times, servings, ingredients and method with their section headings, notes and signed notes, ratings, "made it", nutrition, source, who added it), and `fennl-recipes.json`: Fennl's export format (version 1): the recipes as stored, categories as paths, the household's ratings, notes and "made it" days, and people by name.
+  - **Reading it back**: `importChanges` turns an export into changes for any account, with new IDs. The exporter's own ratings, notes and "made it" days come along; other people's stay behind (they can't be anyone else's). A Fennl-file import screen comes with Stage E's import, which reviews before saving.
+  - **Photos** go in once there are photos (D2).
+  - New dependency: **fflate** (zip, MIT, no dependencies of its own).
+  - Moved the shared wording helpers ("1 hr 30 min", "Serves 6") to `shared/recipeText.ts` so the app and the export use the same ones.
+  - **Tests**: the round trip (an export read into another account exports the same library: recipes, section headings, times, servings, source, nutrition, categories including empty ones, ratings, notes, "made it"); a library bigger than one batch; no export without signing in; an empty library (server); reading a file back, skipping what can't be read, and only the exporter's opinions (unit); a browser test downloading from Settings at computer and phone sizes, checking the contents page, the data, and a recipe page opened in the browser.
 
 ### C11. Limits, usage bar, and over-limit behavior
 - **Goal**: Free limits are enforced kindly, and dropping to Free never loses anything.
@@ -1074,5 +1082,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C6 | Done 2026-10-08 (merged; the owner wrote a recipe on a computer and fixed a typo on a phone, on the preview) |
 | C7 | Done 2026-10-08 (merged; live; the owner set up categories and filed recipes on the preview) |
 | C8 | Done 2026-10-08 (merged; live; the owner searched by an ingredient, a note and part of a title on the preview) |
-| C9 | Approved 2026-10-08; built, waiting for review |
+| C9 | Done 2026-10-08 (merged; live; the owner deleted on one device and put back on another, on the preview) |
+| C10 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

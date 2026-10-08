@@ -34,7 +34,7 @@ function sync(row: { updatedAt: Date; deletedAt: Date | null; serverSeq: number 
   };
 }
 
-function toRecipe(row: typeof recipe.$inferSelect): Recipe {
+export function toRecipe(row: typeof recipe.$inferSelect): Recipe {
   return {
     id: row.id,
     ownerUserId: row.ownerUserId,

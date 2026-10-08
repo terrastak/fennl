@@ -210,7 +210,7 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 | `GET /api/sync/pull?deviceId=&schemaVersion=&since=<owner>:<seq>,...` | Fetch changes after each owner's cursor, in pages (C3) | Device registered and not revoked; only owners in the caller's household |
 | `POST /api/images/upload` (or `/upload-url`) | Upload an image via the Worker or a short-lived signed URL | `images_enabled`, per-file size, total quota |
 | `GET /api/images/:hash` | Serve an image | Caller's household owns it; never public bucket URLs |
-| `GET /api/export` | Full-library export | Always allowed, including lapsed accounts |
+| `GET /api/export` | Full-library export: a .zip of web pages plus `fennl-recipes.json` (built in C10, `worker/export/`; format in `shared/exportFormat.ts`) | Always allowed, including lapsed accounts |
 | `POST /api/import` | Import recipes | `import_structured_enabled` for Paprika files and pages with structured data; `import_ai_enabled` plus the AI usage cap for anything that calls the AI |
 | `GET /api/recipes/:id/versions` | Version history | `history_enabled` |
 
