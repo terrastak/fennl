@@ -8,6 +8,7 @@ export interface ActivityRow {
   createdAt: string;
   adminEmail: string | null;
   targetEmail: string | null;
+  reason?: string | null;
   details: Record<string, unknown> | null;
 }
 
@@ -32,6 +33,9 @@ const ACTION_NAMES: Record<string, string> = {
   "limit.tier_changed": "Changed a plan limit",
   "feedback.read": "Read feedback",
   "feedback.updated": "Updated feedback",
+  "impersonation.started": "Started acting as them",
+  "impersonation.change": "Changed something while acting as them",
+  "impersonation.ended": "Stopped acting as them",
 };
 
 function detailText(row: ActivityRow): string {
@@ -44,7 +48,12 @@ function detailText(row: ActivityRow): string {
   if (typeof d.value !== "undefined" && !("to" in d)) {
     parts.push(`= ${d.value === null ? "no limit" : String(d.value)}`);
   }
-  return parts.join(" ");
+  // Acting as someone (phase C12): why, and what was changed.
+  const acting: string[] = [];
+  if (row.reason) acting.push(`Reason: ${row.reason}`);
+  if (typeof d.request === "string") acting.push(d.request);
+  if (Array.isArray(d.changes)) acting.push(...d.changes.map(String));
+  return [parts.join(" "), ...acting].filter(Boolean).join(" · ");
 }
 
 export function ActivityTable({ rows }: { rows: ActivityRow[] | null }) {

@@ -21,6 +21,7 @@ interface Calls {
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
   syncNow: { args: []; result: undefined };
+  wipe: { args: []; result: undefined };
 }
 type CallName = keyof Calls;
 
@@ -55,13 +56,15 @@ export class SyncClient {
   private release: (() => void) | null = null;
   private stopped = false;
 
+  /** acting: an admin acting as this person (phase C12), with a copy of their own. */
   constructor(
     readonly userId: string,
     private readonly deviceId: string,
+    readonly acting = false,
   ) {}
 
   start() {
-    const name = `fennl-sync-${this.userId}`;
+    const name = `fennl-sync-${this.acting ? "acting-" : ""}${this.userId}`;
     this.channel = new BroadcastChannel(name);
     this.channel.onmessage = (event: MessageEvent<Message>) => void this.receive(event.data);
     if (navigator.locks) {
@@ -134,21 +137,31 @@ export class SyncClient {
     return this.call("syncNow", []);
   }
 
+  /** Empties the local copy and stops syncing (an admin done acting as someone). */
+  wipe() {
+    return this.call("wipe", []);
+  }
+
   // --- Owning the local copy -----------------------------------------------------------------
 
   /** This tab's turn: open the database and sync, until the tab closes. */
   private async own(): Promise<void> {
     if (this.stopped) return;
-    const engine = new SyncEngine(this.userId, this.deviceId, {
-      status: (status) => {
-        this.setStatus(status);
-        this.post({ type: "status", owner: this.tabId, status });
+    const engine = new SyncEngine(
+      this.userId,
+      this.deviceId,
+      {
+        status: (status) => {
+          this.setStatus(status);
+          this.post({ type: "status", owner: this.tabId, status });
+        },
+        changed: () => {
+          this.notifyChanged();
+          this.post({ type: "changed" });
+        },
       },
-      changed: () => {
-        this.notifyChanged();
-        this.post({ type: "changed" });
-      },
-    });
+      this.acting,
+    );
     this.engine = engine;
     this.owner = this.tabId;
     this.ready = engine.start();
@@ -187,6 +200,8 @@ export class SyncClient {
         return engine.getRecipe(args[0] as string);
       case "syncNow":
         return engine.sync();
+      case "wipe":
+        return engine.wipe();
     }
   }
 

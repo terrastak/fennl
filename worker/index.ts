@@ -9,6 +9,7 @@ import { accountNames } from "./admin/accounts";
 import { passedAccess } from "./admin/access";
 import { adminAreaAllowedOn, isAdminPath, isStaticFile, onAdminHost } from "./admin/area";
 import { recentAdminActions } from "./admin/audit";
+import { impersonationOf, impersonationRoutes } from "./admin/impersonation";
 import { accessContext, checkAdmin, passkeyCount, requireAdmin } from "./admin/requireAdmin";
 import { createAuth, signInMethods } from "./auth/auth";
 import { adminCodeRoutes, codeRoutes } from "./codes/routes";
@@ -43,16 +44,23 @@ app.use("*", async (c, next) => {
     return path.startsWith("/api/") ? c.json({ error: "not_found" }, 404) : appNotFound(c);
   }
   if (onAdminHost(c.env, url)) {
-    // The admin address serves the admin console and the APIs it needs, nothing else.
-    const allowedApi =
+    // The admin address serves the admin console and the APIs it needs. The app itself (its
+    // pages and APIs) only for an admin acting as someone (phase C12), so that runs behind
+    // Cloudflare Access, with its own cookies and browser storage, apart from the app's address.
+    const consoleApi =
       path === "/api/health" || path.startsWith("/api/admin/") || path.startsWith("/api/auth/");
-    if (path.startsWith("/api/") && !allowedApi) return c.json({ error: "not_found" }, 404);
-    if (!path.startsWith("/api/") && !isAdminPath(path) && !isStaticFile(path)) {
-      return c.redirect("/admin", 302);
+    const appApi = path.startsWith("/api/") && !consoleApi;
+    const appPage = !path.startsWith("/api/") && !isAdminPath(path) && !isStaticFile(path);
+    if ((appApi || appPage) && !(await impersonationOf(c.env, c.req.raw))) {
+      return appApi ? c.json({ error: "not_found" }, 404) : c.redirect("/admin", 302);
     }
   }
   await next();
 });
+
+// Ending "act as this user" (phase C12): before the admin routes, since the session making the
+// request is the person's, not the admin's.
+app.route("/", impersonationRoutes);
 
 app.get("/api/health", async (c) => {
   const health = healthStatus(await databaseStatus(database(c.env.DB)));
@@ -107,7 +115,29 @@ app.all("/api/auth/passkey/*", async (c, next) => {
 // Sign-up, sign-in, sign-out, sessions, email verification and password reset (Better Auth).
 app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const auth = await createAuth(c.env, c.req.raw);
-  return auth.handler(c.req.raw);
+  const path = new URL(c.req.url).pathname;
+  // An admin acting as someone (phase C12) may sign out (which ends it), and nothing else here:
+  // passwords, email and the account itself are the console's, with its own checks.
+  if (
+    c.req.method === "POST" &&
+    path !== "/api/auth/sign-out" &&
+    c.req.header("cookie") &&
+    (await impersonationOf(c.env, c.req.raw))
+  ) {
+    return c.json({ error: "not_while_impersonating" }, 403);
+  }
+  const response = await auth.handler(c.req.raw);
+  // An admin acting as someone never shows in that person's own list of sessions.
+  if (path === "/api/auth/list-sessions" && response.ok) {
+    const sessions = (await response.json()) as { impersonatedBy?: string | null }[];
+    const headers = new Headers(response.headers);
+    headers.delete("content-length");
+    return new Response(JSON.stringify(sessions.filter((s) => !s.impersonatedBy)), {
+      status: response.status,
+      headers,
+    });
+  }
+  return response;
 });
 
 // Which sign-in buttons the app should show on this deployment, and whether creating an account
@@ -148,6 +178,7 @@ app.post("/api/account/password", async (c) => {
   const auth = await createAuth(c.env, c.req.raw);
   const result = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!result) return c.json({ error: "unauthorized" }, 401);
+  if (result.session.impersonatedBy) return c.json({ error: "not_while_impersonating" }, 403);
   const body = (await c.req.json().catch(() => null)) as {
     currentPassword?: unknown;
     newPassword?: unknown;

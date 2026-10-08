@@ -241,6 +241,7 @@ function AccountPage({ id, onBack }: { id: string; onBack: () => void }) {
             </dl>
           </section>
 
+          <ActAs detail={detail} />
           <Overrides detail={detail} onChange={changed} />
           <EmailTools detail={detail} onChange={changed} />
           <PasswordHelp detail={detail} onChange={changed} />
@@ -252,6 +253,83 @@ function AccountPage({ id, onBack }: { id: string; onBack: () => void }) {
         </>
       )}
     </>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+
+const ACT_ERRORS: Record<string, string> = {
+  reason_required: "Say why, in a few words: it's kept in the admin log.",
+  target_is_admin: "Admin accounts can't be viewed as.",
+  passkey_reconfirm: "Your passkey is needed again. Try once more.",
+};
+
+/** "View as this user" (phase C12): a reason, the passkey again, then the app as them. */
+function ActAs({ detail }: { detail: AccountDetail }) {
+  const id = useId();
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const start = async (event: FormEvent) => {
+    event.preventDefault();
+    setBusy(true);
+    setError(null);
+    const result = await adminRequest<unknown>(
+      `/api/admin/accounts/${encodeURIComponent(detail.id)}/impersonate`,
+      { body: { reason } },
+    );
+    if (result.ok) {
+      // The app, as them (on this admin address, in its own browser storage).
+      window.location.assign("/");
+      return;
+    }
+    setBusy(false);
+    setError(ACT_ERRORS[errorOf(result) ?? ""] ?? "That didn't work. Try again.");
+  };
+
+  return (
+    <section className={styles.card} aria-labelledby={`${id}-title`}>
+      <h2 id={`${id}-title`}>View as this user</h2>
+      <p className={styles.muted}>
+        Use Fennl exactly as they see it, to help them or look into a problem. They aren&rsquo;t
+        told, and it never shows in their devices or sessions. It ends after 30 minutes. Every
+        change you make is recorded under your name, with your reason, in the admin log.
+        You&rsquo;ll be asked for your passkey.
+      </p>
+      {error ? (
+        <p role="alert" className={styles.error}>
+          {error}
+        </p>
+      ) : null}
+      {detail.role === "admin" ? (
+        <p className={styles.muted}>Admin accounts can&rsquo;t be viewed as.</p>
+      ) : (
+        <form onSubmit={(e) => void start(e)}>
+          <div className={styles.field}>
+            <label htmlFor={`${id}-reason`}>Reason (kept in the admin log)</label>
+            <textarea
+              id={`${id}-reason`}
+              rows={2}
+              minLength={5}
+              maxLength={500}
+              required
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+          <div className={styles.row}>
+            <button
+              type="submit"
+              className={styles.button}
+              disabled={busy || reason.trim().length < 5}
+            >
+              {busy ? "Opening…" : "View as this user"}
+            </button>
+          </div>
+        </form>
+      )}
+    </section>
   );
 }
 

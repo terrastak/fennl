@@ -96,7 +96,8 @@ export async function accountDetail(db: Database, userId: string): Promise<Accou
       db
         .select({ at: max(session.updatedAt) })
         .from(session)
-        .where(eq(session.userId, userId))
+        // Not an admin acting as them (phase C12): that isn't the person being seen.
+        .where(and(eq(session.userId, userId), isNull(session.impersonatedBy)))
         .get(),
       db
         .select({ at: max(device.lastSeenAt) })

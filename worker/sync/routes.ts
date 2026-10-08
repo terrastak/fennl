@@ -107,9 +107,11 @@ syncRoutes.post("/api/sync/push", async (c) => {
   });
 
   // Free saves go to the server as they happen; a push of old changes is an offline queue,
-  // which needs offline editing (CLAUDE.md, "Write paths").
+  // which needs offline editing (CLAUDE.md, "Write paths"). An admin acting as someone always
+  // saves straight to the server (phase C12).
   const plan = await householdEntitlements(signedIn.db, signedIn.household.householdId);
-  if (!plan.offline_enabled && valid.some((v) => now - v.time > SYNC_RULES.freeChangeAgeMs)) {
+  const queueAllowed = plan.offline_enabled && !signedIn.impersonating;
+  if (!queueAllowed && valid.some((v) => now - v.time > SYNC_RULES.freeChangeAgeMs)) {
     return refuse(c, "offline_not_allowed");
   }
 

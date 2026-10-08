@@ -91,6 +91,29 @@ function Screen({
           </button>
         </Narrow>
       );
+    case "impersonating":
+      return (
+        <Narrow title="You're acting as someone">
+          <p className={styles.muted}>
+            This browser is acting as another account. Go back to it, or stop acting to use the
+            console.
+          </p>
+          <div className={styles.row}>
+            <a className={styles.button} href="/">
+              Back to their recipes
+            </a>
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() =>
+                void fetch("/api/admin/impersonation/stop", { method: "POST" }).then(refresh)
+              }
+            >
+              Stop acting as them
+            </button>
+          </div>
+        </Narrow>
+      );
     case "passkey_setup":
       return <PasskeySetup refresh={refresh} />;
     case "passkey_sign_in":
@@ -277,8 +300,10 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 
 function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
   const [section, setSection] = useState<SectionId>("accounts");
-  // An account opened from the feedback inbox.
-  const [account, setAccount] = useState<string | null>(null);
+  // An account opened from the feedback inbox, or the one just acted as (/admin?account=…).
+  const [account, setAccount] = useState<string | null>(() =>
+    new URLSearchParams(window.location.search).get("account"),
+  );
   const [newFeedback, setNewFeedback] = useState<number | null>(null);
   const onCounts = useCallback((counts: FeedbackInbox["counts"]) => setNewFeedback(counts.new), []);
 

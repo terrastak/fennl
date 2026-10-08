@@ -1,3 +1,4 @@
+import { isActing } from "./acting/acting";
 import { useEffect, type ComponentType } from "react";
 import { useAccountSchemeSync } from "./appearance/accountScheme";
 import { CategoriesPage } from "./categories/CategoriesPage";
@@ -67,7 +68,8 @@ export function App() {
   useAccountSchemeSync();
   // Every app start registers this browser; over the plan's device limit, the takeover screen
   // shows instead of the app (phase B6).
-  const mustChangePassword = Boolean(session?.user.mustChangePassword);
+  // An admin acting as someone (phase C12) doesn't choose their password for them.
+  const mustChangePassword = Boolean(session?.user.mustChangePassword) && !isActing(session);
   const { gate, takeOver } = useDeviceGate(mustChangePassword ? undefined : session?.session.id);
 
   const accountRoute = ACCOUNT_ROUTES[path];
@@ -120,7 +122,7 @@ export function App() {
 
   // Keep this browser's copy of the recipe box in step with the account (phase C4). Starts
   // once per account; the same client is returned on every render.
-  syncClientFor(session.user.id);
+  syncClientFor(session.user.id, isActing(session));
 
   // A recipe's page: /recipes/<its ID> (phase C5), and its editor: /recipes/<its ID>/edit,
   // with ?new for a recipe that doesn't exist yet (phase C6).

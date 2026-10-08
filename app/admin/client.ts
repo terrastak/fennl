@@ -12,6 +12,7 @@ export type AdminState =
   | { kind: "closed" }
   | { kind: "signed_out"; expired: boolean }
   | { kind: "not_admin" }
+  | { kind: "impersonating" }
   | { kind: "passkey_setup" }
   | { kind: "passkey_sign_in" }
   | { kind: "ready"; me: AdminMe }
@@ -52,6 +53,8 @@ export async function loadAdminState(): Promise<AdminState> {
         return { kind: "signed_out", expired: true };
       case "not_admin":
         return { kind: "not_admin" };
+      case "impersonating":
+        return { kind: "impersonating" };
       case "passkey_required":
         return body.canRegister ? { kind: "passkey_setup" } : { kind: "passkey_sign_in" };
       default:

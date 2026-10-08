@@ -70,12 +70,12 @@ function migrate(d: Database) {
   });
 }
 
-async function open(forUser: string) {
+async function open(forUser: string, file: string) {
   const sqlite3 = await sqlite3InitModule();
   // Only one tab can hold this storage at a time; a second one fails here (C2).
   const pool = await sqlite3.installOpfsSAHPoolVfs({ name: "fennl" });
   await pool.reserveMinimumCapacity(6);
-  db = new pool.OpfsSAHPoolDb(`/fennl-${forUser}.sqlite3`);
+  db = new pool.OpfsSAHPoolDb(`/fennl-${file}.sqlite3`);
   userId = forUser;
   migrate(db);
 }
@@ -376,10 +376,11 @@ function listTrash(): TrashItem[] {
     .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
 }
 
+/** Empties the copy, leaving nothing of it in the file either. */
 function wipe() {
   database().exec(
     `delete from record; delete from cursor; delete from member; delete from outbox;
-     delete from recheck; delete from recipe_search;`,
+     delete from recheck; delete from recipe_search; vacuum;`,
   );
 }
 
@@ -399,7 +400,7 @@ scope.onmessage = (event) => {
       let value: unknown = null;
       switch (request.op) {
         case "open":
-          await open(request.userId);
+          await open(request.userId, request.file);
           break;
         case "snapshot":
           value = snapshot();
