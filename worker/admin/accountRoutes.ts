@@ -28,6 +28,7 @@ import {
   signOutEverywhere,
 } from "./accounts";
 import { recordAdminAction } from "./audit";
+import { startImpersonating } from "./impersonation";
 import { freshPasskeyProblem, requireAdmin, type AdminContext } from "./requireAdmin";
 
 // The admin console's account tools (phase B7). Every route is behind requireAdmin; every
@@ -69,6 +70,9 @@ adminAccountRoutes.get("/accounts/:id", async (c) => {
   );
   return c.json(detail);
 });
+
+/** Acting as this person (phase C12): a reason, the passkey again, 30 minutes at most. */
+adminAccountRoutes.post("/accounts/:id/impersonate", startImpersonating);
 
 /** Password help, the default: Better Auth's own reset email, linking to the app. */
 adminAccountRoutes.post("/accounts/:id/password-reset", async (c) => {

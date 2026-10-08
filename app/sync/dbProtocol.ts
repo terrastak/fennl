@@ -64,7 +64,8 @@ export interface OutboxEntry {
 }
 
 export type DbRequest =
-  | { op: "open"; userId: string }
+  /** file: which copy, the account's own or an admin's while acting as them (phase C12). */
+  | { op: "open"; userId: string; file: string }
   | { op: "snapshot" }
   | { op: "enqueue"; changes: SyncChange[]; now: string }
   | { op: "ack"; seqs: number[] }

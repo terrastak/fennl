@@ -703,6 +703,16 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - The change appears on that account's own device with no sign of impersonation.
   - Exit, and the log shows your reason and the edit.
 - **Done when**: Tests cover the blocked and silent behaviors, the device rules, and the log.
+- **Built (2026-10-08)** (`worker/admin/impersonation.ts`, `app/acting/`, the console's account page):
+  - **Starting**: an account's page in the console has **View as this user**, with a reason (5 to 500 characters, kept only in the admin log) and the passkey again (a passkey sign-in in the last 5 minutes, as for password and limit changes). Admin accounts can't be acted as. It's recorded first ("Started acting as them", with the reason), then the owner gets an email ("Fennl admin is acting as a user"), then Better Auth's admin plugin makes a session for the person, marked as the admin's, that ends after 30 minutes. The admin's own session waits behind it.
+  - **Where it runs**: in production, on the admin address, behind Cloudflare Access. That address now serves the app's pages and APIs, but only to a session acting as someone (anyone else still gets only the console). Its cookies and browser storage are the admin address's own, apart from the app's address. In previews and locally it's the same address as the app.
+  - **The bar**: every page shows "Acting as Petra Ng (petra@…). Every change is recorded under your name in the admin log. Ends at 4:45 PM." with **Stop acting as Petra Ng**. At the end time it leaves by itself.
+  - **Every change in the log**: anything that changes their data, recorded under the admin before it's made (no record, no change). Sync changes are listed without recipe text ("recipe 1a2b3c4d edited: notes"). This happens in `requireHousehold`, which every household route already goes through, so new routes are covered too.
+  - **The console's tools, not the app's**: while acting, the app can't change the password or email, send feedback, or use Better Auth's own account endpoints (only signing out, which ends acting). Those stay with the console's tools, which already ask for the passkey again (steps 3 and 4). Deleting an account and household actions don't exist yet; when they're built, they must be refused while acting and done from the console, with the passkey asked again.
+  - **Silent**: nothing goes to the person. No device is registered and takeover never starts. The session is left out of their own session list, and out of "Last seen" in the console. Recipes they see were changed by them, as far as the app shows.
+  - **Saves go straight to the server**, even on Premium (nothing queues). The app keeps a separate copy of their recipes for the visit (not their own copy, and not the admin's), empty at the start and wiped, file included, on the way out. Nothing about the account is remembered in the browser (for an offline start, the plan or usage).
+  - **Stopping**: "Stopped acting as them" is recorded, Better Auth puts the admin's own session back, and the console opens on the person's account, where the log shows the reason and every change. In the console, the log now shows each entry's reason and what changed. While a browser is acting as someone, the console says so and offers to go back or stop.
+  - **Tests**: server tests for starting (reason, passkey again, never an admin, not for others, not through Better Auth's own endpoint); acting (silent: no device, no email, not in their session list; straight to their account; each change logged under the admin with what changed; the console waits); refusals logging nothing; nothing queued even on Premium; ending by itself after 30 minutes; the admin address serving the app only while acting; and other changes (a color scheme) logged too. A browser test runs the owner's check: act as an account and edit a recipe; it shows on their own device with no banner and still one device; stop; the log shows the reason and the edit; the browser's app is the admin's own again. With accessibility checks.
 
 ## Stage D: Photos and images (Premium)
 
@@ -1096,5 +1106,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C8 | Done 2026-10-08 (merged; live; the owner searched by an ingredient, a note and part of a title on the preview) |
 | C9 | Done 2026-10-08 (merged; live; the owner deleted on one device and put back on another, on the preview) |
 | C10 | Done 2026-10-08 (merged; live) |
-| C11 | Approved 2026-10-08; built, waiting for review |
+| C11 | Done 2026-10-08 (merged; live; the owner checked the limit of 5 on the preview) |
+| C12 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

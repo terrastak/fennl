@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from "react";
+import { ActingBanner } from "../acting/ActingBanner";
 import { Link } from "../router";
 import { SyncNotices } from "../sync/SyncNotices";
 import { SyncStatusLine } from "../sync/SyncStatusLine";
@@ -108,6 +109,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
       </header>
 
       <main id="main" ref={mainRef} tabIndex={-1} className={styles.main}>
+        <ActingBanner />
         <SyncNotices />
         {children}
       </main>

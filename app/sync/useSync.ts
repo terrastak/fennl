@@ -13,10 +13,11 @@ import { SyncClient } from "./tabs";
 
 let current: { userId: string; client: SyncClient } | null = null;
 
-export function syncClientFor(userId: string): SyncClient {
-  if (current?.userId === userId) return current.client;
+/** acting: an admin acting as this person (phase C12). */
+export function syncClientFor(userId: string, acting = false): SyncClient {
+  if (current?.userId === userId && current.client.acting === acting) return current.client;
   current?.client.stop();
-  const client = new SyncClient(userId, deviceId());
+  const client = new SyncClient(userId, deviceId(), acting);
   client.start();
   current = { userId, client };
   return client;

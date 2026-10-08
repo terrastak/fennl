@@ -16,7 +16,7 @@ async function adminAccount(env: Env, userId: string) {
 }
 
 /** Emails the owner (ADMIN_ALERT_EMAIL) about something an admin account did. */
-async function alertOwner(env: Env, subject: string, lines: string[], request?: Request) {
+export async function alertOwner(env: Env, subject: string, lines: string[], request?: Request) {
   if (!env.ADMIN_ALERT_EMAIL) return;
   const where = request
     ? [

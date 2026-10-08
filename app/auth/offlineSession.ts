@@ -12,7 +12,8 @@ const KEY = "fennl:last-session";
 /** The parts of the session the app's frame uses. */
 export interface AppSession {
   user: { id: string; name: string; email: string; mustChangePassword?: boolean | null };
-  session: { id: string };
+  /** impersonatedBy and expiresAt: an admin acting as this person (phase C12). */
+  session: { id: string; impersonatedBy?: string | null; expiresAt?: string | Date | null };
 }
 
 function remember(session: AppSession) {
@@ -65,7 +66,10 @@ export function useAppSession() {
   const { data, isPending, error } = result;
 
   useEffect(() => {
-    if (data) remember(data as AppSession);
+    // An admin acting as someone (phase C12) leaves nothing behind for an offline start.
+    if (data) {
+      if (!(data as AppSession).session.impersonatedBy) remember(data as AppSession);
+    }
     // The server said nobody is signed in here: forget whoever was.
     else if (!isPending && !error) forget();
   }, [data, isPending, error]);

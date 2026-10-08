@@ -64,6 +64,8 @@ export async function checkAdmin(
   if (!result) return { ok: false, status: 401, body: { error: "signed_out" } };
 
   const { user, session } = result;
+  // Acting as someone (phase C12): the console waits until that's stopped.
+  if (session.impersonatedBy) return { ok: false, status: 403, body: { error: "impersonating" } };
   if (user.role !== "admin") return { ok: false, status: 403, body: { error: "not_admin" } };
 
   const db = database(env.DB);

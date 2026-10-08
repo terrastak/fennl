@@ -1,4 +1,5 @@
 import { createMiddleware } from "hono/factory";
+import { recordChange, refusedWhileImpersonating } from "../admin/impersonation";
 import { createAuth } from "../auth/auth";
 import { database, type Database } from "../db/client";
 import { householdForSession, type HouseholdAccess } from "./household";
@@ -9,7 +10,10 @@ export interface SignedIn {
   household: HouseholdAccess;
   /** The sign-in session making this request. */
   sessionId: string;
-  /** An admin is using this account (phase C12): it never registers as a device. */
+  /**
+   * An admin is acting as this person (phase C12): it never registers as a device, saves go
+   * straight to the server, and every change is in the admin log.
+   */
   impersonating: boolean;
 }
 
@@ -25,8 +29,25 @@ export const requireHousehold = createMiddleware<{
   const auth = await createAuth(c.env, c.req.raw);
   const result = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!result) return c.json({ error: "unauthorized" }, 401);
-  // A temporary password from support must be replaced before anything else (phase B7).
-  if (result.user.mustChangePassword) return c.json({ error: "password_change_required" }, 403);
+  const actingAdmin = result.session.impersonatedBy;
+  // A temporary password from support must be replaced before anything else (phase B7), by the
+  // person: an admin acting as them can still look around.
+  if (result.user.mustChangePassword && !actingAdmin) {
+    return c.json({ error: "password_change_required" }, 403);
+  }
+  if (actingAdmin) {
+    // Phase C12: some things are for the console's own tools; every other change is recorded
+    // under the admin first (no record, no change).
+    if (refusedWhileImpersonating(c.req.method, new URL(c.req.url).pathname)) {
+      return c.json({ error: "not_while_impersonating" }, 403);
+    }
+    try {
+      await recordChange(c.env, c.req, actingAdmin, result.user.id);
+    } catch (error) {
+      console.error("Couldn't record a change made while acting as someone", error);
+      return c.json({ error: "not_recorded" }, 503);
+    }
+  }
 
   const db = database(c.env.DB);
   const household = await householdForSession(
@@ -40,7 +61,7 @@ export const requireHousehold = createMiddleware<{
     userId: result.user.id,
     household,
     sessionId: result.session.id,
-    impersonating: Boolean(result.session.impersonatedBy),
+    impersonating: Boolean(actingAdmin),
   });
   await next();
 });

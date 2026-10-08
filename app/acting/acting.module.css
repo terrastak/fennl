@@ -1,0 +1,36 @@
+/* The "Acting as …" bar (phase C12): hard to miss, on every page. */
+
+.banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin: 0 0 var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border: 3px solid var(--color-danger);
+  border-radius: var(--radius-lg);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.banner p {
+  flex: 1 1 18rem;
+  margin: 0;
+}
+
+.banner button {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.banner button:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}

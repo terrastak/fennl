@@ -139,16 +139,20 @@ export class SyncEngine {
   private releases = 0;
   private cleanup: (() => void)[] = [];
 
+  /**
+   * acting: an admin is acting as this person (phase C12). Their copy is kept apart from the
+   * person's own and starts empty, changes are never queued (saves go straight to the server),
+   * and nothing about the account is remembered in this browser.
+   */
   constructor(
     private readonly userId: string,
     private readonly deviceId: string,
     private readonly events: EngineEvents,
+    private readonly acting = false,
   ) {
-    this.status = {
-      ...STARTING,
-      offlineEnabled: rememberedPlan(userId),
-      usage: rememberedUsage(userId),
-    };
+    this.status = acting
+      ? STARTING
+      : { ...STARTING, offlineEnabled: rememberedPlan(userId), usage: rememberedUsage(userId) };
   }
 
   private setStatus(next: Partial<SyncStatus>) {
@@ -170,7 +174,7 @@ export class SyncEngine {
   /** The household's usage, from the server's latest answer (phase C11). */
   private heard(usage: Usage | undefined) {
     if (!usage) return;
-    rememberUsage(this.userId, usage);
+    if (!this.acting) rememberUsage(this.userId, usage);
     this.setStatus({ usage });
     // Room again: what was held goes with the next send.
     if (this.heldRecipes.size > 0 && !addBlockedBy(usage) && this.releases < RELEASES_PER_SYNC) {
@@ -185,7 +189,12 @@ export class SyncEngine {
   async start(): Promise<void> {
     for (let attempt = 0; ; attempt++) {
       try {
-        await this.db.call({ op: "open", userId: this.userId });
+        await this.db.call({
+          op: "open",
+          userId: this.userId,
+          file: this.acting ? `acting-${this.userId}` : this.userId,
+        });
+        if (this.acting) await this.db.call({ op: "wipe" });
         break;
       } catch (error) {
         if (!(error instanceof LocalDbError) || !error.busy || attempt >= 30 || this.stopped) {
@@ -254,6 +263,7 @@ export class SyncEngine {
 
   /** The plan decides whether changes may wait (offline_enabled). Never trusted by the server. */
   private async loadPlan() {
+    if (this.acting) return;
     try {
       const plan = (await request("/api/entitlements")) as Entitlements;
       rememberPlan(this.userId, plan.offline_enabled);
@@ -296,6 +306,13 @@ export class SyncEngine {
     this.events.changed();
     if (this.sendTimer) clearTimeout(this.sendTimer);
     this.sendTimer = setTimeout(() => void this.sync(), SEND_AFTER_MS);
+  }
+
+  /** Empties this browser's copy (an admin's, when they stop acting as someone). */
+  async wipe(): Promise<void> {
+    this.outbox = [];
+    await this.db.call({ op: "wipe" });
+    this.stop();
   }
 
   listRecipes(): Promise<RecipeSummary[]> {
