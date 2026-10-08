@@ -1,0 +1,478 @@
+/* The recipe list and recipe page (phase C5). Tokens only (docs/design/design-direction.md). */
+
+/* --- List ------------------------------------------------------------------------------- */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.sort {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-muted);
+}
+
+.select {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-regular);
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-5);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primary {
+  border: 1px solid var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.primary:hover {
+  background: var(--color-accent-hover);
+  color: var(--color-on-accent);
+}
+
+.secondary {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondary:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.primary:disabled,
+.secondary:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.textButton {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.quickAdd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  max-width: 44rem;
+  margin-bottom: var(--space-6);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+}
+
+.field {
+  display: grid;
+  flex: 1 1 16rem;
+  gap: var(--space-2);
+}
+
+.field label {
+  font-weight: var(--weight-semibold);
+}
+
+.input {
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+  text-decoration: none;
+  transition: box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.card:hover {
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+}
+
+/* Until photos (phase D2): a soft block with the recipe's first letter. */
+.cover {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 16 / 10;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-4xl);
+}
+
+.cardBody {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+}
+
+.cardTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-lg);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.cardMeta {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.cardBy {
+  font-family: var(--font-hand);
+  font-size: var(--text-xl);
+  color: var(--color-hand);
+  line-height: 1;
+}
+
+/* --- Empty state: ghosted cards behind a quiet invitation -------------------------------- */
+
+.empty {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 26rem;
+  padding: var(--space-8) 0;
+}
+
+.ghosts {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-4);
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 90%);
+}
+
+.ghost {
+  height: 11rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  opacity: 0.6;
+}
+
+.emptyText {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+  max-width: 30rem;
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  background: var(--color-bg);
+  box-shadow: 0 0 2rem 2rem var(--color-bg);
+  text-align: center;
+}
+
+.emptyText h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.emptyText p {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-3);
+}
+
+.footnote {
+  margin-top: var(--space-8);
+}
+
+/* --- Recipe page ------------------------------------------------------------------------ */
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  font-weight: var(--weight-medium);
+}
+
+.recipeHeader {
+  max-width: 48rem;
+  margin-bottom: var(--space-6);
+}
+
+.byPerson {
+  margin: 0 0 var(--space-1);
+  font-family: var(--font-hand);
+  font-size: var(--text-hand);
+  color: var(--color-hand);
+  line-height: 1;
+}
+
+.recipeTitle {
+  margin: 0;
+  font-size: var(--text-3xl);
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 900px) {
+  .recipeTitle {
+    font-size: var(--text-4xl);
+  }
+}
+
+.headnote {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-lg);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-4) 0 0;
+}
+
+.facts div {
+  display: grid;
+}
+
+.facts dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.people {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stars {
+  color: var(--color-warm-text);
+  letter-spacing: 0.05em;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chips li {
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-sm);
+}
+
+.made {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-5) 0 0;
+}
+
+.made p {
+  margin: 0;
+}
+
+.columns {
+  display: grid;
+  gap: var(--space-6);
+  margin-bottom: var(--space-8);
+}
+
+@media (min-width: 900px) {
+  .columns {
+    grid-template-columns: minmax(16rem, 2fr) 3fr;
+    align-items: start;
+  }
+}
+
+.panel {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.panel h2,
+.method h2,
+.section h2 {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-2xl);
+}
+
+.subheading {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+/* Space between sections ("For the crust:", "For the filling:"). */
+.group + .group {
+  margin-top: var(--space-6);
+}
+
+.ingredients {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ingredients li {
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+/* Numbered steps; numbering carries on across sections (each list's start attribute). */
+.steps {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding-left: 2rem;
+}
+
+.steps li {
+  padding-left: var(--space-2);
+}
+
+.steps li::marker {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-lg);
+  color: var(--color-accent);
+}
+
+.section {
+  max-width: 48rem;
+  margin-bottom: var(--space-8);
+}
+
+.notes {
+  margin: 0 0 var(--space-4);
+  white-space: pre-wrap;
+}
+
+.signed {
+  margin: 0 0 var(--space-4);
+}
+
+.signed p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.signature {
+  font-family: var(--font-hand);
+  font-size: var(--text-xl);
+  color: var(--color-hand);
+}
+
+.nutrition {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+}
+
+.nutrition dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.nutrition dd {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.danger {
+  margin-top: var(--space-8);
+}

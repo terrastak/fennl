@@ -1,5 +1,5 @@
 import type { SyncChange } from "../../shared/sync";
-import type { RecipeSummary } from "./dbProtocol";
+import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { SyncEngine } from "./engine";
 import { STARTING, type SyncStatus } from "./status";
 
@@ -12,6 +12,7 @@ import { STARTING, type SyncStatus } from "./status";
 interface Calls {
   save: { args: [SyncChange]; result: undefined };
   listRecipes: { args: []; result: RecipeSummary[] };
+  getRecipe: { args: [string]; result: RecipeDetail | null };
   syncNow: { args: []; result: undefined };
 }
 type CallName = keyof Calls;
@@ -98,6 +99,10 @@ export class SyncClient {
     return this.call("listRecipes", []);
   }
 
+  getRecipe(id: string) {
+    return this.call("getRecipe", [id]);
+  }
+
   syncNow() {
     return this.call("syncNow", []);
   }
@@ -141,6 +146,8 @@ export class SyncClient {
         return engine.save(args[0] as SyncChange);
       case "listRecipes":
         return engine.listRecipes();
+      case "getRecipe":
+        return engine.getRecipe(args[0] as string);
       case "syncNow":
         return engine.sync();
     }

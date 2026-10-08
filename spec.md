@@ -563,11 +563,21 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. A few sample recipes you can add to try it out.
 - **You check**: Add the sample recipes; browse on phone and desktop.
 - **Done when**: Pages pass accessibility and keyboard tests.
+- **Built (2026-10-08)** (`app/pages/RecipesPage.tsx`, `app/recipes/`):
+  - **List**: cards with a placeholder cover (the title's first letter, until photos in D2), title, categories and total time, "Not synced yet" while waiting, and in a shared household the name of whoever added it (handwritten). Sort by title, newest or recently changed, remembered on the device. "Add recipe" asks for a title for now; the editor (C6) takes over.
+  - **Empty state** as designed: ghosted cards fading out behind "Your recipe box is empty, for now", **Add recipe** and **Import**, plus "Or add 4 sample recipes to try".
+  - **Sample recipes**: four written for Fennl (Green Chile Stew, Buttermilk Pancakes, Black Bean Tacos with Lime Crema, Lemon Olive Oil Cake), with section headings, times, servings, a person as source, nutrition on one, and categories (including Diet › Vegetarian and Desserts › Cakes). They're ordinary recipes in the account.
+  - **Recipe page** (`/recipes/<id>`): the source person's name (handwritten) above the title, headnote, prep/cook/total, makes, difficulty, categories, ingredients in a card with section headings, numbered method that carries on across sections, notes then each person's signed note, nutrition per serving with where it came from, and the source. Ratings, favorites and "Added by" show only when there's something to show (and "Added by" only in a shared household).
+  - **Made it**: "Last made Oct 3 by Sam" (shared by the household), "Made it today", and Undo for your own of today. **Move to Trash** at the bottom (restoring comes with Trash, C9).
+  - Fixed on the way: asking the local copy for one recipe could get the wrong ID (a clash in the message's field names).
+  - **Not yet**: setting your own rating, favorite and note (C6); the Mine / Partner's / All filter (with sharing, G1).
+  - **Tests**: formatting and samples (unit); browser tests at computer and phone sizes for the empty state and samples, sorting, the recipe page and Made it (kept after a reload, undo), ratings/favorites/signed notes when present, keyboard use, and a missing recipe, with accessibility checks.
 
 ### C6. Recipe editor (text)
 - **Goal**: Create and edit recipes by hand.
 - **Steps**:
   1. Fields for everything in C1 except photos, links, and nutrition (later phases).
+  1b. Your own rating, favorite and signed note on the recipe page (shown since C5).
   2. Ingredient and direction editors: one text box each (C1), with a heading button and a live preview showing how each line was understood.
   3. Autosave through the sync engine; in-session undo.
   4. Keyboard-efficient: no mouse needed to add, reorder, or remove lines.
@@ -1023,5 +1033,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C2 | Done 2026-10-07 (merged; tested on the owner's Mac, iPhone and Windows PC: SQLite on OPFS confirmed) |
 | C3 | Done 2026-10-07 (merged; live) |
 | C4 | Done 2026-10-07 (merged; the owner checked syncing between a Mac and an iPhone) |
-| C4b | Approved 2026-10-07; built, waiting for review |
+| C4b | Done 2026-10-08 (merged; the owner opened Fennl offline on an iPhone and synced afterwards) |
+| C5 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

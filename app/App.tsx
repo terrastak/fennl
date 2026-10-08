@@ -19,6 +19,7 @@ import { ImportPage } from "./pages/ImportPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { RecipePage } from "./recipes/RecipePage";
 import { AppShell } from "./shell/AppShell";
 import { syncClientFor } from "./sync/useSync";
 
@@ -115,6 +116,16 @@ export function App() {
   // Keep this browser's copy of the recipe box in step with the account (phase C4). Starts
   // once per account; the same client is returned on every render.
   syncClientFor(session.user.id);
+
+  // A recipe's page: /recipes/<its ID> (phase C5).
+  const recipeId = /^\/recipes\/([0-9a-f-]{36})$/i.exec(path)?.[1];
+  if (recipeId) {
+    return (
+      <AppShell path={path} title="Recipe">
+        <RecipePage id={recipeId} />
+      </AppShell>
+    );
+  }
 
   const { title, Page } = ROUTES[path] ?? NOT_FOUND;
   return (

@@ -1,7 +1,23 @@
 import sqlite3InitModule, { type Database } from "@sqlite.org/sqlite-wasm";
-import { RECIPE_SCHEMA_VERSION, type Recipe } from "../../shared/recipe";
+import {
+  CATEGORY_SEPARATOR,
+  RECIPE_SCHEMA_VERSION,
+  type Category,
+  type Recipe,
+  type RecipeCategory,
+  type RecipeMade,
+  type RecipeOpinion,
+} from "../../shared/recipe";
 import type { PullResponse, SyncChange } from "../../shared/sync";
-import type { DbRequest, DbResponse, DbResults, OutboxEntry, RecipeSummary } from "./dbProtocol";
+import type {
+  DbRequest,
+  DbResponse,
+  DbResults,
+  Member,
+  OutboxEntry,
+  RecipeDetail,
+  RecipeSummary,
+} from "./dbProtocol";
 import {
   keyOf,
   ownerOfRecord,
@@ -219,23 +235,105 @@ function applyPull(page: PullResponse, now: string) {
   });
 }
 
+/** The values of one kind of record (left out: those with nothing to show). */
+function values<T>(kind: RecordKind, where = "", bind: string[] = []): T[] {
+  return (
+    database().selectValues(
+      `select data from record where kind = ? and data is not null ${where}`,
+      [kind, ...bind],
+    ) as string[]
+  ).map((text) => JSON.parse(text) as T);
+}
+
+/** Category paths ("Desserts › Cakes") by category ID, for categories not deleted. */
+function categoryPaths(): Map<string, string> {
+  const categories = new Map(
+    values<Category>("category")
+      .filter((c) => !c.deletedAt)
+      .map((c) => [c.id, c]),
+  );
+  const paths = new Map<string, string>();
+  for (const category of categories.values()) {
+    const names: string[] = [];
+    let at: Category | undefined = category;
+    // A parent that's missing (or a loop) ends the path there.
+    for (let depth = 0; at && depth < 20; depth++) {
+      names.unshift(at.name);
+      at = at.parentId ? categories.get(at.parentId) : undefined;
+    }
+    paths.set(category.id, names.join(CATEGORY_SEPARATOR));
+  }
+  return paths;
+}
+
+/** Each recipe's category paths, sorted. */
+function recipeCategories(recipeId?: string): Map<string, string[]> {
+  const paths = categoryPaths();
+  const links = recipeId
+    ? values<RecipeCategory>("recipeCategory", "and key like ?", [`${recipeId}|%`])
+    : values<RecipeCategory>("recipeCategory");
+  const byRecipe = new Map<string, string[]>();
+  for (const link of links) {
+    const path = paths.get(link.categoryId);
+    if (link.deletedAt || !path) continue;
+    byRecipe.set(link.recipeId, [...(byRecipe.get(link.recipeId) ?? []), path]);
+  }
+  for (const list of byRecipe.values()) list.sort((a, b) => a.localeCompare(b));
+  return byRecipe;
+}
+
 function listRecipes(): RecipeSummary[] {
   const d = database();
-  const rows = d.selectArrays(
-    `select r.data, exists (select 1 from outbox o where o.kind = 'recipe' and o.key = r.key)
-     from record r where r.kind = 'recipe' and r.data is not null`,
-  ) as [string, number][];
-  return rows
-    .map(([data, waiting]) => ({ recipe: JSON.parse(data) as Recipe, waiting: Boolean(waiting) }))
-    .filter(({ recipe }) => !recipe.deletedAt)
-    .map(({ recipe, waiting }) => ({
+  const waiting = new Set(
+    d.selectValues("select distinct key from outbox where kind = 'recipe'") as string[],
+  );
+  const categories = recipeCategories();
+  const names = new Map(members().map((m) => [m.userId, m.name]));
+  return values<Recipe>("recipe")
+    .filter((recipe) => !recipe.deletedAt)
+    .map((recipe) => ({
       id: recipe.id,
       title: recipe.title,
       ownerUserId: recipe.ownerUserId,
+      createdAt: recipe.createdAt,
       updatedAt: recipe.updatedAt,
-      waiting,
+      totalMinutes: recipe.times.total.minutes,
+      categories: categories.get(recipe.id) ?? [],
+      addedBy: recipe.ownerUserId === userId ? null : (names.get(recipe.ownerUserId) ?? null),
+      waiting: waiting.has(recipe.id),
     }))
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+}
+
+function members(): Member[] {
+  const rows = database().selectArrays("select user_id, name from member order by position") as [
+    string,
+    string,
+  ][];
+  return rows.map(([memberId, name]) => ({ userId: memberId, name }));
+}
+
+function getRecipe(id: string): RecipeDetail | null {
+  const d = database();
+  const data = d.selectValue(
+    "select data from record where kind = 'recipe' and key = ? and data is not null",
+    [id],
+  ) as string | undefined;
+  if (!data) return null;
+  return {
+    recipe: JSON.parse(data) as Recipe,
+    waiting: Boolean(
+      d.selectValue("select exists (select 1 from outbox where kind = 'recipe' and key = ?)", [id]),
+    ),
+    opinions: values<RecipeOpinion>("opinion", "and key like ?", [`${id}|%`]).filter(
+      (o) => !o.deletedAt,
+    ),
+    made: values<RecipeMade>("made")
+      .filter((m) => m.recipeId === id && !m.deletedAt)
+      .sort((a, b) => b.madeOn.localeCompare(a.madeOn) || b.updatedAt.localeCompare(a.updatedAt)),
+    categories: recipeCategories(id).get(id) ?? [],
+    members: members(),
+  };
 }
 
 function wipe() {
@@ -279,6 +377,9 @@ scope.onmessage = (event) => {
           break;
         case "listRecipes":
           value = listRecipes();
+          break;
+        case "getRecipe":
+          value = getRecipe(request.recipeId);
           break;
         case "wipe":
           wipe();
