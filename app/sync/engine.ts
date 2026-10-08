@@ -1,12 +1,13 @@
 import type { Entitlements } from "../../shared/entitlements";
+import { addBlockedBy, type Usage } from "../../shared/limits";
 import { RECIPE_SCHEMA_VERSION } from "../../shared/recipe";
 import {
   SYNC_RULES,
   checkChange,
   formatCursors,
-  type ChangeResult,
   type PullResponse,
   type PushRequest,
+  type PushResponse,
   type SyncChange,
 } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
@@ -81,6 +82,36 @@ function rememberPlan(userId: string, offlineEnabled: boolean) {
   }
 }
 
+/** The recipe a change is about, if any. */
+function recipeOf(change: SyncChange): string | null {
+  if (change.kind === "recipe") return change.id;
+  if (change.kind === "category") return null;
+  return change.recipeId;
+}
+
+/** Times held changes are sent again in one go, at most (they converge well before). */
+const RELEASES_PER_SYNC = 3;
+
+/** The household's usage as last heard (phase C11), so a reload knows it before the first sync. */
+const usageKey = (userId: string) => `fennl:usage:${userId}`;
+
+function rememberedUsage(userId: string): Usage | null {
+  try {
+    const text = localStorage.getItem(usageKey(userId));
+    return text ? (JSON.parse(text) as Usage) : null;
+  } catch {
+    return null;
+  }
+}
+
+function rememberUsage(userId: string, usage: Usage) {
+  try {
+    localStorage.setItem(usageKey(userId), JSON.stringify(usage));
+  } catch {
+    // Not kept: known again at the next sync.
+  }
+}
+
 export interface EngineEvents {
   status(status: SyncStatus): void;
   /** The local copy changed: lists should read it again. */
@@ -99,6 +130,13 @@ export class SyncEngine {
   private sendTimer: ReturnType<typeof setTimeout> | null = null;
   /** When the last change was made here (see save). */
   private lastChangedAt = 0;
+  /**
+   * New recipes the server turned away for a plan limit (phase C11), and every change for them.
+   * They exist only here, so they're kept (not dropped like other refusals) and sent again once
+   * the household has room. Forgotten on reload, when they're simply tried again.
+   */
+  private heldRecipes = new Set<string>();
+  private releases = 0;
   private cleanup: (() => void)[] = [];
 
   constructor(
@@ -106,12 +144,41 @@ export class SyncEngine {
     private readonly deviceId: string,
     private readonly events: EngineEvents,
   ) {
-    this.status = { ...STARTING, offlineEnabled: rememberedPlan(userId) };
+    this.status = {
+      ...STARTING,
+      offlineEnabled: rememberedPlan(userId),
+      usage: rememberedUsage(userId),
+    };
   }
 
   private setStatus(next: Partial<SyncStatus>) {
-    this.status = { ...this.status, ...next, pending: this.outbox.length };
+    const held = this.outbox.filter((e) => this.isHeld(e)).length;
+    this.status = { ...this.status, ...next, pending: this.outbox.length - held, held };
     this.events.status(this.status);
+  }
+
+  private isHeld(entry: OutboxEntry): boolean {
+    const recipe = recipeOf(entry.change);
+    return recipe !== null && this.heldRecipes.has(recipe);
+  }
+
+  /** Changes to send now: everything waiting but what's held for a plan limit. */
+  private sendable(): OutboxEntry[] {
+    return this.outbox.filter((e) => !this.isHeld(e));
+  }
+
+  /** The household's usage, from the server's latest answer (phase C11). */
+  private heard(usage: Usage | undefined) {
+    if (!usage) return;
+    rememberUsage(this.userId, usage);
+    this.setStatus({ usage });
+    // Room again: what was held goes with the next send.
+    if (this.heldRecipes.size > 0 && !addBlockedBy(usage) && this.releases < RELEASES_PER_SYNC) {
+      this.releases += 1;
+      this.heldRecipes.clear();
+      this.setStatus({});
+      this.again = true;
+    }
   }
 
   /** Opens the local copy (waiting for a tab that just closed to let go of it), then syncs. */
@@ -258,14 +325,15 @@ export class SyncEngine {
    */
   async emptyTrash(recipeIds?: string[]): Promise<number> {
     // A sync may already be running (then sync() only asks for another): wait for it, briefly.
-    for (let i = 0; i < 20 && (this.running || this.outbox.length > 0); i++) {
+    // Held new recipes (phase C11) aren't in Trash, so they needn't wait.
+    for (let i = 0; i < 20 && (this.running || this.sendable().length > 0); i++) {
       await this.sync();
-      if (this.running || this.outbox.length > 0) {
+      if (this.running || this.sendable().length > 0) {
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
       if (this.status.phase === "offline") break;
     }
-    if (this.outbox.length > 0) throw new Error("Changes are still waiting to be sent.");
+    if (this.sendable().length > 0) throw new Error("Changes are still waiting to be sent.");
     const answer = (await request("/api/trash/empty", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -283,6 +351,7 @@ export class SyncEngine {
       return;
     }
     this.running = true;
+    this.releases = 0;
     try {
       do {
         this.again = false;
@@ -334,31 +403,44 @@ export class SyncEngine {
   }
 
   private async push() {
-    if (this.outbox.length === 0) return;
+    const waiting = this.sendable();
+    if (waiting.length === 0) return;
     const margin = 64 * 1024;
     for (const batch of batches(
-      [...this.outbox],
+      waiting,
       SYNC_RULES.changesPerPush,
       SYNC_RULES.pushBytes - margin,
     )) {
-      const { results } = (await request("/api/sync/push", {
+      const { results, usage } = (await request("/api/sync/push", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify(this.pushBody(batch)),
-      })) as { results: ChangeResult[] };
-      // Kept, already there, or refused for good: no longer waiting. A failed save stays.
-      const done = batch.filter((_, i) => {
+      })) as PushResponse;
+      // Kept, already there, or refused for good: no longer waiting. A failed save stays, and so
+      // does a new recipe turned away for a plan limit (with everything for it).
+      let failed = false;
+      const done = batch.filter((entry, i) => {
         const result = results[i];
-        if (result?.status === "rejected" && result.reason !== "failed") {
-          console.warn("The server refused a change", result, batch[i]?.change);
+        if (result?.status !== "rejected") return true;
+        if (result.reason === "failed") {
+          failed = true;
+          return false;
         }
-        return !(result?.status === "rejected" && result.reason === "failed");
+        const recipe = recipeOf(entry.change);
+        const isNew = entry.change.kind === "recipe" && entry.change.create !== undefined;
+        if (result.reason === "limit" && recipe && (isNew || this.heldRecipes.has(recipe))) {
+          this.heldRecipes.add(recipe);
+          return false;
+        }
+        console.warn("The server refused a change", result, entry.change);
+        return true;
       });
       await this.db.call({ op: "ack", seqs: done.map((e) => e.seq) });
       const sent = new Set(done.map((e) => e.seq));
       this.outbox = this.outbox.filter((e) => !sent.has(e.seq));
       this.setStatus({});
-      if (done.length < batch.length) throw new SyncProblem("waiting");
+      this.heard(usage);
+      if (failed) throw new SyncProblem("waiting");
     }
   }
 
@@ -373,16 +455,18 @@ export class SyncEngine {
       const pulled = (await request(`/api/sync/pull?${query.toString()}`)) as PullResponse;
       await this.db.call({ op: "applyPull", page: pulled, now: new Date().toISOString() });
       cursors = pulled.cursors;
+      this.heard(pulled.usage);
       if (!pulled.more) return;
       this.events.changed();
     }
   }
 
   private flushOnClose() {
-    if (this.outbox.length === 0) return;
+    const waiting = this.sendable();
+    if (waiting.length === 0) return;
     const fits: OutboxEntry[] = [];
     let bytes = 512;
-    for (const entry of this.outbox) {
+    for (const entry of waiting) {
       const size = JSON.stringify(entry.change).length + 1;
       if (bytes + size > KEEPALIVE_BYTES) break;
       fits.push(entry);

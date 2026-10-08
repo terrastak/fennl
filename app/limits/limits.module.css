@@ -1,0 +1,70 @@
+/* Usage bars (phase C11). */
+
+.meter {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-4);
+}
+
+.meterText {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.track {
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-soft);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.near .fill,
+.full .fill {
+  background: var(--color-warm);
+}
+
+.over .fill {
+  background: var(--color-danger);
+}
+
+.note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  margin: 0 0 var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.note .meter {
+  flex: 1 1 12rem;
+  max-width: 18rem;
+  margin: 0;
+}
+
+.note p {
+  margin: 0;
+}
+
+.blocked {
+  flex: 1 1 100%;
+}
+
+.blocked:focus {
+  outline: none;
+}
+
+.blocked:focus-visible {
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+}

@@ -1,3 +1,5 @@
+import type { Usage } from "../../shared/limits";
+
 /** Where syncing stands, shared by every open tab (phase C4). */
 
 export type SyncPhase =
@@ -26,6 +28,13 @@ export interface SyncStatus {
   offlineEnabled: boolean;
   /** When the last full sync finished. */
   lastSyncedAt: string | null;
+  /** The household's recipe usage and limits, as last heard from the server (phase C11). */
+  usage: Usage | null;
+  /**
+   * Changes to new recipes the server turned away for a plan limit (phase C11). They stay here,
+   * not counted in `pending`, and are sent again once there's room.
+   */
+  held: number;
 }
 
 export const STARTING: SyncStatus = {
@@ -33,6 +42,8 @@ export const STARTING: SyncStatus = {
   pending: 0,
   offlineEnabled: false,
   lastSyncedAt: null,
+  usage: null,
+  held: 0,
 };
 
 /**

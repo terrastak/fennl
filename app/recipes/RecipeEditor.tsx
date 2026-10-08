@@ -16,8 +16,11 @@ import {
   type RecipeSource,
   type SourceKind,
 } from "../../shared/recipe";
+import { addBlockedBy, type AddLimit } from "../../shared/limits";
 import type { RecipeChange } from "../../shared/sync";
 import { RecipeCategories } from "../categories/RecipeCategories";
+import { NOTHING_LOST, TOO_LARGE_TEXT, addBlockedText } from "../limits/limitText";
+import { useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
@@ -45,6 +48,7 @@ const SAVE_TEXT: Record<SaveState, string> = {
   problems: "Fix the marked fields to save them",
   paused: "Waiting for a connection to save",
   failed: "Couldn’t save just now; trying again",
+  too_large: "Too large to save",
 };
 
 const SOURCE_KIND_NAMES: Record<SourceKind, string> = {
@@ -380,10 +384,14 @@ function Editor({
 }) {
   const [session] = useState(() => new EditorSession({ id, initial, save: saveChange }));
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
-  const editable = canEdit(useSyncStatus());
+  const status = useSyncStatus();
+  const editable = canEdit(status);
+  const maxBytes = status.usage?.maxRecipeBytes ?? null;
   const titleBox = useRef<HTMLInputElement>(null);
+  const tooLargeNotice = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => session.setEditable(editable), [session, editable]);
+  useEffect(() => session.setMaxBytes(maxBytes), [session, maxBytes]);
   useEffect(() => {
     if (incoming) session.receive(incoming);
   }, [session, incoming]);
@@ -415,6 +423,8 @@ function Editor({
 
   const done = async () => {
     await session.flush();
+    // Leaving would lose what can't be saved.
+    if (session.getSnapshot().tooLarge) return tooLargeNotice.current?.focus();
     const problem = document.querySelector<HTMLElement>("[aria-invalid='true']");
     if (problem) return problem.focus();
     navigate(session.getSnapshot().created ? `/recipes/${id}` : "/");
@@ -460,6 +470,11 @@ function Editor({
       {!editable ? (
         <p className={editor.notice} role="status">
           Editing is paused until this device is back online. Nothing you&rsquo;ve typed is lost.
+        </p>
+      ) : null}
+      {state.tooLarge ? (
+        <p className={editor.notice} role="alert" tabIndex={-1} ref={tooLargeNotice}>
+          {TOO_LARGE_TEXT}
         </p>
       ) : null}
 
@@ -602,12 +617,38 @@ function Editor({
 /** The editor's page: waits for the local copy, then edits the recipe (or starts a new one). */
 export function RecipeEditor({ id, isNew }: { id: string; isNew: boolean }) {
   const detail = useRecipe(id);
+  const usage = useUsage();
   // What the editor starts from is fixed when it opens; later copies arrive through receive().
-  const [start, setStart] = useState<{ initial: EditorState["draft"] | null } | null>(null);
+  // So is whether a new recipe can be added (phase C11): saving it mustn't close the editor.
+  const [start, setStart] = useState<{
+    initial: EditorState["draft"] | null;
+    blocked: AddLimit | null;
+  } | null>(null);
   if (start === null && detail !== undefined && (detail || isNew)) {
-    setStart({ initial: detail?.recipe ?? null });
+    setStart({
+      initial: detail?.recipe ?? null,
+      blocked: !detail && usage ? addBlockedBy(usage) : null,
+    });
   }
 
+  if (start?.blocked && usage) {
+    return (
+      <>
+        <Link href="/" className={styles.back}>
+          ← All recipes
+        </Link>
+        <h1 tabIndex={-1} className={styles.recipeTitle}>
+          No room for a new recipe
+        </h1>
+        <p>
+          {addBlockedText(start.blocked, usage)} {NOTHING_LOST}
+        </p>
+        <p>
+          <Link href="/settings#usage">Recipe storage</Link> · <Link href="/trash">Trash</Link>
+        </p>
+      </>
+    );
+  }
   if (start) {
     if (detail?.recipe.deletedAt) {
       return (

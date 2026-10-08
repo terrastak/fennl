@@ -1,6 +1,8 @@
+import { tooLarge } from "../../shared/limits";
 import {
   RECIPE_FIELDS,
   emptyRecipeContent,
+  recipeBytes,
   recipeIssues,
   type RecipeContent,
   type RecipeField,
@@ -87,7 +89,9 @@ export type SaveState =
   /** Editing is paused (no connection, without offline editing); changes save when it's back. */
   | "paused"
   /** Saving failed; it will be tried again. */
-  | "failed";
+  | "failed"
+  /** The recipe is over the plan's per-recipe size (phase C11): nothing saves until it shrinks. */
+  | "too_large";
 
 export interface EditorState {
   draft: RecipeContent;
@@ -96,6 +100,8 @@ export interface EditorState {
   created: boolean;
   /** Every problem with what's typed, for showing beside the fields. */
   issues: RecipeIssue[];
+  /** Bigger than the plan's per-recipe size, and bigger than what's saved (phase C11). */
+  tooLarge: boolean;
   save: SaveState;
   canUndo: boolean;
   canRedo: boolean;
@@ -128,6 +134,8 @@ export class EditorSession {
   private saved: RecipeContent;
   private created: boolean;
   private undoStack: Partial<RecipeContent>[] = [];
+  /** The plan's per-recipe size (max_recipe_bytes); null: no limit, or not known yet. */
+  private maxBytes: number | null = null;
   private redoStack: Partial<RecipeContent>[] = [];
   private editable = true;
   private failed = false;
@@ -267,6 +275,22 @@ export class EditorSession {
     this.boxes = boxes;
   }
 
+  /** The plan's per-recipe size, from the sync engine (phase C11). */
+  setMaxBytes(maxBytes: number | null): void {
+    if (maxBytes === this.maxBytes) return;
+    this.maxBytes = maxBytes;
+    this.publish();
+    this.schedule(this.delayMs);
+  }
+
+  /**
+   * Over the per-recipe size: nothing saves until it's back under (or no bigger than what's
+   * saved, for a recipe that was already over it). Recipes this big are very rare.
+   */
+  private tooLarge(): boolean {
+    return tooLarge(recipeBytes(this.draft), recipeBytes(this.saved), this.maxBytes);
+  }
+
   /** Fields with a problem, which wait until it's fixed. */
   private blocked(issues: RecipeIssue[]): Set<string> {
     return new Set(issues.map((issue) => issue.path.split(".")[0] ?? ""));
@@ -279,7 +303,7 @@ export class EditorSession {
   }
 
   private async commitNow(mode: "edit" | "history"): Promise<void> {
-    if (!this.editable) return;
+    if (!this.editable || this.tooLarge()) return;
     const draft = this.draft;
     const base = this.saved;
     const blocked = this.blocked(recipeIssues(draft, null));
@@ -337,8 +361,10 @@ export class EditorSession {
     const unsavedOk = this.created
       ? changedFields(this.saved, this.draft).some((field) => !blocked.has(field))
       : !blocked.has("title");
+    const tooLarge = unsaved && this.tooLarge();
     let save: SaveState = "saved";
-    if (!this.created && blocked.has("title")) save = "needs_title";
+    if (tooLarge) save = "too_large";
+    else if (!this.created && blocked.has("title")) save = "needs_title";
     else if (unsavedOk || this.busy) {
       save = !this.editable ? "paused" : this.failed ? "failed" : "saving";
     } else if (unsaved) save = "problems";
@@ -347,6 +373,7 @@ export class EditorSession {
       boxes: this.boxes,
       created: this.created,
       issues,
+      tooLarge,
       save,
       canUndo: this.undoStack.length > 0 || (this.created && unsavedOk),
       canRedo: this.redoStack.length > 0,

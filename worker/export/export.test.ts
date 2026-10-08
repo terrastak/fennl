@@ -8,7 +8,13 @@ import {
 } from "../../shared/exportFormat";
 import { RECIPE_SCHEMA_VERSION, emptyRecipeContent, type RecipeContent } from "../../shared/recipe";
 import type { ChangeResult, SyncChange } from "../../shared/sync";
-import { setUpDatabase, signUpConfirmed, visitor, type Visitor } from "../test/visitor";
+import {
+  overrideLimit,
+  setUpDatabase,
+  signUpConfirmed,
+  visitor,
+  type Visitor,
+} from "../test/visitor";
 
 // Phase C10: the export, and its round trip (an export read back into another account gives the
 // same library).
@@ -192,6 +198,7 @@ describe("exporting the library", () => {
 
   it("gathers a library bigger than one batch, every recipe once", async () => {
     const lee = await person("Lee");
+    await overrideLimit(lee.v, "max_recipes", null);
     const changes: SyncChange[] = Array.from({ length: 200 }, (_, i) => ({
       kind: "recipe",
       id: id(),

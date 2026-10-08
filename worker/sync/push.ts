@@ -1,5 +1,12 @@
-import { eq, inArray } from "drizzle-orm";
-import { RECIPE_FIELDS, type RecipeContent, type RecipeField } from "../../shared/recipe";
+import { eq, inArray, sql } from "drizzle-orm";
+import { addBlockedBy, tooLarge, type AddLimit, type Usage } from "../../shared/limits";
+import {
+  RECIPE_FIELDS,
+  fieldBytes,
+  recipeBytes,
+  type RecipeContent,
+  type RecipeField,
+} from "../../shared/recipe";
 import type {
   CategoryChange,
   ChangeResult,
@@ -11,6 +18,7 @@ import type {
 } from "../../shared/sync";
 import type { Database } from "../db/client";
 import { category, member, recipe } from "../db/schema";
+import { householdUsage } from "../limits/usage";
 
 // Saving the changes a device sends (phase C3). Each change becomes one SQL statement that does
 // its own "last change wins" field by field, and all of a push's statements run as one D1 batch
@@ -377,6 +385,49 @@ async function owners(
   return found;
 }
 
+/** The plan limits a push is held to (phase C11). Null: no limit. */
+export type PushLimits = Pick<Usage, "maxRecipes" | "maxTextBytes" | "maxRecipeBytes">;
+
+export const NO_LIMITS: PushLimits = { maxRecipes: null, maxTextBytes: null, maxRecipeBytes: null };
+
+const idList = (ids: string[]) =>
+  sql.join(
+    ids.map((id) => sql`${id}`),
+    sql`, `,
+  );
+
+/** Each field's stored size, for recipes whose text a push changes (the per-recipe cap). */
+async function fieldSizes(
+  db: Database,
+  ids: string[],
+): Promise<Map<string, Record<RecipeField, number>>> {
+  const sizes = new Map<string, Record<RecipeField, number>>();
+  const columns = RECIPE_FIELDS.map(
+    (field) => `coalesce(length(cast(${RECIPE_COLUMNS[field].column} as blob)), 0) as "${field}"`,
+  ).join(", ");
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    const rows = await db.all<{ id: string } & Record<RecipeField, number>>(
+      sql`select id, ${sql.raw(columns)} from recipe where id in (${idList(chunk)})`,
+    );
+    for (const row of rows) sizes.set(row.id, row);
+  }
+  return sizes;
+}
+
+/** In Trash, for recipes a push moves in or out of it (counting recipes, phase C11). */
+async function inTrash(db: Database, ids: string[]): Promise<Set<string>> {
+  const trashed = new Set<string>();
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const rows = await db.all<{ id: string }>(
+      sql`select id from recipe
+        where id in (${idList(ids.slice(i, i + CHUNK))}) and deleted_at is not null`,
+    );
+    for (const row of rows) trashed.add(row.id);
+  }
+  return trashed;
+}
+
 /** The people in a household. */
 export async function householdMembers(db: Database, householdId: string): Promise<string[]> {
   const rows = await db
@@ -392,6 +443,10 @@ type Planned = { result: ChangeResult } | { build: (k: number) => Statement };
 /**
  * Decides, for each change, whether it's allowed, and if so the statement that saves it. Owners
  * are read once up front; changes earlier in the same push (a new recipe, a new category) count.
+ *
+ * Plan limits (phase C11): a new recipe, or one put back from Trash, needs room under the
+ * household's limits (shared/limits.ts); edits never do, so an account over its limits can
+ * still change everything it has. A recipe's text may not grow past the per-recipe cap.
  */
 async function plan(
   db: Database,
@@ -399,6 +454,7 @@ async function plan(
   changes: SyncChange[],
   times: number[],
   now: number,
+  limits: PushLimits,
 ): Promise<Planned[]> {
   const recipeIds = new Set<string>();
   const categoryIds = new Set<string>();
@@ -414,30 +470,106 @@ async function plan(
       categoryIds.add(change.categoryId);
     }
   }
-  const [recipeOwner, categoryOwner, people] = await Promise.all([
+  const recipeChanges = changes.filter((c): c is RecipeChange => c.kind === "recipe");
+  const sizeIds =
+    limits.maxRecipeBytes === null
+      ? []
+      : recipeChanges.filter((c) => Object.keys(c.fields).length > 0).map((c) => c.id);
+  const trashIds = recipeChanges.filter((c) => c.deleted !== undefined).map((c) => c.id);
+  const [recipeOwner, categoryOwner, people, sizes, trashed] = await Promise.all([
     owners(db, recipe, [...recipeIds]),
     owners(db, category, [...categoryIds]),
     householdMembers(db, caller.householdId),
+    fieldSizes(db, [...new Set(sizeIds)]),
+    inTrash(db, [...new Set(trashIds)]),
   ]);
   const inHousehold = (owner: string | undefined) => owner !== undefined && people.includes(owner);
   const rejected = (reason: "not_found" | "wrong_owner"): Planned => ({
     result: { status: "rejected", reason },
   });
 
+  // What the household has, kept up to date change by change through the push. Only read when
+  // something in the push adds a recipe.
+  const adds = recipeChanges.some(
+    (c) => (c.create && !recipeOwner.has(c.id)) || (c.deleted === false && trashed.has(c.id)),
+  );
+  const limited = limits.maxRecipes !== null || limits.maxTextBytes !== null;
+  const usage: Usage = {
+    ...(adds && limited
+      ? await householdUsage(db, caller.householdId)
+      : { recipes: 0, textBytes: 0 }),
+    ...limits,
+  };
+  /** New recipes turned away for a limit: what follows for them is turned away too. */
+  const refused = new Map<string, AddLimit>();
+  const overLimit = (limit: AddLimit): Planned => ({
+    result: { status: "rejected", reason: "limit", limit },
+  });
+  const tooBig: Planned = {
+    result: { status: "rejected", reason: "invalid", issues: [{ path: "", problem: "too_large" }] },
+  };
+
   return changes.map((change, i): Planned => {
     const time = times[i] as number;
     switch (change.kind) {
       case "recipe": {
-        if (change.create && !recipeOwner.has(change.id)) recipeOwner.set(change.id, caller.userId);
+        const turnedAway = refused.get(change.id);
+        if (turnedAway) return overLimit(turnedAway);
+        if (change.create && !recipeOwner.has(change.id)) {
+          // A new recipe.
+          const content = change.fields as RecipeContent;
+          const bytes = recipeBytes(content);
+          if (tooLarge(bytes, 0, limits.maxRecipeBytes)) return tooBig;
+          const limit = addBlockedBy(usage);
+          if (limit) {
+            refused.set(change.id, limit);
+            return overLimit(limit);
+          }
+          recipeOwner.set(change.id, caller.userId);
+          if (change.deleted) trashed.add(change.id);
+          else usage.recipes += 1;
+          usage.textBytes += bytes;
+          return { build: (k) => recipeStatement(caller, change, time, now, k) };
+        }
         if (!inHousehold(recipeOwner.get(change.id))) return rejected("not_found");
+        const stored = sizes.get(change.id);
+        if (stored) {
+          const before = RECIPE_FIELDS.reduce((total, field) => total + stored[field], 0);
+          const after = RECIPE_FIELDS.reduce(
+            (total, field) =>
+              total +
+              (field in change.fields
+                ? fieldBytes(change.fields[field as keyof RecipeContent])
+                : stored[field]),
+            0,
+          );
+          if (tooLarge(after, before, limits.maxRecipeBytes)) return tooBig;
+          usage.textBytes += after - before;
+        }
+        if (change.deleted === false && trashed.has(change.id)) {
+          // Back from Trash: one more recipe (its text was counted all along).
+          const limit = addBlockedBy(usage, true);
+          if (limit) return overLimit(limit);
+          trashed.delete(change.id);
+          usage.recipes += 1;
+        } else if (change.deleted === true && !trashed.has(change.id)) {
+          trashed.add(change.id);
+          usage.recipes -= 1;
+        }
         return { build: (k) => recipeStatement(caller, change, time, now, k) };
       }
-      case "opinion":
+      case "opinion": {
+        const turnedAway = refused.get(change.recipeId);
+        if (turnedAway) return overLimit(turnedAway);
         if (!inHousehold(recipeOwner.get(change.recipeId))) return rejected("not_found");
         return { build: (k) => opinionStatement(caller, change, time, now, k) };
-      case "made":
+      }
+      case "made": {
+        const turnedAway = refused.get(change.recipeId);
+        if (turnedAway) return overLimit(turnedAway);
         if (!inHousehold(recipeOwner.get(change.recipeId))) return rejected("not_found");
         return { build: (k) => madeStatement(caller, change, time, now, k) };
+      }
       case "category": {
         if (change.create && !categoryOwner.has(change.id)) {
           const owner = change.create.ownerUserId ?? caller.userId;
@@ -454,6 +586,8 @@ async function plan(
         return { build: (k) => categoryStatement(caller, change, owner, time, now, k) };
       }
       case "recipeCategory": {
+        const turnedAway = refused.get(change.recipeId);
+        if (turnedAway) return overLimit(turnedAway);
         const owner = recipeOwner.get(change.recipeId);
         if (!inHousehold(owner) || !categoryOwner.has(change.categoryId)) {
           return rejected("not_found");
@@ -479,8 +613,9 @@ export async function applyChanges(
   changes: SyncChange[],
   times: number[],
   now = Date.now(),
+  limits: PushLimits = NO_LIMITS,
 ): Promise<ChangeResult[]> {
-  const planned = await plan(db, caller, changes, times, now);
+  const planned = await plan(db, caller, changes, times, now, limits);
   const results: (ChangeResult | null)[] = planned.map((p) => ("result" in p ? p.result : null));
   const toRun = planned.flatMap((p, i) => ("build" in p ? [{ i, build: p.build }] : []));
   if (toRun.length === 0) return results as ChangeResult[];

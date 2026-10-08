@@ -198,9 +198,9 @@ export async function pullChanges(
   householdId: string,
   callerId: string,
   since: Cursors,
-): Promise<PullResponse> {
+): Promise<Omit<PullResponse, "usage">> {
   const members = await householdPeople(db, householdId, callerId);
-  const page: PullResponse = {
+  const page: Omit<PullResponse, "usage"> = {
     members,
     recipes: [],
     opinions: [],

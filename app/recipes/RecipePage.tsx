@@ -9,6 +9,8 @@ import {
   type Recipe,
 } from "../../shared/recipe";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
+import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
+import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
@@ -464,16 +466,22 @@ function Source({ recipe }: { recipe: Recipe }) {
 function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean }) {
   const [failed, setFailed] = useState(false);
   const { recipe } = detail;
+  // Putting it back needs room under the plan's recipe limit (phase C11).
+  const usage = useUsage();
+  const blocked = useAddBlocked(true);
+  const [noRoom, setNoRoom] = useState(false);
   const restore = async () =>
-    setFailed(
-      !(await save({
-        kind: "recipe",
-        id: recipe.id,
-        fields: {},
-        deleted: false,
-        changedAt: Date.now(),
-      })),
-    );
+    blocked
+      ? setNoRoom(true)
+      : setFailed(
+          !(await save({
+            kind: "recipe",
+            id: recipe.id,
+            fields: {},
+            deleted: false,
+            changedAt: Date.now(),
+          })),
+        );
   return (
     <>
       <Link href="/trash" className={styles.back}>
@@ -498,6 +506,9 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
           Couldn&rsquo;t put it back just now. Please try again.
         </p>
       ) : null}
+      <p role="status">
+        {noRoom && blocked && usage ? `${restoreBlockedText(usage)} ${NOTHING_LOST}` : ""}
+      </p>
     </>
   );
 }
