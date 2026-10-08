@@ -9,6 +9,7 @@ import {
   type RecipeOpinion,
 } from "../../shared/recipe";
 import type { PullResponse, SyncChange } from "../../shared/sync";
+import type { CategoryData } from "../categories/tree";
 import type {
   DbRequest,
   DbResponse,
@@ -153,19 +154,23 @@ function snapshot(): DbResults["snapshot"] {
   return { cursors, outbox };
 }
 
-function enqueue(change: SyncChange, now: string): DbResults["enqueue"] {
+/** Changes made here, queued to be sent: all of them or (if anything fails) none. */
+function enqueue(changes: SyncChange[], now: string): DbResults["enqueue"] {
   const d = database();
-  const { kind, key } = recordOf(change, userId);
-  let seq = 0;
+  const ctx = context(now);
+  const seqs: number[] = [];
   d.transaction(() => {
-    d.exec({
-      sql: "insert into outbox (kind, key, change, created_at) values (?, ?, ?, ?)",
-      bind: [kind, key, JSON.stringify(change), Date.now()],
-    });
-    seq = Number(d.selectValue("select last_insert_rowid()"));
-    recompute(kind, key, context(now));
+    for (const change of changes) {
+      const { kind, key } = recordOf(change, userId);
+      d.exec({
+        sql: "insert into outbox (kind, key, change, created_at) values (?, ?, ?, ?)",
+        bind: [kind, key, JSON.stringify(change), Date.now()],
+      });
+      seqs.push(Number(d.selectValue("select last_insert_rowid()")));
+      recompute(kind, key, ctx);
+    }
   });
-  return { seq };
+  return { seqs };
 }
 
 /** Sent and answered: no longer waiting. The records are worked out again after the next fetch. */
@@ -336,6 +341,21 @@ function getRecipe(id: string): RecipeDetail | null {
   };
 }
 
+/** Categories and what's filed under them, for the category tree (phase C7). */
+function getCategories(): CategoryData {
+  const recipeOwners: Record<string, string> = {};
+  for (const recipe of values<Recipe>("recipe")) {
+    if (!recipe.deletedAt) recipeOwners[recipe.id] = recipe.ownerUserId;
+  }
+  return {
+    categories: values<Category>("category").filter((c) => !c.deletedAt),
+    links: values<RecipeCategory>("recipeCategory")
+      .filter((l) => !l.deletedAt && l.recipeId in recipeOwners)
+      .map((l) => ({ recipeId: l.recipeId, categoryId: l.categoryId })),
+    recipeOwners,
+  };
+}
+
 function wipe() {
   database().exec(
     "delete from record; delete from cursor; delete from member; delete from outbox; delete from recheck;",
@@ -364,7 +384,7 @@ scope.onmessage = (event) => {
           value = snapshot();
           break;
         case "enqueue":
-          value = enqueue(request.change, request.now);
+          value = enqueue(request.changes, request.now);
           break;
         case "ack":
           ack(request.seqs);
@@ -380,6 +400,9 @@ scope.onmessage = (event) => {
           break;
         case "getRecipe":
           value = getRecipe(request.recipeId);
+          break;
+        case "getCategories":
+          value = getCategories();
           break;
         case "wipe":
           wipe();

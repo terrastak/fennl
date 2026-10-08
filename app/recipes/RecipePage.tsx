@@ -522,7 +522,9 @@ export function RecipePage({ id }: { id: string }) {
         {detail.categories.length > 0 ? (
           <ul className={styles.chips} aria-label="Categories">
             {detail.categories.map((path) => (
-              <li key={path}>{path}</li>
+              <li key={path}>
+                <Link href={`/?category=${encodeURIComponent(path)}`}>{path}</Link>
+              </li>
             ))}
           </ul>
         ) : null}

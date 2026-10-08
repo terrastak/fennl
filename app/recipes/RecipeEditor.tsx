@@ -17,6 +17,7 @@ import {
   type SourceKind,
 } from "../../shared/recipe";
 import type { RecipeChange } from "../../shared/sync";
+import { RecipeCategories } from "../categories/RecipeCategories";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
@@ -506,6 +507,8 @@ function Editor({
             label="Method"
             hint="One step per line; numbers are added for you."
           />
+
+          <RecipeCategories recipeId={id} disabled={!editable} />
 
           <fieldset className={editor.group}>
             <legend>Time and servings</legend>

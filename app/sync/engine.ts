@@ -9,6 +9,7 @@ import {
   type PushRequest,
   type SyncChange,
 } from "../../shared/sync";
+import type { CategoryData } from "../categories/tree";
 import { LocalDb, LocalDbError } from "./dbClient";
 import type { OutboxEntry, RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { batches, stampedAsSent } from "./records";
@@ -200,20 +201,29 @@ export class SyncEngine {
   }
 
   /** Saves a change here and queues it to be sent. */
-  async save(change: SyncChange): Promise<void> {
+  save(change: SyncChange): Promise<void> {
+    return this.saveMany([change]);
+  }
+
+  /** Saves several changes at once (filing many recipes): all of them, or none. */
+  async saveMany(changes: SyncChange[]): Promise<void> {
+    if (changes.length === 0) return;
     // Each change is later than the one before, even within a millisecond, so the server keeps
     // the last of two quick changes to the same field.
-    const changedAt = Math.max(change.changedAt, this.lastChangedAt + 1);
-    this.lastChangedAt = changedAt;
-    const checked = checkChange({ ...change, changedAt });
-    if (!checked.ok) throw new Error(`Invalid change: ${JSON.stringify(checked.issues)}`);
+    const checkedChanges = changes.map((change) => {
+      const changedAt = Math.max(change.changedAt, this.lastChangedAt + 1);
+      this.lastChangedAt = changedAt;
+      const checked = checkChange({ ...change, changedAt });
+      if (!checked.ok) throw new Error(`Invalid change: ${JSON.stringify(checked.issues)}`);
+      return checked.value;
+    });
     if (!canEdit(this.status)) throw new Error("Editing is paused.");
-    const { seq } = await this.db.call({
+    const { seqs } = await this.db.call({
       op: "enqueue",
-      change: checked.value,
+      changes: checkedChanges,
       now: new Date().toISOString(),
     });
-    this.outbox.push({ seq, change: checked.value });
+    checkedChanges.forEach((change, i) => this.outbox.push({ seq: seqs[i] ?? 0, change }));
     this.setStatus({});
     this.events.changed();
     if (this.sendTimer) clearTimeout(this.sendTimer);
@@ -226,6 +236,10 @@ export class SyncEngine {
 
   getRecipe(id: string): Promise<RecipeDetail | null> {
     return this.db.call({ op: "getRecipe", recipeId: id });
+  }
+
+  getCategories(): Promise<CategoryData> {
+    return this.db.call({ op: "getCategories" });
   }
 
   /** Sends what's waiting, then fetches what's new. One at a time; a request meanwhile runs after. */

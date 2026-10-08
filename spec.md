@@ -604,6 +604,14 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. Filter the recipe list by category.
 - **You check**: Set up your own category tree and file a handful of recipes.
 - **Done when**: Category changes sync between devices.
+- **Built (2026-10-08)** (`app/categories/`):
+  - **One tree for the household**: categories with the same full path ("Desserts › Cakes", ignoring case) show as one, whoever owns them (CLAUDE.md, "Recipe ownership in households"). Renaming, moving or deleting one changes every person's category of that path. A recipe is always filed under its owner's category of that path, which is created for the owner if they don't have it. The rules are in `tree.ts`, which works out the changes and the changes that undo them.
+  - **Categories page** (`/categories`, from "Categories" on the recipe list): add a category (type "Desserts > Cakes" for one inside another), and Rename, Move (into another category or the top level, never into itself) and Delete each one. Deleting also deletes the categories inside it and takes recipes out of them; the recipes stay. Every change shows in a bar with **Undo**. Each category shows how many recipes are in it (including the ones inside it), and the count leads to the list filtered by it.
+  - **A recipe's categories** in the editor: chips with × to take it out, and a box to type in. The list narrows as you type, arrow keys move through it, Enter chooses, and a name that doesn't exist yet offers "New category: …".
+  - **Filtering the list**: a Category menu (with counts) next to Sort by, including "Not in a category". A category includes the ones inside it. The choice is kept in the address (`/?category=Desserts`), so it survives a reload, and a recipe page's category chips lead there.
+  - **Select**: cards turn into checkboxes ("Select all shown" too). **Add to a category** (find or create one by typing) and **Take out of a category** each say what they'll do, with counts ("Add 1 recipe to Weeknight? 2 already there will stay as they are."), before doing it, then offer **Undo**.
+  - **Saving many changes at once**: the sync engine takes a batch of changes in one go (`saveMany`), all or nothing.
+  - **Tests**: the tree, its counts and each kind of change, including two people's same-named categories (unit); browser tests at computer and phone sizes: a tree built, renamed, moved, deleted and undone with the keyboard; many recipes filed and taken out, with previews, counts and undo; the filter kept in the address; choosing categories in the editor by typing; and a category renamed on one device showing on another, with accessibility checks.
 
 ### C8. Search
 - **Goal**: Fast search across the library.
@@ -1046,5 +1054,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C4 | Done 2026-10-07 (merged; the owner checked syncing between a Mac and an iPhone) |
 | C4b | Done 2026-10-08 (merged; the owner opened Fennl offline on an iPhone and synced afterwards) |
 | C5 | Done 2026-10-08 (merged; live) |
-| C6 | Approved 2026-10-08; built, waiting for review |
+| C6 | Done 2026-10-08 (merged; the owner wrote a recipe on a computer and fixed a typo on a phone, on the preview) |
+| C7 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

@@ -1,5 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
+import type { SyncChange } from "../../shared/sync";
 import { deviceId } from "../devices/deviceId";
+import { categoryTree, type CategoryTree } from "../categories/tree";
 import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { STARTING, type SyncStatus } from "./status";
 import { SyncClient } from "./tabs";
@@ -88,4 +90,40 @@ export function useRecipe(id: string): RecipeDetail | null | undefined {
     };
   }, [client, id]);
   return detail?.id === id ? detail.value : undefined;
+}
+
+/** The household's category tree (phase C7), built again whenever the local copy changes. */
+export function useCategoryTree(): CategoryTree | null {
+  const client = activeSyncClient();
+  const [tree, setTree] = useState<CategoryTree | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .getCategories()
+        .then((data) => {
+          if (call === latest) setTree(categoryTree(data, client.userId));
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client]);
+  return tree;
+}
+
+/** Saves changes together; false when they couldn't be saved (editing paused, for one). */
+export async function saveChanges(changes: SyncChange[]): Promise<boolean> {
+  try {
+    await activeSyncClient()?.saveMany(changes);
+    return true;
+  } catch {
+    return false;
+  }
 }

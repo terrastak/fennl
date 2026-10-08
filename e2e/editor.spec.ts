@@ -87,6 +87,16 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
     "3.Top with cilantro.",
   ]);
 
+  // A category, made by typing its name (phase C7).
+  await key.press("Tab");
+  await expect(page.getByRole("combobox", { name: "Add a category" })).toBeFocused();
+  await key.type("Mexican");
+  await key.press("Enter");
+  await expect(page.getByRole("list", { name: "This recipe's categories" })).toContainText(
+    "Mexican",
+  );
+  await key.press("Tab");
+  await expect(page.getByRole("button", { name: "Undo", exact: true }).last()).toBeFocused();
   await key.press("Tab");
   await expect(page.getByLabel("Prep time")).toBeFocused();
   await key.type("20");

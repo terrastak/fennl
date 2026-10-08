@@ -1,5 +1,6 @@
 import { useEffect, type ComponentType } from "react";
 import { useAccountSchemeSync } from "./appearance/accountScheme";
+import { CategoriesPage } from "./categories/CategoriesPage";
 import { AuthLayout } from "./auth/AuthLayout";
 import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
@@ -29,6 +30,7 @@ type Route = { title: string; Page: ComponentType };
 /** Pages inside the app. They need a signed-in account. */
 const ROUTES: Record<string, Route> = {
   "/": { title: "Recipes", Page: RecipesPage },
+  "/categories": { title: "Categories", Page: CategoriesPage },
   "/import": { title: "Import", Page: ImportPage },
   "/settings": { title: "Settings", Page: SettingsPage },
   "/account": { title: "Account", Page: AccountPage },

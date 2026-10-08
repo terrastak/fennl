@@ -1,4 +1,5 @@
 import type { SyncChange } from "../../shared/sync";
+import type { CategoryData } from "../categories/tree";
 import type { RecipeDetail, RecipeSummary } from "./dbProtocol";
 import { SyncEngine } from "./engine";
 import { STARTING, type SyncStatus } from "./status";
@@ -11,6 +12,8 @@ import { STARTING, type SyncStatus } from "./status";
 
 interface Calls {
   save: { args: [SyncChange]; result: undefined };
+  saveMany: { args: [SyncChange[]]; result: undefined };
+  getCategories: { args: []; result: CategoryData };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
   syncNow: { args: []; result: undefined };
@@ -49,7 +52,7 @@ export class SyncClient {
   private stopped = false;
 
   constructor(
-    private readonly userId: string,
+    readonly userId: string,
     private readonly deviceId: string,
   ) {}
 
@@ -95,8 +98,16 @@ export class SyncClient {
     return this.call("save", [change]);
   }
 
+  saveMany(changes: SyncChange[]) {
+    return this.call("saveMany", [changes]);
+  }
+
   listRecipes() {
     return this.call("listRecipes", []);
+  }
+
+  getCategories() {
+    return this.call("getCategories", []);
   }
 
   getRecipe(id: string) {
@@ -144,8 +155,12 @@ export class SyncClient {
     switch (name) {
       case "save":
         return engine.save(args[0] as SyncChange);
+      case "saveMany":
+        return engine.saveMany(args[0] as SyncChange[]);
       case "listRecipes":
         return engine.listRecipes();
+      case "getCategories":
+        return engine.getCategories();
       case "getRecipe":
         return engine.getRecipe(args[0] as string);
       case "syncNow":
