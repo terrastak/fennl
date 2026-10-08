@@ -181,6 +181,14 @@ export function withPending(
   );
 }
 
+/**
+ * Without offline editing, changes go out as made when sent (app/sync/engine.ts pushBody). They
+ * keep their order, a millisecond apart, so the later of two changes to one field wins.
+ */
+export function stampedAsSent(changes: SyncChange[], sentAt: number): SyncChange[] {
+  return changes.map((change, i) => ({ ...change, changedAt: sentAt - (changes.length - 1 - i) }));
+}
+
 /** Splits waiting changes into pushes that fit the protocol's sizes. */
 export function batches<T extends { change: SyncChange }>(
   entries: T[],

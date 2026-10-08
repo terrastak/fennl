@@ -93,7 +93,7 @@ test("A recipe page shows the whole recipe, and Made it is remembered", async ({
   await expect(page.getByText("420 kcal")).toBeVisible();
 });
 
-test("Ratings, favorites and signed notes show when someone has given them", async ({
+test("A rating, favorite and note made on another device show on the recipe", async ({
   page,
   context,
   baseURL,
@@ -102,9 +102,10 @@ test("Ratings, favorites and signed notes show when someone has given them", asy
   await page.goto("/");
   await addSamples(page);
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
-  await expect(page.getByText("A favorite")).toHaveCount(0);
+  await expect(page.getByText("A favorite", { exact: true })).toHaveCount(0);
 
-  // Rating and notes come with the editor (C6); here they're sent the way the app will.
+  // Sent the way another of this person's devices would. (A partner's show above, signed, once
+  // households can share: phase G1.)
   const recipeId = page.url().split("/").pop()!;
   const deviceId = await page.evaluate(() => localStorage.getItem("fennl:device-id"));
   const res = await context.request.post("/api/sync/push", {
@@ -126,12 +127,14 @@ test("Ratings, favorites and signed notes show when someone has given them", asy
   expect(res.ok()).toBe(true);
 
   await page.reload();
-  await expect(
-    page.getByRole("listitem").filter({ hasText: "4 out of 5 stars from" }),
-  ).toContainText("June");
-  await expect(page.getByText("A favorite")).toBeVisible();
-  await expect(page.getByText("Add a little more zest.")).toBeVisible();
-  await expect(page.locator("figcaption")).toHaveText("June");
+  const yours = page.getByRole("region", { name: "Yours" });
+  await expect(yours.getByRole("radio", { name: "4 stars" })).toBeChecked();
+  await expect(yours.getByLabel("A favorite of mine")).toBeChecked();
+  await expect(yours.getByLabel("Your note")).toHaveValue("Add a little more zest.");
+  await expect(yours).toContainText("Signed June");
+  // Not shown twice: your own aren't in the household's ratings and signed notes.
+  await expect(page.getByText(/out of 5 stars from/)).toHaveCount(0);
+  await expect(page.locator("figcaption")).toHaveCount(0);
   await noAccessibilityProblems(page);
 });
 

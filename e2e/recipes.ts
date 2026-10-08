@@ -1,7 +1,7 @@
-import { expect, type BrowserContext, type Page } from "@playwright/test";
-import { makeCode } from "./support";
+import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { PASSWORD, makeCode, useFreshAddress } from "./support";
 
-// Helpers for browser tests that work with recipes (phases C4 and C5).
+// Helpers for browser tests that work with recipes (phases C4 to C6).
 
 /** Premium from a code, as beta testers have it. */
 export async function premium(context: BrowserContext, baseURL: string) {
@@ -21,11 +21,38 @@ export const syncStatus = (page: Page) =>
 export const recipeCard = (page: Page, title: string) =>
   page.getByRole("listitem").filter({ hasText: title });
 
-/** Adds a recipe by its title from the recipe list. */
+/** The editor's saving status ("All changes saved"). */
+export const editorStatus = (page: Page) => page.locator("[data-editor-status]");
+
+/** Adds a recipe with just a title, from the recipe list, and comes back to the list. */
 export async function addRecipe(page: Page, title: string) {
-  const field = page.getByLabel("New recipe");
-  if (!(await field.isVisible())) await page.getByRole("button", { name: "Add recipe" }).click();
-  await field.fill(title);
-  await page.getByRole("button", { name: "Save recipe" }).click();
+  await page.getByRole("button", { name: "Add recipe" }).click();
+  await page.getByLabel("Title", { exact: true }).fill(title);
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await page.getByRole("button", { name: "Done" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+  await page.getByRole("link", { name: "All recipes" }).click();
   await expect(recipeCard(page, title)).toBeVisible();
+}
+
+/** The same account signed in on another device (its own browser storage). */
+export async function signInElsewhere(
+  browser: Browser,
+  baseURL: string,
+  email: string,
+  device: Record<string, unknown> = {},
+): Promise<Page> {
+  const context = await browser.newContext({
+    ...device,
+    baseURL,
+    storageState: { cookies: [], origins: [] },
+  });
+  await useFreshAddress(context);
+  const page = await context.newPage();
+  await page.goto("/sign-in");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  return page;
 }

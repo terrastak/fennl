@@ -564,7 +564,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 - **You check**: Add the sample recipes; browse on phone and desktop.
 - **Done when**: Pages pass accessibility and keyboard tests.
 - **Built (2026-10-08)** (`app/pages/RecipesPage.tsx`, `app/recipes/`):
-  - **List**: cards with a placeholder cover (the title's first letter, until photos in D2), title, categories and total time, "Not synced yet" while waiting, and in a shared household the name of whoever added it (handwritten). Sort by title, newest or recently changed, remembered on the device. "Add recipe" asks for a title for now; the editor (C6) takes over.
+  - **List**: cards with a placeholder cover (the title's first letter, until photos in D2), title, categories and total time, "Not synced yet" while waiting, and in a shared household the name of whoever added it (handwritten). Sort by title, newest or recently changed, remembered on the device. "Add recipe" asked for a title (until C6's editor).
   - **Empty state** as designed: ghosted cards fading out behind "Your recipe box is empty, for now", **Add recipe** and **Import**, plus "Or add 4 sample recipes to try".
   - **Sample recipes**: four written for Fennl (Green Chile Stew, Buttermilk Pancakes, Black Bean Tacos with Lime Crema, Lemon Olive Oil Cake), with section headings, times, servings, a person as source, nutrition on one, and categories (including Diet › Vegetarian and Desserts › Cakes). They're ordinary recipes in the account.
   - **Recipe page** (`/recipes/<id>`): the source person's name (handwritten) above the title, headnote, prep/cook/total, makes, difficulty, categories, ingredients in a card with section headings, numbered method that carries on across sections, notes then each person's signed note, nutrition per serving with where it came from, and the source. Ratings, favorites and "Added by" show only when there's something to show (and "Added by" only in a shared household).
@@ -583,6 +583,17 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. Keyboard-efficient: no mouse needed to add, reorder, or remove lines.
 - **You check**: Write one of your real recipes from scratch on desktop, then fix a typo on your phone.
 - **Done when**: Editor tests pass, including keyboard-only.
+- **Built (2026-10-08)** (`app/recipes/RecipeEditor.tsx`, `editorSession.ts`, `editing.ts`):
+  - **Where**: **Add recipe** opens a new recipe's editor (`/recipes/<new id>/edit?new`); a recipe's page has **Edit recipe** (`/recipes/<id>/edit`).
+  - **Fields**: title, "About this recipe", ingredients, method, prep/cook/total time, serves, makes, difficulty, where it's from (website, cookbook, person or somewhere else, with the fields each needs) and notes. Times are typed as words ("1 hr 30 min", "90", "1½ hours", "20 min plus resting") and tidied when you leave the box. A web address gets its "https://" if it's left off. Nutrition, imported time wording and imported difficulty wording are kept as they are.
+  - **Ingredients and method**: one text box each. Beside it (below on a phone), "How Fennl reads it": each line as it will be saved, section headings marked and steps numbered. Pasted bullets and step numbers are cleaned off. The **Heading** button turns the line you're on into a section heading or back (Fennl spots most headings by itself: "For the crust:", or a short line in capitals).
+  - **Keyboard**: Enter adds a line, an ordinary delete removes one, **Alt+↑ / Alt+↓** (Option on a Mac) moves the line you're on, and Tab reaches every field and button in order.
+  - **Saving**: a moment after you stop typing, the fields that changed go to the sync engine ("All changes saved" / "Saving…" at the top). A new recipe saves once it has a title. A field with a problem (a web address that isn't one, a time over a month) is marked and waits; the rest still save, and **Done** takes you to the problem instead of leaving. On Free with no connection, editing pauses with a notice and what was typed saves when the connection is back.
+  - **Undo / Redo**: one save at a time, for as long as the editor is open (version history across sessions is Premium, later).
+  - **Changes from elsewhere** while the editor is open: a field you're not editing takes the newer value; the one you're typing in keeps what you typed (and it saves over the other, last change wins).
+  - **Yours** (step 1b), on the recipe page: your rating (1 to 5 stars, or none), "A favorite of mine", and your note, signed with your name and saved as you type. They show here rather than in the household's ratings and signed notes, which now list only other people's.
+  - **Fixed on the way** (`app/sync/`): two quick changes to the same field (rating 4, then 5) could reach the server with the same time, and the first one stayed. Every change made on a device is now at least a millisecond after the one before, and Free's changes keep their order when stamped as sent.
+  - **Tests**: line moves, the cursor's line, reading times, web addresses, saving, undo/redo, changes from elsewhere and pausing (unit); browser tests at computer and phone sizes: a whole recipe written with the keyboard alone, undo/redo kept after a reload, a problem holding back only its field, a typo fixed on a second device (a phone) reaching the first, your rating/favorite/note kept, and Free pausing offline then saving, with accessibility checks.
 
 ### C7. Categories
 - **Goal**: Organize recipes.
@@ -1034,5 +1045,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C3 | Done 2026-10-07 (merged; live) |
 | C4 | Done 2026-10-07 (merged; the owner checked syncing between a Mac and an iPhone) |
 | C4b | Done 2026-10-08 (merged; the owner opened Fennl offline on an iPhone and synced afterwards) |
-| C5 | Approved 2026-10-08; built, waiting for review |
+| C5 | Done 2026-10-08 (merged; live) |
+| C6 | Approved 2026-10-08; built, waiting for review |
 | All others | Not started |

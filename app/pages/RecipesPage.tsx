@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { RECIPE_RULES, emptyRecipeContent } from "../../shared/recipe";
+import { useState } from "react";
 import type { SyncChange } from "../../shared/sync";
+import { navigate } from "../navigation";
 import { minutesText } from "../recipes/format";
 import styles from "../recipes/recipes.module.css";
 import { SAMPLE_COUNT, sampleRecipeChanges } from "../recipes/samples";
@@ -12,8 +12,8 @@ import { greetingFor } from "./greeting";
 import { PageHeader } from "./PageHeader";
 
 // The recipe list (phase C5): cards from this browser's copy, sorting, the empty state from
-// docs/design/design-direction.md, and sample recipes to try. "Add recipe" asks for a title for
-// now; the editor (C6) takes over from there.
+// docs/design/design-direction.md, and sample recipes to try. "Add recipe" opens the editor
+// (phase C6) on a new recipe.
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -47,59 +47,6 @@ function sorted(recipes: RecipeSummary[], by: SortBy): RecipeSummary[] {
   if (by === "title") return recipes;
   const key = by === "newest" ? "createdAt" : "updatedAt";
   return [...recipes].sort((a, b) => b[key].localeCompare(a[key]));
-}
-
-function QuickAdd({ disabled, onClose }: { disabled: boolean; onClose: () => void }) {
-  const [title, setTitle] = useState("");
-  const [failed, setFailed] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
-
-  const submit = async (event: FormEvent) => {
-    event.preventDefault();
-    const name = title.trim();
-    if (!name) return;
-    const saved = await save({
-      kind: "recipe",
-      id: crypto.randomUUID(),
-      create: { createdAt: new Date().toISOString(), import: null },
-      fields: { ...emptyRecipeContent(), title: name },
-      changedAt: Date.now(),
-    });
-    setFailed(!saved);
-    if (saved) setTitle("");
-    input.current?.focus();
-  };
-
-  return (
-    <form className={styles.quickAdd} onSubmit={(e) => void submit(e)}>
-      <div className={styles.field}>
-        <label htmlFor="new-recipe">New recipe</label>
-        <input
-          ref={input}
-          id="new-recipe"
-          className={styles.input}
-          value={title}
-          maxLength={RECIPE_RULES.titleLength}
-          placeholder="Its title, for example Green chile stew"
-          onChange={(e) => setTitle(e.target.value)}
-          disabled={disabled}
-        />
-      </div>
-      <button type="submit" className={styles.primary} disabled={disabled || !title.trim()}>
-        Save recipe
-      </button>
-      <button type="button" className={styles.secondary} onClick={onClose}>
-        Done
-      </button>
-      <p className={styles.hint}>Writing the whole recipe comes next; for now, just its title.</p>
-      {failed ? (
-        <p role="alert" className={styles.error}>
-          Couldn&rsquo;t add it just now. Please try again.
-        </p>
-      ) : null}
-    </form>
-  );
 }
 
 function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
@@ -172,7 +119,7 @@ export function RecipesPage() {
   const status = useSyncStatus();
   const recipes = useRecipeList();
   const editable = canEdit(status);
-  const [adding, setAdding] = useState(false);
+  const add = () => navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
   const [addingSamples, setAddingSamples] = useState(false);
 
@@ -197,14 +144,9 @@ export function RecipesPage() {
   return (
     <>
       <PageHeader title="Your recipes" note={greetingFor(new Date())} />
-      {list.length > 0 || adding ? (
+      {list.length > 0 ? (
         <div className={styles.toolbar}>
-          <button
-            type="button"
-            className={styles.primary}
-            onClick={() => setAdding(true)}
-            disabled={!editable || adding}
-          >
+          <button type="button" className={styles.primary} onClick={add} disabled={!editable}>
             Add recipe
           </button>
           {list.length > 1 ? (
@@ -225,7 +167,6 @@ export function RecipesPage() {
           ) : null}
         </div>
       ) : null}
-      {adding ? <QuickAdd disabled={!editable} onClose={() => setAdding(false)} /> : null}
 
       {recipes === null ? null : list.length > 0 ? (
         <section aria-labelledby="list-title">
@@ -238,10 +179,10 @@ export function RecipesPage() {
             ))}
           </ul>
         </section>
-      ) : adding ? null : (
+      ) : (
         <EmptyState
           disabled={!editable}
-          onAdd={() => setAdding(true)}
+          onAdd={add}
           onSamples={() => void addSamples()}
           addingSamples={addingSamples}
         />

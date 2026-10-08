@@ -350,12 +350,19 @@
   font-size: var(--text-sm);
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-6);
+  margin: var(--space-5) 0 0;
+}
+
 .made {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-3);
-  margin: var(--space-5) 0 0;
 }
 
 .made p {
@@ -454,6 +461,105 @@
   font-family: var(--font-hand);
   font-size: var(--text-xl);
   color: var(--color-hand);
+}
+
+/* --- Yours: your rating, favorite and note (phase C6) ------------------------------------- */
+
+.yours {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-8);
+  margin-bottom: var(--space-5);
+}
+
+.rating {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.rating legend {
+  margin-bottom: var(--space-1);
+  padding: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.ratingStars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.starOn,
+.starOff {
+  display: grid;
+  place-items: center;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  border-radius: var(--radius-md);
+  font-size: var(--text-2xl);
+  cursor: pointer;
+}
+
+.starOn {
+  color: var(--color-warm-text);
+}
+
+.starOff {
+  color: var(--color-border-strong);
+}
+
+.noRating {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.noRating:has(input:checked) {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+/* The radios themselves are hidden; their labels show where the keyboard is. */
+.ratingStars label:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.rating:disabled label {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.favorite {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.favorite input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-accent);
+}
+
+.ownNote {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.ownNote label {
+  font-weight: var(--weight-semibold);
 }
 
 .nutrition {

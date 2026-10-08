@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { emptyRecipeContent, type Recipe, type RecipeOpinion } from "../../shared/recipe";
 import type { SyncChange } from "../../shared/sync";
-import { applyChange, batches, keyOf, recordOf, withPending, type ApplyContext } from "./records";
+import {
+  applyChange,
+  batches,
+  keyOf,
+  recordOf,
+  stampedAsSent,
+  withPending,
+  type ApplyContext,
+} from "./records";
 
 const me = "user-me";
 const ctx: ApplyContext = {
@@ -99,6 +107,20 @@ describe("keys", () => {
     const row = applyChange(null, opinion, ctx)!;
     expect(recordOf(opinion, me)).toEqual({ kind: "opinion", key: keyOf("opinion", row) });
     expect(recordOf(create, me)).toEqual({ kind: "recipe", key: recipeId });
+  });
+});
+
+describe("changes sent without offline editing", () => {
+  it("are stamped as sent, keeping their order", () => {
+    const rating = (n: number): SyncChange => ({
+      kind: "opinion",
+      recipeId: "6f1c2a4e-8a1b-4c3d-9e2f-0a1b2c3d4e5f",
+      fields: { rating: n },
+      changedAt: 5,
+    });
+    expect(stampedAsSent([rating(4), rating(5)], 1000).map((c) => c.changedAt)).toEqual([
+      999, 1000,
+    ]);
   });
 });
 

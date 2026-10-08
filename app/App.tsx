@@ -12,13 +12,14 @@ import { ResetPasswordPage } from "./auth/ResetPasswordPage";
 import { SignInPage } from "./auth/SignInPage";
 import { SignUpPage } from "./auth/SignUpPage";
 import { VerifyEmailChangePage } from "./auth/VerifyEmailChangePage";
-import { navigate, usePath } from "./navigation";
+import { navigate, queryParam, usePath } from "./navigation";
 import { AccountPage } from "./pages/AccountPage";
 import { FeedbackPage } from "./pages/FeedbackPage";
 import { ImportPage } from "./pages/ImportPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { RecipeEditor } from "./recipes/RecipeEditor";
 import { RecipePage } from "./recipes/RecipePage";
 import { AppShell } from "./shell/AppShell";
 import { syncClientFor } from "./sync/useSync";
@@ -117,12 +118,17 @@ export function App() {
   // once per account; the same client is returned on every render.
   syncClientFor(session.user.id);
 
-  // A recipe's page: /recipes/<its ID> (phase C5).
-  const recipeId = /^\/recipes\/([0-9a-f-]{36})$/i.exec(path)?.[1];
-  if (recipeId) {
+  // A recipe's page: /recipes/<its ID> (phase C5), and its editor: /recipes/<its ID>/edit,
+  // with ?new for a recipe that doesn't exist yet (phase C6).
+  const recipe = /^\/recipes\/([0-9a-f-]{36})(\/edit)?$/i.exec(path);
+  if (recipe?.[1]) {
     return (
-      <AppShell path={path} title="Recipe">
-        <RecipePage id={recipeId} />
+      <AppShell path={path} title={recipe[2] ? "Edit recipe" : "Recipe"}>
+        {recipe[2] ? (
+          <RecipeEditor id={recipe[1]} isNew={queryParam("new") !== null} />
+        ) : (
+          <RecipePage id={recipe[1]} />
+        )}
       </AppShell>
     );
   }

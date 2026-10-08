@@ -11,7 +11,7 @@ import {
 } from "../../shared/sync";
 import { LocalDb, LocalDbError } from "./dbClient";
 import type { OutboxEntry, RecipeDetail, RecipeSummary } from "./dbProtocol";
-import { batches } from "./records";
+import { batches, stampedAsSent } from "./records";
 import type { SyncPhase, SyncStatus } from "./status";
 import { canEdit, STARTING } from "./status";
 
@@ -95,6 +95,8 @@ export class SyncEngine {
   private retryMs = RETRY_MS.first;
   private timers: ReturnType<typeof setTimeout>[] = [];
   private sendTimer: ReturnType<typeof setTimeout> | null = null;
+  /** When the last change was made here (see save). */
+  private lastChangedAt = 0;
   private cleanup: (() => void)[] = [];
 
   constructor(
@@ -199,7 +201,11 @@ export class SyncEngine {
 
   /** Saves a change here and queues it to be sent. */
   async save(change: SyncChange): Promise<void> {
-    const checked = checkChange(change);
+    // Each change is later than the one before, even within a millisecond, so the server keeps
+    // the last of two quick changes to the same field.
+    const changedAt = Math.max(change.changedAt, this.lastChangedAt + 1);
+    this.lastChangedAt = changedAt;
+    const checked = checkChange({ ...change, changedAt });
     if (!checked.ok) throw new Error(`Invalid change: ${JSON.stringify(checked.issues)}`);
     if (!canEdit(this.status)) throw new Error("Editing is paused.");
     const { seq } = await this.db.call({
@@ -271,9 +277,12 @@ export class SyncEngine {
       // Without offline editing a change waits only while a save is being retried (editing is
       // paused meanwhile, and there's one device), so it's sent as made now; the server would
       // otherwise take a delayed save for an offline queue.
-      changes: entries.map((e) =>
-        this.status.offlineEnabled ? e.change : { ...e.change, changedAt: sentAt },
-      ),
+      changes: this.status.offlineEnabled
+        ? entries.map((e) => e.change)
+        : stampedAsSent(
+            entries.map((e) => e.change),
+            sentAt,
+          ),
     };
   }
 
