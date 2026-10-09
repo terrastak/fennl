@@ -74,7 +74,7 @@ function publicAppFiles(): string[] {
  * Writes /sw.js (from app/offline/sw.js) with the list of the app's files, so the app can open
  * with no connection (phase C4b). Everything the build made is listed except pages, settings
  * files (".assetsignore", which is never served) and files only the admin console or the
- * storage test use.
+ * storage and photo tests use.
  */
 function offlineAppFiles(): Plugin {
   return {
@@ -85,6 +85,7 @@ function offlineAppFiles(): Plugin {
       const elsewhere = new Set([
         ...reachable(bundle, "admin"),
         ...reachable(bundle, "storageTrial"),
+        ...reachable(bundle, "photoTrial"),
       ]);
       const built = Object.keys(bundle).filter(
         (name) =>
@@ -112,15 +113,22 @@ export default defineConfig({
   define: { __APP_VERSION__: JSON.stringify(APP_VERSION) },
   // SQLite's browser build loads its own .wasm file; Vite must not pre-bundle it (its README),
   // and its background worker uses modern imports.
-  optimizeDeps: { exclude: ["@sqlite.org/sqlite-wasm"] },
+  // The WebP encoder (phase D2) loads its .wasm file the same way.
+  optimizeDeps: { exclude: ["@sqlite.org/sqlite-wasm", "@jsquash/webp"] },
   worker: { format: "es" },
   environments: {
     client: {
       build: {
         rollupOptions: {
           // The app, the admin console (served only in the admin area; see worker/admin), and
-          // the browser storage trial (phase C2, /storage-trial).
-          input: { main: "index.html", admin: "admin.html", storageTrial: "storage-trial.html" },
+          // the browser storage trial (phase C2, /storage-trial) and the photo test (phase D2,
+          // /photo-trial).
+          input: {
+            main: "index.html",
+            admin: "admin.html",
+            storageTrial: "storage-trial.html",
+            photoTrial: "photo-trial.html",
+          },
         },
       },
     },
