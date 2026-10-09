@@ -15,7 +15,7 @@ const DAY = 24 * HOUR;
 
 /**
  * How long a photo is kept once nothing shows it, so "Undo", a device catching up, or an import
- * still being reviewed (phase E) can still use it. Not yet confirmed by the owner (spec.md D3).
+ * still being reviewed (phase E) can still use it. Decided 2026-10-09 (spec.md D3).
  */
 export const UNUSED_DAYS = 7;
 

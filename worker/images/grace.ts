@@ -18,7 +18,7 @@ const DAY = 24 * 60 * 60 * 1000;
 
 export const PHOTO_GRACE_DAYS = 90;
 
-/** Reminders, in days left. Proposed in spec.md D3; not yet confirmed by the owner. */
+/** Reminders, in days left, after a notice at the start (decided 2026-10-09, spec.md D3). */
 export const REMINDER_DAYS = [30, 7, 1] as const;
 
 /** Photo rows given a new server_seq per batch when photos are deleted. */
