@@ -733,6 +733,10 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 
      Beta grants get the full Individual or Household values (the trial values are for trials only). The trial is 500 MB so a Paprika library (about 250 MB of photos) can finish importing while someone is deciding to subscribe.
   6. Checks on every upload, on the server (never trust the browser's compression): allowed image type only, file signature (magic bytes) matches, size under `image_max_file_bytes`, upload rate limit per user and household. The same image uploaded twice (same content hash) counts once.
+     - **Upload rate limits (Decided 2026-10-09)**: **120 uploads per minute per user** and **6,000 per day per household**. The per-minute limit stops a runaway or abusive client, and a 1,000-photo Paprika import still finishes in about 8 to 9 minutes. The daily limit means filling a 15,000-photo quota takes an attacker at least 3 days. Cost isn't the reason (R2 writes cost about $4.50 per million, by memory: verify); the photo-count quota is the hard cap. Rejected uploads (wrong type, too big, bad signature) count toward both limits.
+     - Kept as `plan_limits` keys (for example `image_uploads_per_minute`, `image_uploads_per_day`), so they're editable from the admin console and `limit_override` can give one account an exception. They are never hard-coded.
+     - Over the limit, the Worker answers HTTP 429 with a retry-after time, and the client waits and carries on by itself (the Paprika import already resumes, E13).
+     - Unverified, check at the start of D1: whether Cloudflare's rate-limiting binding suits the per-minute window (it is meant for short windows and counts per location). The daily count goes in D1.
   7. At 80% of the quota show a warning; at 100% block new photos only. Nothing is ever deleted for being over quota.
 - **You check**: Nothing visible yet; tests only.
 - **Done when**: Tests prove other households and free accounts can't upload or read.
