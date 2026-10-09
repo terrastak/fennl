@@ -110,6 +110,23 @@ describe("the recipe count", () => {
       maxRecipes: 100,
       maxTextBytes: 3 * 1024 * 1024,
       maxRecipeBytes: 256 * 1024,
+      // Free has no photos (phase D3).
+      photos: {
+        enabled: false,
+        bytes: 0,
+        count: 0,
+        maxBytes: 0,
+        maxCount: 0,
+        members: [
+          {
+            userId: expect.any(String),
+            name: expect.any(String),
+            bytes: 0,
+            count: 0,
+            deleteAfter: null,
+          },
+        ],
+      },
     });
   });
 

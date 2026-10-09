@@ -398,11 +398,18 @@ function photoStatement(
     ", ",
   );
   const id = p.add(change.id);
-  const live = `recipe_id in (select id from recipe where expunged_at is null)`;
+  // Putting a photo back needs its image still stored: not deleted by the housekeeping job or
+  // after the photo grace period (phase D3).
+  const stored =
+    change.deleted === false
+      ? `and exists (select 1 from image i where i.owner_user_id = recipe_photo.owner_user_id
+          and i.hash = recipe_photo.image_hash and i.deleted_at is null)`
+      : "";
+  const live = `recipe_id in (select id from recipe where expunged_at is null) ${stored}`;
   if (!change.create) {
     return {
       sql: `update recipe_photo set ${set}
-        where id = ${id} and owner_user_id in ${visible} and ${live} and ${lww.newer}
+        where id = ${id} and owner_user_id in ${visible} and recipe_photo.${live} and ${lww.newer}
         returning id`,
       params: p.values,
     };

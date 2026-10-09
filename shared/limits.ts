@@ -22,6 +22,35 @@ export interface Usage {
   maxRecipes: number | null;
   maxTextBytes: number | null;
   maxRecipeBytes: number | null;
+  /** Photos (phase D3). Missing from servers older than D3. */
+  photos?: PhotoUsage;
+}
+
+/** One person's photos in a household (phase D3). */
+export interface MemberPhotos {
+  userId: string;
+  name: string;
+  bytes: number;
+  count: number;
+  /**
+   * When this person's photos will be deleted (ms since 1970), during the 90-day grace period
+   * after their plan stopped including photos; otherwise null.
+   */
+  deleteAfter: number | null;
+}
+
+/**
+ * A household's photos (phase D3): what all its members' photos take up, against the
+ * household's quota, and each member's share. Photos never count twice for one person.
+ */
+export interface PhotoUsage {
+  /** Whether the plan includes photos (adding them). */
+  enabled: boolean;
+  bytes: number;
+  count: number;
+  maxBytes: number | null;
+  maxCount: number | null;
+  members: MemberPhotos[];
 }
 
 /** The limits that can stop a recipe being added. */
@@ -65,4 +94,11 @@ export function overallLevel(usage: Usage): UsageLevel {
 /** Whether a recipe's text is over the per-recipe cap, without being an edit that shrinks it. */
 export function tooLarge(bytes: number, before: number, maxRecipeBytes: number | null): boolean {
   return maxRecipeBytes !== null && bytes > maxRecipeBytes && bytes > before;
+}
+
+/** How close the household's photos are to the quota: the closer of size and count. */
+export function photoLevel(photos: PhotoUsage): UsageLevel {
+  const a = usageLevel(photos.bytes, photos.maxBytes);
+  const b = usageLevel(photos.count, photos.maxCount);
+  return ORDER.indexOf(a) >= ORDER.indexOf(b) ? a : b;
 }

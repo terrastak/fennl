@@ -783,6 +783,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   5. 90-day photo grace period after dropping to Free: reminder emails (proposed at 30, 7, and 1 days left), then deletion. Resubscribing (or a new grant) cancels it.
 - **You check**: Account page shows your photo usage.
 - **Done when**: The reconcile job is tested.
+- **Built (2026-10-09)**, all run by the hourly scheduled job (`worker/index.ts`):
+  1. Unused photos (`worker/images/housekeeping.ts`): a photo no recipe has shown for **7 days** (removed from a recipe, on a recipe deleted for good, or uploaded and never added) is removed and stops counting; then its stored copy and small copy are deleted from R2. While that deletion is under way the same photo can't be added again (the upload answers "try again shortly"), so a fresh copy is never deleted by mistake. A removed photo can't be put back once its image is gone. Photos on recipes in Trash are kept. Anything that later holds on to photos (version history, import drafts) must join the "in use" test.
+  2. Reconcile (once a day, 03:17 UTC): every `image` row against a listing of the bucket. Objects no row accounts for are deleted, sizes and small copies are corrected to what R2 holds, photos whose object has gone are logged as errors (they can't be repaired). Anything from the last hour is left alone. It reads the whole table and bucket, fine for the beta; with many more photos it should go one owner at a time.
+  3. CI adds a lifecycle rule to the photos bucket that aborts unfinished multipart uploads after 1 day (photos arrive whole, so there shouldn't be any).
+  4. Usage: every sync answer carries the household's photos (bytes and count against the quota, each member's share, and any grace period's end) next to recipe usage. Settings › Recipe storage shows a Photos bar, the count when that's the nearer limit, and each member's share in a shared household. The photo editor shows a note from 80% and stops adding at 100%.
+  5a. The export includes photos in a `photos/` folder, shown on each recipe's page; `fennl-recipes.json` lists each recipe's photos (export version 2). Settings also offers "Download without photos".
+  5. Grace period (`worker/images/grace.ts`, table `photo_grace`, migration `0021`): per person, judged by the plan of the household they're in now. When it no longer includes photos, a notice by email, reminders at 30, 7 and 1 days left (only the latest due if one was missed), and on day 90 the photos are removed (devices drop them) and deleted from R2. Recipes are untouched. Photos allowed again before then (Premium or a new code) end it; dropping again starts a new 90 days. Settings shows until when.
+  - **Still to confirm with the owner**: the 7-day wait before unused photos go; the reminder schedule (30/7/1 days, plus a notice at the start); no email after the deletion itself; photos included in the export by default.
+  - Tests: `worker/images/housekeeping.test.ts` (unused photos, the purge and re-adding, reconcile, grace period, usage, export) and the Settings check in `e2e/photos.spec.ts`.
 
 ## Stage E: The import engine (headline feature, Premium)
 

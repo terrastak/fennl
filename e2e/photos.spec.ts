@@ -86,6 +86,17 @@ test("Premium: add photos, choose the cover, and see them everywhere", async ({
   await page.getByRole("link", { name: "All recipes" }).click();
   await expect(recipeCard(page, "Shakshuka").locator("img")).toBeVisible();
 
+  // Settings shows the photos against the household's allowance (phase D3), and the download
+  // includes them, or can leave them out.
+  await page.goto("/settings");
+  const storage = page.getByRole("region", { name: "Recipe storage" });
+  await expect(storage.getByRole("meter", { name: "Photos" })).toHaveAttribute(
+    "aria-valuetext",
+    /^[\d.]+ (bytes|KB|MB) of 5 GB of photos$/,
+  );
+  await expect(page.getByRole("link", { name: "Download without photos" })).toBeVisible();
+  await expectAccessible(page);
+
   // Another device of the same account gets the photos too.
   const phone = await signInElsewhere(browser, baseURL!, email);
   await expect(recipeCard(phone, "Shakshuka").locator("img")).toBeVisible({ timeout: 30_000 });

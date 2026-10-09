@@ -2,6 +2,7 @@ import {
   CATEGORY_SEPARATOR,
   RECIPE_FIELDS,
   isCategoryName,
+  type PhotoRole,
   isRating,
   recipeIssues,
   type RecipeContent,
@@ -20,7 +21,8 @@ import { isDay, type SyncChange } from "./sync";
  */
 
 export const EXPORT_FORMAT = "fennl-export";
-export const EXPORT_VERSION = 1;
+/** 2: photos (phase D3). */
+export const EXPORT_VERSION = 2;
 
 export interface ExportPerson {
   userId: string;
@@ -32,6 +34,21 @@ export interface ExportOpinion {
   rating: number | null;
   favorite: boolean;
   note: string;
+}
+
+/** A photo on a recipe (version 2). */
+export interface ExportPhoto {
+  /** SHA-256 of the photo's bytes, which names it in Fennl. */
+  hash: string;
+  /** Where it is in the .zip ("photos/<hash>.webp"), or null if photos were left out. */
+  file: string | null;
+  /**
+   * "photo": in the recipe's gallery, the first being the cover. "import_original": a card or
+   * page the recipe was imported from.
+   */
+  role: PhotoRole;
+  width: number;
+  height: number;
 }
 
 export interface ExportRecipe extends RecipeContent {
@@ -48,6 +65,8 @@ export interface ExportRecipe extends RecipeContent {
   opinions: ExportOpinion[];
   /** "Made it" days, newest first. */
   made: { userId: string; madeOn: string }[];
+  /** Its photos in order, the gallery first (version 2; absent before). */
+  photos?: ExportPhoto[];
 }
 
 export interface ExportFile {
