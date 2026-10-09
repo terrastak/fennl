@@ -289,7 +289,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
     - Free: 100 recipes, 3 MB of text, 1 device, no photos.
     - Every tier: 256 KB per recipe.
     - Individual: 50 MB of text. Household: 100 MB.
-    - Device caps (5 and 10) and image quotas (2 GB and 4 GB, 10 MB per file; trial 100 MB) are placeholders for B6 and D1. D1 replaces the image values with the starting quotas below, in a new migration (never edit `0004`).
+    - Device caps (5 and 10) and image quotas (2 GB and 4 GB, 10 MB per file; trial 100 MB) are placeholders for B6 and D1. Migration `0016_image_quotas.sql` (2026-10-09) replaces the image values with the starting quotas in D1 below, so the Plan page shows the decided numbers. It changes a row only while it still holds the old placeholder, so limits already edited in the admin console are kept.
   - **Caching**: tier limits are cached for a minute per Worker instance, so admin changes apply within a minute. Overrides are read fresh every time.
   - **API and UI**: `GET /api/entitlements` (through `requireHousehold`) returns the caller's household's entitlements. The Account page shows "Your plan" with its name, any end date, and what it includes.
   - **Tests**: unit tests cover free, both paid tiers, every subscription status, active and expired grants, a plan together with a grant, overrides (expiry, lifting a limit, other households unaffected), missing limits, the seeded values, and the one-minute cache.
@@ -723,7 +723,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Upload endpoint: entitlement check, per-file size limit, household quota, content-hash naming.
   3. Serve images only through the Worker, only to the owning household, with long caching.
   4. `image` (owned per user, so photos follow their recipe in a household split) and `household_usage` (a shared household's quota is the sum of both members' images) tables.
-  5. Seed the starting quotas in `plan_limits` (new migration; all editable from the admin console, per-account exceptions in `limit_override`):
+  5. The starting quotas are already in `plan_limits` (migration `0016`; all editable from the admin console, per-account exceptions in `limit_override`):
 
      | Limit | Individual | Household | Trial |
      | --- | --- | --- | --- |

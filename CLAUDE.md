@@ -95,7 +95,7 @@ Derived entitlement fields (computed server-side by `householdEntitlements` in `
 - `max_devices`: 1 for free, a cap for Premium
 - `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
 - `images_enabled`: boolean
-- `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: starting values **Decided 2026-10-08** (reviewed after D2 with real photo sizes), all in `plan_limits`: Individual 5 GB, 15,000 images; Household 10 GB, 30,000 images; trial 500 MB, 2,000 images; 5 MB per stored file on every tier. Beta grants get the full Individual or Household values. Seeded in D1 (`spec.md`)
+- `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: starting values **Decided 2026-10-08** (reviewed after D2 with real photo sizes), all in `plan_limits`: Individual 5 GB, 15,000 images; Household 10 GB, 30,000 images; trial 500 MB, 2,000 images; 5 MB per stored file on every tier. Beta grants get the full Individual or Household values. Seeded by migration `0016` (`spec.md` D1)
 - `offline_enabled`, `history_enabled`: booleans
 - `import_structured_enabled`, `import_ai_enabled`: booleans. Import is gated by what it costs, not by source. See "Import sources".
 
