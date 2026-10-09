@@ -20,6 +20,7 @@ const FREE: Entitlements = {
   image_max_file_bytes: 0,
   image_uploads_per_minute: 0,
   image_uploads_per_day: 0,
+  max_photos_per_recipe: 0,
   images_enabled: false,
   offline_enabled: false,
   history_enabled: false,

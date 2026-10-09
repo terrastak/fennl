@@ -14,6 +14,7 @@ import { forgetTrashed, recentlyTrashed } from "../recipes/trashNotice";
 import styles from "../recipes/recipes.module.css";
 import { SAMPLE_COUNT, sampleRecipeChanges } from "../recipes/samples";
 import { Link } from "../router";
+import { PhotoImage } from "../photos/PhotoImage";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import type { SearchHit } from "../sync/search";
@@ -91,9 +92,21 @@ function RecipeCard({
   const titleId = `card-title-${recipe.id}`;
   const body = (
     <>
-      <span className={styles.cover} aria-hidden="true">
-        {recipe.title.trim().charAt(0).toUpperCase()}
-      </span>
+      {recipe.cover ? (
+        // The cover's small copy (phase D2); recipes without one keep their first letter.
+        <PhotoImage
+          hash={recipe.cover.hash}
+          size="thumb"
+          width={recipe.cover.width}
+          height={recipe.cover.height}
+          alt=""
+          className={styles.coverPhoto}
+        />
+      ) : (
+        <span className={styles.cover} aria-hidden="true">
+          {recipe.title.trim().charAt(0).toUpperCase()}
+        </span>
+      )}
       <span className={styles.cardBody}>
         <span id={titleId} className={styles.cardTitle}>
           <Highlight text={recipe.title} terms={terms} />

@@ -12,6 +12,7 @@ import type {
   ChangeResult,
   MadeChange,
   OpinionChange,
+  PhotoChange,
   RecipeCategoryChange,
   RecipeChange,
   SyncChange,
@@ -364,6 +365,78 @@ function recipeCategoryStatement(
   };
 }
 
+/** Live gallery photos of a recipe, as SQL (role "photo"; import originals don't count). */
+const galleryCount = (recipeId: string) =>
+  `(select count(*) from recipe_photo where recipe_id = ${recipeId} and role = 'photo'
+    and deleted_at is null)`;
+
+function photoStatement(
+  caller: PushCaller,
+  change: PhotoChange,
+  time: number,
+  now: number,
+  k: number,
+  maxPhotos: number | null,
+): Statement {
+  const p = new Params();
+  const t = p.add(time);
+  const fields: Field[] = [];
+  if ("sortOrder" in change.fields) {
+    fields.push({ column: "sort_order", key: "sortOrder", value: p.add(change.fields.sortOrder) });
+  }
+  if (change.deleted !== undefined) {
+    fields.push({
+      column: "deleted_at",
+      key: "deleted",
+      value: p.add(change.deleted ? time : null),
+    });
+  }
+  const at = p.add(now);
+  const visible = members(p, caller);
+  const lww = lastChangeWins(fields, t, "recipe_photo");
+  const set = [...lww.set, lww.fieldTimes, `updated_at = ${at}`, `server_seq = ${seq(k)}`].join(
+    ", ",
+  );
+  const id = p.add(change.id);
+  const live = `recipe_id in (select id from recipe where expunged_at is null)`;
+  if (!change.create) {
+    return {
+      sql: `update recipe_photo set ${set}
+        where id = ${id} and owner_user_id in ${visible} and ${live} and ${lww.newer}
+        returning id`,
+      params: p.values,
+    };
+  }
+  const c = change.create;
+  const value = (key: string) => fields.find((f) => f.key === key)?.value ?? "null";
+  const hash = p.add(c.imageHash);
+  const role = p.add(c.role);
+  // The cap is checked again here, in the statement that adds the photo, so two devices adding
+  // at the same moment can't both get past it (the check in plan() gives the clear answer).
+  const room =
+    maxPhotos === null || c.role !== "photo"
+      ? "1"
+      : `${galleryCount("r.id")} < ${p.add(maxPhotos)}`;
+  return {
+    sql: `insert into recipe_photo (id, recipe_id, owner_user_id, image_hash, role, width, height,
+        sort_order, added_by_user_id, field_times, created_at, updated_at, deleted_at, server_seq)
+      select ${id}, r.id, r.owner_user_id, ${hash}, ${role}, ${p.add(c.width)}, ${p.add(c.height)},
+        ${value("sortOrder")}, ${p.add(caller.userId)}, ${fieldTimesObject(
+          fields.map((f) => f.key),
+          t,
+        )}, ${at}, ${at}, ${value("deleted")}, ${seq(k)}
+      from recipe r
+      where r.id = ${p.add(change.recipeId)} and r.owner_user_id in ${visible}
+        and r.expunged_at is null and ${room}
+        and exists (select 1 from image i where i.owner_user_id = r.owner_user_id
+          and i.hash = ${hash} and i.deleted_at is null)
+      on conflict (id) do update set ${set}
+      where recipe_photo.owner_user_id in ${visible} and recipe_photo.${live} and ${lww.newer}
+      returning id`,
+    params: p.values,
+  };
+}
+
 // ---------------------------------------------------------------------------------------------
 
 const CHUNK = 90;
@@ -385,10 +458,80 @@ async function owners(
   return found;
 }
 
-/** The plan limits a push is held to (phase C11). Null: no limit. */
-export type PushLimits = Pick<Usage, "maxRecipes" | "maxTextBytes" | "maxRecipeBytes">;
+/**
+ * The plan limits a push is held to (phase C11, and photos per recipe in D2). Null: no limit.
+ */
+export type PushLimits = Pick<Usage, "maxRecipes" | "maxTextBytes" | "maxRecipeBytes"> & {
+  maxPhotosPerRecipe: number | null;
+};
 
-export const NO_LIMITS: PushLimits = { maxRecipes: null, maxTextBytes: null, maxRecipeBytes: null };
+export const NO_LIMITS: PushLimits = {
+  maxRecipes: null,
+  maxTextBytes: null,
+  maxRecipeBytes: null,
+  maxPhotosPerRecipe: null,
+};
+
+interface StoredPhoto {
+  recipeId: string;
+  owner: string;
+  role: string;
+  deleted: boolean;
+}
+
+/** Photos a push changes, as stored (phase D2). */
+async function storedPhotos(db: Database, ids: string[]): Promise<Map<string, StoredPhoto>> {
+  const found = new Map<string, StoredPhoto>();
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const rows = await db.all<{
+      id: string;
+      recipeId: string;
+      owner: string;
+      role: string;
+      deleted: number;
+    }>(
+      sql`select id, recipe_id as recipeId, owner_user_id as owner, role,
+          deleted_at is not null as deleted
+        from recipe_photo where id in (${idList(ids.slice(i, i + CHUNK))})`,
+    );
+    for (const row of rows) {
+      found.set(row.id, { ...row, deleted: Boolean(row.deleted) });
+    }
+  }
+  return found;
+}
+
+/** How many gallery photos each recipe has now (phase D2). */
+async function galleryCounts(db: Database, recipeIds: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  for (let i = 0; i < recipeIds.length; i += CHUNK) {
+    const rows = await db.all<{ recipeId: string; count: number }>(
+      sql`select recipe_id as recipeId, count(*) as count from recipe_photo
+        where recipe_id in (${idList(recipeIds.slice(i, i + CHUNK))})
+          and role = 'photo' and deleted_at is null
+        group by recipe_id`,
+    );
+    for (const row of rows) counts.set(row.recipeId, row.count);
+  }
+  return counts;
+}
+
+/** Which images are stored (and not removed), as "owner|hash" (phase D2). */
+async function storedImages(
+  db: Database,
+  wanted: { owner: string; hash: string }[],
+): Promise<Set<string>> {
+  const found = new Set<string>();
+  const hashes = [...new Set(wanted.map((w) => w.hash))];
+  for (let i = 0; i < hashes.length; i += CHUNK) {
+    const rows = await db.all<{ owner: string; hash: string }>(
+      sql`select owner_user_id as owner, hash from image
+        where hash in (${idList(hashes.slice(i, i + CHUNK))}) and deleted_at is null`,
+    );
+    for (const row of rows) found.add(`${row.owner}|${row.hash}`);
+  }
+  return found;
+}
 
 const idList = (ids: string[]) =>
   sql.join(
@@ -458,6 +601,7 @@ async function plan(
 ): Promise<Planned[]> {
   const recipeIds = new Set<string>();
   const categoryIds = new Set<string>();
+  const photoIds = new Set<string>();
   for (const change of changes) {
     if (change.kind === "recipe") recipeIds.add(change.id);
     if (change.kind === "opinion" || change.kind === "made") recipeIds.add(change.recipeId);
@@ -469,6 +613,10 @@ async function plan(
       recipeIds.add(change.recipeId);
       categoryIds.add(change.categoryId);
     }
+    if (change.kind === "photo") {
+      recipeIds.add(change.recipeId);
+      photoIds.add(change.id);
+    }
   }
   const recipeChanges = changes.filter((c): c is RecipeChange => c.kind === "recipe");
   const sizeIds =
@@ -476,13 +624,25 @@ async function plan(
       ? []
       : recipeChanges.filter((c) => Object.keys(c.fields).length > 0).map((c) => c.id);
   const trashIds = recipeChanges.filter((c) => c.deleted !== undefined).map((c) => c.id);
-  const [recipeOwner, categoryOwner, people, sizes, trashed] = await Promise.all([
-    owners(db, recipe, [...recipeIds]),
-    owners(db, category, [...categoryIds]),
-    householdMembers(db, caller.householdId),
-    fieldSizes(db, [...new Set(sizeIds)]),
-    inTrash(db, [...new Set(trashIds)]),
-  ]);
+  const photoChanges = changes.filter((c): c is PhotoChange => c.kind === "photo");
+  const [recipeOwner, categoryOwner, people, sizes, trashed, photos, galleries] = await Promise.all(
+    [
+      owners(db, recipe, [...recipeIds]),
+      owners(db, category, [...categoryIds]),
+      householdMembers(db, caller.householdId),
+      fieldSizes(db, [...new Set(sizeIds)]),
+      inTrash(db, [...new Set(trashIds)]),
+      storedPhotos(db, [...photoIds]),
+      galleryCounts(db, [...new Set(photoChanges.map((c) => c.recipeId))]),
+    ],
+  );
+  // Images a push's new photos show: they must be uploaded first, for the recipe's owner.
+  const images = await storedImages(
+    db,
+    photoChanges.flatMap((c) =>
+      c.create ? [{ owner: recipeOwner.get(c.recipeId) ?? "", hash: c.create.imageHash }] : [],
+    ),
+  );
   const inHousehold = (owner: string | undefined) => owner !== undefined && people.includes(owner);
   const rejected = (reason: "not_found" | "wrong_owner"): Planned => ({
     result: { status: "rejected", reason },
@@ -594,6 +754,45 @@ async function plan(
         }
         if (categoryOwner.get(change.categoryId) !== owner) return rejected("wrong_owner");
         return { build: (k) => recipeCategoryStatement(caller, change, time, now, k) };
+      }
+      case "photo": {
+        const turnedAway = refused.get(change.recipeId);
+        if (turnedAway) return overLimit(turnedAway);
+        const owner = recipeOwner.get(change.recipeId);
+        if (!inHousehold(owner)) return rejected("not_found");
+        const stored = photos.get(change.id);
+        if (stored && stored.recipeId !== change.recipeId) return rejected("not_found");
+        const gallery = (stored?.role ?? change.create?.role) === "photo";
+        const count = galleries.get(change.recipeId) ?? 0;
+        const full = limits.maxPhotosPerRecipe !== null && count >= limits.maxPhotosPerRecipe;
+        const photoLimit: Planned = {
+          result: { status: "rejected", reason: "limit", limit: "max_photos_per_recipe" },
+        };
+        if (!stored) {
+          // A new photo: its image must be stored for the recipe's owner, and there must be room.
+          if (!change.create) return rejected("not_found");
+          if (!images.has(`${owner}|${change.create.imageHash}`)) return rejected("not_found");
+          if (gallery && !change.deleted) {
+            if (full) return photoLimit;
+            galleries.set(change.recipeId, count + 1);
+          }
+          photos.set(change.id, {
+            recipeId: change.recipeId,
+            owner: owner as string,
+            role: change.create.role,
+            deleted: change.deleted === true,
+          });
+        } else if (gallery && change.deleted === false && stored.deleted) {
+          // Putting a removed photo back needs room too; removing one makes room.
+          if (full) return photoLimit;
+          galleries.set(change.recipeId, count + 1);
+          stored.deleted = false;
+        } else if (gallery && change.deleted === true && !stored.deleted) {
+          galleries.set(change.recipeId, count - 1);
+          stored.deleted = true;
+        }
+        const maxPhotos = limits.maxPhotosPerRecipe;
+        return { build: (k) => photoStatement(caller, change, time, now, k, maxPhotos) };
       }
     }
   });

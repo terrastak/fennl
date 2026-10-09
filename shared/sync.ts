@@ -5,6 +5,7 @@ import {
   RECIPE_SCHEMA_VERSION,
   emptyRecipeContent,
   isCategoryName,
+  PHOTO_ROLES,
   isId,
   isRating,
   recipeIssues,
@@ -16,7 +17,10 @@ import {
   type Recipe,
   type RecipeMade,
   type RecipeOpinion,
+  type PhotoRole,
+  type RecipePhoto,
 } from "./recipe";
+import { isImageHash } from "./images";
 import type { AddLimit, Usage } from "./limits";
 
 /**
@@ -121,8 +125,24 @@ export interface RecipeCategoryChange extends ChangeBase {
   deleted: boolean;
 }
 
+export type PhotoFields = Pick<RecipePhoto, "sortOrder">;
+export const PHOTO_FIELDS = ["sortOrder"] as const;
+
+/**
+ * Adding a photo to a recipe (phase D2), moving it, or removing it. The image is uploaded first
+ * (POST /api/images/upload, for the recipe's owner); `create` then says which image it is.
+ */
+export interface PhotoChange extends ChangeBase {
+  kind: "photo";
+  id: string;
+  recipeId: string;
+  create?: { imageHash: string; role: PhotoRole; width: number; height: number };
+  fields: Partial<PhotoFields>;
+  deleted?: boolean;
+}
+
 export type SyncChange =
-  RecipeChange | OpinionChange | MadeChange | CategoryChange | RecipeCategoryChange;
+  RecipeChange | OpinionChange | MadeChange | CategoryChange | RecipeCategoryChange | PhotoChange;
 
 export interface PushRequest {
   deviceId: string;
@@ -143,7 +163,9 @@ export interface PushRequest {
  *     issue { path: "", problem: "too_large" } (phase C11).
  *   limit: adding this recipe (or putting it back from Trash) would go past a plan limit
  *     (phase C11), and so would changes to a new recipe that was turned away. Nothing about it
- *     is wrong: it can be sent again once there's room.
+ *     is wrong: it can be sent again once there's room. For a photo (phase D2): the recipe has
+ *     as many photos as the plan allows (max_photos_per_recipe), or the image isn't uploaded
+ *     (not_found).
  *   failed: the server couldn't save it; send it again later.
  */
 export type ChangeResult =
@@ -151,7 +173,7 @@ export type ChangeResult =
   | { status: "unchanged" }
   | { status: "rejected"; reason: "not_found" | "wrong_owner" | "failed" }
   | { status: "rejected"; reason: "invalid"; issues: RecipeIssue[] }
-  | { status: "rejected"; reason: "limit"; limit: AddLimit };
+  | { status: "rejected"; reason: "limit"; limit: AddLimit | "max_photos_per_recipe" };
 
 export interface PushResponse {
   results: ChangeResult[];
@@ -185,6 +207,8 @@ export interface PullResponse {
   made: RecipeMade[];
   categories: Category[];
   recipeCategories: RecipeCategory[];
+  /** Photos on recipes (phase D2). */
+  photos: RecipePhoto[];
   /** Send these back next time. An owner missing from the request starts at 0. */
   cursors: Cursors;
   /** More changes are waiting: ask again straight away. */
@@ -420,6 +444,63 @@ function checkRecipeCategory(change: Fields, issues: RecipeIssue[]): RecipeCateg
   };
 }
 
+/** A sort position: any finite number within a wide range (moving between two uses halves). */
+function isSortOrder(value: unknown): boolean {
+  return typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= 1e12;
+}
+
+/** Biggest width or height a photo can say it has (a 200 MP photo is about 16,000 pixels). */
+const MAX_PHOTO_SIDE = 50_000;
+
+function checkPhoto(change: Fields, issues: RecipeIssue[]): PhotoChange | null {
+  if (!isId(change.id)) issues.push({ path: "id", problem: "invalid" });
+  if (!isId(change.recipeId)) issues.push({ path: "recipeId", problem: "invalid" });
+  const keys = fieldKeys(change.fields, PHOTO_FIELDS, issues);
+  const fields = (isObject(change.fields) ? change.fields : {}) as Partial<PhotoFields>;
+  if ("sortOrder" in fields && !isSortOrder(fields.sortOrder)) {
+    issues.push({ path: "fields.sortOrder", problem: "invalid" });
+  }
+  if (change.deleted !== undefined && typeof change.deleted !== "boolean") {
+    issues.push({ path: "deleted", problem: "invalid" });
+  }
+  const side = (v: unknown) =>
+    Number.isSafeInteger(v) && (v as number) > 0 && (v as number) <= MAX_PHOTO_SIDE;
+  let create: PhotoChange["create"];
+  if (change.create !== undefined) {
+    const c = change.create;
+    if (
+      !isObject(c) ||
+      !isImageHash(c.imageHash) ||
+      !(PHOTO_ROLES as readonly unknown[]).includes(c.role) ||
+      !side(c.width) ||
+      !side(c.height)
+    ) {
+      issues.push({ path: "create", problem: "invalid" });
+    } else {
+      create = {
+        imageHash: c.imageHash,
+        role: c.role as PhotoRole,
+        width: c.width as number,
+        height: c.height as number,
+      };
+      if (!keys.includes("sortOrder"))
+        issues.push({ path: "fields.sortOrder", problem: "missing" });
+    }
+  } else if (keys.length === 0 && change.deleted === undefined) {
+    issues.push({ path: "fields", problem: "missing" });
+  }
+  if (issues.length > 0) return null;
+  return {
+    kind: "photo",
+    id: change.id as string,
+    recipeId: change.recipeId as string,
+    ...(create ? { create } : {}),
+    fields,
+    ...(change.deleted !== undefined ? { deleted: change.deleted as boolean } : {}),
+    changedAt: change.changedAt as number,
+  };
+}
+
 /** Checks one change from a push. Every problem is reported, by path. */
 export function checkChange(value: unknown): Checked<SyncChange> {
   if (!isObject(value)) return { ok: false, issues: [{ path: "", problem: "invalid" }] };
@@ -431,6 +512,7 @@ export function checkChange(value: unknown): Checked<SyncChange> {
     made: checkMade,
     category: checkCategory,
     recipeCategory: checkRecipeCategory,
+    photo: checkPhoto,
   }[value.kind as SyncChange["kind"]] as
     ((change: Fields, issues: RecipeIssue[]) => SyncChange | null) | undefined;
   if (!check) return { ok: false, issues: [{ path: "kind", problem: "invalid" }] };

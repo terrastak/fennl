@@ -1,4 +1,4 @@
-import type { Recipe, RecipeMade, RecipeOpinion } from "../../shared/recipe";
+import type { Recipe, RecipeMade, RecipeOpinion, RecipePhoto } from "../../shared/recipe";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type { SearchResults } from "./search";
@@ -26,6 +26,15 @@ export interface RecipeSummary {
   /** The signed-in person's own rating and favorite (phase C8's filter). */
   myRating: number | null;
   favorite: boolean;
+  /** The cover: the first gallery photo (phase D2), or null for none. */
+  cover: PhotoRef | null;
+}
+
+/** Enough to show a photo: its image, and its size to make room for it. */
+export interface PhotoRef {
+  hash: string;
+  width: number;
+  height: number;
 }
 
 /** A recipe in Trash (phase C9). */
@@ -55,6 +64,8 @@ export interface RecipeDetail {
   categories: string[];
   /** The household, the signed-in person first. */
   members: Member[];
+  /** Photos not removed, in order: the first gallery photo is the cover (phase D2). */
+  photos: RecipePhoto[];
 }
 
 /** A change waiting to be sent, in the order it was made. */
@@ -76,6 +87,7 @@ export type DbRequest =
   | { op: "getCategories" }
   | { op: "search"; query: string }
   | { op: "listTrash" }
+  | { op: "photoHashes" }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -90,6 +102,8 @@ export interface DbResults {
   getCategories: CategoryData;
   search: SearchResults;
   listTrash: TrashItem[];
+  /** Every image a photo here shows (phase D2), so each device can keep their small copies. */
+  photoHashes: string[];
   wipe: null;
 }
 

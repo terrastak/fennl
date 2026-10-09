@@ -11,6 +11,7 @@ import {
   type SyncChange,
 } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
+import { PhotoCache, photoAccount } from "../photos/cache";
 import { LocalDb, LocalDbError } from "./dbClient";
 import type { SearchResults } from "./search";
 import type { OutboxEntry, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
@@ -138,6 +139,7 @@ export class SyncEngine {
   private heldRecipes = new Set<string>();
   private releases = 0;
   private cleanup: (() => void)[] = [];
+  private photoCache: PhotoCache;
 
   /**
    * acting: an admin is acting as this person (phase C12). Their copy is kept apart from the
@@ -150,6 +152,7 @@ export class SyncEngine {
     private readonly events: EngineEvents,
     private readonly acting = false,
   ) {
+    this.photoCache = new PhotoCache(photoAccount(userId, acting));
     this.status = acting
       ? STARTING
       : { ...STARTING, offlineEnabled: rememberedPlan(userId), usage: rememberedUsage(userId) };
@@ -263,9 +266,16 @@ export class SyncEngine {
 
   /** The plan decides whether changes may wait (offline_enabled). Never trusted by the server. */
   private async loadPlan() {
-    if (this.acting) return;
     try {
       const plan = (await request("/api/entitlements")) as Entitlements;
+      this.setStatus({
+        photos: {
+          enabled: plan.images_enabled,
+          maxPerRecipe: plan.max_photos_per_recipe,
+          maxFileBytes: plan.image_max_file_bytes,
+        },
+      });
+      if (this.acting) return;
       rememberPlan(this.userId, plan.offline_enabled);
       if (plan.offline_enabled !== this.status.offlineEnabled) {
         this.setStatus({ offlineEnabled: plan.offline_enabled });
@@ -312,6 +322,7 @@ export class SyncEngine {
   async wipe(): Promise<void> {
     this.outbox = [];
     await this.db.call({ op: "wipe" });
+    await this.photoCache.clear();
     this.stop();
   }
 
@@ -333,6 +344,10 @@ export class SyncEngine {
 
   listTrash(): Promise<TrashItem[]> {
     return this.db.call({ op: "listTrash" });
+  }
+
+  photoHashes(): Promise<string[]> {
+    return this.db.call({ op: "photoHashes" });
   }
 
   /**
@@ -388,6 +403,11 @@ export class SyncEngine {
       await this.db.call({ op: "recheck", now: new Date().toISOString() });
       this.retryMs = RETRY_MS.first;
       this.setStatus({ phase: "saved", lastSyncedAt: new Date().toISOString() });
+      // Every photo's small copy is kept here, so lists show them offline (phase D2).
+      void this.db
+        .call({ op: "photoHashes" })
+        .then((hashes) => this.photoCache.keepThumbs(hashes))
+        .catch(() => undefined);
     } catch (error) {
       const phase = error instanceof SyncProblem ? error.phase : "waiting";
       if (!(error instanceof SyncProblem)) console.error("Sync failed", error);

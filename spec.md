@@ -760,6 +760,15 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Many photos per recipe; pick the cover; reorder.
   3. Photos load lazily and are cached locally.
   4. Free accounts see a clear "Photos are a Premium feature" message.
+- **Decided (owner, 2026-10-09)**:
+  1. **Thumbnails:** with each photo the device makes a small copy (480 px, WebP) for lists, stored beside the photo (`<owner>/<hash>.thumb` in R2, `image.thumb_bytes`). It doesn't count as a photo against the quota.
+  2. **What each device keeps:** every thumbnail, plus full photos of recently opened recipes up to 200 MB, oldest out first; the rest download when opened (`app/photos/cache.ts`, Cache Storage, per account; wiped when an admin stops acting as someone).
+  3. **Adding photos needs a connection.** Fennl says so; text edits still work offline on Premium. A queue for photos can come later if testers ask.
+  4. **A photo belongs to the recipe's owner**, whoever adds it, so it stays with the recipe in a household split. The upload says whose (`?owner=`, a member of the caller's household); `recipe_photo.added_by_user_id` records who added it ("Added by Sarah").
+  5. **10 photos per recipe** (`max_photos_per_recipe` in `plan_limits`, 0 on Free), raised from the admin console if testers need more. Import originals (phase E) don't count.
+  6. **Photos go in the full-library export** (built in D3, since the zip can be large).
+  - Also: the first photo is the cover ("Make cover" moves it to the front, so two people can't set different covers at once); tapping a photo opens it full screen ("Actual size" for reading a photographed page, pinch-zoom on phones); recipes without photos keep their letter in lists.
+- **Built (2026-10-09)**: `recipe_photo` (migration `0019`, synced like category links: `PhotoChange` in `shared/sync.ts`, push and pull in `worker/sync/`), `max_photos_per_recipe` (`0020`), thumbnails (`POST`/`GET /api/images/:hash/thumb`), `?owner=` on upload. On the device: `app/photos/` (prepare, upload, cache, `PhotoEditor` in the editor, `Gallery` and its viewer on the recipe page, covers in the list). The recipe shape's version went to 2, so every device downloads its copy again once (and gets the photos). Tests: 11 server tests (`worker/sync/photos.test.ts`) and a browser test on desktop and phone sizes (`e2e/photos.spec.ts`).
 - **You check**: Take a photo of a dish on your phone, add it to a recipe, see it on your laptop.
 - **Done when**: Photo flows pass tests on phone and desktop sizes.
 
@@ -770,6 +779,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Scheduled job that reconciles `household_usage` against R2.
   3. R2 rule to clean up incomplete uploads.
   4. Add photos to C11's usage bar (households see the combined total and each member's share).
+  5a. Photos in the full-library export (decided in D2, 2026-10-09; never hold recipes hostage).
   5. 90-day photo grace period after dropping to Free: reminder emails (proposed at 30, 7, and 1 days left), then deletion. Resubscribing (or a new grant) cancels it.
 - **You check**: Account page shows your photo usage.
 - **Done when**: The reconcile job is tested.

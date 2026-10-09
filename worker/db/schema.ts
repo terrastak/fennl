@@ -14,6 +14,7 @@ import {
   index,
   integer,
   primaryKey,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -465,8 +466,9 @@ export const recipeCategory = sqliteTable(
 
 /**
  * One stored photo per owner (phase D1). Photos are owned by a person and shared through their
- * household, like recipes (CLAUDE.md, "Recipe ownership in households"), so a photo follows its
- * owner in a household split. The image is stored in R2 under "<owner>/<hash>" and named by its
+ * household, like recipes (CLAUDE.md, "Recipe ownership in households"). A photo on a recipe is
+ * owned by the recipe's owner, whoever added it (decided 2026-10-09), so it stays with the
+ * recipe in a household split. The image is stored in R2 under "<owner>/<hash>" and named by its
  * content hash, so the same picture uploaded twice by one person is one row and counts once.
  *
  * A household's photo usage is the sum over its members' rows that aren't deleted, read from one
@@ -487,10 +489,49 @@ export const image = sqliteTable(
     contentType: text("content_type").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    /**
+     * Size of the small copy for lists (phase D2), stored in R2 as "<owner>/<hash>.thumb", or null
+     * if there isn't one. It doesn't count towards the quota (it's a few percent of the photo).
+     */
+    thumbBytes: integer("thumb_bytes"),
   },
   (table) => [
     primaryKey({ columns: [table.ownerUserId, table.hash] }),
     index("image_owner_usage_idx").on(table.ownerUserId, table.deletedAt, table.bytes),
     index("image_hash_idx").on(table.hash),
+  ],
+);
+
+/**
+ * A photo on a recipe (phase D2), synced like the recipe's category links. Owned by the recipe's
+ * owner (owner_user_id), as is the image it shows; added_by_user_id is who added it. The first
+ * photo by sort_order is the cover. role "import_original": a card or page photo kept from an
+ * import (phase E), out of the gallery. Removing it fills deleted_at.
+ */
+export const recipePhoto = sqliteTable(
+  "recipe_photo",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipe.id, { onDelete: "cascade" }),
+    /** The recipe's owner, who also owns the image. */
+    ownerUserId: text("owner_user_id").notNull(),
+    imageHash: text("image_hash").notNull(),
+    role: text("role").notNull(),
+    /** Size of the photo as stored, so a page can make room for it before it arrives. */
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    sortOrder: real("sort_order").notNull(),
+    addedByUserId: text("added_by_user_id").notNull(),
+    fieldTimes: text("field_times").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [
+    index("recipe_photo_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
+    index("recipe_photo_recipe_idx").on(table.recipeId, table.deletedAt),
   ],
 );

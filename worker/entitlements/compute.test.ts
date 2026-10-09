@@ -22,6 +22,7 @@ const tierLimits = (overrides: Partial<Limits>): Limits => ({
   image_max_file_bytes: 10 * MB,
   image_uploads_per_minute: 120,
   image_uploads_per_day: 6000,
+  max_photos_per_recipe: 10,
   ...overrides,
 });
 
@@ -35,6 +36,7 @@ const PLAN_LIMITS: PlanLimits = {
     image_max_file_bytes: 0,
     image_uploads_per_minute: 0,
     image_uploads_per_day: 0,
+    max_photos_per_recipe: 0,
   }),
   individual: tierLimits({}),
   household: tierLimits({ max_text_bytes: 100 * MB, max_devices: 10 }),
@@ -74,6 +76,7 @@ describe("free", () => {
       image_max_file_bytes: 0,
       image_uploads_per_minute: 0,
       image_uploads_per_day: 0,
+      max_photos_per_recipe: 0,
       images_enabled: false,
       offline_enabled: false,
       history_enabled: false,

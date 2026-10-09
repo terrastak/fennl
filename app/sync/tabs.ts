@@ -17,6 +17,7 @@ interface Calls {
   getCategories: { args: []; result: CategoryData };
   search: { args: [string]; result: SearchResults };
   listTrash: { args: []; result: TrashItem[] };
+  photoHashes: { args: []; result: string[] };
   emptyTrash: { args: [string[] | undefined]; result: number };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
@@ -125,6 +126,11 @@ export class SyncClient {
     return this.call("listTrash", []);
   }
 
+  /** Every image a photo in the household shows (phase D2). */
+  photoHashes() {
+    return this.call("photoHashes", []);
+  }
+
   emptyTrash(recipeIds?: string[]) {
     return this.call("emptyTrash", [recipeIds]);
   }
@@ -194,6 +200,8 @@ export class SyncClient {
         return engine.search(args[0] as string);
       case "listTrash":
         return engine.listTrash();
+      case "photoHashes":
+        return engine.photoHashes();
       case "emptyTrash":
         return engine.emptyTrash(args[0] as string[] | undefined);
       case "getRecipe":

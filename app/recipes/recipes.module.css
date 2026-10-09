@@ -170,6 +170,12 @@
   font-size: var(--text-4xl);
 }
 
+/* A cover photo in the list (phase D2): the same box as the letter it replaces. */
+.coverPhoto {
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+}
+
 .cardBody {
   display: grid;
   gap: var(--space-1);
