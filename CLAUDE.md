@@ -95,7 +95,7 @@ Derived entitlement fields (computed server-side by `householdEntitlements` in `
 - `max_devices`: 1 for free, a cap for Premium
 - `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
 - `images_enabled`: boolean
-- `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: values Open
+- `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: starting values **Decided 2026-10-08** (reviewed after D2 with real photo sizes), all in `plan_limits`: Individual 5 GB, 15,000 images; Household 10 GB, 30,000 images; trial 500 MB, 2,000 images; 5 MB per stored file on every tier. Beta grants get the full Individual or Household values. Seeded by migration `0016` (`spec.md` D1)
 - `offline_enabled`, `history_enabled`: booleans
 - `import_structured_enabled`, `import_ai_enabled`: booleans. Import is gated by what it costs, not by source. See "Import sources".
 
@@ -218,8 +218,9 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 
 - Clients never receive R2 credentials or public URLs.
 - Uploads go through a Worker (or Worker-issued short-lived signed URLs) **only after** the entitlement and quota check.
-- Enforce a per-file size limit and per-household totals (bytes and count). Reconcile `household_usage` against actual R2 contents periodically.
-- Compress and resize in the client before upload (WebP or AVIF). Largest cost lever.
+- Enforce a per-file size limit and per-household totals (bytes and count). Reconcile `household_usage` against actual R2 contents periodically. Check every upload on the server, never trusting the client's compression: allowed image type, file signature (magic bytes), size, and an upload rate limit. The same image (same content hash) counts once. Warn at 80% of the quota and block new photos only at 100%; nothing is deleted for being over quota.
+- Compress and resize in the client before upload (WebP or AVIF), without visible quality loss (**Decided 2026-10-08**; starting settings in `spec.md` D2, confirmed by a side-by-side test): dish photos at most 2400 px, WebP about 85; cards, pages and screenshots at most 3000 px, WebP about 90 or higher; already-small web images kept as downloaded; never enlarge; keep the original if re-encoding makes it larger.
+- Illegal imagery (**Open**, `spec.md` question 21): the plan and legal duties are settled before public launch, not for the invite-only beta. The privacy policy and terms must include an acceptable-use section (H2).
 - Use R2 lifecycle rules to abort incomplete multipart uploads. Delete orphaned objects when recipes are deleted.
 - Trial accounts get a lower image quota. Require a payment method up front for trials (the Better Auth Stripe plugin limits one trial per account, but a new account can dodge that).
 
@@ -307,7 +308,7 @@ Other current thinking:
 2. ~~Point-in-time restore for D1 and Durable Objects.~~ Checked 2026-10-03; see "Backups and durability". Needs Workers Paid for 30 days.
 3. Browser eviction behavior on Safari, and how reliably `navigator.storage.persist()` is granted. Partly checked 2026-10-03: Safari deletes script-writable storage after 7 days of Safari use without visiting the site. Home Screen apps are exempt, and `persist()` is granted heuristically (e.g. Home Screen). Tested on real devices 2026-10-07 (C2): `persist()` was granted in Chrome, Firefox (after its prompt) and an iPhone Home Screen app, but not in Edge in a tab, so a browser tab can't count on it. The 7-day removal can't be tested in one sitting.
 4. Whether the Better Auth Stripe plugin's organization-customer flow handles cancel and resubscribe cleanly for our flat-seat-limit plans. Docs checked 2026-10-03: organization billing (`customerType: "organization"`), cancel, and restore exist, but there's no credit or plan-time transfer support. Still needs a hands-on test in Stage I.
-5. Final prices, device cap for Premium, image quotas. (Photo grace period: decided, 90 days.)
+5. Final prices and the device cap for Premium. (Photo grace period: decided, 90 days. Image quotas: decided 2026-10-08, see "Derived entitlement fields".)
 6. ~~Whether to gate the free tier by recipe count.~~ Decided: 100 recipes and a 3 MB text cap, plus the one-device limit.
 7. ~~Whether to use a Durable Object per household or keep recipes in D1 for Phase 1.~~ Decided 2026-10-07: D1 (see "Stack"). Checked: D1 databases hold 10 GB, 50,000 per account; Workers with a Durable Object get no preview (version) URLs.
 8. Design of household "smart merge" beyond per-field last-write-wins.

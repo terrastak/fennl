@@ -289,7 +289,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
     - Free: 100 recipes, 3 MB of text, 1 device, no photos.
     - Every tier: 256 KB per recipe.
     - Individual: 50 MB of text. Household: 100 MB.
-    - Device caps (5 and 10) and image quotas (2 GB and 4 GB, 10 MB per file; trial 100 MB) are placeholders for B6 and D1.
+    - Device caps (5 and 10) and image quotas (2 GB and 4 GB, 10 MB per file; trial 100 MB) are placeholders for B6 and D1. Migration `0016_image_quotas.sql` (2026-10-09) replaces the image values with the starting quotas in D1 below, so the Plan page shows the decided numbers. It changes a row only while it still holds the old placeholder, so limits already edited in the admin console are kept.
   - **Caching**: tier limits are cached for a minute per Worker instance, so admin changes apply within a minute. Overrides are read fresh every time.
   - **API and UI**: `GET /api/entitlements` (through `requireHousehold`) returns the caller's household's entitlements. The Account page shows "Your plan" with its name, any end date, and what it includes.
   - **Tests**: unit tests cover free, both paid tiers, every subscription status, active and expired grants, a plan together with a grant, overrides (expiry, lifting a limit, other households unaffected), missing limits, the seeded values, and the one-minute cache.
@@ -723,14 +723,31 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Upload endpoint: entitlement check, per-file size limit, household quota, content-hash naming.
   3. Serve images only through the Worker, only to the owning household, with long caching.
   4. `image` (owned per user, so photos follow their recipe in a household split) and `household_usage` (a shared household's quota is the sum of both members' images) tables.
+  5. The starting quotas are already in `plan_limits` (migration `0016`; all editable from the admin console, per-account exceptions in `limit_override`):
+
+     | Limit | Individual | Household | Trial |
+     | --- | --- | --- | --- |
+     | `image_quota_bytes` | 5 GB | 10 GB | 500 MB |
+     | `image_quota_count` | 15,000 | 30,000 | 2,000 |
+     | `image_max_file_bytes` | 5 MB | 5 MB | 5 MB |
+
+     Beta grants get the full Individual or Household values (the trial values are for trials only). The trial is 500 MB so a Paprika library (about 250 MB of photos) can finish importing while someone is deciding to subscribe.
+  6. Checks on every upload, on the server (never trust the browser's compression): allowed image type only, file signature (magic bytes) matches, size under `image_max_file_bytes`, upload rate limit per user and household. The same image uploaded twice (same content hash) counts once.
+  7. At 80% of the quota show a warning; at 100% block new photos only. Nothing is ever deleted for being over quota.
 - **You check**: Nothing visible yet; tests only.
 - **Done when**: Tests prove other households and free accounts can't upload or read.
-- **Decisions**: Starting image quotas (bytes, count, max file size) for the beta.
+- **Decisions**: ~~Starting image quotas~~ Settled 2026-10-08 (table above), reviewed again after D2 with real photo sizes. Cost basis: R2 storage is $0.015 per GB-month, egress free (Cloudflare pricing page, checked 2026-10-08), so 5 GB is about $0.08 per month.
 
 ### D2. Photos on recipes
 - **Goal**: Add, view, and manage recipe photos.
 - **Steps**:
-  1. Add photos from the camera or files; resize and compress in the browser first (WebP or AVIF).
+  1. Add photos from the camera or files; resize and compress in the browser first, so nobody sees a loss in quality (starting settings, confirmed by the side-by-side test below):
+     - Dish photos: longest edge at most 2400 px, WebP quality about 85. Never enlarge.
+     - Web images from import: keep the file as downloaded if it is 2400 px or smaller and under about 1 MB; only re-encode larger ones.
+     - Cards, cookbook pages and screenshots (text and handwriting): longest edge at most 3000 px, WebP quality about 90 or higher.
+     - Every photo: apply the camera's rotation, convert to sRGB, strip location data, resize with a high-quality resampler (not the default canvas scaling). If the re-encoded file is larger than the original, keep the original.
+     - Verify on real devices first (as in C2) that the browser can encode WebP; Safari and iPhone Home Screen apps may not. Fallback: JPEG at quality 90. A WASM encoder would be a new dependency: ask first.
+     - Side-by-side test: run 10 to 20 real photos (food, a handwritten card, a cookbook page, a screenshot) through the settings and compare them at full size. The owner judges; the numbers stay adjustable.
   2. Many photos per recipe; pick the cover; reorder.
   3. Photos load lazily and are cached locally.
   4. Free accounts see a clear "Photos are a Premium feature" message.
@@ -845,7 +862,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **Steps**:
   1. Take photos with the phone camera or pick files; several per recipe (front/back, multi-page).
   2. Reorder, rotate, crop, or remove pages before reading.
-  3. Originals are compressed lightly (to stay readable) and stored in R2; they count toward the quota.
+  3. Originals are compressed lightly (to stay readable: longest edge at most 3000 px, WebP quality about 90 or higher, see D2) and stored in R2; they count toward the quota.
 - **You check**: Photograph a two-sided card on your phone and arrange the pages.
 - **Done when**: Upload flow works on iPhone and Android.
 
@@ -1005,6 +1022,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
+- **Acceptable use and illegal imagery (owner's request, 2026-10-08)**: the privacy policy and terms must include an acceptable-use section covering what may be uploaded (recipe-related photos only, no illegal content), that Fennl may remove content and suspend accounts that break the rules, how content is reported and removed, and what Fennl does about illegal imagery, including image scanning and legal reporting. The wording depends on the outcome of open question 21, so settle that first. Also state what photos are sent to third parties (the AI vendor, see the data-retention note above).
 - Changing the account email was built early, in B7a.
 
 ### H3. Backups
@@ -1046,7 +1064,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 3 | ~~Invite-only sign-up during beta? Beta grant length?~~ Decided 2026-10-04: invite-only; each code sets its own length (until a date, or a number of days) | B5 |
 | 4 | ~~D1 vs. Durable Object for recipe storage~~ Decided 2026-10-07: D1 (`docs/research/2026-10-07-recipe-storage.md`) | C1 |
 | 5 | ~~Trash retention days~~ Decided: 30 days, then auto-expunge | C9 |
-| 6 | Beta image quotas | D1 |
+| 6 | ~~Beta image quotas~~ Settled 2026-10-08 (D1); revisit after D2 | D1 |
 | 7 | Quality test set contents and target scores | E1 |
 | 8 | Chrome Web Store unlisted vs. manual install | E5 |
 | 9 | AI cap per household and spending alarm | E7 |
@@ -1061,6 +1079,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
 | 19 | ~~Changing an account's email address~~ Decided 2026-10-06: verify the new address first, notify the old one, keep every change so support can restore an earlier address. Built in B7a | B7a |
 | 20 | ~~How long before an account never verified is removed?~~ Decided 2026-10-06: 24 hours from sign-up. An unverified email change simply expires after 24 hours. Built in B7a | B7a |
+| 21 | Illegal imagery in stored photos (researched 2026-10-08). Cloudflare's free CSAM Scanning Tool compares images served through the Cloudflare cache against known-material lists (fuzzy hashing, so near-copies match), emails the owner daily, and blocks serving with an HTTP 451. Limits: it is unconfirmed whether images served by a Worker from R2 are scanned (the docs only say "served through the Cloudflare cache"); it scans only when an image is served, not at upload; it stops serving but does not delete the file from R2 or the `image` table; it only finds known material; and the legal duty to report stays with Fennl. To settle before public launch: (a) ask Cloudflare support whether Worker-served R2 images are covered, and turn the tool on either way; (b) if not covered, decide whether to check uploads against a hash-matching service instead; (c) an admin action to remove an image and suspend an account, recorded in `admin_audit_log` (admin console, C12 style); (d) legal advice on reporting duties. Not needed for the invite-only beta | Before public launch (H2) |
 
 ## Notes: AI provider research (2026-10-01)
 
