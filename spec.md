@@ -722,7 +722,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. Create R2 buckets (staging, production); no public access.
   2. Upload endpoint: entitlement check, per-file size limit, household quota, content-hash naming.
   3. Serve images only through the Worker, only to the owning household, with long caching.
-  4. `image` (owned per user, so photos follow their recipe in a household split) and `household_usage` (a shared household's quota is the sum of both members' images) tables.
+  4. `image` table (owned per user, so photos follow their recipe in a household split). A household's quota is the sum over both members' images, computed from the `image` rows like recipe usage (C11) rather than kept in a separate `household_usage` counter, which would drift when someone joins or leaves (decided in D1, 2026-10-09).
   5. The starting quotas are already in `plan_limits` (migration `0016`; all editable from the admin console, per-account exceptions in `limit_override`):
 
      | Limit | Individual | Household | Trial |
@@ -733,9 +733,14 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
 
      Beta grants get the full Individual or Household values (the trial values are for trials only). The trial is 500 MB so a Paprika library (about 250 MB of photos) can finish importing while someone is deciding to subscribe.
   6. Checks on every upload, on the server (never trust the browser's compression): allowed image type only, file signature (magic bytes) matches, size under `image_max_file_bytes`, upload rate limit per user and household. The same image uploaded twice (same content hash) counts once.
+     - **Upload rate limits (Decided 2026-10-09)**: **120 uploads per minute per user** and **6,000 per day per household**. The per-minute limit stops a runaway or abusive client, and a 1,000-photo Paprika import still finishes in about 8 to 9 minutes. The daily limit means filling a 15,000-photo quota takes an attacker at least 3 days. Cost isn't the reason (R2 writes cost about $4.50 per million, by memory: verify); the photo-count quota is the hard cap. Rejected uploads (wrong type, too big, bad signature) count toward both limits.
+     - Kept as `plan_limits` keys (for example `image_uploads_per_minute`, `image_uploads_per_day`), so they're editable from the admin console and `limit_override` can give one account an exception. They are never hard-coded.
+     - Over the limit, the Worker answers HTTP 429 with a retry-after time, and the client waits and carries on by itself (the Paprika import already resumes, E13).
+     - Unverified, check at the start of D1: whether Cloudflare's rate-limiting binding suits the per-minute window (it is meant for short windows and counts per location). The daily count goes in D1.
   7. At 80% of the quota show a warning; at 100% block new photos only. Nothing is ever deleted for being over quota.
 - **You check**: Nothing visible yet; tests only.
 - **Done when**: Tests prove other households and free accounts can't upload or read.
+- **Built (2026-10-09)**: `image` table (migration `0017`); rate-limit keys (`0018`); `worker/images/` (`POST /api/images/upload`, `GET /api/images/:hash`); the private `IMAGES` R2 bucket (`wrangler.jsonc`, CI creates it). 22 server tests cover free and foreign households, file type by signature, size, quota (bytes, count, simultaneous uploads, shared households), rate limits, lapsed accounts and removed photos. Not yet: the app (D2), cleanup of removed photos' R2 files and the usage reconcile (D3).
 - **Decisions**: ~~Starting image quotas~~ Settled 2026-10-08 (table above), reviewed again after D2 with real photo sizes. Cost basis: R2 storage is $0.015 per GB-month, egress free (Cloudflare pricing page, checked 2026-10-08), so 5 GB is about $0.08 per month.
 
 ### D2. Photos on recipes
@@ -904,9 +909,17 @@ Import quality is the core of the product, so this stage starts by building a wa
   3. Preview: "1,240 recipes, 980 photos, 45 categories. 3 problems found."
   4. Import in batches, with progress, that can resume if the tab closes.
   5. Photos go to R2 within the quota; warn before going over.
-- **You check**: Import your real Paprika library and spot-check 20 recipes against Paprika.
-- **Done when**: Your library imports completely and a second import creates no duplicates.
-- **Decisions**: What to do if a library is bigger than the photo quota.
+  6. Check that the file really is a Paprika export, by its structure and never by its name or extension. All checks run on the server (the browser may pre-check for a faster message, but is never trusted), in this order, before anything is saved:
+     1. **File type**: the zip file signature (magic bytes) must match.
+     2. **Zip safety**, before unpacking: limits on the number of entries, the total unpacked size, and the compression ratio, so a small file can't expand into gigabytes (a "zip bomb"). Also a cap on how many recipes one import can add (the free-account cap is in `CLAUDE.md`, "Import sources").
+     3. **Entries**: only entries ending in `.paprikarecipe` are read. If none match, reject the whole file ("This doesn't look like a Paprika export", for example a zip of images). If some match and others don't, ignore the extras and say so in the preview.
+     4. **Gzip**: each recipe entry must decompress, with a cap on the unpacked size of each.
+     5. **JSON**: each must parse and have the required fields (`uid`, `name`, and ingredients or directions). An entry that fails is listed as a problem in the preview and not imported.
+     6. **Embedded photos**: the base64 photos (`photo_data` and others) are decoded and go through the same checks as any upload (allowed image type, file signature, size limit, D1 step 6), so an import can't bypass the image rules.
+     7. Nothing is saved until the preview is reviewed, so a bad file can't write anything. The checks show a file is shaped like a Paprika export, not that Paprika made it; the recipes still go through the usual limits, quotas and review.
+- **You check**: Import your real Paprika library and spot-check 20 recipes against Paprika. Also try a zip of images and a text file renamed `.paprikarecipes`: both are rejected with a clear message.
+- **Done when**: Your library imports completely and a second import creates no duplicates. Tests cover the rejected files (a zip of images, a zip with the right entry names but bad JSON, a zip bomb, a corrupt gzip entry).
+- **Decisions**: What to do if a library is bigger than the photo quota. The numbers for the zip limits (entries, unpacked size, compression ratio) and per-entry size, to set against your real 827-recipe, 39 MB library so it passes comfortably.
 
 ### E14. Import quality round
 - **Goal**: Fix the worst problems found so far, by the numbers.

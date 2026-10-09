@@ -27,17 +27,30 @@ let ipCounter = 0;
 export function visitor(ip = `203.0.113.${++ipCounter}`) {
   let cookie = "";
   return {
-    async request(path: string, init: { method?: string; body?: unknown } = {}) {
+    /** `bytes`: a raw (non-JSON) body, such as a photo. */
+    async request(
+      path: string,
+      init: {
+        method?: string;
+        body?: unknown;
+        bytes?: Uint8Array;
+        headers?: Record<string, string>;
+      } = {},
+    ) {
       const headers: Record<string, string> = { origin: ORIGIN, "cf-connecting-ip": ip };
       if (cookie) headers.cookie = cookie;
       if (init.body !== undefined) headers["content-type"] = "application/json";
+      if (init.bytes !== undefined) headers["content-type"] = "application/octet-stream";
+      Object.assign(headers, init.headers);
       const res = await app.request(
         `${ORIGIN}${path}`,
         {
-          method: init.method ?? (init.body === undefined ? "GET" : "POST"),
+          method:
+            init.method ?? (init.body === undefined && init.bytes === undefined ? "GET" : "POST"),
           headers,
           redirect: "manual",
           ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
+          ...(init.bytes === undefined ? {} : { body: init.bytes }),
         },
         env,
       );

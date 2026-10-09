@@ -462,3 +462,35 @@ export const recipeCategory = sqliteTable(
     index("recipe_category_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
   ],
 );
+
+/**
+ * One stored photo per owner (phase D1). Photos are owned by a person and shared through their
+ * household, like recipes (CLAUDE.md, "Recipe ownership in households"), so a photo follows its
+ * owner in a household split. The image is stored in R2 under "<owner>/<hash>" and named by its
+ * content hash, so the same picture uploaded twice by one person is one row and counts once.
+ *
+ * A household's photo usage is the sum over its members' rows that aren't deleted, read from one
+ * index (image_owner_usage_idx), as recipe usage is (worker/limits/usage.ts); there is no separate
+ * counter to drift when someone joins or leaves. deleted_at is filled when a photo is removed;
+ * the R2 object is deleted by the housekeeping job (phase D3).
+ */
+export const image = sqliteTable(
+  "image",
+  {
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** SHA-256 of the file's bytes, lowercase hex. */
+    hash: text("hash").notNull(),
+    bytes: integer("bytes").notNull(),
+    /** From the file's own bytes, never from what the browser said (shared/images.ts). */
+    contentType: text("content_type").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.ownerUserId, table.hash] }),
+    index("image_owner_usage_idx").on(table.ownerUserId, table.deletedAt, table.bytes),
+    index("image_hash_idx").on(table.hash),
+  ],
+);

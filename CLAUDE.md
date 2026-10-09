@@ -96,6 +96,7 @@ Derived entitlement fields (computed server-side by `householdEntitlements` in `
 - `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
 - `images_enabled`: boolean
 - `image_quota_bytes`, `image_quota_count`, `image_max_file_bytes`: starting values **Decided 2026-10-08** (reviewed after D2 with real photo sizes), all in `plan_limits`: Individual 5 GB, 15,000 images; Household 10 GB, 30,000 images; trial 500 MB, 2,000 images; 5 MB per stored file on every tier. Beta grants get the full Individual or Household values. Seeded by migration `0016` (`spec.md` D1)
+- `image_uploads_per_minute` (each person), `image_uploads_per_day` (each household): upload rate limits, **Decided 2026-10-09**, 120 and 6,000 on Individual and Household, 0 on Free. Seeded by migration `0018`; rejected uploads count too
 - `offline_enabled`, `history_enabled`: booleans
 - `import_structured_enabled`, `import_ai_enabled`: booleans. Import is gated by what it costs, not by source. See "Import sources".
 
@@ -128,8 +129,8 @@ Better Auth owns user, session, account, verification, organization, member, and
 | Table | Purpose | Key columns |
 | --- | --- | --- |
 | `device` | Device registry for the one-device free limit and Premium cap (built in B6, `worker/devices/`) | `id` (client-generated, random; primary key with `user_id`), `household_id`, `user_id`, `label`, `session_id`, `first_seen_at`, `last_seen_at`, `revoked_at`, `revoked_reason` |
-| `household_usage` | Quota tracking (a shared household's quota is the sum of its members' owned images) | `household_id`, `image_bytes`, `image_count`, `updated_at` |
-| `image` | One row per stored image per owner | `hash` (content hash), `owner_user_id`, `bytes`, `content_type`, `created_at`, `deleted_at` |
+| ~~`household_usage`~~ | Not a table (D1, 2026-10-09). A household's photo usage is computed from the `image` rows of its members, like recipe usage (`worker/limits/usage.ts`), so there is no counter to drift when someone joins or leaves. D3's reconcile job compares those rows with what is in R2 | (none) |
+| `image` | One row per stored photo per owner (built in D1, `worker/images/`). Stored in R2 (binding `IMAGES`) as `<owner>/<hash>`; served only by the Worker | `owner_user_id`, `hash` (SHA-256 of the bytes; primary key with the owner), `bytes`, `content_type` (from the file's own bytes), `created_at`, `deleted_at` |
 | `recipe` | Recipe records (C1: `shared/recipe.ts`, `docs/design/recipe-model.md`; built in C3, `worker/sync/`). Ingredients and directions are lists inside the record (JSON), every line with its own ID | `id` (UUID), `owner_user_id`, `copied_from`, one column per `RECIPE_FIELDS` field, `import`, `field_times` (when each field last changed), `created_at`, `updated_by_user_id`, `updated_at`, `deleted_at`, `expunged_at` (C9), `server_seq`, `text_bytes` (C11: computed by the database, the recipe's text size as `recipeBytes` counts it) |
 | `recipe_opinion` | One person's rating, favorite and signed note on a recipe; shown to the household (C3) | `recipe_id`, `user_id`, `owner_user_id` (the recipe's), `rating`, `favorite`, `note`, `field_times`, `updated_at`, `deleted_at`, `server_seq` |
 | `recipe_made` | "Made it" records; the latest is the household's "last made" (C3) | `id`, `recipe_id`, `user_id`, `owner_user_id` (the recipe's), `made_on`, `updated_at`, `deleted_at`, `server_seq` |
@@ -208,15 +209,15 @@ All routes require a valid Better Auth session. Every route resolves the caller'
 | `GET /api/devices`, `POST /api/devices/:id/sign-out` | Settings › Devices: list active devices, sign another one out | Authenticated; only the caller's own devices can be signed out |
 | `POST /api/sync/push` | Submit changes `{deviceId, schemaVersion, sentAt, changes[]}` (built in C3; shapes in `shared/sync.ts`); the answer carries the household's usage and limits (C11) | Device registered and not revoked; app schema version; without `offline_enabled`, every change must be under 2 minutes old when sent; a new recipe (or one put back from Trash) needs room under `max_recipes` and `max_text_bytes`, and no recipe may grow past `max_recipe_bytes` (C11) |
 | `GET /api/sync/pull?deviceId=&schemaVersion=&since=<owner>:<seq>,...` | Fetch changes after each owner's cursor, in pages (C3), with the household's usage and limits (C11) | Device registered and not revoked; only owners in the caller's household |
-| `POST /api/images/upload` (or `/upload-url`) | Upload an image via the Worker or a short-lived signed URL | `images_enabled`, per-file size, total quota |
-| `GET /api/images/:hash` | Serve an image | Caller's household owns it; never public bucket URLs |
+| `POST /api/images/upload` | Upload a photo as the raw request body; answers with its hash (built in D1, `worker/images/routes.ts`). Through the Worker, not signed URLs | `images_enabled`; rate limits; `image_max_file_bytes` (stream cut off at the limit); file signature must be JPEG, PNG, WebP or AVIF; household quota in bytes and count, checked in the same SQL statement that counts the photo, so simultaneous uploads can't slip past it |
+| `GET /api/images/:hash` | Serve a photo (built in D1) | Owned by a current member of the caller's household; anyone else's, or a missing one, is 404. Allowed on any plan, so a lapsed account keeps view and download access during the 90 days. Cached privately for a year; never public bucket URLs |
 | `GET /api/export` | Full-library export: a .zip of web pages plus `fennl-recipes.json` (built in C10, `worker/export/`; format in `shared/exportFormat.ts`) | Always allowed, including lapsed accounts |
 | `POST /api/import` | Import recipes | `import_structured_enabled` for Paprika files and pages with structured data; `import_ai_enabled` plus the AI usage cap for anything that calls the AI |
 | `GET /api/recipes/:id/versions` | Version history | `history_enabled` |
 
 ## R2 and image rules (Decided: R2 is gated)
 
-- Clients never receive R2 credentials or public URLs.
+- Clients never receive R2 credentials or public URLs. Photos live in the private bucket bound as `IMAGES` (`fennl-images`, `fennl-images-preview`), created by CI without a retention lock.
 - Uploads go through a Worker (or Worker-issued short-lived signed URLs) **only after** the entitlement and quota check.
 - Enforce a per-file size limit and per-household totals (bytes and count). Reconcile `household_usage` against actual R2 contents periodically. Check every upload on the server, never trusting the client's compression: allowed image type, file signature (magic bytes), size, and an upload rate limit. The same image (same content hash) counts once. Warn at 80% of the quota and block new photos only at 100%; nothing is deleted for being over quota.
 - Compress and resize in the client before upload (WebP or AVIF), without visible quality loss (**Decided 2026-10-08**; starting settings in `spec.md` D2, confirmed by a side-by-side test): dish photos at most 2400 px, WebP about 85; cards, pages and screenshots at most 3000 px, WebP about 90 or higher; already-small web images kept as downloaded; never enlarge; keep the original if re-encoding makes it larger.

@@ -44,12 +44,19 @@
       "migrations_dir": "worker/db/migrations",
     },
   ],
-  // Write-once copy of the admin audit log. CI creates the bucket with a retention lock, so
-  // entries can't be changed or deleted, not even by the Worker that wrote them.
+  // AUDIT_LOG: write-once copy of the admin audit log. CI creates the bucket with a retention
+  // lock, so entries can't be changed or deleted, not even by the Worker that wrote them.
+  // IMAGES: recipe photos (phase D1). Private: the bucket has no public address, and photos are
+  // served only by the Worker (worker/images), only to the household that owns them. CI creates
+  // it, without a lock. Both are found by binding name, so keep AUDIT_LOG first.
   "r2_buckets": [
     {
       "binding": "AUDIT_LOG",
       "bucket_name": "fennl-audit",
+    },
+    {
+      "binding": "IMAGES",
+      "bucket_name": "fennl-images",
     },
   ],
   "workers_dev": false,
@@ -71,6 +78,10 @@
         {
           "binding": "AUDIT_LOG",
           "bucket_name": "fennl-audit-preview",
+        },
+        {
+          "binding": "IMAGES",
+          "bucket_name": "fennl-images-preview",
         },
       ],
     },
