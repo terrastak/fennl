@@ -904,9 +904,17 @@ Import quality is the core of the product, so this stage starts by building a wa
   3. Preview: "1,240 recipes, 980 photos, 45 categories. 3 problems found."
   4. Import in batches, with progress, that can resume if the tab closes.
   5. Photos go to R2 within the quota; warn before going over.
-- **You check**: Import your real Paprika library and spot-check 20 recipes against Paprika.
-- **Done when**: Your library imports completely and a second import creates no duplicates.
-- **Decisions**: What to do if a library is bigger than the photo quota.
+  6. Check that the file really is a Paprika export, by its structure and never by its name or extension. All checks run on the server (the browser may pre-check for a faster message, but is never trusted), in this order, before anything is saved:
+     1. **File type**: the zip file signature (magic bytes) must match.
+     2. **Zip safety**, before unpacking: limits on the number of entries, the total unpacked size, and the compression ratio, so a small file can't expand into gigabytes (a "zip bomb"). Also a cap on how many recipes one import can add (the free-account cap is in `CLAUDE.md`, "Import sources").
+     3. **Entries**: only entries ending in `.paprikarecipe` are read. If none match, reject the whole file ("This doesn't look like a Paprika export", for example a zip of images). If some match and others don't, ignore the extras and say so in the preview.
+     4. **Gzip**: each recipe entry must decompress, with a cap on the unpacked size of each.
+     5. **JSON**: each must parse and have the required fields (`uid`, `name`, and ingredients or directions). An entry that fails is listed as a problem in the preview and not imported.
+     6. **Embedded photos**: the base64 photos (`photo_data` and others) are decoded and go through the same checks as any upload (allowed image type, file signature, size limit, D1 step 6), so an import can't bypass the image rules.
+     7. Nothing is saved until the preview is reviewed, so a bad file can't write anything. The checks show a file is shaped like a Paprika export, not that Paprika made it; the recipes still go through the usual limits, quotas and review.
+- **You check**: Import your real Paprika library and spot-check 20 recipes against Paprika. Also try a zip of images and a text file renamed `.paprikarecipes`: both are rejected with a clear message.
+- **Done when**: Your library imports completely and a second import creates no duplicates. Tests cover the rejected files (a zip of images, a zip with the right entry names but bad JSON, a zip bomb, a corrupt gzip entry).
+- **Decisions**: What to do if a library is bigger than the photo quota. The numbers for the zip limits (entries, unpacked size, compression ratio) and per-entry size, to set against your real 827-recipe, 39 MB library so it passes comfortably.
 
 ### E14. Import quality round
 - **Goal**: Fix the worst problems found so far, by the numbers.
