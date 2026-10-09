@@ -722,7 +722,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. Create R2 buckets (staging, production); no public access.
   2. Upload endpoint: entitlement check, per-file size limit, household quota, content-hash naming.
   3. Serve images only through the Worker, only to the owning household, with long caching.
-  4. `image` (owned per user, so photos follow their recipe in a household split) and `household_usage` (a shared household's quota is the sum of both members' images) tables.
+  4. `image` table (owned per user, so photos follow their recipe in a household split). A household's quota is the sum over both members' images, computed from the `image` rows like recipe usage (C11) rather than kept in a separate `household_usage` counter, which would drift when someone joins or leaves (decided in D1, 2026-10-09).
   5. The starting quotas are already in `plan_limits` (migration `0016`; all editable from the admin console, per-account exceptions in `limit_override`):
 
      | Limit | Individual | Household | Trial |
@@ -740,6 +740,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   7. At 80% of the quota show a warning; at 100% block new photos only. Nothing is ever deleted for being over quota.
 - **You check**: Nothing visible yet; tests only.
 - **Done when**: Tests prove other households and free accounts can't upload or read.
+- **Built (2026-10-09)**: `image` table (migration `0017`); rate-limit keys (`0018`); `worker/images/` (`POST /api/images/upload`, `GET /api/images/:hash`); the private `IMAGES` R2 bucket (`wrangler.jsonc`, CI creates it). 22 server tests cover free and foreign households, file type by signature, size, quota (bytes, count, simultaneous uploads, shared households), rate limits, lapsed accounts and removed photos. Not yet: the app (D2), cleanup of removed photos' R2 files and the usage reconcile (D3).
 - **Decisions**: ~~Starting image quotas~~ Settled 2026-10-08 (table above), reviewed again after D2 with real photo sizes. Cost basis: R2 storage is $0.015 per GB-month, egress free (Cloudflare pricing page, checked 2026-10-08), so 5 GB is about $0.08 per month.
 
 ### D2. Photos on recipes

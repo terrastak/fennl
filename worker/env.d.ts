@@ -13,6 +13,8 @@ interface FennlEnv {
   ASSETS: Fetcher;
   /** R2 bucket with the write-once copy of admin_audit_log (wrangler.jsonc). */
   AUDIT_LOG: R2Bucket;
+  /** R2 bucket with recipe photos, named "<owner>/<hash>" (wrangler.jsonc, worker/images). */
+  IMAGES: R2Bucket;
   /**
    * The app's own address in production (from the GitHub variable APP_HOSTNAME, set at build
    * time). Links in emails the admin console sends point here. Unset in previews and locally,

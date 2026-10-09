@@ -20,6 +20,7 @@ import { passkey, user } from "./db/schema";
 import { devOutbox } from "./email/outbox";
 import { householdEntitlements } from "./entitlements/entitlements";
 import { householdSummary } from "./household/household";
+import { imageRoutes } from "./images/routes";
 import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
 import { syncRoutes } from "./sync/routes";
@@ -159,6 +160,9 @@ app.route("/", deviceRoutes);
 app.route("/", syncRoutes);
 app.route("/", trashRoutes);
 app.route("/", exportRoutes);
+
+// Uploading and showing photos (phase D1).
+app.route("/", imageRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {

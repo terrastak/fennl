@@ -123,6 +123,19 @@ jobs:
             npx wrangler r2 bucket create "$bucket"
           fi
           npx wrangler r2 bucket lock set "$bucket" --file worker/admin/audit-bucket-lock.json --force
+      - name: Create the photos bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Recipe photos (worker/images). Private, no retention lock: photos are deleted when
+          # recipes are deleted for good. The name comes from the built config.
+          bucket=$(node -p 'require("./dist/fennl/wrangler.json").r2_buckets.find((b) => b.binding === "IMAGES").bucket_name')
+          if npx wrangler r2 bucket info "$bucket" > /dev/null 2>&1; then
+            echo "Bucket $bucket exists."
+          else
+            echo "Creating bucket $bucket."
+            npx wrangler r2 bucket create "$bucket"
+          fi
       - name: Prepare preview secrets
         shell: bash
         run: |
@@ -276,6 +289,19 @@ jobs:
             npx wrangler r2 bucket create "$bucket"
           fi
           npx wrangler r2 bucket lock set "$bucket" --file worker/admin/audit-bucket-lock.json --force
+      - name: Create the photos bucket
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Recipe photos (worker/images). Private, no retention lock: photos are deleted when
+          # recipes are deleted for good. The name comes from the built config.
+          bucket=$(node -p 'require("./dist/fennl/wrangler.json").r2_buckets.find((b) => b.binding === "IMAGES").bucket_name')
+          if npx wrangler r2 bucket info "$bucket" > /dev/null 2>&1; then
+            echo "Bucket $bucket exists."
+          else
+            echo "Creating bucket $bucket."
+            npx wrangler r2 bucket create "$bucket"
+          fi
       - name: Prepare production secrets
         shell: bash
         run: |

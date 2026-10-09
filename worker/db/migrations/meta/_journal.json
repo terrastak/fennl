@@ -120,6 +120,20 @@
       "when": 1791504060176,
       "tag": "0016_image_quotas",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1791505837560,
+      "tag": "0017_image",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1791505838884,
+      "tag": "0018_image_upload_limits",
+      "breakpoints": true
     }
   ]
 }

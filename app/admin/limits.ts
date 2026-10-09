@@ -9,6 +9,8 @@ export const LIMIT_LABELS: Record<LimitKey, string> = {
   image_quota_bytes: "Photo storage",
   image_quota_count: "Number of photos",
   image_max_file_bytes: "Largest photo",
+  image_uploads_per_minute: "Photo uploads per minute (each person)",
+  image_uploads_per_day: "Photo uploads per day (household)",
 };
 
 export const LIMIT_ORDER: readonly LimitKey[] = LIMIT_KEYS;
