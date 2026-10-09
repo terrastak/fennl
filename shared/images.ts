@@ -4,8 +4,17 @@
  * declared type: it looks at the file's first bytes (its "signature") instead.
  */
 
-/** The picture formats Fennl stores. The app sends WebP (or JPEG where WebP can't be made). */
-export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"] as const;
+/**
+ * The picture formats Fennl stores. The app sends WebP (or JPEG where WebP can't be made), and
+ * keeps a GIF (animated or not) as it is rather than turning it into something else.
+ */
+export const IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+  "image/avif",
+] as const;
 export type ImageType = (typeof IMAGE_TYPES)[number];
 
 /** However high a plan's file limit is set, a single upload is never read past this. */
@@ -29,6 +38,8 @@ export function detectImageType(bytes: Uint8Array): ImageType | null {
   ) {
     return "image/png";
   }
+  // GIF: "GIF87a" or "GIF89a".
+  if (ascii(bytes, 0, "GIF87a") || ascii(bytes, 0, "GIF89a")) return "image/gif";
   // WebP: "RIFF", a 4-byte size, then "WEBP".
   if (ascii(bytes, 0, "RIFF") && ascii(bytes, 8, "WEBP")) return "image/webp";
   // AVIF: an ISO file whose first box is "ftyp" with the brand "avif" or "avis".

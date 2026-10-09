@@ -749,6 +749,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. Add photos from the camera or files; resize and compress in the browser first, so nobody sees a loss in quality (starting settings, confirmed by the side-by-side test below):
      - Dish photos: longest edge at most 2400 px, WebP quality about 85. Never enlarge.
      - Web images from import: keep the file as downloaded if it is 2400 px or smaller and under about 1 MB; only re-encode larger ones.
+     - GIFs (animated or not) are kept as they are, since the server accepts them (decided 2026-10-09: converting would lose the animation for a small saving). A GIF over the file-size limit becomes a still image (its first frame), and the person is told.
      - Cards, cookbook pages and screenshots (text and handwriting): longest edge at most 3000 px, WebP quality about 90 or higher.
      - Every photo: apply the camera's rotation, convert to sRGB, strip location data, resize with a high-quality resampler (not the default canvas scaling). If the re-encoded file is larger than the original, keep the original.
      - Verify on real devices first (as in C2) that the browser can encode WebP; Safari and iPhone Home Screen apps may not. Fallback: JPEG at quality 90. A WASM encoder would be a new dependency: ask first.

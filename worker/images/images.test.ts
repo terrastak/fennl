@@ -173,7 +173,6 @@ describe("uploading a photo", () => {
       text("PK\x03\x04 a zip of pictures, named .jpg"),
       text("<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)</script></svg>"),
       text("<html><script>alert(1)</script></html>"),
-      text("GIF89a......"),
       new Uint8Array(),
     ];
     for (const bytes of notImages) {
@@ -189,6 +188,19 @@ describe("uploading a photo", () => {
     const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3]);
     const res = await upload(june, png, { "content-type": "image/jpeg" });
     expect(((await res.json()) as { contentType: string }).contentType).toBe("image/png");
+  });
+
+  it("keeps a GIF as it is, animation included", async () => {
+    const june = await premiumPerson();
+    const gif = new Uint8Array(200);
+    gif.set(new TextEncoder().encode("GIF89a"));
+    const res = await upload(june, gif);
+    expect(res.status).toBe(201);
+    const stored = (await res.json()) as { url: string; contentType: string };
+    expect(stored.contentType).toBe("image/gif");
+    const shown = await june.v.request(stored.url);
+    expect(shown.headers.get("content-type")).toBe("image/gif");
+    expect(new Uint8Array(await shown.arrayBuffer())).toEqual(gif);
   });
 
   it("refuses a file over the size limit, declared or not", async () => {
