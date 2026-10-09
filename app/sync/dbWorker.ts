@@ -7,6 +7,7 @@ import {
   type RecipeCategory,
   type RecipeMade,
   type RecipeOpinion,
+  type RecipePhoto,
 } from "../../shared/recipe";
 import type { PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
@@ -135,10 +136,29 @@ function dropRelated(d: Database, recipeId: string) {
     bind: [recipeId],
   });
   d.exec({
-    sql: `delete from record where kind = 'made'
+    sql: `delete from record where kind in ('made', 'photo')
           and json_extract(coalesce(data, server_data), '$.recipeId') = ?`,
     bind: [recipeId],
   });
+}
+
+/** Photos not removed, in order (phase D2). */
+function livePhotos(recipeId?: string): RecipePhoto[] {
+  const photos = recipeId
+    ? values<RecipePhoto>("photo", "and json_extract(data, '$.recipeId') = ?", [recipeId])
+    : values<RecipePhoto>("photo");
+  return photos
+    .filter((p) => !p.deletedAt)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id.localeCompare(b.id));
+}
+
+/** Each recipe's cover: its first gallery photo. */
+function covers(): Map<string, RecipePhoto> {
+  const found = new Map<string, RecipePhoto>();
+  for (const photo of livePhotos()) {
+    if (photo.role === "photo" && !found.has(photo.recipeId)) found.set(photo.recipeId, photo);
+  }
+  return found;
 }
 
 function snapshot(): DbResults["snapshot"] {
@@ -298,6 +318,7 @@ function listRecipes(): RecipeSummary[] {
       .filter((o) => !o.deletedAt)
       .map((o) => [o.recipeId, o]),
   );
+  const coverOf = covers();
   return values<Recipe>("recipe")
     .filter((recipe) => !recipe.deletedAt)
     .map((recipe) => ({
@@ -312,6 +333,10 @@ function listRecipes(): RecipeSummary[] {
       waiting: waiting.has(recipe.id),
       myRating: mine.get(recipe.id)?.rating ?? null,
       favorite: mine.get(recipe.id)?.favorite ?? false,
+      cover: (() => {
+        const photo = coverOf.get(recipe.id);
+        return photo ? { hash: photo.imageHash, width: photo.width, height: photo.height } : null;
+      })(),
     }))
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 }
@@ -344,6 +369,7 @@ function getRecipe(id: string): RecipeDetail | null {
       .sort((a, b) => b.madeOn.localeCompare(a.madeOn) || b.updatedAt.localeCompare(a.updatedAt)),
     categories: recipeCategories(id).get(id) ?? [],
     members: members(),
+    photos: livePhotos(id),
   };
 }
 
@@ -428,6 +454,9 @@ scope.onmessage = (event) => {
           break;
         case "listTrash":
           value = listTrash();
+          break;
+        case "photoHashes":
+          value = [...new Set(livePhotos().map((p) => p.imageHash))];
           break;
         case "search":
           value = searchRecipes(database(), request.query, recipeCategories());

@@ -35,6 +35,17 @@ export interface SyncStatus {
    * not counted in `pending`, and are sent again once there's room.
    */
   held: number;
+  /** What the plan allows for photos (phase D2), once known. The server checks it again. */
+  photos: PhotoPlan | null;
+}
+
+export interface PhotoPlan {
+  /** New photos may be added (Premium). */
+  enabled: boolean;
+  /** Photos on one recipe. Null: no limit. */
+  maxPerRecipe: number | null;
+  /** The biggest file the server takes. Null: no limit. */
+  maxFileBytes: number | null;
 }
 
 export const STARTING: SyncStatus = {
@@ -44,6 +55,7 @@ export const STARTING: SyncStatus = {
   lastSyncedAt: null,
   usage: null,
   held: 0,
+  photos: null,
 };
 
 /**

@@ -18,7 +18,7 @@
  * The version of this shape. The sync protocol carries it, so the server can refuse an app
  * that's too old (CLAUDE.md, "Data model rules"). Raise it when the shape changes.
  */
-export const RECIPE_SCHEMA_VERSION = 1;
+export const RECIPE_SCHEMA_VERSION = 2;
 
 // ---------------------------------------------------------------------------------------------
 // Ingredients and directions
@@ -268,17 +268,27 @@ export interface RecipeCategory extends SyncColumns {
   categoryId: string;
 }
 
-export const PHOTO_ROLES = ["cover", "photo", "import_original"] as const;
+/** "photo": in the gallery. "import_original": a card or page kept from an import, out of it. */
+export const PHOTO_ROLES = ["photo", "import_original"] as const;
 export type PhotoRole = (typeof PHOTO_ROLES)[number];
 
-/** A photo on a recipe (the image itself is stored once, by content hash: phase D1). */
+/**
+ * A photo on a recipe (phase D2; the image itself is stored by content hash, phase D1). The first
+ * gallery photo by sortOrder is the cover, so "make this the cover" moves it to the front (one
+ * order, nothing for two people to set differently at once). The photo, like the image, belongs
+ * to the recipe's owner, whoever added it (decided 2026-10-09).
+ */
 export interface RecipePhoto extends SyncColumns {
   id: string;
   recipeId: string;
   imageHash: string;
-  /** One cover per recipe; import originals (card scans, pages) are kept but out of the gallery. */
   role: PhotoRole;
+  /** Size as stored, so pages can make room for it before it arrives. */
+  width: number;
+  height: number;
   sortOrder: number;
+  /** Who added it ("Added by Sarah"). */
+  addedByUserId: string;
 }
 
 // ---------------------------------------------------------------------------------------------

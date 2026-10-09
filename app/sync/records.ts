@@ -5,6 +5,7 @@ import type {
   RecipeCategory,
   RecipeMade,
   RecipeOpinion,
+  RecipePhoto,
 } from "../../shared/recipe";
 import type { CategoryFields, PullResponse, SyncChange } from "../../shared/sync";
 
@@ -13,9 +14,10 @@ import type { CategoryFields, PullResponse, SyncChange } from "../../shared/sync
 // people see is that combination. When the server sends a newer copy, the pending changes are
 // applied to it again, so nothing typed here is lost while it waits to be sent.
 
-export type RecordKind = "recipe" | "opinion" | "made" | "category" | "recipeCategory";
+export type RecordKind = "recipe" | "opinion" | "made" | "category" | "recipeCategory" | "photo";
 
-export type RecordValue = Recipe | RecipeOpinion | RecipeMade | Category | RecipeCategory;
+export type RecordValue =
+  Recipe | RecipeOpinion | RecipeMade | Category | RecipeCategory | RecipePhoto;
 
 /** Who is working here, and how to find a recipe's owner (for opinions, links and "made it"). */
 export interface ApplyContext {
@@ -37,6 +39,8 @@ export function recordOf(change: SyncChange, userId: string): { kind: RecordKind
       return { kind: "category", key: change.id };
     case "recipeCategory":
       return { kind: "recipeCategory", key: `${change.recipeId}|${change.categoryId}` };
+    case "photo":
+      return { kind: "photo", key: change.id };
   }
 }
 
@@ -64,10 +68,11 @@ export function pulledRecords(page: PullResponse): { kind: RecordKind; value: Re
     ...page.opinions.map((value) => ({ kind: "opinion" as const, value })),
     ...page.made.map((value) => ({ kind: "made" as const, value })),
     ...page.recipeCategories.map((value) => ({ kind: "recipeCategory" as const, value })),
+    ...(page.photos ?? []).map((value) => ({ kind: "photo" as const, value })),
   ];
 }
 
-/** The owner of a record: the recipe's owner for opinions, links and "made it". */
+/** The owner of a record: the recipe's owner for opinions, links, "made it" and photos. */
 export function ownerOfRecord(kind: RecordKind, value: RecordValue, ctx: ApplyContext): string {
   if (kind === "recipe" || kind === "category") return (value as Recipe | Category).ownerUserId;
   return ctx.ownerOf((value as { recipeId: string }).recipeId) ?? "";
@@ -164,6 +169,27 @@ export function applyChange(
         ...(base ?? unsynced(ctx.now)),
         updatedAt: ctx.now,
         deletedAt: change.deleted ? ctx.now : null,
+      };
+    }
+    case "photo": {
+      const base = current as RecipePhoto | null;
+      if (!base) {
+        if (!change.create) return null;
+        return {
+          id: change.id,
+          recipeId: change.recipeId,
+          ...change.create,
+          sortOrder: change.fields.sortOrder ?? 0,
+          addedByUserId: ctx.userId,
+          deletedAt: deletedAt(change.deleted, null),
+          ...unsynced(ctx.now),
+        };
+      }
+      return {
+        ...base,
+        ...change.fields,
+        updatedAt: ctx.now,
+        deletedAt: deletedAt(change.deleted, base.deletedAt),
       };
     }
   }

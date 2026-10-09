@@ -72,6 +72,13 @@ export async function expungeRecipes(db: Database, recipeIds: string[], now = Da
           where ${theirs}`,
         params: [now, ...ids],
       },
+      // Its photos (phase D2). The images themselves are deleted by the housekeeping job (D3)
+      // once nothing uses them.
+      {
+        sql: `update recipe_photo set deleted_at = coalesce(deleted_at, ?1), updated_at = ?1
+          where ${theirs}`,
+        params: [now, ...ids],
+      },
       bump(ids.length),
     );
     const results = await d1.batch(statements.map((s) => d1.prepare(s.sql).bind(...s.params)));

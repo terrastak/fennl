@@ -6,6 +6,8 @@ import type {
   RecipeCategory,
   RecipeMade,
   RecipeOpinion,
+  RecipePhoto,
+  PhotoRole,
 } from "../../shared/recipe";
 import { SYNC_RULES, type Cursors, type PullResponse } from "../../shared/sync";
 import type { Database } from "../db/client";
@@ -16,6 +18,7 @@ import {
   recipeCategory,
   recipeMade,
   recipeOpinion,
+  recipePhoto,
   user,
 } from "../db/schema";
 
@@ -94,12 +97,27 @@ function toRecipeCategory(row: typeof recipeCategory.$inferSelect): RecipeCatego
   return { recipeId: row.recipeId, categoryId: row.categoryId, ...sync(row) };
 }
 
+function toPhoto(row: typeof recipePhoto.$inferSelect): RecipePhoto {
+  return {
+    id: row.id,
+    recipeId: row.recipeId,
+    imageHash: row.imageHash,
+    role: row.role as PhotoRole,
+    width: row.width,
+    height: row.height,
+    sortOrder: row.sortOrder,
+    addedByUserId: row.addedByUserId,
+    ...sync(row),
+  };
+}
+
 type Item =
   | { kind: "recipes"; seq: number; value: Recipe }
   | { kind: "opinions"; seq: number; value: RecipeOpinion }
   | { kind: "made"; seq: number; value: RecipeMade }
   | { kind: "categories"; seq: number; value: Category }
-  | { kind: "recipeCategories"; seq: number; value: RecipeCategory };
+  | { kind: "recipeCategories"; seq: number; value: RecipeCategory }
+  | { kind: "photos"; seq: number; value: RecipePhoto };
 
 /** One owner's changes after `after`, in order, and whether there may be more than these. */
 async function changesFor(
@@ -108,7 +126,7 @@ async function changesFor(
   after: number,
 ): Promise<{ items: Item[]; complete: boolean }> {
   const rows = SYNC_RULES.pullRows;
-  const [recipes, opinions, made, categories, links] = await db.batch([
+  const [recipes, opinions, made, categories, links, photos] = await db.batch([
     db
       .select()
       .from(recipe)
@@ -139,6 +157,12 @@ async function changesFor(
       .where(and(eq(recipeCategory.ownerUserId, owner), gt(recipeCategory.serverSeq, after)))
       .orderBy(asc(recipeCategory.serverSeq))
       .limit(rows),
+    db
+      .select()
+      .from(recipePhoto)
+      .where(and(eq(recipePhoto.ownerUserId, owner), gt(recipePhoto.serverSeq, after)))
+      .orderBy(asc(recipePhoto.serverSeq))
+      .limit(rows),
   ]);
 
   // A table that filled its page may have more after its last row, so only rows up to the
@@ -153,6 +177,7 @@ async function changesFor(
   full(made, rows);
   full(categories, rows);
   full(links, rows);
+  full(photos, rows);
 
   const items: Item[] = [
     ...recipes.map((r): Item => ({ kind: "recipes", seq: r.serverSeq, value: toRecipe(r) })),
@@ -168,6 +193,7 @@ async function changesFor(
       seq: r.serverSeq,
       value: toRecipeCategory(r),
     })),
+    ...photos.map((r): Item => ({ kind: "photos", seq: r.serverSeq, value: toPhoto(r) })),
   ]
     .filter((item) => item.seq <= horizon)
     .sort((a, b) => a.seq - b.seq);
@@ -207,6 +233,7 @@ export async function pullChanges(
     made: [],
     categories: [],
     recipeCategories: [],
+    photos: [],
     cursors: Object.fromEntries(members.map((m) => [m.userId, since[m.userId] ?? 0])),
     more: false,
   };

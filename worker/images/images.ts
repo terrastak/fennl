@@ -15,6 +15,9 @@ export interface ImageUsage {
 /** The R2 key of a person's copy of a photo. */
 export const imageKey = (ownerUserId: string, hash: string) => `${ownerUserId}/${hash}`;
 
+/** The R2 key of its small copy for lists (phase D2). */
+export const thumbKey = (ownerUserId: string, hash: string) => `${ownerUserId}/${hash}.thumb`;
+
 /** Bytes and count of every photo the household's members own (not deleted). */
 export async function householdImageUsage(db: Database, householdId: string): Promise<ImageUsage> {
   const row = await db.get<{ bytes: number; count: number }>(sql`
@@ -119,6 +122,7 @@ export async function imageForHousehold(
       ownerUserId: image.ownerUserId,
       contentType: image.contentType,
       bytes: image.bytes,
+      thumbBytes: image.thumbBytes,
     })
     .from(image)
     .innerJoin(member, eq(member.userId, image.ownerUserId))

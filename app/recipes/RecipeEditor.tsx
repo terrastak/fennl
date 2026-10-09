@@ -13,12 +13,14 @@ import {
   SOURCE_KINDS,
   type Difficulty,
   type RecipeIssue,
+  type RecipePhoto,
   type RecipeSource,
   type SourceKind,
 } from "../../shared/recipe";
 import { addBlockedBy, type AddLimit } from "../../shared/limits";
 import type { RecipeChange } from "../../shared/sync";
 import { RecipeCategories } from "../categories/RecipeCategories";
+import { PhotoEditor } from "../photos/PhotoEditor";
 import { NOTHING_LOST, TOO_LARGE_TEXT, addBlockedText } from "../limits/limitText";
 import { useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
@@ -375,12 +377,18 @@ function Editor({
   initial,
   incoming,
   isNew,
+  photos,
+  ownerUserId,
 }: {
   id: string;
   initial: EditorState["draft"] | null;
   /** The local copy as it changes (this device's saves, and changes from elsewhere). */
   incoming: EditorState["draft"] | null;
   isNew: boolean;
+  /** The recipe's photos (phase D2), as they change. */
+  photos: RecipePhoto[];
+  /** Whose recipe it is: its photos are theirs too. */
+  ownerUserId: string;
 }) {
   const [session] = useState(() => new EditorSession({ id, initial, save: saveChange }));
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
@@ -507,6 +515,13 @@ function Editor({
               onChange={(e) => set({ description: e.target.value })}
             />
           </Field>
+
+          <PhotoEditor
+            recipeId={id}
+            ownerUserId={ownerUserId}
+            photos={photos}
+            created={state.created}
+          />
 
           <LinesBox
             session={session}
@@ -668,6 +683,8 @@ export function RecipeEditor({ id, isNew }: { id: string; isNew: boolean }) {
         initial={start.initial}
         incoming={detail?.recipe ?? null}
         isNew={isNew}
+        photos={detail?.photos ?? []}
+        ownerUserId={detail?.recipe.ownerUserId ?? activeSyncClient()?.userId ?? ""}
       />
     );
   }

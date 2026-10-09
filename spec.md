@@ -749,13 +749,26 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   1. Add photos from the camera or files; resize and compress in the browser first, so nobody sees a loss in quality (starting settings, confirmed by the side-by-side test below):
      - Dish photos: longest edge at most 2400 px, WebP quality about 85. Never enlarge.
      - Web images from import: keep the file as downloaded if it is 2400 px or smaller and under about 1 MB; only re-encode larger ones.
+     - GIFs (animated or not) are kept as they are, since the server accepts them (decided 2026-10-09: converting would lose the animation for a small saving). A GIF over the file-size limit becomes a still image (its first frame), and the person is told.
      - Cards, cookbook pages and screenshots (text and handwriting): longest edge at most 3000 px, WebP quality about 90 or higher.
      - Every photo: apply the camera's rotation, convert to sRGB, strip location data, resize with a high-quality resampler (not the default canvas scaling). If the re-encoded file is larger than the original, keep the original.
-     - Verify on real devices first (as in C2) that the browser can encode WebP; Safari and iPhone Home Screen apps may not. Fallback: JPEG at quality 90. A WASM encoder would be a new dependency: ask first.
+     - Encoder (researched 2026-10-09): Safari, on the Mac and the iPhone, can't make WebP from a canvas (it quietly gives a PNG). At equal quality a JPEG is about 1.4 times the size of a WebP (owner's test photos), so the owner approved a WebAssembly WebP encoder, `@jsquash/webp` (libwebp, Apache-2.0), run in a background worker (`app/photos/`). Checked with the photo test page, `/photo-trial` (like C2's storage test; also installable to the Home Screen): on an iPhone 18 Pro it encoded a cookbook page in under half a second, and Safari's JPEG was 1.7 to 1.9 times its size (`docs/research/2026-10-09-photo-trial.md`). **Decided 2026-10-09: the WebAssembly encoder on every browser**; the browser's own JPEG only if it can't load.
+     - Photos are drawn through an `<img>` element (browsers turn it upright from its EXIF data) onto a canvas no larger than the result: iPhones refuse canvases over about 16.7 million pixels, and the owner's iPhone 18 Pro takes 24.5 MP photos. Only the pixels are stored, so the location in a camera photo never leaves the device.
+     - Adding photos (decided 2026-10-09): on phones and tablets (any brand, judged by touch, not by brand), two buttons: "Take photo" opens the camera directly, and "Choose photos" picks one or more from the library or files. Computers get "Choose photos" and drag and drop. Two buttons because Chrome on Android 14 and 15 is reported to leave the camera out of a plain photo picker. The scanner-style multi-page capture is E9.
+     - Very large photos (some Android phones take 200 MP): sized from the file's header first, and opened at a reduced size so a phone doesn't run out of memory.
      - Side-by-side test: run 10 to 20 real photos (food, a handwritten card, a cookbook page, a screenshot) through the settings and compare them at full size. The owner judges; the numbers stay adjustable.
   2. Many photos per recipe; pick the cover; reorder.
   3. Photos load lazily and are cached locally.
   4. Free accounts see a clear "Photos are a Premium feature" message.
+- **Decided (owner, 2026-10-09)**:
+  1. **Thumbnails:** with each photo the device makes a small copy (480 px, WebP) for lists, stored beside the photo (`<owner>/<hash>.thumb` in R2, `image.thumb_bytes`). It doesn't count as a photo against the quota.
+  2. **What each device keeps:** every thumbnail, plus full photos of recently opened recipes up to 200 MB, oldest out first; the rest download when opened (`app/photos/cache.ts`, Cache Storage, per account; wiped when an admin stops acting as someone).
+  3. **Adding photos needs a connection.** Fennl says so; text edits still work offline on Premium. A queue for photos can come later if testers ask.
+  4. **A photo belongs to the recipe's owner**, whoever adds it, so it stays with the recipe in a household split. The upload says whose (`?owner=`, a member of the caller's household); `recipe_photo.added_by_user_id` records who added it ("Added by Sarah").
+  5. **10 photos per recipe** (`max_photos_per_recipe` in `plan_limits`, 0 on Free), raised from the admin console if testers need more. Import originals (phase E) don't count.
+  6. **Photos go in the full-library export** (built in D3, since the zip can be large).
+  - Also: the first photo is the cover ("Make cover" moves it to the front, so two people can't set different covers at once); tapping a photo opens it full screen ("Actual size" for reading a photographed page, pinch-zoom on phones); recipes without photos keep their letter in lists.
+- **Built (2026-10-09)**: `recipe_photo` (migration `0019`, synced like category links: `PhotoChange` in `shared/sync.ts`, push and pull in `worker/sync/`), `max_photos_per_recipe` (`0020`), thumbnails (`POST`/`GET /api/images/:hash/thumb`), `?owner=` on upload. On the device: `app/photos/` (prepare, upload, cache, `PhotoEditor` in the editor, `Gallery` and its viewer on the recipe page, covers in the list). The recipe shape's version went to 2, so every device downloads its copy again once (and gets the photos). Tests: 11 server tests (`worker/sync/photos.test.ts`) and a browser test on desktop and phone sizes (`e2e/photos.spec.ts`).
 - **You check**: Take a photo of a dish on your phone, add it to a recipe, see it on your laptop.
 - **Done when**: Photo flows pass tests on phone and desktop sizes.
 
@@ -766,6 +779,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   2. Scheduled job that reconciles `household_usage` against R2.
   3. R2 rule to clean up incomplete uploads.
   4. Add photos to C11's usage bar (households see the combined total and each member's share).
+  5a. Photos in the full-library export (decided in D2, 2026-10-09; never hold recipes hostage).
   5. 90-day photo grace period after dropping to Free: reminder emails (proposed at 30, 7, and 1 days left), then deletion. Resubscribing (or a new grant) cancels it.
 - **You check**: Account page shows your photo usage.
 - **Done when**: The reconcile job is tested.
@@ -866,6 +880,8 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **Goal**: Get photos of cards and pages into Fennl comfortably, especially on a phone.
 - **Steps**:
   1. Take photos with the phone camera or pick files; several per recipe (front/back, multi-page).
+     - Capture (owner's request, 2026-10-09): a scanner-style live camera inside Fennl, to photograph page after page and then tap Done, since the phone's own camera hands back one photo per opening. In a Safari tab on an iPhone 18 Pro the live view gave 12 MP pictures, sharper than the phone's camera opened from a page (`docs/research/2026-10-09-photo-trial.md`). The phone's own camera stays as the fallback (and wherever the live view fails, such as a Home Screen app if the iOS 26 sideways reports hold).
+     - Keeping live-camera pictures sharp (owner's concern, 2026-10-09: other apps' live shots are often out of focus unless the phone is held at just the right distance). A phone's aperture is fixed, so depth of field can't be raised; instead: take a real photo (ImageCapture `takePhoto`, available on the iPhone) rather than a video frame, so focus settles; score each shot's sharpness and offer "This one looks blurry. Retake?" at once; an outline that keeps the phone back from the lens's minimum focus distance (and 2× zoom if Safari allows it, to stand further back); a torch button, off by default (glare on glossy pages); maybe auto-capture when the page is steady and sharp. Measure first: add the camera's controllable features (zoom, torch, focus) and a sharpness score to `/photo-trial`, and test near and far shots.
   2. Reorder, rotate, crop, or remove pages before reading.
   3. Originals are compressed lightly (to stay readable: longest edge at most 3000 px, WebP quality about 90 or higher, see D2) and stored in R2; they count toward the quota.
 - **You check**: Photograph a two-sided card on your phone and arrange the pages.

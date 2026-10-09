@@ -14,6 +14,7 @@ import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
+import { Gallery } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { noteTrashed } from "./trashNotice";
@@ -606,6 +607,13 @@ export function RecipePage({ id }: { id: string }) {
       <Link href="/" className={styles.back}>
         ← All recipes
       </Link>
+      <Gallery
+        photos={detail.photos.filter((p) => p.role === "photo")}
+        title={recipe.title}
+        addedBy={(photo) =>
+          shared && photo.addedByUserId !== me ? name(photo.addedByUserId) : null
+        }
+      />
       <header className={styles.recipeHeader}>
         {recipe.source.kind === "person" && recipe.source.name ? (
           <p className={styles.byPerson}>{recipe.source.name}</p>

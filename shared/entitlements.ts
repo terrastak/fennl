@@ -22,6 +22,7 @@ export const LIMIT_KEYS = [
   "image_max_file_bytes",
   "image_uploads_per_minute",
   "image_uploads_per_day",
+  "max_photos_per_recipe",
 ] as const;
 export type LimitKey = (typeof LIMIT_KEYS)[number];
 export type Limits = Record<LimitKey, number | null>;

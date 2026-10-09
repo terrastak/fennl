@@ -126,6 +126,7 @@ syncRoutes.post("/api/sync/push", async (c) => {
       maxRecipes: plan.max_recipes,
       maxTextBytes: plan.max_text_bytes,
       maxRecipeBytes: plan.max_recipe_bytes,
+      maxPhotosPerRecipe: plan.max_photos_per_recipe,
     },
   );
   valid.forEach((v, i) => {
