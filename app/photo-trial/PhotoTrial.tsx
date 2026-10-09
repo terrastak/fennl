@@ -80,6 +80,9 @@ interface LiveCamera {
   imageCapture?: boolean;
   frame?: { width: number; height: number };
   still?: { width: number; height: number } | { error: string };
+  /** Previews, to see by eye whether the pictures came out upright and sharp. */
+  framePreview?: string;
+  stillPreview?: string;
 }
 
 /** Whether the browser's own canvas can make WebP (Safari gives a PNG instead). */
@@ -237,7 +240,15 @@ export function PhotoTrial() {
     const element = video.current;
     if (!element || !stream.current) return;
     const frame = { width: element.videoWidth, height: element.videoHeight };
+    const canvas = document.createElement("canvas");
+    canvas.width = frame.width;
+    canvas.height = frame.height;
+    canvas.getContext("2d")?.drawImage(element, 0, 0);
+    const frameBlob = await encodeWithCanvas(canvas, "image/jpeg", 0.9);
+    release(canvas);
+    const framePreview = frameBlob ? URL.createObjectURL(frameBlob) : undefined;
     let still: LiveCamera["still"];
+    let stillPreview: string | undefined;
     const track = stream.current.getVideoTracks()[0];
     const Capture = (
       window as Window & {
@@ -249,11 +260,18 @@ export function PhotoTrial() {
         const blob = await new Capture(track).takePhoto();
         const image = await decode(blob);
         still = { width: image.naturalWidth, height: image.naturalHeight };
+        stillPreview = URL.createObjectURL(blob);
       } catch (error) {
         still = { error: error instanceof Error ? error.message : String(error) };
       }
     }
-    setLive((current) => ({ ...current, frame, ...(still ? { still } : {}) }));
+    setLive((current) => ({
+      ...current,
+      frame,
+      ...(still ? { still } : {}),
+      ...(framePreview ? { framePreview } : {}),
+      ...(stillPreview ? { stillPreview } : {}),
+    }));
   };
 
   const stopCamera = () => {
@@ -406,6 +424,30 @@ export function PhotoTrial() {
           <p role="status" className={styles.hint}>
             {liveLine(live)}
           </p>
+        ) : null}
+        {live.framePreview || live.stillPreview ? (
+          <div className={styles.row}>
+            {live.framePreview ? (
+              <a
+                href={live.framePreview}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.preview}
+              >
+                <img src={live.framePreview} alt="Picture from the live view" />
+              </a>
+            ) : null}
+            {live.stillPreview ? (
+              <a
+                href={live.stillPreview}
+                target="_blank"
+                rel="noreferrer"
+                className={styles.preview}
+              >
+                <img src={live.stillPreview} alt="Full photo from the live camera" />
+              </a>
+            ) : null}
+          </div>
         ) : null}
       </section>
 

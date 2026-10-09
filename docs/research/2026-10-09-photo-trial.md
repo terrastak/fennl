@@ -29,10 +29,14 @@ Pages are resized to 2250×3000 (the 3000 px page limit) at quality 0.9; food to
 - **Taking a photo from inside Fennl works in a Safari tab.** iOS hands over a JPEG (no HEIC to convert), with no location, at 3088×2316 (about 7 MP) rather than the camera's full 24.5 MP. That is still above both limits (2400 px for food, 3000 for pages), and it opens in about 30 ms instead of 1.8 s.
 - **Upright and private:** drawing through an `<img>` turned both sideways-stored photos upright, and only pixels are uploaded, so their location never left the phone.
 
+## Live camera (2026-10-09)
+
+**A live camera view inside Fennl is as sharp as the camera gets**, in a Safari tab on the iPhone 18 Pro: the live view ran at 4032×3024 (12 MP), a picture taken from it was 3024×4032 (portrait, so turned the right way), and Safari now has the full-photo feature (ImageCapture), which also gave 3024×4032. That is sharper than the phone's own camera opened from a page (3088×2316). So a scanner-style capture for multi-page recipes (shoot each page, then Done; E9) is worth building, with the phone's own camera as the fallback. Still to check: the same in the Home Screen app, where iOS 26 reports describe sideways pictures from a live camera.
+
 ## Still to run
 
 - "Take a photo" as a Home Screen app (done in a Safari tab).
-- The live camera check (resolution of a picture taken from a live view), in both.
+- The live camera check in the Home Screen app (done in a Safari tab; the page now shows the pictures, to check they're upright).
 - Safari and Chrome on a Mac.
 
 ## Results as sent
@@ -74,4 +78,12 @@ image.jpg (from the camera, treated as food)
   Browser JPEG: 1.2 MB in 20 ms
   WebAssembly WebP: 482 KB in 338 ms
   Upload: the prepared version
+```
+
+```
+Fennl photo test, 10/9/2026, 3:29:06 PM
+Device: Safari on iPhone (browser tab)
+Browser makes WebP: no
+
+Live view: 4032×3024; picture from it: 3024×4032; full photo (ImageCapture): 3024×4032
 ```
