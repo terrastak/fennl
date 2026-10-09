@@ -40,7 +40,16 @@ export type StoreResult =
   /** This person already had this exact photo: nothing changes and nothing more is counted. */
   | { status: "existing" }
   /** Over the household's quota: nothing was stored. */
-  | { status: "full"; limit: "bytes" | "count" };
+  | { status: "full"; limit: "bytes" | "count" }
+  /** The housekeeping job is deleting this person's earlier copy right now: try again shortly. */
+  | { status: "busy" };
+
+/**
+ * How long the housekeeping job may take to delete a photo's R2 objects once it has claimed it
+ * (purged_at). Until then the same photo can't be added again, so a new copy is never deleted by
+ * mistake. Well over the time a scheduled run may take.
+ */
+export const PURGE_WINDOW_MS = 30 * 60 * 1000;
 
 async function hasLiveRow(db: Database, ownerUserId: string, hash: string): Promise<boolean> {
   const row = await db
@@ -86,13 +95,25 @@ export async function countImage(
       ) <= ${limits.maxCount})
     on conflict (owner_user_id, hash) do update
       set deleted_at = null, bytes = excluded.bytes, content_type = excluded.content_type,
-        created_at = excluded.created_at
+        created_at = excluded.created_at,
+        thumb_bytes = case when image.purged_at is null then image.thumb_bytes end,
+        purged_at = null
       where image.deleted_at is not null
+        and (image.purged_at is null or image.purged_at < ${now.getTime() - PURGE_WINDOW_MS})
     returning hash`);
   if (inserted.length > 0) return { status: "stored" };
 
-  // Nothing written: either the same photo arrived twice at once, or the quota is full.
+  // Nothing written: the same photo arrived twice at once, its old copy is being deleted, or the
+  // quota is full.
   if (await hasLiveRow(db, ownerUserId, hash)) return { status: "existing" };
+  const purging = await db
+    .select({ purgedAt: image.purgedAt })
+    .from(image)
+    .where(and(eq(image.ownerUserId, ownerUserId), eq(image.hash, hash)))
+    .get();
+  if (purging?.purgedAt && purging.purgedAt.getTime() >= now.getTime() - PURGE_WINDOW_MS) {
+    return { status: "busy" };
+  }
   const used = await householdImageUsage(db, householdId);
   const overBytes = limits.maxBytes !== null && used.bytes + bytes > limits.maxBytes;
   return { status: "full", limit: overBytes ? "bytes" : "count" };

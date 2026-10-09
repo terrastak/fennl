@@ -136,6 +136,13 @@ jobs:
             echo "Creating bucket $bucket."
             npx wrangler r2 bucket create "$bucket"
           fi
+          # Uploads that were started and never finished are removed after a day (spec.md D3).
+          # Photos arrive whole through the Worker, so there shouldn't be any.
+          if npx wrangler r2 bucket lifecycle list "$bucket" 2>/dev/null | grep -q abort-incomplete-uploads; then
+            echo "Bucket $bucket already cleans up incomplete uploads."
+          else
+            npx wrangler r2 bucket lifecycle add "$bucket" abort-incomplete-uploads --abort-multipart-days 1 --force
+          fi
       - name: Prepare preview secrets
         shell: bash
         run: |
@@ -301,6 +308,13 @@ jobs:
           else
             echo "Creating bucket $bucket."
             npx wrangler r2 bucket create "$bucket"
+          fi
+          # Uploads that were started and never finished are removed after a day (spec.md D3).
+          # Photos arrive whole through the Worker, so there shouldn't be any.
+          if npx wrangler r2 bucket lifecycle list "$bucket" 2>/dev/null | grep -q abort-incomplete-uploads; then
+            echo "Bucket $bucket already cleans up incomplete uploads."
+          else
+            npx wrangler r2 bucket lifecycle add "$bucket" abort-incomplete-uploads --abort-multipart-days 1 --force
           fi
       - name: Prepare production secrets
         shell: bash

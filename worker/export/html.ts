@@ -28,6 +28,7 @@ const STYLE = `
   ol li, ul li { margin: 0.3rem 0; }
   a { color: #24476b; }
   blockquote { margin: 0.8rem 0; padding-left: 1rem; border-left: 3px solid #ddd; }
+  img { display: block; max-width: 100%; height: auto; margin: 1rem 0; border-radius: 6px; }
   @media print { a { color: inherit; text-decoration: none; } .noprint { display: none; } }
 `;
 
@@ -75,6 +76,13 @@ function lines(items: (IngredientLine | DirectionStep)[], numbered: boolean): st
 
 const name = (people: Map<string, string>, userId: string) => people.get(userId) ?? "Someone";
 
+/** A photo, from a page in the recipes folder. Only photos that are in the .zip. */
+function photo(p: { file: string | null; width: number; height: number }, alt: string): string {
+  return p.file
+    ? `<img src="../${escape(p.file)}" alt="${escape(alt)}" width="${p.width}" height="${p.height}" loading="lazy">`
+    : "";
+}
+
 /** A recipe's own page. */
 export function recipePage(recipe: ExportRecipe, people: ExportPerson[]): string {
   const names = new Map(people.map((p) => [p.userId, p.name]));
@@ -86,12 +94,17 @@ export function recipePage(recipe: ExportRecipe, people: ExportPerson[]): string
     ["Difficulty", recipe.difficultyText ?? recipe.difficulty],
   ].filter((f): f is [string, string] => Boolean(f[1]));
   const source = sourceLine(recipe.source);
+  const photos = (recipe.photos ?? []).filter((p) => p.file);
+  const gallery = photos.filter((p) => p.role === "photo");
+  const cover = gallery[0];
   const parts = [
     `<p class="noprint"><a href="../index.html">← All recipes</a></p>`,
     recipe.source.kind === "person" && recipe.source.name
       ? `<p class="muted">${escape(recipe.source.name)}</p>`
       : "",
     `<h1>${escape(recipe.title)}</h1>`,
+    // The cover (the first gallery photo); the rest at the end.
+    cover ? photo(cover, recipe.title) : "",
     recipe.description.trim() ? paragraphs(recipe.description) : "",
     facts.length
       ? `<ul class="facts">${facts.map(([k, v]) => `<li><strong>${k}:</strong> ${escape(v)}</li>`).join("")}</ul>`
@@ -153,6 +166,15 @@ export function recipePage(recipe: ExportRecipe, people: ExportPerson[]): string
       `<p class="muted">Source: ${
         recipe.source.url ? `<a href="${escape(recipe.source.url)}">${label}</a>` : label
       }</p>`,
+    );
+  }
+  const more = gallery.slice(1);
+  const originals = photos.filter((p) => p.role === "import_original");
+  if (more.length || originals.length) {
+    parts.push(
+      `<h2>Photos</h2>`,
+      ...more.map((p, i) => photo(p, `${recipe.title}, photo ${i + 2}`)),
+      ...originals.map((p, i) => photo(p, `${recipe.title}, original ${i + 1}`)),
     );
   }
   parts.push(`<p class="muted">Added by ${escape(name(names, recipe.ownerUserId))}.</p>`);

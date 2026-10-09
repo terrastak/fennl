@@ -148,6 +148,13 @@
       "when": 1791585676177,
       "tag": "0020_photo_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1791588368807,
+      "tag": "0021_photo_housekeeping",
+      "breakpoints": true
     }
   ]
 }

@@ -127,6 +127,9 @@ imageRoutes.post("/api/images/upload", async (c) => {
   if (result.status === "full") {
     return c.json({ error: "image_quota_full", limit: result.limit }, 403);
   }
+  if (result.status === "busy") {
+    return c.json({ error: "storage_busy" }, 503, { "retry-after": "60" });
+  }
 
   // The same photo again only needs its stored copy checked; otherwise store it. If storing
   // fails the photo is taken back out of the count, so nothing is counted that isn't there.

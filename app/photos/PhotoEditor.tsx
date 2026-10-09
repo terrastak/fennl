@@ -1,6 +1,10 @@
 import { useEffect, useState, type DragEvent } from "react";
+import { photoLevel } from "../../shared/limits";
 import type { RecipePhoto } from "../../shared/recipe";
 import type { PhotoChange } from "../../shared/sync";
+import { photosNearText } from "../limits/limitText";
+import { useUsage } from "../limits/useLimits";
+import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { saveChanges, useSyncStatus } from "../sync/useSync";
 import { addPhotos, problemText, type AddPhotoProblem } from "./addPhotos";
@@ -74,7 +78,12 @@ export function PhotoEditor({
   const max = plan?.maxPerRecipe ?? null;
   const room = max === null ? null : Math.max(0, max - gallery.length);
   const premium = plan?.enabled ?? false;
-  const canAdd = premium && editable && created && online && adding === null && room !== 0;
+  // The household's photo storage (phase D3): a note from 80%, and no adding once it's full.
+  const quota = useUsage()?.photos;
+  const level = quota?.enabled ? photoLevel(quota) : "fine";
+  const quotaFull = level === "full" || level === "over";
+  const canAdd =
+    premium && editable && created && online && adding === null && room !== 0 && !quotaFull;
 
   const add = async (files: File[]) => {
     const cache = currentPhotoCache();
@@ -247,6 +256,11 @@ export function PhotoEditor({
           ) : room === 0 ? (
             <p className={styles.note}>
               This recipe has {max} photos, the most it can have. Remove one to add another.
+            </p>
+          ) : null}
+          {quota && level !== "fine" ? (
+            <p className={styles.note}>
+              {photosNearText(quota, quotaFull)} <Link href="/settings#usage">Recipe storage</Link>
             </p>
           ) : null}
         </>

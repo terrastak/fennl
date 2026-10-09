@@ -1,18 +1,28 @@
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
-import { Zip, ZipDeflate } from "fflate";
+import { Zip, ZipDeflate, ZipPassThrough } from "fflate";
 import { Hono } from "hono";
 import {
   EXPORT_FORMAT,
   EXPORT_VERSION,
   type ExportFile,
   type ExportPerson,
+  type ExportPhoto,
   type ExportRecipe,
 } from "../../shared/exportFormat";
 import { CATEGORY_SEPARATOR, RECIPE_FIELDS, type RecipeContent } from "../../shared/recipe";
 import type { Database } from "../db/client";
 import { member, user } from "../db/auth-schema";
-import { category, recipe, recipeCategory, recipeMade, recipeOpinion } from "../db/schema";
+import {
+  category,
+  image,
+  recipe,
+  recipeCategory,
+  recipeMade,
+  recipeOpinion,
+  recipePhoto,
+} from "../db/schema";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
+import { imageKey } from "../images/images";
 import { toRecipe } from "../sync/pull";
 import { contentsPage, recipeFile, recipePage, type ContentsEntry } from "./html";
 
@@ -22,6 +32,9 @@ import { contentsPage, recipeFile, recipePage, type ContentsEntry } from "./html
 // never held hostage (CLAUDE.md, "Lapsed subscriptions").
 //
 // It's built and sent a batch of recipes at a time, so a big library never has to fit in memory.
+//
+// Photos (phase D3) come last, in a photos folder, stored as they are (they're compressed
+// already). Leaving them out (?photos=0) makes a much smaller download.
 
 /** Recipes per database read (D1 allows 100 values in one query). */
 const BATCH = 90;
@@ -33,9 +46,25 @@ interface Household {
   ids: string[];
   /** Category paths by category ID. */
   paths: Map<string, string>;
+  /** Whether photos go in the .zip. */
+  withPhotos: boolean;
+  /** The photos to add, file in the .zip → R2 key, gathered as recipes are read. */
+  photoFiles: Map<string, string>;
 }
 
-async function household(db: Database, householdId: string): Promise<Household> {
+const EXTENSIONS: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/gif": "gif",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+
+async function household(
+  db: Database,
+  householdId: string,
+  withPhotos: boolean,
+): Promise<Household> {
   const people = await db
     .select({ userId: user.id, name: user.name })
     .from(member)
@@ -59,7 +88,7 @@ async function household(db: Database, householdId: string): Promise<Household> 
     }
     paths.set(c.id, names.join(CATEGORY_SEPARATOR));
   }
-  return { people, ids, paths };
+  return { people, ids, paths, withPhotos, photoFiles: new Map() };
 }
 
 /** One batch of recipes after `after` (by ID), with everything that goes with them. */
@@ -80,7 +109,7 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
     .all();
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
-  const [links, opinions, made] = await Promise.all([
+  const [links, opinions, made, photos] = await Promise.all([
     db
       .select({ recipeId: recipeCategory.recipeId, categoryId: recipeCategory.categoryId })
       .from(recipeCategory)
@@ -96,7 +125,50 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
       .from(recipeMade)
       .where(and(inArray(recipeMade.recipeId, ids), isNull(recipeMade.deletedAt)))
       .all(),
+    db
+      .select({
+        recipeId: recipePhoto.recipeId,
+        owner: recipePhoto.ownerUserId,
+        hash: recipePhoto.imageHash,
+        role: recipePhoto.role,
+        width: recipePhoto.width,
+        height: recipePhoto.height,
+        sortOrder: recipePhoto.sortOrder,
+        contentType: image.contentType,
+      })
+      .from(recipePhoto)
+      .innerJoin(
+        image,
+        and(
+          eq(image.ownerUserId, recipePhoto.ownerUserId),
+          eq(image.hash, recipePhoto.imageHash),
+          isNull(image.deletedAt),
+        ),
+      )
+      .where(and(inArray(recipePhoto.recipeId, ids), isNull(recipePhoto.deletedAt)))
+      .all(),
   ]);
+  const photosOf = (recipeId: string): ExportPhoto[] =>
+    photos
+      .filter((p) => p.recipeId === recipeId)
+      .sort(
+        (a, b) =>
+          Number(a.role !== "photo") - Number(b.role !== "photo") || a.sortOrder - b.sortOrder,
+      )
+      .map((p) => {
+        let file: string | null = null;
+        if (home.withPhotos) {
+          file = `photos/${p.hash}.${EXTENSIONS[p.contentType] ?? "img"}`;
+          home.photoFiles.set(file, imageKey(p.owner, p.hash));
+        }
+        return {
+          hash: p.hash,
+          file,
+          role: p.role as ExportPhoto["role"],
+          width: p.width,
+          height: p.height,
+        };
+      });
   return rows.map((row) => {
     const r = toRecipe(row);
     const content = Object.fromEntries(
@@ -125,6 +197,7 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
         .filter((m) => m.recipeId === r.id)
         .map((m) => ({ userId: m.userId, madeOn: m.madeOn }))
         .sort((a, b) => b.madeOn.localeCompare(a.madeOn)),
+      photos: photosOf(r.id),
     };
   });
 }
@@ -140,8 +213,16 @@ async function* allRecipes(db: Database, home: Household): AsyncGenerator<Export
   }
 }
 
-/** The export, as a .zip streamed while it's made. */
-export function exportZip(db: Database, householdId: string, userId: string): ReadableStream {
+/**
+ * The export, as a .zip streamed while it's made. With `photos` (the R2 bucket), the photos go
+ * in too.
+ */
+export function exportZip(
+  db: Database,
+  householdId: string,
+  userId: string,
+  photos: R2Bucket | null = null,
+): ReadableStream {
   const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
   const writer = writable.getWriter();
   const zip = new Zip((error, chunk, final) => {
@@ -159,7 +240,7 @@ export function exportZip(db: Database, householdId: string, userId: string): Re
   };
 
   const build = async () => {
-    const home = await household(db, householdId);
+    const home = await household(db, householdId, photos !== null);
     const exportedAt = new Date().toISOString();
     const me = home.people.find((p) => p.userId === userId) ?? { userId, name: "" };
     const head: Omit<ExportFile, "recipes"> = {
@@ -196,6 +277,25 @@ export function exportZip(db: Database, householdId: string, userId: string): Re
       await writer.ready;
     }
     file("index.html")(contentsPage(contents, exportedAt), true);
+
+    // Then the photos, read from R2 a piece at a time.
+    for (const [name, key] of photos ? home.photoFiles : []) {
+      const object = await photos?.get(key);
+      if (!object) {
+        console.error(`Export: photo ${key} isn't in storage`);
+        continue;
+      }
+      const entry = new ZipPassThrough(name);
+      zip.add(entry);
+      const reader = object.body.getReader();
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        entry.push(value);
+        await writer.ready;
+      }
+      entry.push(new Uint8Array(), true);
+    }
     zip.end();
   };
   build().catch((error: unknown) => {
@@ -215,7 +315,9 @@ exportRoutes.use("/api/export", requireHousehold);
 exportRoutes.get("/api/export", (c) => {
   const signedIn = c.var.signedIn;
   const day = new Date().toISOString().slice(0, 10);
-  return new Response(exportZip(signedIn.db, signedIn.household.householdId, signedIn.userId), {
+  const photos = c.req.query("photos") === "0" ? null : c.env.IMAGES;
+  const zip = exportZip(signedIn.db, signedIn.household.householdId, signedIn.userId, photos);
+  return new Response(zip, {
     headers: {
       "content-type": "application/zip",
       "content-disposition": `attachment; filename="fennl-recipes-${day}.zip"`,

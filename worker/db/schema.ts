@@ -473,8 +473,9 @@ export const recipeCategory = sqliteTable(
  *
  * A household's photo usage is the sum over its members' rows that aren't deleted, read from one
  * index (image_owner_usage_idx), as recipe usage is (worker/limits/usage.ts); there is no separate
- * counter to drift when someone joins or leaves. deleted_at is filled when a photo is removed;
- * the R2 object is deleted by the housekeeping job (phase D3).
+ * counter to drift when someone joins or leaves. deleted_at is filled when a photo is removed
+ * (no longer used, or after the 90-day grace period); purged_at when the housekeeping job deletes
+ * its R2 objects (phase D3, worker/images/housekeeping.ts).
  */
 export const image = sqliteTable(
   "image",
@@ -494,6 +495,11 @@ export const image = sqliteTable(
      * if there isn't one. It doesn't count towards the quota (it's a few percent of the photo).
      */
     thumbBytes: integer("thumb_bytes"),
+    /**
+     * When the housekeeping job started deleting its R2 objects (phase D3). While that's under way
+     * the same photo can't be added again (worker/images/images.ts, countImage).
+     */
+    purgedAt: integer("purged_at", { mode: "timestamp_ms" }),
   },
   (table) => [
     primaryKey({ columns: [table.ownerUserId, table.hash] }),
@@ -533,5 +539,34 @@ export const recipePhoto = sqliteTable(
   (table) => [
     index("recipe_photo_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
     index("recipe_photo_recipe_idx").on(table.recipeId, table.deletedAt),
+    // Whether anything still shows an image (phase D3).
+    index("recipe_photo_image_idx").on(table.ownerUserId, table.imageHash, table.deletedAt),
+  ],
+);
+
+/**
+ * The 90-day photo grace period (phase D3; CLAUDE.md, "Lapsed subscriptions"): a person's photos
+ * are in a household without photos (images_enabled), so they stay viewable and downloadable
+ * until delete_after, then they're deleted. One open row per person (ended_at null); ended when
+ * photos are allowed again ("premium") or once they're deleted ("deleted"). Kept afterwards as a
+ * record. reminded_days: the last reminder sent, in days left (90 for the first notice).
+ */
+export const photoGrace = sqliteTable(
+  "photo_grace",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
+    deleteAfter: integer("delete_after", { mode: "timestamp_ms" }).notNull(),
+    remindedDays: integer("reminded_days").notNull(),
+    endedAt: integer("ended_at", { mode: "timestamp_ms" }),
+    endedReason: text("ended_reason"),
+  },
+  (table) => [
+    uniqueIndex("photo_grace_open_idx")
+      .on(table.userId)
+      .where(sql`${table.endedAt} is null`),
   ],
 );

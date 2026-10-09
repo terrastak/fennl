@@ -147,3 +147,56 @@ export function emailChangedNotice(
     html: layout(lines),
   };
 }
+
+/** "January 7, 2027", the same wherever the scheduled job runs. */
+function longDate(when: Date): string {
+  return when.toLocaleDateString("en-US", {
+    dateStyle: "long",
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * The start of the 90-day photo grace period (phase D3): the person's plan no longer includes
+ * photos. Nothing to click; the app says the same in Settings.
+ */
+export function photoGraceStartedEmail(
+  to: { email: string; name: string },
+  deleteAfter: Date,
+): EmailMessage {
+  const date = longDate(deleteAfter);
+  const lines = [
+    greeting(to.name),
+    `Your Fennl plan no longer includes photos, so the photos you've added to recipes will be kept until ${date}, then deleted.`,
+    "Until then you can still see them, and download them with your recipes from Settings › Download your recipes.",
+    `If you have Premium again before ${date}, your photos stay. Your recipes themselves are never deleted.`,
+  ];
+  return {
+    to: to.email,
+    subject: `Your Fennl photos are kept until ${date}`,
+    text: `${lines.join("\n\n")}\n`,
+    html: layout(lines),
+  };
+}
+
+/** A reminder during the photo grace period (phase D3), some days before the photos go. */
+export function photoGraceReminderEmail(
+  to: { email: string; name: string },
+  deleteAfter: Date,
+  daysLeft: number,
+): EmailMessage {
+  const date = longDate(deleteAfter);
+  const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
+  const lines = [
+    greeting(to.name),
+    `The photos you've added to Fennl recipes will be deleted ${when}, on ${date}, because your plan no longer includes photos.`,
+    "To keep a copy, download them with your recipes from Settings › Download your recipes.",
+    `If you have Premium again before ${date}, your photos stay. Your recipes themselves are never deleted.`,
+  ];
+  return {
+    to: to.email,
+    subject: `Your Fennl photos will be deleted ${when}`,
+    text: `${lines.join("\n\n")}\n`,
+    html: layout(lines),
+  };
+}

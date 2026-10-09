@@ -17,9 +17,17 @@ import { deviceRoutes } from "./devices/routes";
 import { adminFeedbackRoutes, feedbackRoutes } from "./feedback/routes";
 import { database, databaseStatus } from "./db/client";
 import { passkey, user } from "./db/schema";
+import { createEmailSender } from "./email/email";
 import { devOutbox } from "./email/outbox";
 import { householdEntitlements } from "./entitlements/entitlements";
 import { householdSummary } from "./household/household";
+import { photoGracePeriods } from "./images/grace";
+import {
+  isReconcileRun,
+  markUnusedImages,
+  purgeDeletedImages,
+  reconcileImages,
+} from "./images/housekeeping";
 import { imageRoutes } from "./images/routes";
 import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
@@ -301,7 +309,7 @@ app.notFound((c) => {
  * verified (worker/account/purge.ts), and delete for good recipes in Trash for more than 30
  * days (worker/sync/trash.ts).
  */
-async function scheduled(_controller: ScheduledController, env: Env) {
+async function scheduled(controller: ScheduledController, env: Env) {
   const db = database(env.DB);
   const removed = await removeUnverifiedAccounts(db);
   if (removed.length > 0) {
@@ -310,6 +318,25 @@ async function scheduled(_controller: ScheduledController, env: Env) {
   }
   const expunged = await expungeOldTrash(db);
   if (expunged > 0) console.log(`Deleted ${expunged} recipe(s) from Trash for good`);
+
+  // Photo housekeeping (phase D3): photos nothing shows, the 90-day grace period, then the R2
+  // objects of every photo removed, and once a day a check of the rows against R2.
+  const unused = await markUnusedImages(db);
+  if (unused > 0) console.log(`Removed ${unused} photo(s) nothing has shown for a week`);
+  const grace = await photoGracePeriods(db, createEmailSender(env));
+  if (Object.values(grace).some((n) => n > 0)) console.log("Photo grace periods", grace);
+  const purged = await purgeDeletedImages(db, env.IMAGES);
+  if (purged > 0) console.log(`Deleted the stored copies of ${purged} removed photo(s)`);
+  if (isReconcileRun(controller.scheduledTime)) {
+    const report = await reconcileImages(db, env.IMAGES);
+    const { missing, ...rest } = report;
+    if (missing.length > 0) console.error(`Photos missing from storage: ${missing.join(", ")}`);
+    console.log("Photo storage check", {
+      ...rest,
+      removed: rest.removed.length,
+      unknown: rest.unknown.length,
+    });
+  }
 }
 
 export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Env>;

@@ -1,8 +1,17 @@
 import { forwardRef, useEffect } from "react";
-import { overallLevel, usageLevel, type Usage } from "../../shared/limits";
+import { overallLevel, usageLevel, type PhotoUsage, type Usage } from "../../shared/limits";
 import styles from "../pages/SettingsPage.module.css";
 import { Link } from "../router";
-import { NOTHING_LOST, addBlockedText, recipesLine, textLine } from "./limitText";
+import {
+  NOTHING_LOST,
+  addBlockedText,
+  graceText,
+  memberPhotosLine,
+  photoCountLine,
+  photosLine,
+  recipesLine,
+  textLine,
+} from "./limitText";
 import { useAddBlocked, useUsage } from "./useLimits";
 import limits from "./limits.module.css";
 
@@ -61,6 +70,44 @@ function Meters({ usage }: { usage: Usage }) {
   );
 }
 
+/**
+ * The household's photos (phase D3): the total against the quota, the count when it's the closer
+ * limit, each member's share, and any 90-day grace period. Not shown to a plan without photos
+ * that has none.
+ */
+function PhotoMeters({ photos }: { photos: PhotoUsage }) {
+  if (!photos.enabled && photos.count === 0) return null;
+  const quota = photos.enabled ? photos.maxBytes : null;
+  const countMax = photos.enabled ? photos.maxCount : null;
+  const shared = photos.members.length > 1;
+  const waiting = photos.members.filter((m) => m.deleteAfter !== null && m.count > 0);
+  return (
+    <>
+      <UsageMeter label="Photos" used={photos.bytes} max={quota} text={photosLine(photos)} />
+      {usageLevel(photos.count, countMax) !== "fine" ? (
+        <UsageMeter
+          label="Number of photos"
+          used={photos.count}
+          max={countMax}
+          text={photoCountLine(photos)}
+        />
+      ) : null}
+      {shared && photos.count > 0 ? (
+        <ul className={limits.shares} aria-label="Photos by person">
+          {photos.members.map((m) => (
+            <li key={m.userId}>{memberPhotosLine(m)}</li>
+          ))}
+        </ul>
+      ) : null}
+      {waiting.map((m) => (
+        <p key={m.userId} role="status" className={limits.note}>
+          {graceText(m, !shared)}
+        </p>
+      ))}
+    </>
+  );
+}
+
 /** Settings › Recipe storage. */
 export function UsageSection() {
   const usage = useUsage();
@@ -75,9 +122,11 @@ export function UsageSection() {
       {usage ? (
         <>
           <Meters usage={usage} />
+          {usage.photos ? <PhotoMeters photos={usage.photos} /> : null}
           <p className={styles.help}>
             Recipes in Trash don&rsquo;t count toward the number of recipes, but their text counts
             until they&rsquo;re deleted for good.
+            {usage.photos?.enabled ? " A photo counts once, however many recipes show it." : ""}
           </p>
           {blocked ? (
             <p role="status" className={limits.note}>

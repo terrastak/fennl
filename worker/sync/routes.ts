@@ -17,7 +17,7 @@ import type { Database } from "../db/client";
 import { device } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
-import { householdUsage, usageWithLimits } from "../limits/usage";
+import { householdPhotos, householdUsage, usageWithLimits } from "../limits/usage";
 import { pullChanges } from "./pull";
 import { applyChanges } from "./push";
 
@@ -132,9 +132,13 @@ syncRoutes.post("/api/sync/push", async (c) => {
   valid.forEach((v, i) => {
     results[v.index] = applied[i] ?? { status: "rejected", reason: "failed" };
   });
+  const [counts, photos] = await Promise.all([
+    householdUsage(signedIn.db, householdId),
+    householdPhotos(signedIn.db, householdId),
+  ]);
   const response: PushResponse = {
     results: results as ChangeResult[],
-    usage: usageWithLimits(await householdUsage(signedIn.db, householdId), plan),
+    usage: usageWithLimits(counts, plan, photos),
   };
   return c.json(response);
 });
@@ -150,11 +154,12 @@ syncRoutes.get("/api/sync/pull", async (c) => {
   const since = parseCursors(c.req.query("since"));
   if (!since) return refuse(c, "invalid_request");
   const householdId = signedIn.household.householdId;
-  const [page, plan, counts] = await Promise.all([
+  const [page, plan, counts, photos] = await Promise.all([
     pullChanges(signedIn.db, householdId, signedIn.userId, since),
     householdEntitlements(signedIn.db, householdId),
     householdUsage(signedIn.db, householdId),
+    householdPhotos(signedIn.db, householdId),
   ]);
-  const response: PullResponse = { ...page, usage: usageWithLimits(counts, plan) };
+  const response: PullResponse = { ...page, usage: usageWithLimits(counts, plan, photos) };
   return c.json(response);
 });
