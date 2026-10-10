@@ -1,0 +1,34 @@
+{
+  "title": "Thai Iced Tea",
+  "description": "Next to coffee, Thai tea is my favorite beverage on earth. Problem is, dye-packed, quick-brew mixes have become so prevalent that finding a suitable sample out in the world has become tough. The answer, of course, is make your own. I like mine to have a tang to it, so I start with Earl Grey tea rather than standard black tea, and I include tamarind pulp. Is it nice and clear like Southern sweet tea? Nope. But since I always put a little half-and-half in mine, I care not.",
+  "ingredients": [
+    "5 cups filtered or bottled water",
+    "6 Earl Grey tea bags",
+    "1 ounce fresh tamarind pulp, smashed",
+    "8 green cardamom pods",
+    "8 whole cloves",
+    "2 whole star anise pods",
+    "1 cinnamon stick",
+    "1/2 vanilla bean or 1 teaspoon vanilla extract",
+    "1/4 teaspoon kosher salt",
+    "1/2 cup sugar",
+    "1/2 cup half-and-half"
+  ],
+  "directions": [
+    "Bring the water to a boil in a 2-quart saucepan. Remove from the boil and add the tea bags, tamarind, cardamom, cloves, star anise, cinnamon, vanilla and salt.",
+    "Cover the saucepan with a lid and steep the tea for 20 minutes.",
+    "Remove the tea bags and strain out the spices and vanilla bean (if using).",
+    "Add the sugar and stir to dissolve.",
+    "Chill the Thai tea base for at least 8 hours before serving over ice with a splash of half-and-half."
+  ],
+  "servings": {
+    "count": 4,
+    "yield": "1 quart"
+  },
+  "notes": "To get the pulp out of a tamarind pod, just crack the thin outer case and remove the pulpy interior. Some folks pick out the seeds, but I don't bother. Two pods usually yield the correct amount. If you want to use packaged paste, that's fine too.\n\nCanned milk is more authentic since it was probably the only dairy that colonists could get their hands on when they moved into Southeast Asia. But, I think the fat content of half-and-half is better at balancing the tannins in the tea.",
+  "source": {
+    "name": "EveryDayCook",
+    "author": "Alton Brown",
+    "page": "98"
+  }
+}

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "walnut-cherry-cake-card",
+    "kind": "card",
+    "inputs": ["test_images/handwriten1.jpg"],
+    "notes": "Cursive in blue ink; two ingredients share a line; the directions run off the bottom of the card (front only)."
+  },
+  {
+    "id": "sugar-butter-balls-card",
+    "kind": "card",
+    "inputs": ["test_images/handwritten2.gif"],
+    "notes": "Cursive on a lined card; oven temperature and yield written beside the title; two ingredients share a line."
+  },
+  {
+    "id": "thai-iced-tea-cookbook",
+    "kind": "cookbook",
+    "inputs": ["test_images/IMG_0019.jpeg"],
+    "notes": "Phone photo of a page at an angle; footnotes marked * and **; icons next to some ingredients."
+  },
+  {
+    "id": "kale-salad-cookbook",
+    "kind": "cookbook",
+    "inputs": ["test_images/IMG_0020.jpeg"],
+    "notes": "Text printed over a faded photo; ingredient list beside the steps; footnotes; references to other recipes in the book."
+  },
+  {
+    "id": "stuffed-shells-screenshots",
+    "kind": "screenshot",
+    "inputs": ["test_images/FN1.png", "test_images/FN2.png", "test_images/FN3.png"],
+    "notes": "Three overlapping screenshots of one web page, with browser tabs, ads and related recipes around it."
+  },
+  {
+    "id": "hamburger-buns-pdf",
+    "kind": "pdf",
+    "inputs": ["test_images/Hamburger Buns.pdf"],
+    "notes": "Scanned book pages (photos of a book) with a poor text layer; a three-day recipe; equipment listed before the ingredients."
+  },
+  {
+    "id": "pretzels-pdf",
+    "kind": "pdf",
+    "inputs": ["test_images/Pretzels.pdf"],
+    "notes": "Five scanned pages, one of them only a photo; a two-day recipe; long shaping instructions; equipment lists."
+  }
+]

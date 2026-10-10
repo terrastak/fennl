@@ -570,3 +570,42 @@ export const photoGrace = sqliteTable(
       .where(sql`${table.endedAt} is null`),
   ],
 );
+
+/**
+ * One import of one recipe (phase E1): who, when, from what, how far it got, the draft
+ * (shared/importDraft.ts) and, once the person saves it, the recipe. A file with many recipes (a
+ * Paprika library, a PDF of several) is one job per recipe sharing a batch_id, so each row stays
+ * well under D1's size limit. The recipe records the job in its `import` (shared/recipe.ts).
+ *
+ * status: "reading" (the importer is working), "ready" (a draft waits for review), "saved",
+ * "discarded", or "failed" (error says why).
+ */
+export const importJob = sqliteTable(
+  "import_job",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    batchId: text("batch_id"),
+    /** One of IMPORT_SOURCES (shared/recipe.ts). */
+    source: text("source").notNull(),
+    status: text("status").notNull(),
+    /** The draft as JSON, once read. */
+    draft: text("draft"),
+    /** What was imported, as JSON: file names and sizes, the page's address, image hashes. */
+    provenance: text("provenance").notNull(),
+    error: text("error"),
+    /** The recipe it became. Recipes are never hard-deleted, so no foreign key is needed. */
+    recipeId: text("recipe_id"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("import_job_household_idx").on(table.householdId, table.createdAt),
+    index("import_job_batch_idx").on(table.batchId),
+  ],
+);

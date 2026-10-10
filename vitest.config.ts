@@ -12,6 +12,14 @@ export default defineConfig({
   test: {
     projects: [
       {
+        // The import quality scorecard (phase E1): the test set and the report.
+        test: {
+          name: "import-quality",
+          include: ["import-quality/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
         // App and shared code: plain unit tests in Node.
         test: {
           name: "node",

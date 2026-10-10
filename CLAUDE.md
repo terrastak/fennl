@@ -141,7 +141,7 @@ Better Auth owns user, session, account, verification, organization, member, and
 | `recipe_category` | Recipe-to-category links (many per recipe) (C3) | `recipe_id`, `category_id`, `owner_user_id` (the recipe's), `field_times`, `updated_at`, `deleted_at`, `server_seq` |
 | `sync_counter` | One row: the last `server_seq` handed out, shared by every synced table (C3) | `id`, `value` |
 | `recipe_photo` | Photos on a recipe (built in D2, `worker/sync/`, `app/photos/`), synced like category links. Owned by the recipe's owner, as is the image, whoever added it (Decided 2026-10-09). The first gallery photo by `sort_order` is the cover. At most `max_photos_per_recipe` gallery photos (10 on Premium, Decided 2026-10-09) | `id` (UUID), `recipe_id`, `owner_user_id` (the recipe's), `image_hash`, `role` (`photo` or `import_original`), `width`, `height`, `sort_order`, `added_by_user_id`, `field_times`, `created_at`, `updated_at`, `deleted_at`, `server_seq` |
-| `import_job` | One row per import attempt | `id`, `household_id`, `user_id`, source type, status, draft, provenance, resulting `recipe_id`, `created_at` |
+| `import_job` | One row per recipe imported (built in E1, migration `0022`); a file of many recipes shares a `batch_id`. The draft is a `RecipeDraft` (`shared/importDraft.ts`) | `id`, `household_id`, `user_id`, `batch_id`, `source`, `status`, `draft`, `provenance`, `error`, `recipe_id`, `created_at`, `updated_at` |
 | `ai_usage` | Metering for every AI call | `id`, `household_id`, `import_job_id`, provider, model, input/output tokens, estimated cost, `created_at` |
 | `plan_limits` | Every tier limit (recipe count, text caps, device caps, image quotas), editable without a deploy | `tier`, `key`, `value`, `updated_at`, `updated_by` |
 | `limit_override` | Per-account limit exceptions, which beat the tier limit | `household_id`, `key`, `value`, `expires_at`, `note`, `created_by`, `created_at` |
@@ -244,7 +244,8 @@ Keeping imported photos and original-card photos needs `images_enabled`. A free 
 - **Paprika 3**: full library import with photos and categories, essential for the beta. Re-importing must update rather than duplicate.
 - **Original photos are always kept** with the imported recipe.
 - **Every import is reviewed before saving.** Nothing is silently added or overwritten.
-- **Measured quality.** Import accuracy is scored field by field against a real test set; see `spec.md` phase E1.
+- **One draft format.** Every importer produces a recipe draft (`shared/importDraft.ts`, built in E1): the recipe's own content with a confidence and a source for each field, for the review screen.
+- **Measured quality.** Import accuracy is scored field by field against a real test set; see `spec.md` phase E1. Built in E1: the test set and scorecard are in `import-quality/` (public, Decided 2026-10-10), scored by `shared/importScore.ts`; CI prints the report.
 - **Not in the beta**: paste-a-link import, phone share button, other browsers' extensions, social and video import.
 
 ## AI import (Leaning)

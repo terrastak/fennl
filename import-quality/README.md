@@ -1,0 +1,68 @@
+# Import quality test set
+
+How Fennl measures import quality (phase E1 in `spec.md`). Every importer runs over these
+samples, and the scorecard compares what it found with the correct answer, field by field: title,
+description, each ingredient, each step, times, servings, notes and source.
+
+- `samples.json`: the samples. Each has an `id`, a `kind` (`web`, `card`, `cookbook`,
+  `screenshot`, `pdf` or `paprika`), its input files (paths from the repository's root, in reading
+  order) and a note on what makes it a useful test.
+- `expected/<id>.json`: the correct answer. A file of several recipes (a PDF, a Paprika library)
+  has a list of them.
+- `importers.ts`: the importers the scorecard runs. Each import phase (E3 to E13) adds its own.
+- `npm run import:quality` runs the scorecard and prints the report. CI runs it with the unit
+  tests and puts the report on each run's summary page.
+
+**This folder and `test_images/` are public** (the repository is public; decided by the owner
+2026-10-10). Only add pages and cards you're happy for anyone to see.
+
+## Writing a correct answer
+
+Write what the source says, the way it says it. Fennl keeps recipe text as written, so the
+correct answer is the text a careful person would type in, not a tidied version.
+
+```json
+{
+  "title": "Sugar Butter Balls",
+  "ingredients": ["## For the dough:", "1 cup butter", "1/2 cup sifted powdered sugar"],
+  "directions": ["Mix butter, sugar and vanilla, sift flour and salt, add nuts."],
+  "times": { "prep": 15, "cook": null, "total": null },
+  "servings": { "count": 48, "yield": "4 doz." },
+  "description": "The headnote, if there is one.",
+  "notes": "Footnotes, tips and variations.",
+  "source": { "name": "Cookbook title or site", "author": null, "page": "98", "url": null }
+}
+```
+
+- One line per ingredient, one step per numbered step or paragraph. A section heading starts
+  with `## `.
+- Leave a field out when it doesn't matter what's found (no time on the card, say). Use `null` or
+  `""` when the right answer is "nothing".
+- Small differences are forgiven when scoring: letter case, spacing, curly quotes, `½` against
+  `1/2`, bullets and step numbers. Spelling mistakes are not.
+
+## Collecting samples (checklist)
+
+The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
+PDFs and a Paprika export. Already in: 2 cards, 2 cookbook pages, 1 screenshot recipe (3 images)
+and 2 PDFs.
+
+- [ ] **Web pages (about 30):** addresses of recipe pages you'd really save. Mix big sites (Food
+      Network, NYT Cooking, Serious Eats, Allrecipes, BBC Good Food), blogs with long stories
+      before the recipe, a page with two recipes, one with sections ("For the sauce"), metric
+      amounts, and a few with no recipe card at all. Paywalled pages are fine: the Chrome
+      extension reads them as you see them; save them as "Web Page, Complete" too.
+- [ ] **Card photos (about 18 more):** printed and handwritten, faded, stained, cursive, both
+      sides of a card (front and back as two files of one sample), two recipes on one card, and a
+      couple taken badly (angled, shadowed, blurry).
+- [ ] **Cookbook pages (about 8 more):** a recipe across two pages, two recipes on one page,
+      columns, a photo behind the text, metric and imperial, and a recipe that points to another.
+- [ ] **Screenshots (about 9 more):** phone and computer, Instagram or Facebook captions, a
+      recipe in a text message, a page cut across several screenshots.
+- [ ] **PDFs (a few more):** a printed-to-PDF web page, a scanned family cookbook, a PDF of
+      several recipes.
+- [ ] **Paprika export:** a `.paprikarecipes` file of 20 to 50 recipes with photos and
+      categories (for E13).
+
+For each new sample, add it to `samples.json` and the file to `test_images/`, and I'll write the
+first draft of its correct answer for you to check.
