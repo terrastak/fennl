@@ -324,6 +324,7 @@ Other current thinking:
 
 - Prefer small, reviewable changes. Ask before changing anything marked **Decided**.
 - When a task depends on an **Unverified** claim, check current official docs first and say what you found.
+- **Before writing step-by-step instructions for the owner in any third-party product** (Cloudflare, GitHub, Stripe, Google, Apple, Resend, a domain registrar, and so on), read that product's current official documentation first and base the steps on it, never on memory. Name the page used and the date checked, use the exact menu and button names it shows, and say what to send back if their screen differs. If the docs can't be reached, say so and mark the steps "from memory, unverified". The owner is not a developer and follows steps literally, so out-of-date steps cost real time.
 - Entitlement checks live on the server. Never trust tier, device status, or quota from the client.
 - Keep the free/Premium difference in entitlement flags, not in separate code paths wherever possible: one client, one data layer.
 - Do not add dependencies for sync, auth, or billing without asking.
