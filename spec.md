@@ -780,7 +780,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   3. R2 rule to clean up incomplete uploads.
   4. Add photos to C11's usage bar (households see the combined total and each member's share).
   5a. Photos in the full-library export (decided in D2, 2026-10-09; never hold recipes hostage).
-  5. 90-day photo grace period after dropping to Free: reminder emails (proposed at 30, 7, and 1 days left), then deletion. Resubscribing (or a new grant) cancels it.
+  5. 90-day photo grace period after dropping to Free: reminder emails (at 30, 7, and 1 days left; Decided 2026-10-09), then deletion. Resubscribing (or a new grant) cancels it.
 - **You check**: Account page shows your photo usage.
 - **Done when**: The reconcile job is tested.
 - **Built (2026-10-09)**, all run by the hourly scheduled job (`worker/index.ts`):
@@ -790,7 +790,7 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   4. Usage: every sync answer carries the household's photos (bytes and count against the quota, each member's share, and any grace period's end) next to recipe usage. Settings › Recipe storage shows a Photos bar, the count when that's the nearer limit, and each member's share in a shared household. The photo editor shows a note from 80% and stops adding at 100%.
   5a. The export includes photos in a `photos/` folder, shown on each recipe's page; `fennl-recipes.json` lists each recipe's photos (export version 2). Settings also offers "Download without photos".
   5. Grace period (`worker/images/grace.ts`, table `photo_grace`, migration `0021`): per person, judged by the plan of the household they're in now. When it no longer includes photos, a notice by email, reminders at 30, 7 and 1 days left (only the latest due if one was missed), and on day 90 the photos are removed (devices drop them) and deleted from R2. Recipes are untouched. Photos allowed again before then (Premium or a new code) end it; dropping again starts a new 90 days. Settings shows until when.
-  - **Still to confirm with the owner**: the 7-day wait before unused photos go; the reminder schedule (30/7/1 days, plus a notice at the start); no email after the deletion itself; photos included in the export by default.
+  - **Decided (owner, 2026-10-09)**: unused photos go after 7 days; grace-period emails are a notice at the start and reminders at 30, 7 and 1 days left, with none after the deletion; photos are in the download by default ("Download without photos" leaves them out).
   - Tests: `worker/images/housekeeping.test.ts` (unused photos, the purge and re-adding, reconcile, grace period, usage, export) and the Settings check in `e2e/photos.spec.ts`.
 
 ## Stage E: The import engine (headline feature, Premium)
