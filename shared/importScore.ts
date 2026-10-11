@@ -64,6 +64,8 @@ export interface RecipeScore {
   overall: number;
   ingredients: LineCounts | null;
   directions: LineCounts | null;
+  /** The servings count alone (it drives scaling): 1 right, 0 wrong, null when not given. */
+  servingsCount: number | null;
 }
 
 const FRACTIONS: Record<string, string> = {
@@ -242,6 +244,7 @@ export function scoreRecipe(expected: ExpectedRecipe, found: RecipeContent): Rec
   };
   let ingredients: LineCounts | null = null;
   let directions: LineCounts | null = null;
+  let servingsCount: number | null = null;
 
   if (expected.title !== undefined) fields.title = textScore(expected.title, found.title);
   if (expected.description !== undefined) {
@@ -268,7 +271,10 @@ export function scoreRecipe(expected: ExpectedRecipe, found: RecipeContent): Rec
   if (expected.servings) {
     const s = expected.servings;
     const parts: number[] = [];
-    if (s.count !== undefined) parts.push(sameNumber(s.count, found.servings.count));
+    if (s.count !== undefined) {
+      servingsCount = sameNumber(s.count, found.servings.count);
+      parts.push(servingsCount);
+    }
     if (s.yield !== undefined) parts.push(optionalText(s.yield, found.servings.yield));
     fields.servings = mean(parts);
   }
@@ -283,7 +289,7 @@ export function scoreRecipe(expected: ExpectedRecipe, found: RecipeContent): Rec
   }
 
   const scored = SCORED_FIELDS.map((f) => fields[f]).filter((v): v is number => v !== null);
-  return { fields, overall: mean(scored) ?? 0, ingredients, directions };
+  return { fields, overall: mean(scored) ?? 0, ingredients, directions, servingsCount };
 }
 
 /**

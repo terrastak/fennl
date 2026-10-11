@@ -1,0 +1,38 @@
+{
+  "title": "Pasta with Garlic Sauce, Arugula, and Walnuts",
+  "description": "",
+  "ingredients": [
+    "50 garlic cloves, peeled (1 cup)",
+    "3 tbsp extra-virgin olive oil, plus extra for drizzling",
+    "1 cup chicken broth",
+    "2 tsp balsamic vinegar",
+    "Salt and pepper",
+    "1 pound spaghetti",
+    "8 ounces arugula",
+    "1 cup walnuts, toasted and chopped",
+    "Grated pecorino romano cheese"
+  ],
+  "directions": [
+    "In a medium saucepan over medium heat, combine the garlic and oil. Cover and cook until the garlic is browned all over. Stir occasionally. America's Test Kitchen says 6-8 minutes, but for me it's been like 12 minutes.",
+    "While the garlic is going, bring 4 quarts of water to a boil in a large pot.",
+    "Once the garlic is browned, add the broth, balsamic vinegar, ¾ tsp salt, and ½ tsp pepper. Bring to the garlic mix to a boil. Reduce the heat to low and simmer for for about 5 minutes. The garlic is ready when you can easily stab it with a fork.",
+    "While your garlic is simmering, your water should have come to a boil. Salt the water generously and add in you spaghetti. Cook until al dente (look at package but about 8-10 minutes). Reserve ½ cup of the pasta water.",
+    "When the garlic mixture is finished, transfer it into a food processor. Blend until smooth, about 1 minute.",
+    "Drain pasta and return to the pot. Pour the sauce over. Add some of the reserved pasta water if you'd like to thin out the sauce.",
+    "Mix in the arugula and chopped walnuts. Sprinkle with cheese."
+  ],
+  "times": {
+    "cook": 20,
+    "total": 20
+  },
+  "servings": {
+    "count": 4,
+    "yield": null
+  },
+  "notes": "",
+  "source": {
+    "name": "Cooking is Messy",
+    "author": "Cook's Country",
+    "url": "https://www.cookingismessy.com/2014/10/27/pasta-garlic-sauce-arugula-walnuts/"
+  }
+}
