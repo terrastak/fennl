@@ -822,6 +822,13 @@ Import quality is the core of the product, so this stage starts by building a wa
   3. A large test suite of real-world ingredient lines.
 - **You check**: A page where you can type ingredient lines and see how they're understood.
 - **Done when**: The parser passes the test suite. (It's reused for scaling in Stage F.)
+- **Built (2026-10-11)**:
+  1. The ingredient reader (`shared/ingredients.ts`, `readIngredient`): amount (whole numbers, decimals including `1,5`, fractions, `½`-style and fraction-slash characters, mixed numbers such as `1 1/2`, `1-1/2` and `1 and 1/2`, ranges such as `2–3`, `2 to 3`, `2 or 3`, number words such as "two", "half a", "a couple of"), unit, item and note. Amounts added together are one amount (`1 pound 4 ounces`, `1 cup plus 2 tablespoons`, `1 cup + ¼ cup`). "A pinch" and "a dash" have a unit but no number to scale. Temperatures ("70 degrees F") are never amounts.
+  2. Units (`UNITS`): every common spelling and abbreviation, `t` a teaspoon and `T` a tablespoon, and a unit only where a word ends (the "can" in "candied" isn't one). Each has a kind (volume, weight, count, imprecise, length) and, for volume and weight, its size in millilitres or grams, ready for converting (F1).
+  3. Every amount on the line is recorded with where it's written and what it is: the main amount, the same amount another way (`(190 g)`, `/ 240 ml`, `8 tablespoons 1 stick`), each package's size (`1 (14-ounce) can`, `Two 28-ounce cans`, `2 x 400 g tins`, `4- to 5-pound chicken`), or another amount on the line (`or 1 teaspoon extract`). F1 scales by changing those spans, so a weight in parentheses never contradicts the main amount.
+  4. Tests: 142 real-world lines (`shared/ingredients.test.ts`), and the owner's whole Paprika library (827 recipes, 7,861 different lines, read in under a tenth of a second; `import-quality/ingredients.test.ts`), where 6,914 lines have an amount and most of the rest have none ("Salt").
+  5. The check page: `/ingredient-trial` (like D2's photo test page; nothing leaves the device).
+  - Not stored yet: recipes keep only their text. The reader runs when it's needed, so improving it never leaves stale readings in recipes; F1 decides whether caching (`IngredientLine.parsed`) is worth it.
 
 ### E3. Structured web recipe extraction
 - **Goal**: Read recipes from web pages that publish structured recipe data (most big recipe sites do).

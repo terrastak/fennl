@@ -1,3 +1,5 @@
+import type { IngredientAmount } from "./ingredients";
+
 /**
  * What a recipe is (phase C1). The plain-English description is docs/design/recipe-model.md;
  * this file is the same thing as types and validation rules, shared by the app and the Worker.
@@ -38,6 +40,12 @@ export interface ParsedIngredient {
   item: string | null;
   /** "sifted", "(or more)". */
   note: string | null;
+  /**
+   * Every amount on the line, with where it's written (phase E2, shared/ingredients.ts), so
+   * scaling changes numbers in place: the main amount, the same amount another way ("(190 g)"),
+   * a package size ("1 (14-ounce) can"), and any other. Absent from anything read before E2.
+   */
+  amounts?: IngredientAmount[];
 }
 
 /** One line of the ingredient list. */
