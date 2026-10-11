@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import { addRecipe, editorStatus, recipeCard, syncStatus } from "./recipes";
-import { runLocalSql, useOwnAccount } from "./support";
+import { testSetup, useOwnAccount } from "./support";
 
 // Phase C11: plan limits, the usage bar, and what happens over a limit.
 
@@ -21,11 +21,7 @@ async function setLimit(
 ) {
   const res = await context.request.get("/api/household", { headers: { origin: baseURL } });
   const { id } = (await res.json()) as { id: string };
-  runLocalSql(
-    "INSERT INTO limit_override (id, household_id, key, value, note, created_at) VALUES " +
-      `('${crypto.randomUUID()}', '${id}', '${key}', ${value ?? "NULL"}, 'Browser test', ${Date.now()}) ` +
-      "ON CONFLICT(household_id, key) DO UPDATE SET value = excluded.value",
-  );
+  await testSetup(context.request, { kind: "limitOverride", householdId: id, key, value });
 }
 
 async function addSamples(page: Page) {
