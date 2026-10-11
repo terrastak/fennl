@@ -61,8 +61,9 @@ and 2 PDFs.
       recipe in a text message, a page cut across several screenshots.
 - [ ] **PDFs (a few more):** a printed-to-PDF web page, a scanned family cookbook, a PDF of
       several recipes.
-- [ ] **Paprika export:** a `.paprikarecipes` file of 20 to 50 recipes with photos and
-      categories (for E13).
+- [x] **Paprika export:** the owner's whole library (827 recipes) is in
+      `test_recipes/all-recipes.paprikarecipes`. E2 reads every ingredient line in it
+      (`ingredients.test.ts`); E13 will import it.
 
 For each new sample, add it to `samples.json` and the file to `test_images/`, and I'll write the
 first draft of its correct answer for you to check.

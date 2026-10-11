@@ -1,0 +1,125 @@
+/* The ingredient check page (phase E2). */
+
+.page {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: var(--space-8) var(--space-4) var(--space-12);
+}
+
+.title {
+  font-size: var(--text-3xl);
+  margin: 0 0 var(--space-3);
+}
+
+.lead {
+  margin: 0 0 var(--space-6);
+  color: var(--color-text-muted);
+}
+
+.card {
+  margin-bottom: var(--space-6);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+}
+
+.card h2 {
+  font-size: var(--text-xl);
+  margin: 0 0 var(--space-4);
+}
+
+.input {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-4) 0 0;
+}
+
+.secondary {
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.results {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result {
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.result:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.line {
+  margin: 0 0 var(--space-2);
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.main,
+.other {
+  padding: 0 0.15em;
+  border-radius: var(--radius-sm);
+  color: inherit;
+}
+
+.main {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.other {
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.details {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.details div {
+  display: grid;
+  grid-template-columns: minmax(7rem, 10rem) 1fr;
+  gap: var(--space-3);
+}
+
+.details dt {
+  color: var(--color-text-muted);
+}
+
+.details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
