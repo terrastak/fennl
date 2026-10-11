@@ -2,8 +2,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
 import {
   PASSWORD,
+  adminEmail,
   linkFromLatestEmail,
-  runLocalSql,
   signUpConfirmed,
   uniqueEmail,
   useFreshAddress,
@@ -15,11 +15,6 @@ test.beforeEach(async ({ context, isMobile }) => {
   test.skip(isMobile, "The admin console is checked on a computer");
   await useFreshAddress(context);
 });
-
-/** The admin role is granted only by a database command, exactly as the runbook does it. */
-function grantAdmin(email: string) {
-  runLocalSql(`UPDATE user SET role = 'admin' WHERE email = '${email}'`);
-}
 
 /** A software passkey device, so the test can create and use passkeys without a person. */
 async function addVirtualAuthenticator(context: BrowserContext, page: Page) {
@@ -45,9 +40,8 @@ async function signInWithPassword(page: Page, email: string) {
   await page.getByRole("button", { name: "Sign in with password" }).click();
 }
 
-test("an admin sets up a passkey, then signs in with it", async ({ page, context, baseURL }) => {
-  const email = await signUpConfirmed(context, baseURL!, "Owner");
-  grantAdmin(email);
+test("an admin sets up a passkey, then signs in with it", async ({ page, context }, testInfo) => {
+  const email = adminEmail(testInfo, "passkey");
   await context.clearCookies();
   await addVirtualAuthenticator(context, page);
 
@@ -118,7 +112,7 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   context,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   // Someone who needs help, made first in a separate browser.
   const helped = await browser.newContext({
     baseURL: baseURL!,
@@ -127,8 +121,7 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   await useFreshAddress(helped);
   const helpedEmail = await signUpConfirmed(helped, baseURL!, "Petra Ng");
 
-  const email = await signUpConfirmed(context, baseURL!, "Helper");
-  grantAdmin(email);
+  const email = adminEmail(testInfo, "helps");
   await context.clearCookies();
   await addVirtualAuthenticator(context, page);
   await signInWithPassword(page, email);
@@ -206,7 +199,7 @@ test("an admin puts back an account's earlier email after someone changed it", a
   context,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   // The account's own browser: it changes its email (as someone who took it over might).
   const person = await browser.newContext({
     baseURL: baseURL!,
@@ -228,8 +221,7 @@ test("an admin puts back an account's earlier email after someone changed it", a
   expect(await verified.json()).toEqual({ result: "done" });
   await person.close();
 
-  const email = await signUpConfirmed(context, baseURL!, "Support");
-  grantAdmin(email);
+  const email = adminEmail(testInfo, "restores");
   await context.clearCookies();
   await addVirtualAuthenticator(context, page);
   await signInWithPassword(page, email);
@@ -257,7 +249,7 @@ test("an admin reads feedback, replies by email, and marks it done", async ({
   context,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   // A tester sends feedback from their own browser.
   const tester = await browser.newContext({
     baseURL: baseURL!,
@@ -273,8 +265,7 @@ test("an admin reads feedback, replies by email, and marks it done", async ({
   expect(sent.ok()).toBe(true);
   await tester.close();
 
-  const email = await signUpConfirmed(context, baseURL!, "Support");
-  grantAdmin(email);
+  const email = adminEmail(testInfo, "feedback");
   await context.clearCookies();
   await addVirtualAuthenticator(context, page);
   await signInWithPassword(page, email);

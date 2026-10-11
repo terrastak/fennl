@@ -33,6 +33,7 @@ import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
 import { syncRoutes } from "./sync/routes";
 import { expungeOldTrash, trashRoutes } from "./sync/trash";
+import { testSetupRoutes } from "./dev/testSetup";
 import { exportRoutes } from "./export/export";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
@@ -285,6 +286,9 @@ app.get("/api/dev/outbox", (c) => {
   }
   return c.json(devOutbox.list(c.req.query("to")));
 });
+
+// Local browser tests only: setting up codes, limits and switches (worker/dev/testSetup.ts).
+app.route("/", testSetupRoutes);
 
 // The admin console's page. The API above does the real checks; this keeps the page itself
 // behind Access too.
