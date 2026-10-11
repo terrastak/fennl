@@ -1,0 +1,36 @@
+{
+  "title": "Big Soft Ginger Cookies",
+  "description": "These ginger cookies are soft, easy to make and loaded with the flavors of fall.",
+  "ingredients": [
+    "3/4 cup butter, softened",
+    "1 cup sugar, plus additional for rolling",
+    "1 large egg, room temperature",
+    "1/4 cup molasses",
+    "2-1/4 cups all-purpose flour",
+    "2 teaspoons ground ginger",
+    "1 teaspoon baking soda",
+    "3/4 teaspoon ground cinnamon",
+    "1/2 teaspoon ground cloves",
+    "1/4 teaspoon salt"
+  ],
+  "directions": [
+    "Create the dough: Preheat the oven to 350°F. In a large bowl, use a hand mixer or stand mixer to cream the butter and sugar until light and fluffy, five to seven minutes. Beat in the room-temperature egg and the molasses. In a separate bowl, whisk together the flour, ginger, baking soda, cinnamon, cloves and salt. Gradually add the flour mixture to the creamed mixture and beat well.",
+    "Shape into balls and coat in sugar: Roll the dough into 1-1/2-inch balls, then roll each ball in a small bowl that’s filled with sugar. Place the balls 2 inches apart on ungreased baking sheets. Editor’s Tip: Portion out the dough with a cookie scoop for consistency and ease.",
+    "Bake the cookies until they’re puffy and lightly browned, 10 to 12 minutes. Remove the cookies onto wire racks to cool to room temperature."
+  ],
+  "times": {
+    "prep": 20,
+    "cook": 10,
+    "total": 30
+  },
+  "servings": {
+    "count": null,
+    "yield": "2-1/2 dozen"
+  },
+  "notes": "",
+  "source": {
+    "name": "Taste of Home",
+    "author": "Val Goodrich",
+    "url": "https://www.tasteofhome.com/recipes/big-soft-ginger-cookies/"
+  }
+}

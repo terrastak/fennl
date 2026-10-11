@@ -40,5 +40,222 @@
     "kind": "pdf",
     "inputs": ["test_images/Pretzels.pdf"],
     "notes": "Five scanned pages, one of them only a photo; a two-day recipe; long shaping instructions; equipment lists."
+  },
+  {
+    "id": "nyt-7up-sheet-cake",
+    "kind": "web",
+    "inputs": ["test_pages/nyt-7up-sheet-cake.html"],
+    "url": "https://cooking.nytimes.com/recipes/1024208-7up-sheet-cake",
+    "notes": "NYT Cooking (paywalled site): ingredient sections only on the page; amounts in cups and grams."
+  },
+  {
+    "id": "bonappetit-coconut-cream-pie",
+    "kind": "web",
+    "inputs": ["test_pages/bonappetit-coconut-cream-pie.html"],
+    "url": "https://www.bonappetit.com/recipe/best-coconut-cream-pie",
+    "notes": "Bon Appétit: sections in the data, amounts split from their lines on the page, \"Do Ahead\" tips and an editor's note inside the steps."
+  },
+  {
+    "id": "epicurious-beer-battered-onion-rings",
+    "kind": "web",
+    "inputs": ["test_pages/epicurious-beer-battered-onion-rings.html"],
+    "url": "https://www.epicurious.com/recipes/food/views/beer-battered-onion-rings",
+    "notes": "Epicurious: diet keywords (vegan, nut free), equipment listed with the ingredients, an editor's note after the last step."
+  },
+  {
+    "id": "cookscountry-bacon-wrapped-meatloaf",
+    "kind": "web",
+    "inputs": ["test_pages/cookscountry-bacon-wrapped-meatloaf.html"],
+    "url": "https://www.cookscountry.com/recipes/8213-bacon-wrapped-meatloaf",
+    "notes": "Cook's Country (paywalled): fractions as 1/4 in the data and ¼ on the page; \"Before You Begin\" notes outside the data."
+  },
+  {
+    "id": "atk-blackberry-mascarpone-lemon-cake",
+    "kind": "web",
+    "inputs": ["test_pages/atk-blackberry-mascarpone-lemon-cake.html"],
+    "url": "https://www.americastestkitchen.com/guides/the-perfect-cake/blackberry-mascarpone-lemon-cake",
+    "notes": "America's Test Kitchen: ingredient sections only on the page; weights in parentheses; no times in the data."
+  },
+  {
+    "id": "pioneerwoman-apple-cranberry-stuffing",
+    "kind": "web",
+    "inputs": ["test_pages/pioneerwoman-apple-cranberry-stuffing.html"],
+    "url": "https://www.thepioneerwoman.com/food-cooking/recipes/a37858440/apple-cranberry-stuffing-recipe/",
+    "notes": "The Pioneer Woman (Hearst): \"c.\" in the data where the page says \"cup\"; yield \"8 - 10 serving(s)\"."
+  },
+  {
+    "id": "delish-blt-eggs-benedict",
+    "kind": "web",
+    "inputs": ["test_pages/delish-blt-eggs-benedict.html"],
+    "url": "https://www.delish.com/cooking/recipe-ideas/a41093156/blt-eggs-benedict-recipe/",
+    "notes": "Delish (Hearst): ingredient sections only on the page; \"&nbsp;\" in the data."
+  },
+  {
+    "id": "goodhousekeeping-herbed-stuffing",
+    "kind": "web",
+    "inputs": ["test_pages/goodhousekeeping-herbed-stuffing.html"],
+    "url": "https://www.goodhousekeeping.com/food-recipes/a15424/herb-apple-stuffing-recipe-ghk1113/",
+    "notes": "Good Housekeeping (Hearst): abbreviated units in the data; the test kitchen as author."
+  },
+  {
+    "id": "tasteofhome-big-soft-ginger-cookies",
+    "kind": "web",
+    "inputs": ["test_pages/tasteofhome-big-soft-ginger-cookies.html"],
+    "url": "https://www.tasteofhome.com/recipes/big-soft-ginger-cookies",
+    "notes": "Taste of Home: each step has a name (\"Create the dough\"); yield \"2-1/2 dozen\"."
+  },
+  {
+    "id": "tastingtable-chewy-sweet-coconut-bars",
+    "kind": "web",
+    "inputs": ["test_pages/tastingtable-chewy-sweet-coconut-bars.html"],
+    "url": "https://www.tastingtable.com/1534713/chewy-sweet-coconut-bars-recipe/",
+    "notes": "Tasting Table: title ends in \"Recipe\"; yield given twice (12, \"12 bars\")."
+  },
+  {
+    "id": "foodcom-honey-mustard-sauce",
+    "kind": "web",
+    "inputs": ["test_pages/foodcom-honey-mustard-sauce.html"],
+    "url": "http://www.food.com/recipe/applebees-honey-mustard-sauce-78490",
+    "notes": "Food.com: runs of spaces inside lines; a site-wide sentence as the description."
+  },
+  {
+    "id": "bettycrocker-scalloped-potatoes",
+    "kind": "web",
+    "inputs": ["test_pages/bettycrocker-scalloped-potatoes.html"],
+    "url": "https://www.bettycrocker.com/recipes/scalloped-potatoes/328145a6-db72-4258-b545-0589655fe23d",
+    "notes": "Betty Crocker: steps named \"Step 1\" to \"Step 7\"; the recipe card sent hidden for a script to show."
+  },
+  {
+    "id": "pillsbury-chicken-pot-pie",
+    "kind": "web",
+    "inputs": ["test_pages/pillsbury-chicken-pot-pie.html"],
+    "url": "http://www.pillsbury.com/recipes/classic-chicken-pot-pie/1401d418-ac0b-4b50-ad09-c6f1243fb992",
+    "notes": "Pillsbury: twelve steps named \"Step 1\" onwards; a brand-name ingredient line."
+  },
+  {
+    "id": "tasty-cookie-dough-ice-cream",
+    "kind": "web",
+    "inputs": ["test_pages/tasty-cookie-dough-ice-cream.html"],
+    "url": "https://tasty.co/recipe/salted-malted-chocolate-chip-cookie-dough-ice-cream-by-salt-and-straw",
+    "notes": "Tasty: title ends \"Recipe by Tasty\"; invisible characters in a step; several authors."
+  },
+  {
+    "id": "kraftheinz-dutch-apple-pie-jam",
+    "kind": "web",
+    "inputs": ["test_pages/kraftheinz-dutch-apple-pie-jam.html"],
+    "url": "https://www.kraftheinz.com/sure-jell/recipes/502637-sure-jell-dutch-apple-pie-jam",
+    "notes": "Kraft Heinz: a placeholder image instead of a photo; the brand as author; double space in the title."
+  },
+  {
+    "id": "sallys-apple-cinnamon-quick-bread",
+    "kind": "web",
+    "inputs": ["test_pages/sallys-apple-cinnamon-quick-bread.html"],
+    "url": "https://sallysbakingaddiction.com/apple-cinnamon-bread/print/100330/",
+    "notes": "Sally's Baking Addiction (Tasty Recipes card): sections only on the page; long notes."
+  },
+  {
+    "id": "sugarspunrun-apple-cinnamon-rolls",
+    "kind": "web",
+    "inputs": ["test_pages/sugarspunrun-apple-cinnamon-rolls.html"],
+    "url": "https://sugarspunrun.com/apple-cinnamon-rolls/",
+    "notes": "Sugar Spun Run (WP Recipe Maker): metric amounts on the page but not in the data; sections in both lists."
+  },
+  {
+    "id": "recipetineats-beef-stock",
+    "kind": "web",
+    "inputs": ["test_pages/recipetineats-beef-stock.html"],
+    "url": "https://www.recipetineats.com/homemade-beef-stock/#recipe",
+    "notes": "RecipeTin Eats (Australian, metric): yield in litres; step sections; long numbered notes."
+  },
+  {
+    "id": "onceuponachef-granola",
+    "kind": "web",
+    "inputs": ["test_pages/onceuponachef-granola.html"],
+    "url": "https://www.onceuponachef.com/recipes/homemade-granola.html",
+    "notes": "Once Upon a Chef: yield in cups; total time \"plus time to cool\"."
+  },
+  {
+    "id": "cookieandkate-black-bean-soup",
+    "kind": "web",
+    "inputs": ["test_pages/cookieandkate-black-bean-soup.html"],
+    "url": "https://cookieandkate.com/spicy-vegan-black-bean-soup/",
+    "notes": "Cookie and Kate: vegan; the card names a different author than the data."
+  },
+  {
+    "id": "cookiesandcups-coconut-butter-bars",
+    "kind": "web",
+    "inputs": ["test_pages/cookiesandcups-coconut-butter-bars.html"],
+    "url": "https://cookiesandcups.com/butter-coconut-bars/",
+    "notes": "Cookies and Cups (Tasty Recipes card): sections on the page; short notes."
+  },
+  {
+    "id": "ofbatteranddough-apple-pancakes",
+    "kind": "web",
+    "inputs": ["test_pages/ofbatteranddough-apple-pancakes.html"],
+    "url": "https://ofbatteranddough.com/apple-cinnamon-pancakes/",
+    "notes": "Of Batter and Dough (Mediavine Create card): title with \"{Buttermilk Recipe}\"; sections in both lists."
+  },
+  {
+    "id": "bakefromscratch-flourless-chocolate-cake",
+    "kind": "web",
+    "inputs": ["test_pages/bakefromscratch-flourless-chocolate-cake.html"],
+    "url": "https://bakefromscratch.com/edd-kimbers-flourless-chocolate-cake-with-roasted-strawberries/",
+    "notes": "Bake from Scratch: no times or yield in the data; sections only on the page."
+  },
+  {
+    "id": "cookingismessy-pasta-garlic-sauce",
+    "kind": "web",
+    "inputs": ["test_pages/cookingismessy-pasta-garlic-sauce.html"],
+    "url": "http://www.cookingismessy.com/2014/10/27/pasta-garlic-sauce-arugula-walnuts/",
+    "notes": "Cooking is Messy: microdata (no JSON-LD); adapted from Cook's Country."
+  },
+  {
+    "id": "nigella-mughlai-chicken",
+    "kind": "web",
+    "inputs": ["test_pages/nigella-mughlai-chicken.html"],
+    "url": "https://www.nigella.com/recipes/mughlai-chicken",
+    "notes": "Nigella: microdata only; UK measures with US ones behind a toggle; notes outside the data."
+  },
+  {
+    "id": "altonbrown-chocolate-muffins",
+    "kind": "web",
+    "inputs": ["test_pages/altonbrown-chocolate-muffins.html"],
+    "url": "https://altonbrown.com/recipes/double-chocolate-muffins/",
+    "notes": "Alton Brown (WP Recipe Maker): an equipment list on the card; active time rather than prep time."
+  },
+  {
+    "id": "giadzy-simple-bolognese",
+    "kind": "web",
+    "inputs": ["test_pages/giadzy-simple-bolognese.html"],
+    "url": "https://giadzy.com/blogs/recipes/simple-bolognese",
+    "notes": "Giadzy (shop site): pop-up messages inside the ingredient list; two long steps."
+  },
+  {
+    "id": "today-sheet-pan-chicken",
+    "kind": "web",
+    "inputs": ["test_pages/today-sheet-pan-chicken.html"],
+    "url": "https://www.today.com/recipes/giada-de-laurentiis-italian-sheet-pan-chicken-bread-salad-recipe-t147309",
+    "notes": "TODAY: the recipe card is drawn by a script, so only the data is in the saved page."
+  },
+  {
+    "id": "handletheheat-sour-cream-doughnuts",
+    "kind": "web",
+    "inputs": ["test_pages/handletheheat-sour-cream-doughnuts.html"],
+    "url": "https://www.handletheheat.com/old-fashioned-sour-cream-doughnuts/",
+    "notes": "Handle the Heat (WP Recipe Maker): tooltips inside ingredient lines; sections in both lists."
+  },
+  {
+    "id": "lifeloveandsugar-drunken-truffle-cake",
+    "kind": "web",
+    "inputs": ["test_pages/lifeloveandsugar-drunken-truffle-cake.html"],
+    "url": "https://www.lifeloveandsugar.com/2018/05/14/drunken-chocolate-truffle-cake/",
+    "notes": "Life Love and Sugar: a long recipe, five ingredient sections."
+  },
+  {
+    "id": "tastesbetter-german-chocolate-cake",
+    "kind": "web",
+    "inputs": ["test_pages/tastesbetter-german-chocolate-cake.html"],
+    "url": "https://tastesbetterfromscratch.com/german-chocolate-cake/",
+    "notes": "Tastes Better From Scratch: sections in both lists; long notes."
   }
 ]

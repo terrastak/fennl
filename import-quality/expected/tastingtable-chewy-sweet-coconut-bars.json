@@ -1,0 +1,54 @@
+{
+  "title": "Chewy Sweet Coconut Bars",
+  "description": "The ultimate coconut treat, these buttery, gooey bars have toasted coconut flavor in both the filling and topping and come together incredibly easily.",
+  "ingredients": [
+    "## For the topping",
+    "1 cup sweetened shredded coconut",
+    "## For the crust",
+    "½ cup butter, melted",
+    "½ cup brown sugar, packed",
+    "1 cup all-purpose flour",
+    "½ teaspoon salt",
+    "## For the filling",
+    "½ cup all-purpose flour",
+    "¼ cup light brown sugar, packed",
+    "3 large eggs, at room temperature",
+    "1 (14-ounce) can sweetened condensed milk",
+    "¼ cup butter, melted",
+    "2 teaspoons vanilla extract",
+    "½ teaspoon salt",
+    "2 cups sweetened shredded coconut"
+  ],
+  "directions": [
+    "Preheat oven to 325 F.",
+    "Make the topping: Place 1 cup shredded coconut on a parchment-lined baking sheet.",
+    "Toast in the oven for 7-9 minutes, until golden brown. Set aside, keeping the oven on.",
+    "Line a 9x9-inch baking pan with parchment paper or aluminum foil and set aside.",
+    "Make the crust: Add melted butter and brown sugar to a large bowl and mix until combined.",
+    "Add flour and salt and mix until a moist dough forms.",
+    "Press dough evenly into the bottom of the prepared baking pan.",
+    "Bake for 15-17 minutes, until golden brown, then remove from the oven and set aside.",
+    "Make the filling: Add flour, brown sugar, eggs, sweetened condensed milk, melted butter, vanilla extract, and salt to a large bowl.",
+    "Whisk together until smooth.",
+    "Add the 2 cups untoasted coconut, as well as half of the toasted coconut, and mix until combined.",
+    "Pour filling over the baked crust.",
+    "Sprinkle the remaining toasted coconut on top.",
+    "Bake for 25-30 minutes, until the center is set.",
+    "Remove from the oven and cool completely before cutting and serving."
+  ],
+  "times": {
+    "prep": 15,
+    "cook": 50,
+    "total": 65
+  },
+  "servings": {
+    "count": 12,
+    "yield": "12 bars"
+  },
+  "notes": "",
+  "source": {
+    "name": "Tasting Table",
+    "author": "Jessica Morone",
+    "url": "https://www.tastingtable.com/1534713/chewy-sweet-coconut-bars-recipe/"
+  }
+}

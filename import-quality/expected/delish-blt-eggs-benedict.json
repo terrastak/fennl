@@ -1,0 +1,51 @@
+{
+  "title": "BLT Eggs Benedict",
+  "description": "The classic BLT gets an eggs Benedict makeover with an easy chili spiced hollandaise.",
+  "ingredients": [
+    "## Bacon",
+    "4 slices bacon, cut in half crosswise",
+    "2 Tbsp. maple syrup",
+    "2 Tbsp. packed light brown sugar",
+    "1/4 tsp. cayenne pepper",
+    "## Hollandaise",
+    "2 large egg yolks",
+    "1 Tbsp. fresh lemon juice",
+    "1/2 cup (1 stick) unsalted butter, melted",
+    "1 tsp. chili powder",
+    "1/4 tsp. smoked paprika",
+    "Kosher salt",
+    "## Poached Eggs & Assembly",
+    "4 large eggs",
+    "2 English muffins, split and toasted",
+    "Softened unsalted butter, for muffins",
+    "2 small handfuls of arugula",
+    "1 medium heirloom or beefsteak tomato, sliced",
+    "Freshly ground black pepper"
+  ],
+  "directions": [
+    "## Bacon",
+    "Step 1Preheat oven to 350°. Line a rimmed baking sheet with foil and arrange bacon in an even layer. In a small bowl, whisk maple syrup, brown sugar, and cayenne pepper. Brush syrup mixture over bacon.",
+    "Step 2Bake until bacon is golden and edges are crispy, 28 to 32 minutes. Bacon will continue to crisp as it cools.",
+    "## Hollandaise",
+    "Step 1Bring a medium saucepan filled about halfway with water to a simmer. In a large heatproof bowl, whisk egg yolks and lemon juice. Place bowl over pot of simmering water, ensuring bottom of bowl isn’t touching water.",
+    "Step 2While whisking, slowly pour in butter. Continue to whisk until butter is incorporated and mixture is smooth and creamy and the texture of a loose mayonnaise, 1 to 2 minutes.",
+    "Step 3Remove bowl from heat and whisk in chili powder and paprika; season with salt. If mixture thickens too much, add 1 teaspoon hot water at a time to loosen.",
+    "## Poached Eggs & Assembly",
+    "Step 1Bring a large pot of water to a simmer over medium heat. Crack 1 egg into a small ramekin and gently drop into simmering water. Quickly repeat with remaining eggs and simmer 4 minutes. Using a slotted spoon, transfer eggs to a paper towel-lined plate.",
+    "Step 2Spread cut sides of English muffins with butter and top with arugula. Top with a tomato slice; season with salt and black pepper. Top with 2 pieces reserved bacon and 1 poached egg. Spoon hollandaise sauce over."
+  ],
+  "times": {
+    "prep": 20,
+    "total": 60
+  },
+  "servings": {
+    "count": 2,
+    "yield": null
+  },
+  "notes": "",
+  "source": {
+    "name": "Delish",
+    "author": "Makinze Gore",
+    "url": "https://www.delish.com/cooking/recipe-ideas/a41093156/blt-eggs-benedict-recipe/"
+  }
+}

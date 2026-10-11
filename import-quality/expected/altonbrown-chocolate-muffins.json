@@ -1,0 +1,43 @@
+{
+  "title": "Chocolate Muffins #7",
+  "description": "These light, moist, and slightly sweet double chocolate muffins are the best way to eat chocolate for breakfast.Why number seven? Because in order to bring you the best chocolate muffin recipe, we tested hundreds of different ingredient combinations and mixing methods and … well, OK, it was actually seven. By the way, I don’t really like mixing metric weights with standard volumetric measures like tablespoons, but truth is, it’s easier that way. For you … not for me. Just so we’re clear. This recipe first appeared in I'm Just Here For More Food.",
+  "ingredients": [
+    "2 cups all-purpose flour",
+    "3/4 cup cocoa powder",
+    "1 tablespoon baking powder",
+    "1/2 teaspoon baking soda",
+    "1/2 teaspoon kosher salt",
+    "1 cup chocolate chips",
+    "2 cups sugar",
+    "8 fluid ounces buttermilk",
+    "8 tablespoons (1 stick) unsalted butter, melted and cooled slightly",
+    "2 large eggs",
+    "2 teaspoons vanilla extract"
+  ],
+  "directions": [
+    "Place a rack in the middle of the oven and heat to 375ºF.",
+    "Lube a muffin tin with nonstick cooking spray. I do this inside a plastic grocery bag to keep the spray from going everywhere.",
+    "Sift the flour, cocoa powder, baking powder, baking soda, and salt together in a large bowl. Air is an important ingredient here, so it’s not enough to simply stir the powders together. If you don’t have a sifter, pulse the mixture in your food processor.",
+    "Stir in the chocolate chips.",
+    "In a separate bowl, whisk together the sugar, buttermilk, unsalted butter, eggs, and vanilla extract.",
+    "Add the wet ingredients to the dry and stir until just combined using a large rubber or silicone spatula. Resist the urgeto mix it smooth — lumps are good.",
+    "Using an ice cream disher or spoon, drop the batter into the prepared tin. The cups should be full.",
+    "Park on oven rack and and boost the temperature to 400ºF.",
+    "Bake until the internal temperature hits 210ºF on a digital instant-read thermometer or a toothpick inserted in the bottom of a muffin comes out clean, 18 to 20 minutes.",
+    "Remove from the oven and immediately turn the muffins up on their sides so that steam can escape the pan. Skip this step and you'll have gummy bottoms.",
+    "Serve immediately or store in an airtight container."
+  ],
+  "times": {
+    "total": 40
+  },
+  "servings": {
+    "count": 12,
+    "yield": "12 muffins"
+  },
+  "notes": "",
+  "source": {
+    "name": "Alton Brown",
+    "author": "Aidas Ciziunas",
+    "url": "https://altonbrown.com/recipes/double-chocolate-muffins/"
+  }
+}

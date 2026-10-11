@@ -1,0 +1,30 @@
+{
+  "title": "Applebee's Honey Mustard Sauce",
+  "ingredients": [
+    "1⁄4 cup mayonnaise",
+    "1⁄4 cup Grey Poupon Dijon Mustard",
+    "1⁄4 cup honey",
+    "1 tablespoon prepared mustard",
+    "1 tablespoon white vinegar",
+    "1⁄8 teaspoon paprika"
+  ],
+  "directions": [
+    "Combine ingredients in a small bowl.",
+    "Mix well.",
+    "Store in a covered container in the refrigerator until ready to serve."
+  ],
+  "times": {
+    "prep": 20,
+    "total": 20
+  },
+  "servings": {
+    "count": 4,
+    "yield": "4-5 serving(s)"
+  },
+  "notes": "",
+  "source": {
+    "name": "Food.com",
+    "author": "Danny Beason",
+    "url": "https://www.food.com/recipe/applebees-honey-mustard-sauce-78490"
+  }
+}

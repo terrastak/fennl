@@ -1,0 +1,37 @@
+{
+  "title": "Simple Bolognese",
+  "description": "Giada's simple bolognese is a longtime favorite among readers, and it's no question why.",
+  "ingredients": [
+    "1 lb of pasta, such as nodi marini, mezzi rigatoni, or orecchiette",
+    "1/4 cup extra-virgin olive oil",
+    "1 medium onion (coarsely chopped)",
+    "2 garlic cloves (peeled and coarsely chopped)",
+    "1 celery stalk (coarsely chopped)",
+    "1 carrot (coarsely chopped)",
+    "1 pound ground chuck beef",
+    "2 14-ounce cans cherry tomatoes, crushed",
+    "1/4 cup flat-leaf Italian parsley (chopped)",
+    "8 fresh basil leaves (chopped)",
+    "Salt and freshly ground black pepper",
+    "1/4 cup freshly grated Pecorino Romano"
+  ],
+  "directions": [
+    "In a large skillet heat the olive oil. When almost smoking, add the onion and garlic and saute over medium heat until the onions become very soft, about 8 minutes. Add the celery and carrot and saute for 5 minutes. Raise the heat to high and add the ground beef. Saute, stirring frequently and breaking up any large lumps and cook until meat is no longer pink, about 10 minutes. Add the tomatoes, parsley, and basil and cook over medium low heat until the sauce thickens. Season with salt and pepper. This will take approximately 1/2 hour. Finish the bolognese with Pecorino Romano.",
+    "Meanwhile, bring a large pot of water to a boil over high heat. Season generously with kosher salt. Add the pasta to the water and cook for 2 minutes less than directed, about 8 to 9 minutes. Using tongs, add the pasta directly from the pasta water to the sauce. Serve drizzled with more olive oil and sprinkled with more cheese if desired."
+  ],
+  "times": {
+    "prep": 10,
+    "cook": 45,
+    "total": 55
+  },
+  "servings": {
+    "count": 6,
+    "yield": null
+  },
+  "notes": "",
+  "source": {
+    "name": "Giadzy",
+    "author": "Giada De Laurentiis",
+    "url": "https://giadzy.com/blogs/recipes/simple-bolognese"
+  }
+}
