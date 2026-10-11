@@ -7,6 +7,7 @@
 
 # testing
 /coverage
+/import-quality/report.md
 
 # next.js
 /.next/

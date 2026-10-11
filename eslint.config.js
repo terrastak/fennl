@@ -28,7 +28,7 @@ export default defineConfig([
     languageOptions: { globals: globals.serviceworker },
   },
   {
-    files: ["*.{js,ts}", "e2e/**/*.ts", "scripts/**/*.mjs"],
+    files: ["*.{js,ts}", "e2e/**/*.ts", "scripts/**/*.mjs", "import-quality/**/*.ts"],
     languageOptions: { globals: globals.node },
   },
   {

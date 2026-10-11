@@ -806,7 +806,13 @@ Import quality is the core of the product, so this stage starts by building a wa
   4. A scoring tool that compares importer output to the correct answers field by field (title, each ingredient, each step, times, servings...).
 - **You check**: Collect the samples (I'll give a checklist), and spot-check a few correct answers.
 - **Done when**: The scorer runs in CI and prints a quality report.
-- **Decisions**: Which sites and cards go in the test set. Private family cards stay private (the test set is not published).
+- **Decisions**: Which sites and cards go in the test set. Private family cards stay private: in Fennl, a person's recipes and card photos are seen only by them and their household, unless they choose to share (CLAUDE.md, "Access rule"); importing never changes that. The quality test set is separate, test material the owner chooses: **Decided 2026-10-10 (owner): it is public**, in this repository with `test_images/`.
+- **Built (2026-10-10)**:
+  1. Recipe draft (`shared/importDraft.ts`): the recipe's own content (`shared/recipe.ts`), each field with a confidence (`high`, `medium`, `low`) and where it came from (structured data, page text, Paprika, the AI, or Fennl's own rules, pointing at one of the draft's inputs), plus a confidence per ingredient and direction line, categories, photos (which inputs to keep, and as what), warnings for the person, and what made it (importer, and the model when it's the AI). `draftIssues` checks a draft, including the content against the recipe's own rules, so an AI answer is checked the same way (E7).
+  2. `import_job` table (migration `0022`): one row per recipe imported, with who, household, source, status (`reading`, `ready`, `saved`, `discarded`, `failed`), the draft, what was imported, the error, and the saved recipe. A file of many recipes shares a `batch_id`, so no row nears D1's size limit.
+  3. Quality test set (`import-quality/`, with a collection checklist in its README): 7 samples so far from `test_images/` (2 handwritten cards, 2 cookbook page photos, 1 web page in 3 screenshots, 2 scanned-book PDFs), each with a first-draft correct answer for the owner to spot-check.
+  4. Scorer (`shared/importScore.ts`): each field 0 to 1. Text by edit distance after forgiving case, spacing, curly quotes, `½`/`1/2`, bullets and step numbers; ingredient and direction lists line by line (best pairs first, so missing and extra lines both cost, a heading mistaken for a line counts half); times and servings counts exactly. A file of several recipes is paired by title. The scorecard (`npm run import:quality`) runs every importer in `import-quality/importers.ts` over the samples; CI runs it with the unit tests and adds the report to the run's summary. No importers yet: E3 adds the first.
+  - Still open (question 7): target scores, to set once E3 gives the first numbers.
 
 ### E2. Ingredient and quantity parser
 - **Goal**: Understand ingredient lines like "1 ½ cups (190 g) flour, sifted" or "2–3 large eggs".
@@ -1103,7 +1109,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 4 | ~~D1 vs. Durable Object for recipe storage~~ Decided 2026-10-07: D1 (`docs/research/2026-10-07-recipe-storage.md`) | C1 |
 | 5 | ~~Trash retention days~~ Decided: 30 days, then auto-expunge | C9 |
 | 6 | ~~Beta image quotas~~ Settled 2026-10-08 (D1); revisit after D2 | D1 |
-| 7 | Quality test set contents and target scores | E1 |
+| 7 | ~~Quality test set contents~~ Decided 2026-10-10: public, in `import-quality/` (checklist in its README). Target scores: still open, set after E3's first numbers | E1, E3 |
 | 8 | Chrome Web Store unlisted vs. manual install | E5 |
 | 9 | AI cap per household and spending alarm | E7 |
 | 14 | Should free accounts get a few "teaser" AI imports? (Owner undecided; revisit later) | Before public launch (Stage I) |

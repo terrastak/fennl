@@ -52,6 +52,12 @@ jobs:
       - run: npm run typecheck
       - run: npm run db:check
       - run: npm test
+      # The import quality report (phase E1), written by the unit tests: printed here and added
+      # to the run's summary page.
+      - name: Import quality report
+        run: |
+          cat import-quality/report.md
+          cat import-quality/report.md >> "$GITHUB_STEP_SUMMARY"
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
       - name: Upload browser test report
