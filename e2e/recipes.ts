@@ -5,7 +5,11 @@ import { PASSWORD, makeCode, useFreshAddress } from "./support";
 
 /** Premium from a code, as beta testers have it. */
 export async function premium(context: BrowserContext, baseURL: string) {
-  const code = makeCode({ tier: "individual", days: 30, allowsSignUp: false });
+  const code = await makeCode(context.request, {
+    tier: "individual",
+    days: 30,
+    allowsSignUp: false,
+  });
   const used = await context.request.post("/api/codes/redeem", {
     headers: { origin: baseURL },
     data: { code },

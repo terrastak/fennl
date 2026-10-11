@@ -16,7 +16,7 @@ const DAY = 24 * 60 * 60 * 1000;
 test("signing up with a code gives Premium", async ({ page }) => {
   await page.context().clearCookies();
   await useFreshAddress(page.context());
-  const code = makeCode({
+  const code = await makeCode(page.request, {
     tier: "household",
     until: new Date(Date.now() + 100 * DAY),
     allowsSignUp: true,
@@ -55,7 +55,11 @@ test("a code that doesn't exist is caught before the account is made", async ({ 
 
 test("a code can be used from the Account page", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
-  const code = makeCode({ tier: "individual", days: 30, allowsSignUp: false });
+  const code = await makeCode(context.request, {
+    tier: "individual",
+    days: 30,
+    allowsSignUp: false,
+  });
   await page.goto("/account");
   await expect(page.getByRole("heading", { name: "Your plan: Free" })).toBeVisible();
 
