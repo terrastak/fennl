@@ -214,6 +214,35 @@ describe("readWebRecipes", () => {
     expect(draftContent(draft).notes).toBe("Use whole milk.\nRolls freeze well.");
   });
 
+  it("reads notes and a yield the recipe card shows but the data leaves out", () => {
+    const html = page(
+      ld({
+        "@type": "Recipe",
+        name: "Bacon-Wrapped Meatloaf",
+        recipeIngredient: ["1/4 cup barbecue sauce", "1 onion, chopped"],
+        recipeInstructions: ["Heat the oven.", "Bake the meatloaf."],
+      }),
+      `<div class="recipe">
+         <p>Makes 4 servings</p>
+         <h4>Ingredients</h4>
+         <div><span>¼ cup barbecue sauce</span><span>1 onion, chopped</span></div>
+         <div>
+           <h4>Before You Begin</h4>
+           <div><p>Bulls-Eye Original is our favorite barbecue sauce.</p></div>
+           <h4>Instructions</h4>
+           <ol><li>Heat the oven.</li><li>Bake the meatloaf.</li></ol>
+         </div>
+       </div>
+       <h2>Notes</h2><p>A note in the comments far below, not part of the recipe.</p>`,
+    );
+    const draft = only(html);
+    const content = draftContent(draft);
+    expect(content.notes).toBe("Bulls-Eye Original is our favorite barbecue sauce.");
+    expect(content.servings).toEqual({ count: 4, yield: "Makes 4 servings" });
+    expect(draft.fields.servings?.confidence).toBe("medium");
+    expect(lines(draft, "ingredients")).toEqual(["¼ cup barbecue sauce", "1 onion, chopped"]);
+  });
+
   it("reads a microdata recipe", () => {
     const html = page(
       "<title>Mughlai Chicken | Nigella</title>",

@@ -12,6 +12,10 @@ description, each ingredient, each step, times, servings, notes and source.
 - `importers.ts`: the importers the scorecard runs. Each import phase (E3 to E13) adds its own.
 - `npm run import:quality` runs the scorecard and prints the report. CI runs it with the unit
   tests and puts the report on each run's summary page.
+- **Must be exact** (decided 2026-10-11): an importer marked `exact` (one reading data a source
+  publishes, like a page's recipe data or a Paprika file) must get the ingredients, directions,
+  times and servings count exactly right on every sample. Any miss fails CI, and the report's
+  "Must be exact" section names it.
 
 **This folder, `test_images/` and `test_pages/` are public** (the repository is public; decided by
 the owner 2026-10-10). Only add pages and cards you're happy for anyone to see.

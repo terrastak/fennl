@@ -242,13 +242,15 @@ export interface ShownList {
   headings: boolean;
   /** Some lines read as the page shows them, which says more than the data ("(236 ml)"). */
   texts: boolean;
+  /** The element showing the list. */
+  box: Element;
 }
 
 /**
  * A list as the page shows it. The lines from the data stay in their order, and the page adds
  * what it shows that the data leaves out: the section headings between them (unless the data
  * has its own), and a line's fuller wording ("1 cup (236 ml) whole milk" for "1 cup whole
- * milk"). Null when the page doesn't show the list, or shows nothing more.
+ * milk"). Null when the page doesn't show the list.
  */
 export function asShown(
   doc: Document,
@@ -299,7 +301,6 @@ export function asShown(
     done.push(el);
     pending = text;
   }
-  if (before.size === 0 && shown.size === 0) return null;
   const out: CardLine[] = [];
   let index = 0;
   for (const line of lines) {
@@ -312,7 +313,7 @@ export function asShown(
     out.push({ text: shown.get(index) ?? line.text, heading: false });
     index += 1;
   }
-  return { lines: out, headings: before.size > 0, texts: shown.size > 0 };
+  return { lines: out, headings: before.size > 0, texts: shown.size > 0, box };
 }
 
 /** Recipe card plugins' notes sections: WP Recipe Maker, Tasty Recipes, Mediavine Create. */
@@ -328,13 +329,65 @@ export function notesElement(doc: Document): Element | null {
   return null;
 }
 
-/** The notes a recipe card shows with the recipe, as plain text with paragraphs kept. */
-export function cardNotes(doc: Document): string {
+/**
+ * The recipe card: the smallest element showing both the ingredients and the directions, unless
+ * that's most of the page (lists far apart, in an article).
+ */
+export function cardElement(lists: readonly Element[]): Element | null {
+  const [first, ...rest] = lists;
+  if (!first || rest.length === 0) return null;
+  let card: Element | null = first;
+  while (card && !rest.every((el) => el === card || isInside(el, card as Element))) {
+    card = card.parent?.type === "tag" ? card.parent : null;
+  }
+  if (!card) return null;
+  const shown = lists.reduce((sum, el) => sum + textLength(el), 0);
+  return textLength(card) <= shown * 2 + 4000 ? card : null;
+}
+
+/** Headings of a recipe card's notes, whatever the site calls them. */
+const NOTES_LABEL =
+  /^(?:notes?|recipe notes|cook(?:'|’)?s notes?|chef(?:'|’)?s notes?|tips?|recipe tips|before you begin|additional information|make ahead|storage)$/i;
+
+/** A notes section the card shows under a heading ("Before You Begin"): the text after it. */
+function labelledNotes(card: Element, lists: readonly Element[]): string {
+  const parts: string[] = [];
+  for (const el of visible(card)) {
+    if (!headingLike(el) || lists.some((list) => el === list || isInside(el, list))) continue;
+    if (!NOTES_LABEL.test(cleanText(shownText(el), true).replace(/:$/, ""))) continue;
+    const siblings = el.parent?.children ?? [];
+    for (const next of siblings.slice(siblings.indexOf(el) + 1)) {
+      if (next.type === "tag" && headingLike(next)) break;
+      const text = cleanText(shownText(next));
+      if (text) parts.push(text);
+    }
+  }
+  return parts.join("\n");
+}
+
+/**
+ * The notes a recipe card shows with the recipe, as plain text with paragraphs kept: a recipe
+ * card plugin's notes, else a section of the card headed "Notes", "Before You Begin" or the like.
+ */
+export function cardNotes(doc: Document, card: Element | null, lists: readonly Element[]): string {
   const el = notesElement(doc);
-  if (!el) return "";
-  return cleanText(shownText(el))
-    .replace(/^notes?:?\s*\n/i, "")
-    .trim();
+  if (el) {
+    return cleanText(shownText(el))
+      .replace(/^notes?:?\s*\n/i, "")
+      .trim();
+  }
+  return card ? labelledNotes(card, lists) : "";
+}
+
+/** A yield the card shows that the data doesn't give: "Makes 4 servings", "Serves 6". */
+export function cardYield(card: Element, lists: readonly Element[]): string | null {
+  for (const el of visible(card)) {
+    if (lists.some((list) => el === list || isInside(el, list))) continue;
+    if (textLength(el) > 80) continue;
+    const text = cleanText(shownText(el), true);
+    if (/^(?:makes|serves|yields?|servings)\b:?\s*\d/i.test(text)) return text;
+  }
+  return null;
 }
 
 /** The element showing a list on the page (for saving a trimmed copy of it: import-quality/). */

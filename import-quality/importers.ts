@@ -5,6 +5,7 @@ import type { Importer } from "./scorecard";
 const webStructured: Importer = {
   name: "web (structured data)",
   kinds: ["web"],
+  exact: true,
   run: (files, sample) => {
     const page = files[0];
     if (!page) return Promise.resolve([]);

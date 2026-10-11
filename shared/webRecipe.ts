@@ -1,4 +1,4 @@
-import type { Document } from "domhandler";
+import type { Document, Element } from "domhandler";
 import { getAttributeValue, textContent } from "domutils";
 import { parseDocument } from "htmlparser2";
 import { dietLabels } from "./diet";
@@ -12,7 +12,7 @@ import {
   type RecipeDraft,
 } from "./importDraft";
 import type { DirectionStep, IngredientLine, RecipeTime } from "./recipe";
-import { asShown, cardNotes, type CardLine } from "./recipeCard";
+import { asShown, cardElement, cardNotes, cardYield, type CardLine } from "./recipeCard";
 import { cleanLine, looksLikeHeading, type ListKind } from "./recipeLines";
 import {
   elements,
@@ -213,14 +213,15 @@ function ingredientLines(recipe: SchemaObject): CardLine[] {
     .filter((line): line is CardLine => line !== null);
 }
 
-/** The list as the page shows it (section headings, fuller wording), when it shows more. */
+/** The list as the page shows it (section headings, fuller wording), and where it shows it. */
 function shownOnPage(
   doc: Document,
   lines: CardLine[],
   kind: ListKind,
-): { lines: CardLine[]; fromPage: boolean } {
+): { lines: CardLine[]; fromPage: boolean; box: Element | null } {
   const shown = asShown(doc, lines, kind);
-  return shown ? { lines: shown.lines, fromPage: true } : { lines, fromPage: false };
+  if (!shown) return { lines, fromPage: false, box: null };
+  return { lines: shown.lines, fromPage: shown.headings || shown.texts, box: shown.box };
 }
 
 const newId = () => crypto.randomUUID();
@@ -310,9 +311,19 @@ function draftFor(
     };
   }
 
+  const lists = [ingredients.box, directions.box].filter((el): el is Element => el !== null);
+  const card = cardElement(lists);
+
   const servings = readYield(recipe.recipeYield ?? recipe.yield);
   if (servings.count !== null || servings.yield !== null) {
     fields.servings = value(servings, "high", where("recipeYield"));
+  } else {
+    // A yield the recipe card shows but the data leaves out ("Makes 4 servings").
+    const shown = card ? cardYield(card, lists) : null;
+    const read = shown ? readYield(shown) : null;
+    if (read && (read.count !== null || read.yield !== null)) {
+      fields.servings = value(read, "medium", "the recipe card's yield", "page_text");
+    }
   }
 
   fields.source = value(
@@ -321,7 +332,7 @@ function draftFor(
     where("author"),
   );
 
-  const notes = cardNotes(doc);
+  const notes = cardNotes(doc, card, lists);
   if (notes) fields.notes = value(notes, "medium", "the recipe card's notes", "page_text");
 
   const nutrition = readNutrition(recipe.nutrition);

@@ -2,7 +2,7 @@ import type { AnyNode, Document, Element } from "domhandler";
 import { getAttributeValue, textContent } from "domutils";
 import { parseDocument } from "htmlparser2";
 import { draftContent } from "../shared/importDraft";
-import { listElement, notesElement } from "../shared/recipeCard";
+import { cardElement, listElement, notesElement } from "../shared/recipeCard";
 import { elements } from "../shared/schemaRecipe";
 import { readWebRecipes } from "../shared/webRecipe";
 
@@ -130,13 +130,17 @@ function recipeParts(doc: Document, html: string, url: string | null): Element[]
   const parts: Element[] = [];
   for (const draft of readWebRecipes(html, url)) {
     const content = draftContent(draft);
+    const lists: Element[] = [];
     for (const list of [content.ingredients, content.directions]) {
       const el = listElement(
         doc,
         list.filter((l) => !l.heading).map((l) => l.text),
       );
-      if (el) parts.push(el);
+      if (el) lists.push(el);
     }
+    // The whole recipe card when it's small enough: its notes and yield are read from it.
+    const card = cardElement(lists);
+    parts.push(...(card ? [card] : lists));
   }
   const notes = notesElement(doc);
   if (notes) parts.push(notes);

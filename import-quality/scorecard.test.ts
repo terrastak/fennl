@@ -5,6 +5,7 @@ import { ingredientsFromText } from "../shared/recipeLines";
 import type { RecipeDraft } from "../shared/importDraft";
 import { IMPORTERS } from "./importers";
 import {
+  exactMisses,
   loadSamples,
   reportMarkdown,
   runScorecard,
@@ -21,10 +22,13 @@ describe("import quality scorecard", () => {
     expect(await testSetIssues(await loadSamples())).toEqual([]);
   });
 
-  it("writes the quality report", async () => {
-    const report = reportMarkdown(await runScorecard(IMPORTERS));
+  it("writes the quality report, and exact importers are exact", async () => {
+    const card = await runScorecard(IMPORTERS);
+    const report = reportMarkdown(card);
     await writeFile(join(import.meta.dirname, "report.md"), `${report}\n`);
     expect(report).toContain("# Import quality");
+    // What decides how the dish turns out must be right (agreed 2026-10-11): see the report.
+    expect(exactMisses(card)).toEqual([]);
   }, 120_000);
 
   it("scores what an importer finds", async () => {
@@ -75,5 +79,17 @@ describe("import quality scorecard", () => {
     expect(report).toContain("| stand-in | 2 |");
     expect(report).toContain("a recipe wasn't found");
     expect(report).not.toContain("- card:");
+    // The stand-in isn't marked exact, so the rule for published data doesn't apply to it.
+    expect(exactMisses(card)).toEqual([]);
+
+    // Marked exact, every miss in what decides how the dish turns out is named.
+    const exact = await runScorecard([{ ...standIn, name: "exact stand-in", exact: true }]);
+    expect(exactMisses(exact)).toEqual([
+      "walnut-cherry-cake-card (exact stand-in): not found",
+      expect.stringMatching(/^sugar-butter-balls-card \(exact stand-in\): ingredients \d+%$/),
+      "sugar-butter-balls-card (exact stand-in): directions 0%",
+      "sugar-butter-balls-card (exact stand-in): servings count",
+    ]);
+    expect(reportMarkdown(exact)).toContain("## Must be exact");
   });
 });

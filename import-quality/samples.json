@@ -235,7 +235,7 @@
     "kind": "web",
     "inputs": ["test_pages/today-sheet-pan-chicken.html"],
     "url": "https://www.today.com/recipes/giada-de-laurentiis-italian-sheet-pan-chicken-bread-salad-recipe-t147309",
-    "notes": "TODAY: the recipe card is drawn by a script, so only the data is in the saved page."
+    "notes": "TODAY: a script draws the recipe card, so the page was saved as a browser shows it; its ingredient sections are only in hidden data, not on the page."
   },
   {
     "id": "handletheheat-sour-cream-doughnuts",
