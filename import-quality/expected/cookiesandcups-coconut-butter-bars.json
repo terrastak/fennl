@@ -1,0 +1,41 @@
+{
+  "title": "Coconut Butter Bars",
+  "description": "These Coconut Butter Bars are perfect for the coconut lovers in your life. They're buttery, sweet and packed with as much coconut as I could get in there!",
+  "ingredients": [
+    "## Crust",
+    "2 cups flour",
+    "1 cup light brown sugar",
+    "1 cup salted butter, melted",
+    "## Coconut Layer",
+    "3 eggs",
+    "1 tablespoon vanilla",
+    "1 (14- ounce) can sweetened condensed milk",
+    "1/4 cup light brown sugar",
+    "1/2 cup flour",
+    "1/4 cup salted butter, melted",
+    "4 cups sweetened flaked coconut, divided (this equals one 14- ounce bag)"
+  ],
+  "directions": [
+    "Preheat oven to 350°F. Line a 9×13 baking dish with aluminum foil and spray only the sides of the pan. Set aside.",
+    "## Crust",
+    "In a large bowl combine the flour, sugar and butter. Press evenly into the bottom of the prepared pan. Bake for 15 minutes or until lightly golden. Reduce the oven heat to 325°F. Transfer the pan to a wire rack.",
+    "## Coconut Layer",
+    "While the crust is baking, in a large bowl, whisk together eggs, vanilla, sweetened condensed milk, brown sugar, flour and butter until smooth. Stir in 3 cups of the coconut and spread the mixture onto the warm crust. Sprinkle the remaining cup of coconut evenly on top and bake for 25-30 minutes, or until the edges are lightly golden and the center is set.",
+    "Allow the bars to cool completely before cutting."
+  ],
+  "times": {
+    "prep": 10,
+    "cook": 45,
+    "total": 55
+  },
+  "servings": {
+    "count": 30,
+    "yield": "30 bars"
+  },
+  "notes": "recipe slightly adapted from Taste of Home",
+  "source": {
+    "name": "Cookies and Cups",
+    "author": "Shelly",
+    "url": "https://cookiesandcups.com/butter-coconut-bars/"
+  }
+}

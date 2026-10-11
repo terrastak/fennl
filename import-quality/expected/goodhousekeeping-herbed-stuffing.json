@@ -1,0 +1,37 @@
+{
+  "title": "Easy Herbed Stuffing",
+  "description": "This traditional herb stuffing is packed with flavor.",
+  "ingredients": [
+    "1 small loaf country-style bread (about 1 lb.), cut into 1⁄2-inch pieces (about 10 cups)",
+    "3 Tbsp. olive oil",
+    "2 medium onions, chopped",
+    "2 large carrots, cut into 1⁄4-inch pieces",
+    "2 stalks celery, cut into 1⁄4-inch pieces",
+    "3 cups lower-sodium chicken broth",
+    "1 cup fresh flat-leaf parsley, chopped",
+    "2 tsp. fresh thyme leaves",
+    "2 large eggs, beaten",
+    "Kosher salt",
+    "pepper"
+  ],
+  "directions": [
+    "Step 1Heat oven to 375°F. Grease 3-quart casserole dish. Place bread on rimmed baking sheet and toast until golden brown, 15 to 20 minutes; transfer to large bowl.",
+    "Step 2Meanwhile, heat oil in 12-inch skillet on medium. Add onions, 1 teaspoon salt and 1⁄2 teaspoon pepper and cook, covered, stirring occasionally, until very tender and beginning to turn golden, 6 to 8 minutes",
+    "Step 3Add carrots and celery and cook, stirring occasionally, until tender, 6 to 7 minutes. Add broth and heat to a boil. Stir in parsley and thyme.",
+    "Step 4Transfer vegetable mixture to bowl with bread; toss to combine. Fold in beaten eggs. Transfer to prepared baking dish, cover with foil and bake 10 minutes. Remove foil and bake until golden brown, 15 to 20 minutes."
+  ],
+  "times": {
+    "prep": 15,
+    "total": 45
+  },
+  "servings": {
+    "count": 10,
+    "yield": null
+  },
+  "notes": "",
+  "source": {
+    "name": "Good Housekeeping",
+    "author": "The Good Housekeeping Test Kitchen",
+    "url": "https://www.goodhousekeeping.com/food-recipes/a46623/easy-herbed-stuffing-recipe/"
+  }
+}

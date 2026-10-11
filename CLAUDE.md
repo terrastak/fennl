@@ -239,13 +239,13 @@ Import is the headline feature. It is gated by cost, using two flags (**Decided*
 
 Keeping imported photos and original-card photos needs `images_enabled`. A free Paprika import brings in the text and drops the photos, and tells the user so. Add a new import source by deciding which of the two flags it falls under, not by adding a flag per source.
 
-- **Web pages**: a **Chrome extension** (desktop) is the first and, during the beta, only web import path. It reads the page as the user sees it, so logged-in and paywalled sites work. It never collects passwords for recipe sites. Extraction order: Schema.org structured data first, then AI for pages without it.
+- **Web pages**: a **Chrome extension** (desktop) is the first and, during the beta, only web import path. It reads the page as the user sees it, so logged-in and paywalled sites work. It never collects passwords for recipe sites. Extraction order: Schema.org structured data first, then AI for pages without it. Built in E3: `readWebRecipes` (`shared/webRecipe.ts`) reads JSON-LD and microdata, puts back the section headings and wording the page shows, adds diet labels under "Diet" and picks up to 3 photos; it never fetches anything itself.
 - **Photos and documents**: handwritten cards (front/back, multi-card), printed cookbook pages (multi-page), screenshots, and PDFs (possibly many recipes per file).
 - **Paprika 3**: full library import with photos and categories, essential for the beta. Re-importing must update rather than duplicate.
 - **Original photos are always kept** with the imported recipe.
 - **Every import is reviewed before saving.** Nothing is silently added or overwritten.
 - **One draft format.** Every importer produces a recipe draft (`shared/importDraft.ts`, built in E1): the recipe's own content with a confidence and a source for each field, for the review screen.
-- **Measured quality.** Import accuracy is scored field by field against a real test set; see `spec.md` phase E1. Built in E1: the test set and scorecard are in `import-quality/` (public, Decided 2026-10-10), scored by `shared/importScore.ts`; CI prints the report.
+- **Measured quality.** Import accuracy is scored field by field against a real test set; see `spec.md` phase E1. Built in E1: the test set and scorecard are in `import-quality/` (public, Decided 2026-10-10), scored by `shared/importScore.ts`; CI prints the report. Web pages in it are trimmed copies (`test_pages/`, added with `npm run import:save-page`): the recipe data and card only, never a site's articles, photos or comments. **Decided 2026-10-11:** an importer reading data a source publishes (web recipe data, Paprika files) must get the ingredients, directions, times and servings count exactly right on every sample, or CI fails; keep improving importers as better methods turn up, measured on the test set.
 - **Not in the beta**: paste-a-link import, phone share button, other browsers' extensions, social and video import.
 
 ## AI import (Leaning)

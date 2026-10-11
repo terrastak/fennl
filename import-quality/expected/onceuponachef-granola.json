@@ -1,0 +1,39 @@
+{
+  "title": "Granola",
+  "description": "Not too sweet, totally customizable, and full of crunch, this granola is a no-fuss, go-to recipe you’ll come back to again and again.",
+  "ingredients": [
+    "⅓ cup vegetable oil or melted coconut oil",
+    "¼ cup maple syrup or honey",
+    "¼ cup (packed) light brown sugar",
+    "1 large egg white",
+    "¾ teaspoon vanilla extract",
+    "1 teaspoon ground cinnamon",
+    "¾ teaspoon salt",
+    "3 cups old-fashioned rolled oats",
+    "1¼ cups nuts of your choice (such as almonds, walnuts, and/or pecans), roughly chopped",
+    "¼ cup seeds (such as sunflower seeds and/or pumpkin seeds), or replace with more nuts",
+    "½ cup shredded sweetened or unsweetened coconut, optional",
+    "½ cup dried fruit (such as raisins, cranberries, and/or dried blueberries), optional"
+  ],
+  "directions": [
+    "Preheat the oven to 300°F (150°C) and set a rack in the middle position. Line a rimmed baking sheet with parchment paper.",
+    "In a large bowl, whisk together the oil, maple syrup, brown sugar, egg white, vanilla, cinnamon, and salt. Add the oats, nuts, seeds, and shredded coconut (if using).",
+    "Spread the mixture into an even layer on the prepared baking sheet. Bake for 15 minutes, then remove from the oven. Stir the mixture with a rubber spatula, and then press into an even, compact layer on the baking sheet. Return to the oven and bake for another 15 to 20 minutes, or until golden, without stirring.",
+    "Remove from the oven and allow the granola to cool completely on the baking sheet. It will become crunchier as it cools. Once cooled, break the granola into clusters of your desired size and add the dried fruit. Store the granola in an airtight container at room temperature for about 10 days, or freeze for longer storage."
+  ],
+  "times": {
+    "prep": 10,
+    "cook": 35,
+    "total": 45
+  },
+  "servings": {
+    "count": 9,
+    "yield": "9 to 10 cups"
+  },
+  "notes": "Freezer-Friendly Instructions: The granola can be frozen in an airtight container for up to 3 months. Thaw overnight on the counter before using.",
+  "source": {
+    "name": "Once Upon a Chef",
+    "author": "Jennifer Segal",
+    "url": "https://www.onceuponachef.com/recipes/homemade-granola.html"
+  }
+}
