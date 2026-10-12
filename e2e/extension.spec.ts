@@ -5,6 +5,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { chromium, expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { premium } from "./recipes";
 import { PASSWORD, signUpConfirmed, useFreshAddress } from "./support";
 
 // Phase E5: the Chrome extension, built for this test server and loaded into Chromium, connects
@@ -264,6 +265,62 @@ document.head.append(data);
       /Fennl couldn't find a recipe on this page\./,
     );
     await expectAccessible(storyPanel);
+  } finally {
+    await context.close();
+  }
+});
+
+test("Premium: the extension brings photos from sites that refuse servers", async ({ baseURL }) => {
+  test.setTimeout(120_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "June Lee");
+    await premium(context, baseURL!);
+    await connect(context);
+    // The photo is only on this made-up site, which Fennl's server can't reach: like Food
+    // Network's photo server, which refuses anything that isn't a browser.
+    const recipeData = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Recipe",
+      name: "Black Cocoa Crinkle Cookies",
+      image: `${SITE}/photos/crinkle.png`,
+      recipeIngredient: ["1 cup flour", "1/2 cup black cocoa"],
+      recipeInstructions: [{ "@type": "HowToStep", text: "Mix, roll in sugar, bake." }],
+    });
+    await context.route(`${SITE}/**`, (route) =>
+      route.request().url().endsWith(".png")
+        ? route.fulfill({ path: "test_images/Image_chocchip.png" })
+        : route.fulfill({
+            contentType: "text/html",
+            body: `<!DOCTYPE html><html><head><title>Cookies</title><script type="application/ld+json">${recipeData}</script></head><body><h1>Cookies</h1></body></html>`,
+          }),
+    );
+    const recipe = await context.newPage();
+    await recipe.goto(`${SITE}/crinkle-cookies`);
+
+    const panel = await panelFor(context, `${SITE}/crinkle-cookies`);
+    // The tests' build may read any site already, so the panel doesn't ask.
+    await expect(panel.getByRole("button", { name: "Import this page" })).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Allow photos from any site" })).toHaveCount(0);
+    const opened = context.waitForEvent("page");
+    await panel.getByRole("button", { name: "Import this page" }).click();
+    const review = await opened;
+    const photos = review.getByRole("region", { name: "Photos" });
+    await expect(photos.getByRole("img", { name: "Photo 1 from the page" })).toBeVisible();
+    await expect
+      .poll(() =>
+        photos
+          .getByRole("img", { name: "Photo 1 from the page" })
+          .evaluate((img: HTMLImageElement) => img.naturalWidth),
+      )
+      .toBeGreaterThan(0);
+    await review.getByRole("button", { name: "Save recipe" }).first().click();
+    await expect(
+      review.getByRole("heading", { level: 1, name: "Black Cocoa Crinkle Cookies" }),
+    ).toBeVisible({ timeout: 60_000 });
+    await expect(
+      review.getByRole("img", { name: "Black Cocoa Crinkle Cookies", exact: true }),
+    ).toBeVisible();
   } finally {
     await context.close();
   }

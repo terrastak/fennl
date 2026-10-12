@@ -2,7 +2,15 @@ import type { ExtensionMe } from "../shared/extension";
 import { CONNECT_PATH } from "../shared/extension";
 import "../app/styles/tokens.css";
 import { ORIGIN, disconnect, savedConnection, whoAmI, type Connection } from "./connection";
-import { capturePage, problemText, reviewPath, sendPage } from "./capture";
+import {
+  PHOTO_SITES,
+  bringPhotos,
+  capturePage,
+  photosAllowed,
+  problemText,
+  reviewPath,
+  sendPage,
+} from "./capture";
 import "./popup.css";
 
 // The toolbar button's panel (phase E5): connect to Fennl, see who it's connected to and what
@@ -68,7 +76,7 @@ const TIER_NAMES: Record<ExtensionMe["tier"], string> = {
   household: "Premium (household)",
 };
 
-function showConnected(connection: Connection, me: ExtensionMe) {
+function showConnected(connection: Connection, me: ExtensionMe, canBringPhotos: boolean) {
   const who = el("p", undefined, "who");
   who.append("Connected as ", el("strong", me.name), el("span", ` (${me.email})`, "muted"));
   const plan = el("p");
@@ -78,9 +86,25 @@ function showConnected(connection: Connection, me: ExtensionMe) {
     const status = el("p", undefined, "status");
     status.setAttribute("role", "status");
     const importButton = button("Import this page", true, () => {
-      void importThisPage(connection, importButton, status);
+      void importThisPage(connection, importButton, status, me.photos && canBringPhotos);
     });
     parts.push(importButton, status);
+    if (me.photos && !canBringPhotos) {
+      // Asked once, from its own button: Chrome's question may close this panel, and nothing
+      // in progress is lost that way.
+      parts.push(
+        el(
+          "p",
+          "Some sites only let a browser download their photos. Allow it once, and the extension brings recipes' photos from any site.",
+          "muted",
+        ),
+        button("Allow photos from any site", false, () => {
+          void chrome.permissions.request(PHOTO_SITES).then(async (granted) => {
+            if (granted) showConnected(connection, me, true);
+          });
+        }),
+      );
+    }
   } else {
     parts.push(button("See plans in Fennl", true, () => openFennl("/account")));
   }
@@ -100,6 +124,7 @@ async function importThisPage(
   connection: Connection,
   importButton: HTMLButtonElement,
   status: HTMLElement,
+  withPhotos: boolean,
 ) {
   importButton.disabled = true;
   status.className = "status";
@@ -108,6 +133,10 @@ async function importThisPage(
   if (!("problem" in page)) status.textContent = "Sending it to Fennl…";
   const sent = "problem" in page ? null : await sendPage(connection, page);
   if (sent?.ok) {
+    if (withPhotos && sent.jobs.some((job) => job.photos.length > 0)) {
+      status.textContent = "Bringing the photos…";
+      await bringPhotos(connection, sent.jobs);
+    }
     status.textContent = "Opening it in Fennl to review…";
     return openFennl(reviewPath(sent.jobs));
   }
@@ -126,7 +155,7 @@ async function start() {
   const result = await whoAmI(connection);
   switch (result.status) {
     case "connected":
-      return showConnected(connection, result.me);
+      return showConnected(connection, result.me, await photosAllowed());
     case "not_connected":
       return showConnect("This extension isn't connected any more. Connect it again to carry on.");
     case "password_change_required":

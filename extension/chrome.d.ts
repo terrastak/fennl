@@ -31,6 +31,13 @@ declare namespace chrome {
       func: () => T;
     }): Promise<InjectionResult<Awaited<T>>[]>;
   }
+  namespace permissions {
+    interface Permissions {
+      origins?: string[];
+    }
+    function contains(permissions: Permissions): Promise<boolean>;
+    function request(permissions: Permissions): Promise<boolean>;
+  }
   namespace runtime {
     function getManifest(): { version: string };
   }

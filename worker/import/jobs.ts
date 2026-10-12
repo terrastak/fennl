@@ -1,5 +1,5 @@
 import { and, eq, inArray, lt, sql } from "drizzle-orm";
-import { IMPORT_RULES } from "../../shared/importJobs";
+import { IMPORT_PHOTO_PREFIX, IMPORT_RULES } from "../../shared/importJobs";
 import type { Database } from "../db/client";
 import { importJob } from "../db/schema";
 
@@ -57,4 +57,54 @@ export async function removeOldImportJobs(db: Database, now = Date.now()): Promi
     .returning({ id: importJob.id })
     .all();
   return removed.length;
+}
+
+/** Removes the photos the extension brought for one draft (phase E6). */
+export async function removeJobPhotos(bucket: R2Bucket, jobId: string): Promise<void> {
+  const listed = await bucket.list({ prefix: `${IMPORT_PHOTO_PREFIX}${jobId}/` });
+  const keys = listed.objects.map((o) => o.key);
+  if (keys.length > 0) await bucket.delete(keys);
+}
+
+/**
+ * Removes the photos the extension brought for drafts no longer waiting for review: saved (the
+ * recipe has its own copies by then), discarded, or removed for age. Run hourly (worker/index.ts).
+ * Photos for a draft made in the last hour are left alone, as it may still be being saved.
+ */
+export async function removeImportPhotos(
+  db: Database,
+  bucket: R2Bucket,
+  now = Date.now(),
+): Promise<number> {
+  const keys: { key: string; jobId: string }[] = [];
+  let cursor: string | undefined;
+  for (let page = 0; page < 50; page++) {
+    const listed = await bucket.list({
+      prefix: IMPORT_PHOTO_PREFIX,
+      limit: 1000,
+      ...(cursor ? { cursor } : {}),
+    });
+    for (const object of listed.objects) {
+      const jobId = object.key.slice(IMPORT_PHOTO_PREFIX.length).split("/")[0];
+      if (jobId && object.uploaded.getTime() < now - 60 * 60 * 1000) {
+        keys.push({ key: object.key, jobId });
+      }
+    }
+    if (!listed.truncated) break;
+    cursor = listed.cursor;
+  }
+  if (keys.length === 0) return 0;
+  const jobIds = [...new Set(keys.map((k) => k.jobId))];
+  const waiting = new Set<string>();
+  for (let i = 0; i < jobIds.length; i += 50) {
+    const rows = await db
+      .select({ id: importJob.id })
+      .from(importJob)
+      .where(and(inArray(importJob.id, jobIds.slice(i, i + 50)), eq(importJob.status, "ready")))
+      .all();
+    for (const row of rows) waiting.add(row.id);
+  }
+  const done = keys.filter((k) => !waiting.has(k.jobId)).map((k) => k.key);
+  for (let i = 0; i < done.length; i += 1000) await bucket.delete(done.slice(i, i + 1000));
+  return done.length;
 }

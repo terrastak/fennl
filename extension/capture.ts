@@ -1,4 +1,5 @@
-import type { ImportJobSummary, ImportWebError } from "../shared/importJobs";
+import type { ImportWebError, ImportWebResponse } from "../shared/importJobs";
+import { ABSOLUTE_MAX_IMAGE_BYTES } from "../shared/images";
 import { ORIGIN, forgetConnection, type Connection } from "./connection";
 
 // "Import this page" (phase E6): read the page in the current tab as the person sees it (signed
@@ -56,8 +57,10 @@ export async function capturePage(): Promise<CapturedPage | { problem: CapturePr
   return page;
 }
 
+type SentJob = ImportWebResponse["jobs"][number];
+
 export type SendResult =
-  | { ok: true; jobs: ImportJobSummary[] }
+  | { ok: true; jobs: SentJob[] }
   | { ok: false; problem: ImportWebError | "not_connected" | "offline" | "failed" };
 
 /** Sends the page to Fennl with the extension's key. */
@@ -73,7 +76,7 @@ export async function sendPage(connection: Connection, page: CapturedPage): Prom
   } catch {
     return { ok: false, problem: "offline" };
   }
-  if (res.ok) return { ok: true, jobs: ((await res.json()) as { jobs: ImportJobSummary[] }).jobs };
+  if (res.ok) return { ok: true, jobs: ((await res.json()) as ImportWebResponse).jobs };
   if (res.status === 401) {
     await forgetConnection();
     return { ok: false, problem: "not_connected" };
@@ -82,8 +85,47 @@ export async function sendPage(connection: Connection, page: CapturedPage): Prom
   return { ok: false, problem: error ?? "failed" };
 }
 
+/** Reading photos from any site: asked for once, from the panel's "Allow photos" button. */
+export const PHOTO_SITES = { origins: ["https://*/*", "http://*/*"] };
+
+export function photosAllowed(): Promise<boolean> {
+  return chrome.permissions.contains(PHOTO_SITES);
+}
+
+/**
+ * Brings the drafts' photos from the browser and hands them to Fennl (some sites, Food Network
+ * for one, refuse photo downloads from servers but not from a browser). Best effort: a photo
+ * that can't be had here is left for Fennl to try itself. Returns how many arrived.
+ */
+export async function bringPhotos(connection: Connection, jobs: SentJob[]): Promise<number> {
+  let brought = 0;
+  for (const job of jobs) {
+    for (const photo of job.photos) {
+      try {
+        const res = await fetch(photo.url);
+        if (!res.ok) continue;
+        const blob = await res.blob();
+        if (blob.size === 0 || blob.size > ABSOLUTE_MAX_IMAGE_BYTES) continue;
+        const sent = await fetch(`${ORIGIN}/api/import/jobs/${job.id}/inputs/${photo.input}`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${connection.key}`,
+            "content-type": "application/octet-stream",
+          },
+          credentials: "omit",
+          body: blob,
+        });
+        if (sent.ok) brought += 1;
+      } catch {
+        // Left for Fennl to fetch itself.
+      }
+    }
+  }
+  return brought;
+}
+
 /** Where to review what was sent: the draft, or the list when the page had several recipes. */
-export function reviewPath(jobs: ImportJobSummary[]): string {
+export function reviewPath(jobs: SentJob[]): string {
   const [only] = jobs;
   return jobs.length === 1 && only ? `/import/${only.id}` : "/import";
 }

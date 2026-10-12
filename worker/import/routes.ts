@@ -4,6 +4,7 @@ import { draftIssues, type RecipeDraft } from "../../shared/importDraft";
 import {
   IMPORT_RULES,
   fetchableImageUrl,
+  importPhotoKey,
   savedFromUrl,
   type ImportJobDetail,
   type ImportJobSummary,
@@ -22,7 +23,7 @@ import { extensionCaller } from "../extension/routes";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
 import { householdMembers } from "../sync/push";
-import { markImportsSaved } from "./jobs";
+import { markImportsSaved, removeJobPhotos } from "./jobs";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
 // drafts and keeps them in the account until the person reviews them: nothing becomes a recipe
@@ -33,12 +34,16 @@ type ImportEnv = { Bindings: Env; Variables: { signedIn: SignedIn } };
 
 export const importRoutes = new Hono<ImportEnv>();
 
-// Every import route needs a signed-in person. Sending a page (POST /api/import/web) also takes
-// the Chrome extension's key instead (phase E6): the extension reads the page as the person sees
-// it and sends it here. The key works on nothing else (worker/extension/routes.ts).
+/** What the Chrome extension may send with its key: a page, and the photos of its drafts. */
+const EXTENSION_PATHS = /^\/api\/import\/(?:web|jobs\/[^/]+\/inputs\/\d+)$/;
+
+// Every import route needs a signed-in person. Sending a page (POST /api/import/web) and a
+// draft's photos (POST /api/import/jobs/:id/inputs/:n) also take the Chrome extension's key
+// instead (phase E6): the extension reads the page, and its photos, as the person's browser does,
+// and sends them here. The key works on nothing else (worker/extension/routes.ts).
 importRoutes.use("/api/import/*", async (c, next) => {
   const authorization = c.req.header("authorization");
-  if (c.req.method === "POST" && c.req.path === "/api/import/web" && authorization) {
+  if (c.req.method === "POST" && EXTENSION_PATHS.test(c.req.path) && authorization) {
     const caller = await extensionCaller(c.env, authorization);
     if ("error" in caller) return c.json({ error: caller.error }, caller.status);
     c.set("signedIn", {
@@ -166,7 +171,16 @@ importRoutes.post("/api/import/web", async (c) => {
     };
   });
   await db.insert(importJob).values(rows);
-  const response: ImportWebResponse = { jobs: rows.map(summary) };
+  const response: ImportWebResponse = {
+    jobs: rows.map((row, i) => {
+      const draft = drafts[i];
+      const photos = (draft?.photos ?? []).flatMap((photo) => {
+        const url = draft?.inputs[photo.input]?.url;
+        return photo.role === "photo" && url ? [{ input: photo.input, url }] : [];
+      });
+      return { ...summary(row), photos };
+    }),
+  };
   return c.json(response, 201);
 });
 
@@ -234,6 +248,7 @@ importRoutes.post("/api/import/jobs/:id/discard", async (c) => {
   const job = await ownJob(c);
   if (!job || job.status !== "ready") return c.json({ error: "not_found" }, 404);
   await c.var.signedIn.db.delete(importJob).where(eq(importJob.id, job.id));
+  await removeJobPhotos(c.env.IMAGES, job.id);
   return c.json({ ok: true });
 });
 
@@ -292,13 +307,27 @@ importRoutes.get("/api/import/jobs/:id/inputs/:index", async (c) => {
   const job = await ownJob(c);
   if (!job?.draft || job.status !== "ready") return c.json({ error: "not_found" }, 404);
   const draft = JSON.parse(job.draft) as RecipeDraft;
-  const input = draft.inputs[Number(c.req.param("index"))];
+  const index = Number(c.req.param("index"));
+  const input = draft.inputs[index];
   const ownHosts = [
     new URL(c.req.url).hostname,
     c.env.APP_HOSTNAME ?? "",
     c.env.ADMIN_HOSTNAME ?? "",
   ].map((h) => h.toLowerCase());
-  const url = input?.kind === "image" ? fetchableImageUrl(input.url, ownHosts) : null;
+  if (input?.kind !== "image") return c.json({ error: "not_found" }, 404);
+  const headers = {
+    "cache-control": "private, max-age=3600",
+    "x-content-type-options": "nosniff",
+    "content-security-policy": "default-src 'none'; sandbox",
+  };
+  // The photo the extension brought from the person's browser, when it could (phase E6).
+  const brought = await c.env.IMAGES.get(importPhotoKey(job.id, index));
+  if (brought) {
+    return new Response(brought.body, {
+      headers: { ...headers, "content-type": brought.httpMetadata?.contentType ?? "image/jpeg" },
+    });
+  }
+  const url = fetchableImageUrl(input.url, ownHosts);
   if (!url) return c.json({ error: "not_found" }, 404);
   const perMinute = plan.image_uploads_per_minute;
   if (
@@ -330,12 +359,41 @@ importRoutes.get("/api/import/jobs/:id/inputs/:index", async (c) => {
   if (!bytes) return c.json({ error: "image_too_large" }, 413);
   const contentType = detectImageType(bytes);
   if (!contentType) return c.json({ error: "unsupported_type" }, 415);
-  return new Response(bytes, {
-    headers: {
-      "content-type": contentType,
-      "cache-control": "private, max-age=3600",
-      "x-content-type-options": "nosniff",
-      "content-security-policy": "default-src 'none'; sandbox",
-    },
-  });
+  return new Response(bytes, { headers: { ...headers, "content-type": contentType } });
+});
+
+// POST /api/import/jobs/:id/inputs/:index: one of the draft's photos, as the person's browser
+// downloaded it (the Chrome extension, phase E6). Some sites refuse photo downloads from servers,
+// so the extension brings them. Kept only until the draft is saved or removed (the review screen
+// shows it, and saving uploads it to the recipe like any photo, with the usual checks). Photos are
+// part of Premium; only the draft's own photo inputs; image files only, by their signature.
+importRoutes.post("/api/import/jobs/:id/inputs/:index", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  if (!plan.images_enabled) return c.json({ error: "images_not_included" }, 403);
+  const job = await ownJob(c);
+  if (!job?.draft || job.status !== "ready") return c.json({ error: "not_found" }, 404);
+  const draft = JSON.parse(job.draft) as RecipeDraft;
+  const index = Number(c.req.param("index"));
+  const isPhoto = draft.photos.some((p) => p.input === index && p.role === "photo");
+  if (draft.inputs[index]?.kind !== "image" || !isPhoto) return c.json({ error: "not_found" }, 404);
+  const perMinute = plan.image_uploads_per_minute;
+  if (
+    perMinute !== null &&
+    !(await withinRateLimit(db, `import-photo:minute:${userId}`, {
+      max: perMinute,
+      windowMs: MINUTE,
+    }))
+  ) {
+    return c.json({ error: "rate_limited" }, 429, { "retry-after": "60" });
+  }
+  const tooLarge = () => c.json({ error: "image_too_large" }, 413);
+  const declared = Number(c.req.header("content-length"));
+  if (Number.isFinite(declared) && declared > ABSOLUTE_MAX_IMAGE_BYTES) return tooLarge();
+  const bytes = await readCapped(c.req.raw, ABSOLUTE_MAX_IMAGE_BYTES);
+  if (!bytes) return tooLarge();
+  const contentType = detectImageType(bytes);
+  if (!contentType) return c.json({ error: "unsupported_type" }, 415);
+  await c.env.IMAGES.put(importPhotoKey(job.id, index), bytes, { httpMetadata: { contentType } });
+  return c.json({ ok: true }, 201);
 });
