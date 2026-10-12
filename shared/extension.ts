@@ -18,6 +18,11 @@ export const EXTENSION_RULES = {
 export const CONNECT_MESSAGE = "fennl-extension-connect";
 /** The extension's answer once it has kept the key. */
 export const CONNECTED_MESSAGE = "fennl-extension-connected";
+/**
+ * The connect page's word that connecting is finished, so the extension can ask for what's left:
+ * on Premium, bringing photos from any site (extension/background.ts).
+ */
+export const CONNECT_FINISHED_MESSAGE = "fennl-extension-finished";
 /** Where the extension opens Fennl to connect. */
 export const CONNECT_PATH = "/connect-extension";
 

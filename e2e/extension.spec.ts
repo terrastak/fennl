@@ -325,3 +325,57 @@ test("Premium: the extension brings photos from sites that refuse servers", asyn
     await context.close();
   }
 });
+
+test("Premium: connecting asks once to bring photos, as its last step", async ({ baseURL }) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "June Lee");
+    // The tests' build may read any site already: have it ask as a real install would.
+    const panel = await context.newPage();
+    await panel.goto(`chrome-extension://${unpackedId(EXTENSION)}/popup.html`);
+    await panel.evaluate(() =>
+      (
+        globalThis as unknown as {
+          chrome: { storage: { local: { set(items: object): Promise<void> } } };
+        }
+      ).chrome.storage.local.set({ testAskForPhotos: true }),
+    );
+
+    // Free keeps no photos, so connecting ends on Fennl's page.
+    const page = await context.newPage();
+    await page.goto("/connect-extension");
+    await page.getByRole("button", { name: "Connect the extension" }).click();
+    await expect(page.getByText(/^Connected\. You can close this tab/)).toBeVisible();
+    await panel.reload();
+    await expect(panel.getByText("Connected as June Lee")).toBeVisible();
+    await expect(page).toHaveURL(/\/connect-extension$/);
+
+    // On Premium, the tab moves on to the extension's own page to ask.
+    await premium(context, baseURL!);
+    await page.reload();
+    await page.getByRole("button", { name: "Connect the extension" }).click();
+    await expect(page).toHaveURL(/^chrome-extension:\/\/[a-p]+\/setup\.html$/);
+    await expect(
+      page.getByRole("heading", { level: 2, name: "One more step: photos" }),
+    ).toBeVisible();
+    await expect(page.getByText("Connected as June Lee")).toBeVisible();
+    await expectAccessible(page);
+
+    await page.getByRole("button", { name: "Not now" }).click();
+    await expect(page.getByRole("status")).toHaveText(/^Photos aren't allowed yet\./);
+    // The panel still offers it.
+    await panel.reload();
+    await expect(panel.getByRole("button", { name: "Allow photos from any site" })).toBeVisible();
+
+    // Chrome doesn't ask the tests' build, which has the permission already: it says yes.
+    await page.reload();
+    await page.getByRole("button", { name: "Allow photos from any site" }).click();
+    await expect(page.getByRole("status")).toHaveText(/^All set\./);
+    await expectAccessible(page);
+    await page.getByRole("button", { name: "Open Fennl" }).click();
+    await expect(page).toHaveURL((url) => url.origin === new URL(baseURL!).origin);
+  } finally {
+    await context.close();
+  }
+});

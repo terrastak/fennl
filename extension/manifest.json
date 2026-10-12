@@ -18,6 +18,9 @@
       "32": "icons/icon-32.png"
     }
   },
+  "background": {
+    "service_worker": "background.js"
+  },
   "permissions": ["storage", "activeTab", "scripting"],
   "host_permissions": ["__FENNL_ORIGIN__/*"],
   "optional_host_permissions": ["https://*/*", "http://*/*"],

@@ -16,6 +16,7 @@ declare namespace chrome {
       url?: string;
     }
     function create(properties: { url: string }): Promise<Tab>;
+    function update(tabId: number, properties: { url: string }): Promise<Tab>;
     function query(query: {
       active?: boolean;
       currentWindow?: boolean;
@@ -39,7 +40,16 @@ declare namespace chrome {
     function request(permissions: Permissions): Promise<boolean>;
   }
   namespace runtime {
+    interface MessageSender {
+      tab?: tabs.Tab;
+      url?: string;
+    }
     function getManifest(): { version: string };
+    function getURL(path: string): string;
+    function sendMessage(message: unknown): Promise<unknown>;
+    const onMessage: {
+      addListener(listener: (message: unknown, sender: MessageSender) => void): void;
+    };
   }
 }
 

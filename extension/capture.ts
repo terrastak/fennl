@@ -85,10 +85,22 @@ export async function sendPage(connection: Connection, page: CapturedPage): Prom
   return { ok: false, problem: error ?? "failed" };
 }
 
-/** Reading photos from any site: asked for once, from the panel's "Allow photos" button. */
+/**
+ * Reading photos from any site: asked for once, as the last step of connecting on Premium
+ * (setup.html), or later from the panel's "Allow photos" button.
+ */
 export const PHOTO_SITES = { origins: ["https://*/*", "http://*/*"] };
 
-export function photosAllowed(): Promise<boolean> {
+/** In the tests' build, which may read any site already, a test can have it ask anyway. */
+export const TEST_ASK_FOR_PHOTOS = "testAskForPhotos";
+
+export async function photosAllowed(): Promise<boolean> {
+  if (
+    __FENNL_TEST__ &&
+    (await chrome.storage.local.get(TEST_ASK_FOR_PHOTOS))[TEST_ASK_FOR_PHOTOS]
+  ) {
+    return false;
+  }
   return chrome.permissions.contains(PHOTO_SITES);
 }
 

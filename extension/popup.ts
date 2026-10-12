@@ -11,31 +11,13 @@ import {
   reviewPath,
   sendPage,
 } from "./capture";
+import { button, el } from "./ui";
 import "./popup.css";
 
 // The toolbar button's panel (phase E5): connect to Fennl, see who it's connected to and what
 // the plan lets it import, import the page you're on (phase E6), open Fennl, or disconnect.
 
 const app = document.getElementById("app") as HTMLElement;
-
-/** An element with text (never HTML, so a name can't inject anything). */
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  text?: string,
-  className?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
-  if (className) node.className = className;
-  return node;
-}
-
-function button(text: string, primary: boolean, onClick: () => void): HTMLButtonElement {
-  const b = el("button", text, primary ? "primary" : "secondary");
-  b.type = "button";
-  b.addEventListener("click", onClick);
-  return b;
-}
 
 function openFennl(path: string) {
   void chrome.tabs.create({ url: `${ORIGIN}${path}` });
@@ -90,8 +72,9 @@ function showConnected(connection: Connection, me: ExtensionMe, canBringPhotos: 
     });
     parts.push(importButton, status);
     if (me.photos && !canBringPhotos) {
-      // Asked once, from its own button: Chrome's question may close this panel, and nothing
-      // in progress is lost that way.
+      // Normally asked as the last step of connecting (setup.html); here for anyone who said
+      // "Not now" or connected before. From its own button: Chrome's question may close this
+      // panel, and nothing in progress is lost that way.
       parts.push(
         el(
           "p",
