@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { CONNECTED_MESSAGE, CONNECT_MESSAGE } from "../../shared/extension";
+import {
+  CONNECTED_MESSAGE,
+  CONNECT_FINISHED_MESSAGE,
+  CONNECT_MESSAGE,
+} from "../../shared/extension";
 import { PageHeader } from "../pages/PageHeader";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
@@ -9,7 +13,8 @@ import styles from "./extension.module.css";
 // /connect-extension (phase E5): the Fennl extension opens this page to connect to the account.
 // The person confirms; the server makes a key for the extension, and the page hands it to the
 // extension's script here (extension/connect.ts), which keeps it. A key the extension doesn't
-// pick up is taken back at once. Nothing is typed into the extension itself.
+// pick up is taken back at once. Nothing is typed into the extension itself. Once connected, the
+// extension may move the tab on to one more step of its own (asking about photos, on Premium).
 
 /** How long to wait for the extension to say it kept the key. */
 const ANSWER_MS = 5000;
@@ -88,6 +93,8 @@ export function ConnectExtensionPage() {
     // The extension was connected before: its old key is no longer needed.
     if (replaced) await removeExtensionLink(replaced);
     setState({ kind: "connected" });
+    // On Premium, the extension may now move this tab on to ask about photos (its own page).
+    window.postMessage({ type: CONNECT_FINISHED_MESSAGE }, window.location.origin);
   };
 
   return (

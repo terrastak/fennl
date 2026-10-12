@@ -28,7 +28,8 @@ Each time a change reaches `main`, GitHub builds the extension for `beta.fennl.a
    1. Click the puzzle-piece **Extensions** button in Chrome's toolbar, then **Fennl** (the pin icon next to it keeps it in the toolbar).
    2. Click **Connect to Fennl**. Fennl opens; sign in if it asks.
    3. Click **Connect the extension**. Fennl says "Connected."
-   4. Click the Fennl button again: it shows "Connected as" and your name.
+   4. On Premium, the tab then changes to "One more step: photos". Click **Allow photos from any site**, and allow it when Chrome asks. Some sites (Food Network, for one) only let a browser download their photos, so the extension brings them itself. It only does so for the recipe you import. If you click **Not now**, the same button is in the Fennl button's panel for later.
+   5. Click the Fennl button again: it shows "Connected as" and your name.
 4. Import a recipe:
    1. Open a recipe on a site you use (signed in, if it's a site you sign in to).
    2. Click the Fennl button, then **Import this page**.
@@ -38,8 +39,10 @@ Things to know:
 
 - Chrome doesn't update an extension loaded this way. For a newer version, download it again, replace the folder's contents, and click the reload arrow on Fennl's card in `chrome://extensions`.
 - **Settings › Chrome extension** in Fennl lists connected extensions, with **Disconnect**. Changing your password disconnects them, and one unused for 90 days disconnects itself.
+- Updating to 0.3.0 (photos from any site) when already connected: replace the folder's contents and click the reload arrow as below. Then, on Premium, click the Fennl button, then **Allow photos from any site**, and allow it when Chrome asks.
 - Updating from version 0.1.0 (before **Import this page**): replace the folder's contents with the new download, then click the reload arrow on Fennl's card in `chrome://extensions`. The new permissions it uses (reading the page you click its button on) show no warning in Chrome ([permissions list](https://developer.chrome.com/docs/extensions/reference/permissions-list), checked 2026-10-12).
 - The extension reads only the page you click its button on, and only then.
+- On Premium without photos allowed (you clicked **Not now**, or upgraded from Free after connecting): when a site won't let Fennl download a recipe's photos, the panel says "This site only lets a browser download its photos". Click **Allow photos from any site**, then the same button on the page that opens, and allow it when Chrome asks. The extension then brings that recipe's photos and opens it for review.
 
 ## Part B: The Chrome Web Store (later, before testers need it)
 

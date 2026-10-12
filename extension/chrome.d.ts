@@ -9,6 +9,8 @@ declare namespace chrome {
       remove(keys: string | string[]): Promise<void>;
     }
     const local: StorageArea;
+    /** Kept until the browser closes; only the extension's own pages can read it. */
+    const session: StorageArea;
   }
   namespace tabs {
     interface Tab {
@@ -16,6 +18,7 @@ declare namespace chrome {
       url?: string;
     }
     function create(properties: { url: string }): Promise<Tab>;
+    function update(tabId: number, properties: { url: string }): Promise<Tab>;
     function query(query: {
       active?: boolean;
       currentWindow?: boolean;
@@ -31,8 +34,24 @@ declare namespace chrome {
       func: () => T;
     }): Promise<InjectionResult<Awaited<T>>[]>;
   }
+  namespace permissions {
+    interface Permissions {
+      origins?: string[];
+    }
+    function contains(permissions: Permissions): Promise<boolean>;
+    function request(permissions: Permissions): Promise<boolean>;
+  }
   namespace runtime {
+    interface MessageSender {
+      tab?: tabs.Tab;
+      url?: string;
+    }
     function getManifest(): { version: string };
+    function getURL(path: string): string;
+    function sendMessage(message: unknown): Promise<unknown>;
+    const onMessage: {
+      addListener(listener: (message: unknown, sender: MessageSender) => void): void;
+    };
   }
 }
 
