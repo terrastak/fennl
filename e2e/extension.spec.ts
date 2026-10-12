@@ -94,7 +94,7 @@ test("connect the extension once, see who it's connected to, and disconnect it",
     await page.reload();
     await page.getByRole("button", { name: "Connect the extension" }).click();
     await expect(page.getByText(/^Connected\./)).toBeVisible();
-    await page.goto("/settings");
+    await page.goto("/account");
     const list = page.getByRole("list", { name: "Connected extensions" });
     await expect(list.getByRole("listitem")).toHaveCount(1);
     await expect(list).toContainText(/Extension in Chrome on \w+/);
@@ -124,7 +124,7 @@ test("disconnecting from the extension, and Fennl without it", async ({ baseURL,
     await expect(panel.getByText("Connected as Sam Park")).toBeVisible();
     await panel.getByRole("button", { name: "Disconnect" }).click();
     await expect(panel.getByText("Disconnected.")).toBeVisible();
-    await connect.goto("/settings");
+    await connect.goto("/account");
     await expect(connect.getByText("No extension is connected.")).toBeVisible();
   } finally {
     await context.close();
