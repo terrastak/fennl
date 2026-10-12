@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { devices, expect, test, type Page } from "@playwright/test";
+import { keys } from "./keys";
 import {
   addRecipe,
   editorStatus,
@@ -50,8 +51,8 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
     "For the stew:\n2 lb pork shoulder\n1 cup beer\n1 onion\n4 cloves garlic",
   );
   // The cursor stayed on the moved line: take it out again.
-  await key.press("End");
-  await key.press("Shift+Home");
+  await key.press(keys.lineEnd);
+  await key.press(keys.selectToLineStart);
   await key.press("Backspace");
   await key.press("Backspace");
   await expect(ingredientsBox(page)).toHaveValue(
