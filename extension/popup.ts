@@ -2,32 +2,25 @@ import type { ExtensionMe } from "../shared/extension";
 import { CONNECT_PATH } from "../shared/extension";
 import "../app/styles/tokens.css";
 import { ORIGIN, disconnect, savedConnection, whoAmI, type Connection } from "./connection";
-import { capturePage, problemText, reviewPath, sendPage } from "./capture";
+import {
+  PHOTO_SITES,
+  bringPhotos,
+  capturePage,
+  keepWaitingImport,
+  photosAllowed,
+  photosRefused,
+  problemText,
+  reviewPath,
+  sendPage,
+  type SentJob,
+} from "./capture";
+import { button, el } from "./ui";
 import "./popup.css";
 
 // The toolbar button's panel (phase E5): connect to Fennl, see who it's connected to and what
 // the plan lets it import, import the page you're on (phase E6), open Fennl, or disconnect.
 
 const app = document.getElementById("app") as HTMLElement;
-
-/** An element with text (never HTML, so a name can't inject anything). */
-function el<K extends keyof HTMLElementTagNameMap>(
-  tag: K,
-  text?: string,
-  className?: string,
-): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag);
-  if (text !== undefined) node.textContent = text;
-  if (className) node.className = className;
-  return node;
-}
-
-function button(text: string, primary: boolean, onClick: () => void): HTMLButtonElement {
-  const b = el("button", text, primary ? "primary" : "secondary");
-  b.type = "button";
-  b.addEventListener("click", onClick);
-  return b;
-}
 
 function openFennl(path: string) {
   void chrome.tabs.create({ url: `${ORIGIN}${path}` });
@@ -68,7 +61,7 @@ const TIER_NAMES: Record<ExtensionMe["tier"], string> = {
   household: "Premium (household)",
 };
 
-function showConnected(connection: Connection, me: ExtensionMe) {
+function showConnected(connection: Connection, me: ExtensionMe, canBringPhotos: boolean) {
   const who = el("p", undefined, "who");
   who.append("Connected as ", el("strong", me.name), el("span", ` (${me.email})`, "muted"));
   const plan = el("p");
@@ -78,9 +71,31 @@ function showConnected(connection: Connection, me: ExtensionMe) {
     const status = el("p", undefined, "status");
     status.setAttribute("role", "status");
     const importButton = button("Import this page", true, () => {
-      void importThisPage(connection, importButton, status);
+      void importThisPage(
+        connection,
+        importButton,
+        status,
+        me.photos ? (canBringPhotos ? "bring" : "offer") : "none",
+      );
     });
     parts.push(importButton, status);
+    if (me.photos && !canBringPhotos) {
+      // Normally asked as the last step of connecting (setup.html); here for anyone who said
+      // "Not now" or connected before. From its own button: Chrome's question may close this
+      // panel, and nothing in progress is lost that way.
+      parts.push(
+        el(
+          "p",
+          "Some sites only let a browser download their photos. Allow it once, and the extension brings recipes' photos from any site.",
+          "muted",
+        ),
+        button("Allow photos from any site", false, () => {
+          void chrome.permissions.request(PHOTO_SITES).then(async (granted) => {
+            if (granted) showConnected(connection, me, true);
+          });
+        }),
+      );
+    }
   } else {
     parts.push(button("See plans in Fennl", true, () => openFennl("/account")));
   }
@@ -95,11 +110,16 @@ function showConnected(connection: Connection, me: ExtensionMe) {
   show(...parts);
 }
 
-/** Reads the page, sends it, and opens Fennl's review screen for it. */
+/**
+ * Reads the page, sends it, and opens Fennl's review screen for it. Photos: brought from the
+ * browser ("bring"), or, on Premium without the permission ("offer"), checked and offered when
+ * the site refuses Fennl's server.
+ */
 async function importThisPage(
   connection: Connection,
   importButton: HTMLButtonElement,
   status: HTMLElement,
+  photos: "bring" | "offer" | "none",
 ) {
   importButton.disabled = true;
   status.className = "status";
@@ -108,6 +128,14 @@ async function importThisPage(
   if (!("problem" in page)) status.textContent = "Sending it to Fennl…";
   const sent = "problem" in page ? null : await sendPage(connection, page);
   if (sent?.ok) {
+    const hasPhotos = sent.jobs.some((job) => job.photos.length > 0);
+    if (photos === "bring" && hasPhotos) {
+      status.textContent = "Bringing the photos…";
+      await bringPhotos(connection, sent.jobs);
+    } else if (photos === "offer" && hasPhotos) {
+      status.textContent = "Checking the photos…";
+      if (await photosRefused(connection, sent.jobs)) return offerToBringPhotos(sent.jobs);
+    }
     status.textContent = "Opening it in Fennl to review…";
     return openFennl(reviewPath(sent.jobs));
   }
@@ -120,13 +148,38 @@ async function importThisPage(
   importButton.disabled = false;
 }
 
+/**
+ * The site refused Fennl its photos: offer to bring them from the browser. Chrome's question is
+ * asked from a tab of the extension's own (setup.html), which then brings the photos and opens the
+ * review, since the question may close this panel.
+ */
+async function offerToBringPhotos(jobs: SentJob[]) {
+  await keepWaitingImport(jobs);
+  show(
+    el(
+      "p",
+      "This site only lets a browser download its photos, so Fennl couldn't get this recipe's photos.",
+      "note",
+    ),
+    el(
+      "p",
+      "Allow the extension to bring photos from any site, and it brings them for this recipe and the ones you import after it.",
+    ),
+    button("Allow photos from any site", true, () => {
+      void chrome.tabs.create({ url: chrome.runtime.getURL("setup.html?for=import") });
+      window.close();
+    }),
+    button("Open it without photos", false, () => openFennl(reviewPath(jobs))),
+  );
+}
+
 async function start() {
   const connection = await savedConnection();
   if (!connection) return showConnect();
   const result = await whoAmI(connection);
   switch (result.status) {
     case "connected":
-      return showConnected(connection, result.me);
+      return showConnected(connection, result.me, await photosAllowed());
     case "not_connected":
       return showConnect("This extension isn't connected any more. Connect it again to carry on.");
     case "password_change_required":

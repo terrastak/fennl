@@ -42,27 +42,37 @@ const shared = {
   define: { __FENNL_ORIGIN__: JSON.stringify(origin), __FENNL_TEST__: JSON.stringify(test) },
 };
 
-// The panel: an HTML page with its script and styles.
+// The panel and the setup step: HTML pages with their scripts and styles.
 await build({
   ...shared,
   base: "./",
-  build: { outDir: out, emptyOutDir: false, rollupOptions: { input: join(source, "popup.html") } },
-});
-
-// The script on Fennl's connect page: one classic script (content scripts can't be modules).
-await build({
-  ...shared,
   build: {
     outDir: out,
     emptyOutDir: false,
-    lib: {
-      entry: join(source, "connect.ts"),
-      formats: ["iife"],
-      name: "fennlConnect",
-      fileName: () => "connect.js",
-    },
+    rollupOptions: { input: [join(source, "popup.html"), join(source, "setup.html")] },
   },
 });
+
+// The script on Fennl's connect page (content scripts can't be modules) and the background
+// script: one classic script each.
+for (const [entry, name] of [
+  ["connect", "fennlConnect"],
+  ["background", "fennlBackground"],
+]) {
+  await build({
+    ...shared,
+    build: {
+      outDir: out,
+      emptyOutDir: false,
+      lib: {
+        entry: join(source, `${entry}.ts`),
+        formats: ["iife"],
+        name,
+        fileName: () => `${entry}.js`,
+      },
+    },
+  });
+}
 
 const manifest = readFileSync(join(source, "manifest.json"), "utf8").replaceAll(
   "__FENNL_ORIGIN__",

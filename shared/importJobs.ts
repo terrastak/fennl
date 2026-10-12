@@ -52,10 +52,24 @@ export interface ImportJobDetail extends ImportJobSummary {
   recipeId: string | null;
 }
 
-/** POST /api/import/web: one job for each recipe on the page. */
-export interface ImportWebResponse {
-  jobs: ImportJobSummary[];
+/** A draft's photo: which of its inputs, and where the page had it. */
+export interface ImportPhotoSource {
+  input: number;
+  url: string;
 }
+
+/**
+ * POST /api/import/web: one job for each recipe on the page, with the photos it would keep, so
+ * the Chrome extension can bring them from the browser (some sites refuse photo downloads from
+ * servers; phase E6).
+ */
+export interface ImportWebResponse {
+  jobs: (ImportJobSummary & { photos: ImportPhotoSource[] })[];
+}
+
+/** Where a photo the extension brought waits until the draft is saved or removed (R2, IMAGES). */
+export const importPhotoKey = (jobId: string, input: number) => `imports/${jobId}/${input}`;
+export const IMPORT_PHOTO_PREFIX = "imports/";
 
 export type ImportWebError =
   | "invalid_request"
