@@ -72,7 +72,7 @@ export function ConnectExtensionPage() {
     if (!created.ok) {
       const text = {
         too_many:
-          "Ten extensions are connected to your account already. Disconnect one in Settings, then try again.",
+          "Ten extensions are connected to your account already. Disconnect one on your Account page, then try again.",
         offline: "Connecting needs a connection. Try again when you're back online.",
         not_while_impersonating: "An extension can't be connected while acting as someone.",
         failed: "The extension couldn't be connected just now. Please try again.",
@@ -107,7 +107,7 @@ export function ConnectExtensionPage() {
         <ul className={styles.list}>
           <li>The extension can send pages you choose to Fennl to import, for you to review.</li>
           <li>It can&rsquo;t see or change your recipes, and it never asks for your password.</li>
-          <li>You can disconnect it at any time in Settings.</li>
+          <li>You can disconnect it at any time from your Account page.</li>
         </ul>
         {state.kind === "connected" ? (
           <p ref={result} tabIndex={-1} role="status" className={styles.done}>
@@ -137,7 +137,7 @@ export function ConnectExtensionPage() {
           </>
         )}
         <p className={recipes.hint}>
-          <Link href="/settings">Settings</Link> lists every connected extension.
+          Your <Link href="/account">Account</Link> page lists every connected extension.
         </p>
       </section>
     </>

@@ -170,7 +170,7 @@ export async function takeOver(
   return registerDevice(db, caller, deviceId, label, maxDevices, now);
 }
 
-/** "Sign out" next to a device in Settings. Not the device asking (that's ordinary sign-out). */
+/** "Sign out" next to a device on the Account page. Not the device asking (that's ordinary sign-out). */
 export async function signOutDevice(
   db: Database,
   caller: DeviceCaller,
@@ -187,4 +187,36 @@ export async function signOutDevice(
   if (!row) return false;
   await revoke(db, caller, [row], "signed_out", now);
   return true;
+}
+
+/**
+ * "Sign out all other browsers" on the Account page: every one of the caller's devices but this
+ * one, and every other sign-in of theirs, including any that never became a device (a browser
+ * left on the takeover screen). An admin acting as them is left alone (the route refuses this
+ * while acting, too). Returns how many browsers were signed out.
+ */
+export async function signOutOtherDevices(
+  db: Database,
+  caller: DeviceCaller,
+  currentId: string,
+  now = new Date(),
+): Promise<number> {
+  const others = await db
+    .select({ id: device.id, sessionId: device.sessionId })
+    .from(device)
+    .where(
+      and(eq(device.userId, caller.userId), ne(device.id, currentId), isNull(device.revokedAt)),
+    )
+    .all();
+  await revoke(db, caller, others, "signed_out", now);
+  await db
+    .delete(session)
+    .where(
+      and(
+        eq(session.userId, caller.userId),
+        ne(session.id, caller.sessionId),
+        isNull(session.impersonatedBy),
+      ),
+    );
+  return others.length;
 }

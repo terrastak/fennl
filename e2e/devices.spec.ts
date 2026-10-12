@@ -65,7 +65,7 @@ test("Free: choosing to sign out instead leaves the first browser alone", async 
   await other.context().close();
 });
 
-test("Premium: several browsers at once, and one can be signed out from Settings", async ({
+test("Premium: several browsers at once, signed out one by one or all at once from Account", async ({
   page,
   context,
   browser,
@@ -83,20 +83,44 @@ test("Premium: several browsers at once, and one can be signed out from Settings
   });
   expect(used.ok()).toBe(true);
 
-  const other = await signInElsewhere(browser, baseURL!, email);
-  await expect(other.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  const others: Page[] = [];
+  for (let i = 0; i < 3; i++) {
+    const other = await signInElsewhere(browser, baseURL!, email);
+    await expect(other.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+    others.push(other);
+  }
 
-  await page.goto("/settings");
-  const devices = page.getByRole("region", { name: "Devices" });
-  await expect(devices.getByText("Your plan includes up to 5 devices at once.")).toBeVisible();
+  await page.goto("/account");
+  const card = page.getByRole("region", { name: "Where you’re signed in" });
+  const devices = card.getByRole("list", { name: "Devices" });
+  await expect(card.getByText("Your plan includes up to 5 devices at once.")).toBeVisible();
   await expect(devices.getByText("This device")).toBeVisible();
-  await expect(devices.getByRole("listitem")).toHaveCount(2);
+  await expect(devices.getByRole("listitem")).toHaveCount(4);
+  const results = await new AxeBuilder({ page })
+    .include("main")
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
+    .analyze();
+  expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
-  await devices.getByRole("button", { name: /^Sign out/ }).click();
-  await expect(devices.getByRole("status")).toHaveText(/^Signed out /);
+  // One at a time.
+  await devices
+    .getByRole("button", { name: /^Sign out/ })
+    .first()
+    .click();
+  await expect(card.getByRole("status")).toHaveText(/^Signed out /);
+  await expect(devices.getByRole("listitem")).toHaveCount(3);
+
+  // Then every other one.
+  await card.getByRole("button", { name: "Sign out all other devices" }).click();
+  await expect(card.getByRole("status")).toHaveText("Signed out all your other devices.");
   await expect(devices.getByRole("listitem")).toHaveCount(1);
+  await expect(card.getByRole("button", { name: "Sign out all other devices" })).toHaveCount(0);
 
-  await other.reload();
-  await expect(other).toHaveURL(/\/sign-in$/);
-  await other.context().close();
+  for (const other of others) {
+    await other.reload();
+    await expect(other).toHaveURL(/\/sign-in$/);
+    await other.context().close();
+  }
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1, name: "Account" })).toBeVisible();
 });

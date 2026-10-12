@@ -7,6 +7,7 @@ import {
   activeDevices,
   registerDevice,
   signOutDevice,
+  signOutOtherDevices,
   takeOver,
   type DeviceCaller,
 } from "./devices";
@@ -83,7 +84,7 @@ deviceRoutes.post("/api/devices/takeover", async (c) => {
   return c.json(result);
 });
 
-/** The device list in Settings. ?current= is the asking browser's own ID. */
+/** The device list on the Account page. ?current= is the asking browser's own ID. */
 deviceRoutes.get("/api/devices", async (c) => {
   const signedIn = c.var.signedIn;
   const current = c.req.query("current") ?? "";
@@ -103,4 +104,15 @@ deviceRoutes.post("/api/devices/:id/sign-out", async (c) => {
   }
   const done = await signOutDevice(signedIn.db, caller(signedIn), target, current);
   return done ? c.json({ ok: true }) : c.json({ error: "not_found" }, 404);
+});
+
+// "Sign out all other browsers". Refused while an admin is acting as the person: it would end
+// their own sign-ins, which acting never does (CLAUDE.md, "Admin console").
+deviceRoutes.post("/api/devices/sign-out-others", async (c) => {
+  const signedIn = c.var.signedIn;
+  if (signedIn.impersonating) return c.json({ error: "not_while_impersonating" }, 403);
+  const current = await deviceIdFrom(c.req.raw);
+  if (!isDeviceId(current)) return c.json({ error: "invalid_device" }, 400);
+  const signedOut = await signOutOtherDevices(signedIn.db, caller(signedIn), current);
+  return c.json({ ok: true, signedOut });
 });

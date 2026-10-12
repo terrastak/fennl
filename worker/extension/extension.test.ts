@@ -129,7 +129,7 @@ describe("a key", () => {
     }
   });
 
-  it("stops working when removed in Settings, or disconnected by the extension", async () => {
+  it("stops working when removed on the Account page, or disconnected by the extension", async () => {
     const { v } = await person();
     const first = (await connect(v)).body;
     const second = (await connect(v)).body;
