@@ -223,8 +223,13 @@ describe("photos on recipes", () => {
     const recipeId = id();
     const { hash } = (await upload(june)).body;
     const photoId = id();
-    const t = Date.now();
-    await push(june, [newRecipe(recipeId), addPhoto(recipeId, hash, { photoId, changedAt: t })]);
+    // Made a minute ago, offline, and sent in three pushes. Times are never later than a push was
+    // sent, so changes stamped after that would all count as made at the same moment.
+    const t = Date.now() - 60_000;
+    await push(june, [
+      { ...newRecipe(recipeId), changedAt: t },
+      addPhoto(recipeId, hash, { photoId, changedAt: t }),
+    ]);
     const move = (sortOrder: number, changedAt: number): SyncChange => ({
       kind: "photo",
       id: photoId,
