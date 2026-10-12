@@ -97,8 +97,8 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   await petraPage.getByRole("link", { name: /Green Chile Stew/ }).click();
   await expect(petraPage.getByText("Checked by support: it's all here.")).toBeVisible();
   await expect(petraPage.getByRole("region", { name: "Acting as this person" })).toHaveCount(0);
-  await petraPage.goto("/settings");
-  const devices = petraPage.getByRole("region", { name: "Devices" });
+  await petraPage.goto("/account");
+  const devices = petraPage.getByRole("list", { name: "Devices" });
   await expect(devices.getByRole("listitem")).toHaveCount(1);
   await expect(devices).toContainText("This device");
 

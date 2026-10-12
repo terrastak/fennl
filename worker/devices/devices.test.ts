@@ -175,7 +175,34 @@ describe("Premium: several devices", () => {
     expect(await signedIn(two)).toBe(true);
   });
 
-  it("lists devices in Settings and signs one out from there", async () => {
+  it("signs out every other browser at once, even one left on the takeover screen", async () => {
+    const address = email("others");
+    const here = await signUpConfirmed(address);
+    await allowDevices(here, 2);
+    const [hereId, thereId] = [newDeviceId(), newDeviceId()];
+    await register(here, hereId);
+    const there = await signIn(address);
+    await register(there, thereId);
+    // A third browser over the limit: signed in, but never a device.
+    const waiting = await signIn(address);
+    expect((await register(waiting, newDeviceId())).body.status).toBe("over_limit");
+    const someoneElse = await signUpConfirmed(email("bystander"));
+
+    expect(
+      (await here.request("/api/devices/sign-out-others", { body: { deviceId: "x" } })).status,
+    ).toBe(400);
+    const res = await here.request("/api/devices/sign-out-others", { body: { deviceId: hereId } });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ ok: true, signedOut: 1 });
+    expect(await signedIn(here)).toBe(true);
+    expect(await signedIn(there)).toBe(false);
+    expect(await signedIn(waiting)).toBe(false);
+    expect(await signedIn(someoneElse)).toBe(true);
+    expect(await deviceRow(here, thereId)).toMatchObject({ revokedReason: "signed_out" });
+    expect(await deviceRow(here, hereId)).toMatchObject({ revokedAt: null });
+  });
+
+  it("lists devices and signs one out", async () => {
     const address = email("list");
     const here = await signUpConfirmed(address);
     await allowDevices(here, 5);
@@ -230,5 +257,21 @@ describe("admins using someone's account", () => {
     const id = newDeviceId();
     expect((await register(v, id)).body).toEqual({ status: "ok" });
     expect(await deviceRow(v, id)).toBeUndefined();
+  });
+
+  it("can't sign out all their other browsers", async () => {
+    const address = email("acted-on");
+    const own = await signUpConfirmed(address);
+    const acting = await signIn(address);
+    const sessionId = (await acting.session())!.session.id;
+    await db()
+      .update(session)
+      .set({ impersonatedBy: "some-admin" })
+      .where(eq(session.id, sessionId));
+    const res = await acting.request("/api/devices/sign-out-others", {
+      body: { deviceId: newDeviceId() },
+    });
+    expect(res.status).toBe(403);
+    expect(await signedIn(own)).toBe(true);
   });
 });

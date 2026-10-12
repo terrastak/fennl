@@ -104,14 +104,14 @@ extensionLinkRoutes.post("/api/extension/links", async (c) => {
   return c.json(created, 201);
 });
 
-// GET /api/extension/links: the person's connected extensions, for Settings.
+// GET /api/extension/links: the person's connected extensions, for the Account page.
 extensionLinkRoutes.get("/api/extension/links", async (c) => {
   const { db, userId } = c.var.signedIn;
   const links: ExtensionLinkSummary[] = await listLinks(db, userId);
   return c.json({ links });
 });
 
-// POST /api/extension/links/:id/remove: disconnect one (Settings, or the connect page taking
+// POST /api/extension/links/:id/remove: disconnect one (the Account page, or the connect page taking
 // back a key no extension picked up).
 extensionLinkRoutes.post("/api/extension/links/:id/remove", async (c) => {
   const { db, userId } = c.var.signedIn;

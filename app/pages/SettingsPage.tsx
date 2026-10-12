@@ -9,11 +9,10 @@ import {
 import { useAppearance } from "../appearance/appearance";
 import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
-import { DevicesSection } from "../devices/DevicesSection";
 import { ExportSection } from "../export/ExportSection";
-import { ExtensionSection } from "../extension/ExtensionSection";
 import { UsageSection } from "../limits/Usage";
 import { LocalCopySection } from "../sync/LocalCopySection";
+import { Link } from "../router";
 import { PageHeader } from "./PageHeader";
 import styles from "./SettingsPage.module.css";
 
@@ -144,9 +143,13 @@ export function SettingsPage() {
 
       <EmailSection />
 
-      <DevicesSection />
-
-      <ExtensionSection />
+      <section aria-labelledby="signed-in-title" className={styles.section}>
+        <h2 id="signed-in-title">Devices and extensions</h2>
+        <p className={styles.help}>
+          The devices signed in to your account and your connected Chrome extensions are on your{" "}
+          <Link href="/account">Account</Link> page, where you can sign out or disconnect them.
+        </p>
+      </section>
 
       <UsageSection />
 
