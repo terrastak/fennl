@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { keys } from "./keys";
 import { premium, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
@@ -130,7 +131,7 @@ test("lines can move between the lists and the draft be discarded", async ({
   // The last ingredient ("A 9" deep pie dish…") is equipment: move it to the method.
   const box = ingredients(page);
   await box.click();
-  await page.keyboard.press("ControlOrMeta+End");
+  await page.keyboard.press(keys.textEnd);
   await page.getByRole("button", { name: "Move to method" }).click();
   await expect(box).not.toHaveValue(/deep pie dish/);
   await expect(method(page)).toHaveValue(/A 9" deep pie dish; a candy thermometer$/);
@@ -155,7 +156,7 @@ test("the review can be done with the keyboard alone", async ({ page, context, b
   await expect(page.getByLabel("About this recipe")).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(ingredients(page)).toBeFocused();
-  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.press(keys.textStart);
   await page.keyboard.press("Shift+Tab");
   await expect(page.getByRole("button", { name: "Move to method" })).toBeFocused();
   await page.keyboard.press("Enter");
