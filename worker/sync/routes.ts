@@ -17,6 +17,7 @@ import type { Database } from "../db/client";
 import { device } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
+import { markImportsSaved } from "../import/jobs";
 import { householdPhotos, householdUsage, usageWithLimits } from "../limits/usage";
 import { pullChanges } from "./pull";
 import { applyChanges } from "./push";
@@ -132,6 +133,18 @@ syncRoutes.post("/api/sync/push", async (c) => {
   valid.forEach((v, i) => {
     results[v.index] = applied[i] ?? { status: "rejected", reason: "failed" };
   });
+  // A recipe made from an import draft (phase E4): the draft is now saved.
+  await markImportsSaved(
+    signedIn.db,
+    signedIn.userId,
+    valid.flatMap((v, i) =>
+      v.change.kind === "recipe" &&
+      v.change.create?.import?.importJobId &&
+      applied[i]?.status === "applied"
+        ? [{ importJobId: v.change.create.import.importJobId, recipeId: v.change.id }]
+        : [],
+    ),
+  );
   const [counts, photos] = await Promise.all([
     householdUsage(signedIn.db, householdId),
     householdPhotos(signedIn.db, householdId),

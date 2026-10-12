@@ -1,3 +1,4 @@
+import type { DuplicateMatch, DuplicateQuery } from "../../shared/duplicates";
 import type { Recipe, RecipeMade, RecipeOpinion, RecipePhoto } from "../../shared/recipe";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
@@ -88,6 +89,7 @@ export type DbRequest =
   | { op: "search"; query: string }
   | { op: "listTrash" }
   | { op: "photoHashes" }
+  | { op: "findDuplicates"; query: DuplicateQuery }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -104,6 +106,8 @@ export interface DbResults {
   listTrash: TrashItem[];
   /** Every image a photo here shows (phase D2), so each device can keep their small copies. */
   photoHashes: string[];
+  /** Recipes an import may duplicate (phase E4). */
+  findDuplicates: DuplicateMatch[];
   wipe: null;
 }
 

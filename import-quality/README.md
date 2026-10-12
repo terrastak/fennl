@@ -24,7 +24,7 @@ the owner 2026-10-10). Only add pages and cards you're happy for anyone to see.
 
     npm run import:save-page -- <sample-id> <page address> [saved .html file]
 
-This saves a trimmed copy of the page to `test_pages/` (`trimPage.ts`): the page's recipe data,
+This saves a trimmed copy of the page to `test_pages/` (`shared/pageSnapshot.ts`): the page's recipe data,
 address, name and sharing image, and its recipe card (ingredients, directions, notes). The site's
 articles, photos, comments and scripts are left out, since the folder is public. It checks the
 importer reads the copy just as it reads the whole page, and prints what it reads as a first draft

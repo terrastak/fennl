@@ -1,3 +1,4 @@
+import type { DuplicateMatch, DuplicateQuery } from "../../shared/duplicates";
 import type { Entitlements } from "../../shared/entitlements";
 import { addBlockedBy, type Usage } from "../../shared/limits";
 import { RECIPE_SCHEMA_VERSION } from "../../shared/recipe";
@@ -344,6 +345,10 @@ export class SyncEngine {
 
   listTrash(): Promise<TrashItem[]> {
     return this.db.call({ op: "listTrash" });
+  }
+
+  findDuplicates(query: DuplicateQuery): Promise<DuplicateMatch[]> {
+    return this.db.call({ op: "findDuplicates", query });
   }
 
   photoHashes(): Promise<string[]> {

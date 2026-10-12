@@ -310,6 +310,33 @@ export function fileRecipes(
   return { changes, undo, added };
 }
 
+/**
+ * Files one recipe under several categories at once (an import's, phase E4), creating what's
+ * missing once even when paths share a parent ("Diet › Vegan" and "Diet › Gluten-free").
+ */
+export function fileRecipeUnder(
+  tree: CategoryTree,
+  recipeId: string,
+  paths: string[][],
+  ctx: PlanContext,
+): Plan {
+  const changes: SyncChange[] = [];
+  const undo: SyncChange[] = [];
+  const made = new Map<string, string>();
+  const seen = new Set<string>();
+  for (const names of paths) {
+    const key = pathKey(names);
+    if (names.length === 0 || seen.has(key)) continue;
+    seen.add(key);
+    if (tree.byKey.get(key)?.recipeIds.has(recipeId)) continue;
+    const owner = tree.recipeOwners[recipeId] ?? ctx.me;
+    const categoryId = ensurePath(tree, owner, names, ctx, changes, made);
+    changes.push(link(ctx, recipeId, categoryId, false));
+    undo.push(link(ctx, recipeId, categoryId, true));
+  }
+  return { changes, undo };
+}
+
 /** Takes recipes out of a category (only that category, not the ones inside it). */
 export function unfileRecipes(
   tree: CategoryTree,
