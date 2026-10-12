@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { keys } from "./keys";
 import { premium, recipeCard, signInElsewhere, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
@@ -56,7 +57,7 @@ test("A category tree built, changed and undone with the keyboard", async ({
   await page.getByRole("button", { name: "Rename Desserts › Cakes" }).focus();
   await key.press("Enter");
   await expect(page.getByLabel("New name for Cakes")).toBeFocused();
-  await key.press("Control+a");
+  await key.press(keys.selectAll);
   await key.type("Layer cakes");
   await key.press("Enter");
   await expect(undoStatus(page)).toHaveText("Renamed Cakes to Layer cakes.");
