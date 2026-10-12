@@ -5,7 +5,7 @@ import { readWebRecipes } from "../shared/webRecipe";
 import { loadSamples } from "./scorecard";
 
 // The saved web pages of the quality test set (phase E3). The test set is public, so each page
-// is a trimmed copy (trimPage.ts): the recipe data and recipe card, without the site's
+// is a trimmed copy (shared/pageSnapshot.ts): the recipe data and recipe card, without the site's
 // articles, photos, comments or scripts.
 
 const root = join(import.meta.dirname, "..");

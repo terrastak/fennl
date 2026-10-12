@@ -6,6 +6,7 @@ import {
   categoryTree,
   createCategory,
   deleteCategory,
+  fileRecipeUnder,
   fileRecipes,
   moveCategory,
   parsePath,
@@ -179,6 +180,27 @@ describe("filing recipes", () => {
       expect.objectContaining({ fields: { name: "Breads", parentId: null, sortOrder: 0 } }),
     ]);
     expect(made[0]?.create).toEqual({});
+  });
+
+  it("files a new recipe under several categories, making a shared parent once", () => {
+    const tree = categoryTree(data(), ME);
+    const plan = fileRecipeUnder(
+      tree,
+      "r-new",
+      [
+        ["Diet", "Vegan"],
+        ["Diet", "Gluten-free"],
+        ["desserts", "CAKES"],
+        ["Desserts", "Cakes"],
+      ],
+      ctx(),
+    );
+    const made = plan.changes.filter((c) => c.kind === "category") as CategoryChange[];
+    expect(made.map((c) => c.fields.name)).toEqual(["Diet", "Vegan", "Gluten-free"]);
+    expect(made[2]?.fields.parentId).toBe(made[0]?.id);
+    const links = plan.changes.filter((c) => c.kind === "recipeCategory") as RecipeCategoryChange[];
+    expect(links.map((l) => l.categoryId)).toEqual([made[1]?.id, made[2]?.id, id("2")]);
+    expect(plan.undo).toHaveLength(3);
   });
 
   it("takes recipes out of only that category", () => {

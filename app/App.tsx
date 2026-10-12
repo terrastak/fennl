@@ -17,7 +17,8 @@ import { VerifyEmailChangePage } from "./auth/VerifyEmailChangePage";
 import { navigate, queryParam, usePath } from "./navigation";
 import { AccountPage } from "./pages/AccountPage";
 import { FeedbackPage } from "./pages/FeedbackPage";
-import { ImportPage } from "./pages/ImportPage";
+import { ImportPage } from "./import/ImportPage";
+import { ReviewPage } from "./import/ReviewPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -135,6 +136,16 @@ export function App() {
         ) : (
           <RecipePage id={recipe[1]} />
         )}
+      </AppShell>
+    );
+  }
+
+  // Reviewing an import before it's saved (phase E4): /import/<its draft's ID>.
+  const review = /^\/import\/([0-9a-f-]{36})$/i.exec(path);
+  if (review?.[1]) {
+    return (
+      <AppShell path={path} title="Review import">
+        <ReviewPage id={review[1]} />
       </AppShell>
     );
   }

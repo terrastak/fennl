@@ -1,16 +1,22 @@
 import type { AnyNode, Document, Element } from "domhandler";
 import { getAttributeValue, textContent } from "domutils";
 import { parseDocument } from "htmlparser2";
-import { draftContent } from "../shared/importDraft";
-import { cardElement, listElement, notesElement } from "../shared/recipeCard";
-import { elements } from "../shared/schemaRecipe";
-import { readWebRecipes } from "../shared/webRecipe";
+import { draftContent } from "./importDraft";
+import { cardElement, listElement, notesElement } from "./recipeCard";
+import { elements } from "./schemaRecipe";
+import { readWebRecipes } from "./webRecipe";
 
 /**
- * A trimmed copy of a recipe page for the quality test set (phase E3). The test set is public
- * (decided 2026-10-10), so a saved page keeps only what the importer reads: the page's recipe
- * data, its address, name and sharing image, and the recipe card as shown (ingredients,
- * directions, notes). The site's articles, photos, adverts and scripts are left out.
+ * The recipe card a web page shows, copied without anything that could run or track (phases E3
+ * and E4). Two uses:
+ *
+ * - The quality test set (import-quality/) keeps a trimmed copy of each page (`trimPage`). The
+ *   test set is public (decided 2026-10-10), so a saved page keeps only what the importer reads:
+ *   the page's recipe data, its address, name and sharing image, and the recipe card as shown.
+ * - The import review screen (E4) shows the person the recipe card next to the draft
+ *   (`recipeCardHtml`).
+ *
+ * The site's articles, photos, adverts, scripts and styles are always left out.
  */
 
 /** Head elements the importer reads. */
@@ -155,6 +161,21 @@ function recipeParts(doc: Document, html: string, url: string | null): Element[]
   return parts.filter((el) => !parts.some((other) => other !== el && isInside(el, other)));
 }
 
+function cardParts(doc: Document, html: string, url: string | null): string[] {
+  return recipeParts(doc, html, url).map((el) =>
+    cleaned(el, isMicrodataRecipe(el) || [...elements(el)].some(isMicrodataRecipe)),
+  );
+}
+
+/**
+ * The page's recipe card as HTML: only text and structure, with classes and hidden parts kept
+ * (no scripts, styles, pictures, links or forms). Empty when the page shows no card the importer
+ * found.
+ */
+export function recipeCardHtml(html: string, url: string | null): string {
+  return cardParts(parseDocument(html), html, url).join("\n");
+}
+
 /** The trimmed page, as HTML. `source` says where and when it was saved. */
 export function trimPage(html: string, url: string | null, source: string): string {
   const doc = parseDocument(html);
@@ -175,9 +196,7 @@ export function trimPage(html: string, url: string | null, source: string): stri
       head.push(`<script type="application/ld+json">${withoutArticles(textContent(el))}</script>`);
     }
   }
-  const body = recipeParts(doc, html, url).map((el) =>
-    cleaned(el, isMicrodataRecipe(el) || [...elements(el)].some(isMicrodataRecipe)),
-  );
+  const body = cardParts(doc, html, url);
   return [
     "<!doctype html>",
     `<!-- A trimmed copy of a recipe page for Fennl's import tests: the recipe data and recipe card only. ${source} -->`,

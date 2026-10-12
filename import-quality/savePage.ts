@@ -2,7 +2,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { draftContent } from "../shared/importDraft";
 import { readWebRecipes } from "../shared/webRecipe";
-import { trimPage } from "./trimPage";
+import { trimPage } from "../shared/pageSnapshot";
 
 /**
  * Adds a web page to the quality test set (phase E3):
@@ -11,7 +11,7 @@ import { trimPage } from "./trimPage";
  *
  * Reads the page (from the saved file when given, e.g. one saved with "Save Page As" while
  * signed in to a site, else from its address), writes a trimmed copy to test_pages/ (see
- * trimPage.ts), checks the importer reads the copy just as it reads the whole page, and prints
+ * shared/pageSnapshot.ts), checks the importer reads the copy just as it reads the whole page, and prints
  * what it reads as a first draft of the correct answer. Add the sample to samples.json and
  * write its correct answer in expected/ (README.md).
  */
