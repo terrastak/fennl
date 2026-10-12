@@ -181,6 +181,12 @@ export const device = sqliteTable(
     revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
     /** Why: "taken_over", "signed_out" (from the device list) or "replaced" (same browser, new ID). */
     revokedReason: text("revoked_reason"),
+    /**
+     * This browser's latest synced change: when it was made by the browser's clock, and the time
+     * the server gave it, so its next change lands after it (worker/sync/clock.ts).
+     */
+    lastChangeAt: integer("last_change_at"),
+    lastChangeTime: integer("last_change_time"),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.id] }),

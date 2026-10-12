@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isDeviceId } from "../../shared/devices";
 import {
@@ -18,6 +18,7 @@ import { device } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 import { householdPhotos, householdUsage, usageWithLimits } from "../limits/usage";
+import { serverTimes, type DeviceClock } from "./clock";
 import { pullChanges } from "./pull";
 import { applyChanges } from "./push";
 
@@ -46,21 +47,33 @@ function refuse(c: Context<SyncEnv>, error: SyncError, extra: Record<string, unk
   return c.json({ error, ...extra }, STATUS[error]);
 }
 
-/** Whether this browser may sync for the caller: registered, and not signed out or replaced. */
-async function deviceProblem(
+/**
+ * Whether this browser may sync for the caller (registered, and not signed out or replaced), and
+ * its latest synced change (see worker/sync/clock.ts).
+ */
+async function checkDevice(
   db: Database,
   signedIn: SignedIn,
   deviceId: unknown,
-): Promise<SyncError | null> {
-  if (signedIn.impersonating) return null;
-  if (!isDeviceId(deviceId)) return "invalid_request";
+): Promise<{ problem: SyncError } | { problem: null; clock: DeviceClock | null }> {
+  if (signedIn.impersonating) return { problem: null, clock: null };
+  if (!isDeviceId(deviceId)) return { problem: "invalid_request" };
   const row = await db
-    .select({ revokedAt: device.revokedAt })
+    .select({
+      revokedAt: device.revokedAt,
+      lastChangeAt: device.lastChangeAt,
+      lastChangeTime: device.lastChangeTime,
+    })
     .from(device)
     .where(and(eq(device.userId, signedIn.userId), eq(device.id, deviceId)))
     .get();
-  if (!row) return "device_not_registered";
-  return row.revokedAt ? "device_revoked" : null;
+  if (!row) return { problem: "device_not_registered" };
+  if (row.revokedAt) return { problem: "device_revoked" };
+  const clock =
+    row.lastChangeAt === null || row.lastChangeTime === null
+      ? null
+      : { changedAt: row.lastChangeAt, time: row.lastChangeTime };
+  return { problem: null, clock };
 }
 
 syncRoutes.post("/api/sync/push", async (c) => {
@@ -83,28 +96,34 @@ syncRoutes.post("/api/sync/push", async (c) => {
 
   const version = schemaVersionProblem(push.schemaVersion);
   if (version) return refuse(c, version);
-  const problem = await deviceProblem(signedIn.db, signedIn, push.deviceId);
-  if (problem) return refuse(c, problem);
+  const checked = await checkDevice(signedIn.db, signedIn, push.deviceId);
+  if (checked.problem) return refuse(c, checked.problem);
   if (push.changes.length > SYNC_RULES.changesPerPush) {
     return refuse(c, "too_many_changes", { max: SYNC_RULES.changesPerPush });
   }
 
-  // Each change on the server's clock: the device's clock may be off, but by the same amount
-  // when it made the change as when it sent the push. Never later than now.
-  const now = Date.now();
-  const offset = now - push.sentAt;
   const results: (ChangeResult | null)[] = [];
-  const valid: { index: number; change: SyncChange; time: number }[] = [];
+  const accepted: { index: number; change: SyncChange }[] = [];
   push.changes.forEach((raw, index) => {
-    const checked = checkChange(raw);
-    if (!checked.ok) {
-      results[index] = { status: "rejected", reason: "invalid", issues: checked.issues };
+    const change = checkChange(raw);
+    if (!change.ok) {
+      results[index] = { status: "rejected", reason: "invalid", issues: change.issues };
       return;
     }
     results[index] = null;
-    const time = Math.max(1, Math.min(now, checked.value.changedAt + offset));
-    valid.push({ index, change: checked.value, time });
+    accepted.push({ index, change: change.value });
   });
+  // Each change on the server's clock: the device's clock may be off, but by the same amount
+  // when it made the change as when it sent the push. Never later than now, except to keep
+  // after this device's previous change (worker/sync/clock.ts).
+  const now = Date.now();
+  const clock = serverTimes(
+    accepted.map((a) => a.change.changedAt),
+    push.sentAt,
+    now,
+    checked.clock,
+  );
+  const valid = accepted.map((a, i) => ({ ...a, time: clock.times[i] as number }));
 
   // Free saves go to the server as they happen; a push of old changes is an offline queue,
   // which needs offline editing (CLAUDE.md, "Write paths"). An admin acting as someone always
@@ -132,6 +151,20 @@ syncRoutes.post("/api/sync/push", async (c) => {
   valid.forEach((v, i) => {
     results[v.index] = applied[i] ?? { status: "rejected", reason: "failed" };
   });
+  if (clock.latest && !signedIn.impersonating) {
+    // Only ever moves forward, even if two pushes from this device cross.
+    await signedIn.db
+      .update(device)
+      .set({ lastChangeAt: clock.latest.changedAt, lastChangeTime: clock.latest.time })
+      .where(
+        and(
+          eq(device.userId, signedIn.userId),
+          eq(device.id, push.deviceId),
+          or(isNull(device.lastChangeAt), lt(device.lastChangeAt, clock.latest.changedAt)),
+        ),
+      )
+      .run();
+  }
   const [counts, photos] = await Promise.all([
     householdUsage(signedIn.db, householdId),
     householdPhotos(signedIn.db, householdId),
@@ -149,8 +182,8 @@ syncRoutes.get("/api/sync/pull", async (c) => {
   if (!Number.isSafeInteger(schemaVersion)) return refuse(c, "invalid_request");
   const version = schemaVersionProblem(schemaVersion);
   if (version) return refuse(c, version);
-  const problem = await deviceProblem(signedIn.db, signedIn, c.req.query("deviceId"));
-  if (problem) return refuse(c, problem);
+  const checked = await checkDevice(signedIn.db, signedIn, c.req.query("deviceId"));
+  if (checked.problem) return refuse(c, checked.problem);
   const since = parseCursors(c.req.query("since"));
   if (!since) return refuse(c, "invalid_request");
   const householdId = signedIn.household.householdId;
