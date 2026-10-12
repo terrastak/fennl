@@ -176,6 +176,13 @@
       "when": 1791779402073,
       "tag": "0024_extension_link",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1791834060530,
+      "tag": "0025_device_clock",
+      "breakpoints": true
     }
   ]
 }
