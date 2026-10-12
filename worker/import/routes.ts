@@ -18,6 +18,7 @@ import { cleanText } from "../../shared/webText";
 import { readCapped } from "../body";
 import { importJob, recipe } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
+import { extensionCaller } from "../extension/routes";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
 import { householdMembers } from "../sync/push";
@@ -32,7 +33,25 @@ type ImportEnv = { Bindings: Env; Variables: { signedIn: SignedIn } };
 
 export const importRoutes = new Hono<ImportEnv>();
 
-importRoutes.use("/api/import/*", requireHousehold);
+// Every import route needs a signed-in person. Sending a page (POST /api/import/web) also takes
+// the Chrome extension's key instead (phase E6): the extension reads the page as the person sees
+// it and sends it here. The key works on nothing else (worker/extension/routes.ts).
+importRoutes.use("/api/import/*", async (c, next) => {
+  const authorization = c.req.header("authorization");
+  if (c.req.method === "POST" && c.req.path === "/api/import/web" && authorization) {
+    const caller = await extensionCaller(c.env, authorization);
+    if ("error" in caller) return c.json({ error: caller.error }, caller.status);
+    c.set("signedIn", {
+      db: caller.db,
+      userId: caller.userId,
+      household: caller.household,
+      sessionId: "",
+      impersonating: false,
+    });
+    return next();
+  }
+  return requireHousehold(c, next);
+});
 
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;

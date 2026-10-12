@@ -2,10 +2,11 @@ import type { ExtensionMe } from "../shared/extension";
 import { CONNECT_PATH } from "../shared/extension";
 import "../app/styles/tokens.css";
 import { ORIGIN, disconnect, savedConnection, whoAmI, type Connection } from "./connection";
+import { capturePage, problemText, reviewPath, sendPage } from "./capture";
 import "./popup.css";
 
 // The toolbar button's panel (phase E5): connect to Fennl, see who it's connected to and what
-// the plan lets it import, open Fennl, or disconnect. Importing the page comes in phase E6.
+// the plan lets it import, import the page you're on (phase E6), open Fennl, or disconnect.
 
 const app = document.getElementById("app") as HTMLElement;
 
@@ -72,18 +73,51 @@ function showConnected(connection: Connection, me: ExtensionMe) {
   who.append("Connected as ", el("strong", me.name), el("span", ` (${me.email})`, "muted"));
   const plan = el("p");
   plan.append(el("strong", TIER_NAMES[me.tier]), ` · ${planText(me)}`);
-  const parts: Node[] = [who, plan];
-  if (!me.importPages) {
+  const parts: Node[] = [];
+  if (me.importPages) {
+    const status = el("p", undefined, "status");
+    status.setAttribute("role", "status");
+    const importButton = button("Import this page", true, () => {
+      void importThisPage(connection, importButton, status);
+    });
+    parts.push(importButton, status);
+  } else {
     parts.push(button("See plans in Fennl", true, () => openFennl("/account")));
   }
   parts.push(
-    el("p", "Importing the page you're on comes in the next update.", "muted"),
-    button("Open Fennl", !!me.importPages, () => openFennl("/")),
+    who,
+    plan,
+    button("Open Fennl", false, () => openFennl("/")),
     button("Disconnect", false, () => {
       void disconnect(connection).then(() => showConnect("Disconnected."));
     }),
   );
   show(...parts);
+}
+
+/** Reads the page, sends it, and opens Fennl's review screen for it. */
+async function importThisPage(
+  connection: Connection,
+  importButton: HTMLButtonElement,
+  status: HTMLElement,
+) {
+  importButton.disabled = true;
+  status.className = "status";
+  status.textContent = "Reading the page…";
+  const page = await capturePage();
+  if (!("problem" in page)) status.textContent = "Sending it to Fennl…";
+  const sent = "problem" in page ? null : await sendPage(connection, page);
+  if (sent?.ok) {
+    status.textContent = "Opening it in Fennl to review…";
+    return openFennl(reviewPath(sent.jobs));
+  }
+  if (sent?.problem === "not_connected") {
+    return showConnect("This extension isn't connected any more. Connect it again to carry on.");
+  }
+  const problem = "problem" in page ? page.problem : (sent?.problem ?? "failed");
+  status.className = "status problem";
+  status.textContent = problemText(problem);
+  importButton.disabled = false;
 }
 
 async function start() {
