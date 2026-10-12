@@ -14,6 +14,7 @@ export default defineConfig([
     "test-results",
     "playwright-report",
     "e2e/.auth",
+    "dist-extension",
   ]),
   js.configs.recommended,
   tseslint.configs.strict,
@@ -26,6 +27,11 @@ export default defineConfig([
     // The service worker that keeps the app's files on the device (phase C4b).
     files: ["app/offline/sw.js"],
     languageOptions: { globals: globals.serviceworker },
+  },
+  {
+    // The Chrome extension (phase E5): its panel and the script on Fennl's connect page.
+    files: ["extension/**/*.ts"],
+    languageOptions: { globals: globals.browser },
   },
   {
     files: ["*.{js,ts}", "e2e/**/*.ts", "scripts/**/*.mjs", "import-quality/**/*.ts"],

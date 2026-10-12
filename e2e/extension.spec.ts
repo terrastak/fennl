@@ -1,0 +1,270 @@
+import AxeBuilder from "@axe-core/playwright";
+import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { chromium, expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { PASSWORD, signUpConfirmed, useFreshAddress } from "./support";
+
+// Phase E5: the Chrome extension, built for this test server and loaded into Chromium, connects
+// to an account once from Fennl, shows who it's connected to, and can be disconnected from
+// either side.
+
+test.beforeEach(({ isMobile }) => {
+  test.skip(isMobile, "The extension is for Chrome on a computer");
+});
+
+const EXTENSION = resolve("dist-extension");
+
+/** Chrome names an unpacked extension after its folder: SHA-256 of the path, as letters a–p. */
+function unpackedId(path: string): string {
+  const hex = createHash("sha256").update(path).digest("hex").slice(0, 32);
+  return [...hex].map((c) => String.fromCharCode(97 + parseInt(c, 16))).join("");
+}
+
+async function withExtension(baseURL: string): Promise<BrowserContext> {
+  const context = await chromium.launchPersistentContext(
+    mkdtempSync(join(tmpdir(), "fennl-extension-")),
+    {
+      headless: true,
+      baseURL,
+      ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+        ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE }
+        : { channel: "chromium" }),
+      args: [`--disable-extensions-except=${EXTENSION}`, `--load-extension=${EXTENSION}`],
+    },
+  );
+  await useFreshAddress(context);
+  return context;
+}
+
+async function expectAccessible(page: Page) {
+  const results = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
+    .analyze();
+  expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+}
+
+test.beforeAll(() => {
+  execFileSync("node", ["scripts/build-extension.mjs"], {
+    // The tests' build: the panel can be told which tab to import (a test can't click
+    // Chrome's toolbar). See scripts/build-extension.mjs.
+    env: { ...process.env, FENNL_ORIGIN: "http://localhost:4173", FENNL_EXTENSION_TEST: "1" },
+    stdio: "pipe",
+  });
+});
+
+test("connect the extension once, see who it's connected to, and disconnect it", async ({
+  baseURL,
+}) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    const popupUrl = `chrome-extension://${unpackedId(EXTENSION)}/popup.html`;
+    await signUpConfirmed(context, baseURL!, "June Lee");
+
+    // Not connected yet: the panel offers to connect, which opens Fennl's connect page.
+    const popup = await context.newPage();
+    await popup.goto(popupUrl);
+    await expect(popup.getByText(/Connect this extension to your Fennl account/)).toBeVisible();
+    const opened = context.waitForEvent("page");
+    await popup.getByRole("button", { name: "Connect to Fennl" }).click();
+    const page = await opened;
+    await expect(page).toHaveURL(/\/connect-extension$/);
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Connect the Fennl extension" }),
+    ).toBeVisible();
+    await expectAccessible(page);
+
+    await page.getByRole("button", { name: "Connect the extension" }).click();
+    await expect(page.getByText(/^Connected\. You can close this tab/)).toBeVisible();
+
+    // The panel knows who it's connected to, and what the plan imports.
+    const panel = await context.newPage();
+    await panel.goto(popupUrl);
+    await expect(panel.getByText("Connected as June Lee")).toBeVisible();
+    await expect(
+      panel.getByText(/Free plan · Imports recipe text\. Photos come with Premium\./),
+    ).toBeVisible();
+    await expectAccessible(panel);
+
+    // Connecting again replaces the old connection rather than adding one.
+    await page.reload();
+    await page.getByRole("button", { name: "Connect the extension" }).click();
+    await expect(page.getByText(/^Connected\./)).toBeVisible();
+    await page.goto("/settings");
+    const list = page.getByRole("list", { name: "Connected extensions" });
+    await expect(list.getByRole("listitem")).toHaveCount(1);
+    await expect(list).toContainText(/Extension in Chrome on \w+/);
+
+    // Disconnected in Settings: the panel says so and offers to connect again.
+    await list.getByRole("button", { name: /Disconnect/ }).click();
+    await expect(page.getByText("No extension is connected.")).toBeVisible();
+    await panel.reload();
+    await expect(panel.getByText(/isn't connected any more/)).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("disconnecting from the extension, and Fennl without it", async ({ baseURL, page }) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "Sam Park");
+    const connect = await context.newPage();
+    await connect.goto("/connect-extension");
+    await connect.getByRole("button", { name: "Connect the extension" }).click();
+    await expect(connect.getByText(/^Connected\./)).toBeVisible();
+
+    const panel = await context.newPage();
+    await panel.goto(`chrome-extension://${unpackedId(EXTENSION)}/popup.html`);
+    await expect(panel.getByText("Connected as Sam Park")).toBeVisible();
+    await panel.getByRole("button", { name: "Disconnect" }).click();
+    await expect(panel.getByText("Disconnected.")).toBeVisible();
+    await connect.goto("/settings");
+    await expect(connect.getByText("No extension is connected.")).toBeVisible();
+  } finally {
+    await context.close();
+  }
+
+  // A browser without the extension can't connect, and is told why.
+  await page.goto("/connect-extension");
+  await expect(page.getByText(/can.t see the extension in this browser/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect the extension" })).toBeDisabled();
+});
+
+test("signing in from the connect page comes back to it", async ({ browser, baseURL }) => {
+  const made = await browser.newContext({
+    storageState: { cookies: [], origins: [] },
+    baseURL: baseURL!,
+  });
+  await useFreshAddress(made);
+  const email = await signUpConfirmed(made, baseURL!);
+  await made.close();
+
+  const context = await browser.newContext({
+    storageState: { cookies: [], origins: [] },
+    baseURL: baseURL!,
+  });
+  await useFreshAddress(context);
+  const page = await context.newPage();
+  await page.goto("/connect-extension");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fconnect-extension$/);
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/connect-extension$/);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Connect the Fennl extension" }),
+  ).toBeVisible();
+  await context.close();
+});
+
+/** A recipe site, served by the test from the test set's saved pages. */
+const SITE = "https://recipes.fennl-test.example";
+
+async function connect(context: BrowserContext) {
+  const page = await context.newPage();
+  await page.goto("/connect-extension");
+  await page.getByRole("button", { name: "Connect the extension" }).click();
+  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await page.close();
+}
+
+/** The panel, as if its button were clicked on the tab showing `url`. */
+async function panelFor(context: BrowserContext, url: string) {
+  const panel = await context.newPage();
+  await panel.goto(
+    `chrome-extension://${unpackedId(EXTENSION)}/popup.html?target=${encodeURIComponent(url)}`,
+  );
+  return panel;
+}
+
+test("import the page you're on, and review it in Fennl", async ({ baseURL }) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "June Lee");
+    await connect(context);
+    await context.route(`${SITE}/**`, (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        path: "test_pages/tasteofhome-big-soft-ginger-cookies.html",
+      }),
+    );
+    const recipe = await context.newPage();
+    await recipe.goto(`${SITE}/big-soft-ginger-cookies`);
+
+    const panel = await panelFor(context, `${SITE}/big-soft-ginger-cookies`);
+    await expect(panel.getByText("Connected as June Lee")).toBeVisible();
+    await expectAccessible(panel);
+    const opened = context.waitForEvent("page");
+    await panel.getByRole("button", { name: "Import this page" }).click();
+    const review = await opened;
+    await expect(review).toHaveURL(/\/import\/[0-9a-f-]{36}$/);
+    await expect(
+      review.getByRole("heading", { level: 1, name: "Review the import" }),
+    ).toBeVisible();
+    await expect(review.getByLabel("Title", { exact: true })).toHaveValue(
+      "Big Soft Ginger Cookies",
+    );
+    await review.getByRole("button", { name: "Save recipe" }).first().click();
+    await expect(
+      review.getByRole("heading", { level: 1, name: "Big Soft Ginger Cookies" }),
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("pages are read as the browser shows them, and the panel says what went wrong", async ({
+  baseURL,
+}) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "Sam Park");
+    await connect(context);
+    const recipeData = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Recipe",
+      name: "Drawn by a Script Stew",
+      recipeIngredient: ["2 carrots", "1 onion"],
+      recipeInstructions: [{ "@type": "HowToStep", text: "Simmer it all." }],
+    });
+    await context.route(`${SITE}/**`, (route) => {
+      const url = route.request().url();
+      // The recipe data only exists once the page's script has run, as on many sites.
+      const body = url.endsWith("/drawn")
+        ? `<!DOCTYPE html><html><head><title>Stew</title></head><body><h1>Stew</h1><script>
+const data = document.createElement("script");
+data.type = "application/ld+json";
+data.textContent = ${JSON.stringify(recipeData)};
+document.head.append(data);
+</script></body></html>`
+        : "<!DOCTYPE html><html><head><title>A story</title></head><body><p>No recipe here.</p></body></html>";
+      return route.fulfill({ contentType: "text/html", body });
+    });
+
+    const drawn = await context.newPage();
+    await drawn.goto(`${SITE}/drawn`);
+    const panel = await panelFor(context, `${SITE}/drawn`);
+    const opened = context.waitForEvent("page");
+    await panel.getByRole("button", { name: "Import this page" }).click();
+    const review = await opened;
+    await expect(review.getByLabel("Title", { exact: true })).toHaveValue("Drawn by a Script Stew");
+
+    const story = await context.newPage();
+    await story.goto(`${SITE}/story`);
+    const storyPanel = await panelFor(context, `${SITE}/story`);
+    await storyPanel.getByRole("button", { name: "Import this page" }).click();
+    await expect(storyPanel.getByRole("status")).toHaveText(
+      /Fennl couldn't find a recipe on this page\./,
+    );
+    await expectAccessible(storyPanel);
+  } finally {
+    await context.close();
+  }
+});

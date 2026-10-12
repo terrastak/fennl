@@ -1,0 +1,44 @@
+{
+  "title": "7Up Sheet Cake",
+  "description": "This old-fashioned Southern dessert, commonly seen at potlucks, church picnics and family barbecues, is a true center-of-the-table cake. Part lemon cake, part sheet cake, it uses 7Up in two ways: first, for moisture and, second, for leavening, replacing traditional leaveners, such as baking soda or baking powder. The carbonation in the soda helps the cake rise and keeps it tender. (If you don’t have 7Up, you can also use Sprite.) While this cake is traditionally made in a Bundt pan, this recipe uses a half sheet tray, which is perfect for feeding a crowd.",
+  "ingredients": [
+    "## FOR THE CAKE",
+    "1 cup/227 grams unsalted butter, at room temperature, plus more for greasing the pan",
+    "2 ½ cups/500 grams granulated sugar",
+    "5 eggs, at room temperature",
+    "1 ½ teaspoons lemon extract",
+    "1 teaspoon finely grated fresh lemon zest (from 1 lemon)",
+    "1 teaspoon finely grated fresh lime zest (from 1 large lime)",
+    "3 cups/384 grams cake flour",
+    "1 cup/240 milliliters 7Up",
+    "## FOR THE GLAZE",
+    "5 cups/490 grams confectioners’ sugar",
+    "¼ cup/60 milliliters 7Up",
+    "3 tablespoons lemon juice (from about 2 lemons)",
+    "1 teaspoon finely grated fresh lemon zest (from 1 lemon)",
+    "1 teaspoon finely grated fresh lime zest (from 1 large lime)"
+  ],
+  "directions": [
+    "Heat oven to 350 degrees. Grease a rimmed 13-by-18-inch half sheet pan and line with parchment paper.",
+    "In the bowl of a stand mixer, cream together the butter and granulated sugar at medium speed. Add eggs one at a time, blending until incorporated, then add extract and both zests.",
+    "Reduce mixer speed to low. Add about ⅓ of the cake flour, followed by half of the 7Up, blending until combined. Repeat with flour, then 7Up, then the remaining flour, until evenly blended.",
+    "Transfer the batter into the prepared pan, smooth the top with a spatula and bake until golden brown and set in the middle, about 35 minutes.",
+    "While the cake bakes, make the glaze: In a medium bowl, combine the confectioners’ sugar, 7Up, lemon juice and both zests. Whisk until smooth. (If a skin forms on top, give it a stir.)",
+    "Let the cake stand cool completely in the pan, then spread the glaze onto the cake, and serve directly from the pan."
+  ],
+  "times": {
+    "prep": 15,
+    "cook": 60,
+    "total": 75
+  },
+  "servings": {
+    "count": 12,
+    "yield": "12 to 16 servings"
+  },
+  "notes": "",
+  "source": {
+    "name": "NYT Cooking",
+    "author": "Millie Peartree",
+    "url": "https://cooking.nytimes.com/recipes/1024208-7up-sheet-cake"
+  }
+}

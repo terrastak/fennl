@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { editorStatus, recipeCard, syncStatus } from "./recipes";
-import { PASSWORD, runLocalSql, signUpConfirmed, useFreshAddress } from "./support";
+import { PASSWORD, adminEmail, signUpConfirmed, useFreshAddress } from "./support";
 
 // Phase C12: an admin acting as a user, locally at /admin and / on one address
 // (ACCESS_DEV_BYPASS stands in for Cloudflare Access; production uses the admin address).
@@ -34,9 +34,8 @@ async function addVirtualAuthenticator(context: BrowserContext, page: Page) {
 }
 
 /** A new admin, signed in to the console with a passkey just now. */
-async function signedInAdmin(page: Page, context: BrowserContext, baseURL: string) {
-  const email = await signUpConfirmed(context, baseURL, "Ada Admin");
-  runLocalSql(`UPDATE user SET role = 'admin' WHERE email = '${email}'`);
+async function signedInAdmin(page: Page, context: BrowserContext, testInfo: TestInfo) {
+  const email = adminEmail(testInfo, "acts");
   await context.clearCookies();
   await addVirtualAuthenticator(context, page);
   await page.goto("/admin");
@@ -52,7 +51,7 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   context,
   browser,
   baseURL,
-}) => {
+}, testInfo) => {
   // Petra, on her own computer, with a few recipes.
   const petra = await browser.newContext({
     baseURL: baseURL!,
@@ -67,7 +66,7 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   await expect(syncStatus(petraPage)).toHaveText("Saved to cloud");
 
   // The admin finds her account and acts as her, with a reason.
-  await signedInAdmin(page, context, baseURL!);
+  await signedInAdmin(page, context, testInfo);
   await page.getByLabel("Email or name").fill(petraEmail);
   await page.getByRole("button", { name: "Search" }).click();
   await page.getByRole("button", { name: "Petra Ng" }).click();

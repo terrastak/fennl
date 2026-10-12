@@ -14,10 +14,12 @@ import { ResetPasswordPage } from "./auth/ResetPasswordPage";
 import { SignInPage } from "./auth/SignInPage";
 import { SignUpPage } from "./auth/SignUpPage";
 import { VerifyEmailChangePage } from "./auth/VerifyEmailChangePage";
-import { navigate, queryParam, usePath } from "./navigation";
+import { afterSignIn, navigate, queryParam, usePath } from "./navigation";
 import { AccountPage } from "./pages/AccountPage";
 import { FeedbackPage } from "./pages/FeedbackPage";
-import { ImportPage } from "./pages/ImportPage";
+import { ConnectExtensionPage } from "./extension/ConnectExtensionPage";
+import { ImportPage } from "./import/ImportPage";
+import { ReviewPage } from "./import/ReviewPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
@@ -38,6 +40,7 @@ const ROUTES: Record<string, Route> = {
   "/settings": { title: "Settings", Page: SettingsPage },
   "/account": { title: "Account", Page: AccountPage },
   "/feedback": { title: "Send feedback", Page: FeedbackPage },
+  "/connect-extension": { title: "Connect the extension", Page: ConnectExtensionPage },
 };
 
 /** Account screens, open to everyone. */
@@ -74,7 +77,7 @@ export function App() {
 
   const accountRoute = ACCOUNT_ROUTES[path];
   if (accountRoute) {
-    if (session && SIGNED_OUT_ONLY.has(path)) return <Redirect to="/" />;
+    if (session && SIGNED_OUT_ONLY.has(path)) return <Redirect to={afterSignIn()} />;
     const { title, Page } = accountRoute;
     return (
       <AuthLayout path={path} title={title}>
@@ -93,7 +96,12 @@ export function App() {
   if (!session) {
     // Keep an error from an email link (for example ?error=invalid_token) so sign-in can explain it.
     const error = new URLSearchParams(window.location.search).get("error");
-    return <Redirect to={error ? `/sign-in?error=${encodeURIComponent(error)}` : "/sign-in"} />;
+    // Back to this page once signed in (the extension's connect page, a link from an email).
+    const here = `${path}${window.location.search}`;
+    const next = !error && path !== "/" ? `?next=${encodeURIComponent(here)}` : "";
+    return (
+      <Redirect to={error ? `/sign-in?error=${encodeURIComponent(error)}` : `/sign-in${next}`} />
+    );
   }
   if (mustChangePassword) {
     return (
@@ -135,6 +143,16 @@ export function App() {
         ) : (
           <RecipePage id={recipe[1]} />
         )}
+      </AppShell>
+    );
+  }
+
+  // Reviewing an import before it's saved (phase E4): /import/<its draft's ID>.
+  const review = /^\/import\/([0-9a-f-]{36})$/i.exec(path);
+  if (review?.[1]) {
+    return (
+      <AppShell path={path} title="Review import">
+        <ReviewPage id={review[1]} />
       </AppShell>
     );
   }

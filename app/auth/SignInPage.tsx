@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { navigate, queryParam } from "../navigation";
+import { afterSignIn, navigate, queryParam } from "../navigation";
 import { Link } from "../router";
 import { AuthHeader } from "./AuthLayout";
 import { authClient } from "./client";
@@ -25,7 +25,7 @@ export function SignInPage() {
     const { error: failure } = await authClient.signIn.email({ email, password });
     setBusy(false);
     if (!failure) {
-      navigate("/", { replace: true });
+      navigate(afterSignIn(), { replace: true });
     } else if (failure.code === "EMAIL_NOT_VERIFIED") {
       // Better Auth has just emailed a fresh verification link.
       rememberPendingEmail(email);

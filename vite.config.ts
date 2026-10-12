@@ -74,7 +74,7 @@ function publicAppFiles(): string[] {
  * Writes /sw.js (from app/offline/sw.js) with the list of the app's files, so the app can open
  * with no connection (phase C4b). Everything the build made is listed except pages, settings
  * files (".assetsignore", which is never served) and files only the admin console or the
- * storage and photo tests use.
+ * storage, photo and ingredient test pages use.
  */
 function offlineAppFiles(): Plugin {
   return {
@@ -86,6 +86,7 @@ function offlineAppFiles(): Plugin {
         ...reachable(bundle, "admin"),
         ...reachable(bundle, "storageTrial"),
         ...reachable(bundle, "photoTrial"),
+        ...reachable(bundle, "ingredientTrial"),
       ]);
       const built = Object.keys(bundle).filter(
         (name) =>
@@ -121,13 +122,14 @@ export default defineConfig({
       build: {
         rollupOptions: {
           // The app, the admin console (served only in the admin area; see worker/admin), and
-          // the browser storage trial (phase C2, /storage-trial) and the photo test (phase D2,
-          // /photo-trial).
+          // the browser storage trial (phase C2, /storage-trial), the photo test (phase D2,
+          // /photo-trial) and the ingredient check (phase E2, /ingredient-trial).
           input: {
             main: "index.html",
             admin: "admin.html",
             storageTrial: "storage-trial.html",
             photoTrial: "photo-trial.html",
+            ingredientTrial: "ingredient-trial.html",
           },
         },
       },

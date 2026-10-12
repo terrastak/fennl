@@ -5,6 +5,7 @@ import { image } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { householdMembers } from "../sync/push";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
+import { readCapped } from "../body";
 import { withinRateLimit } from "../rateLimit";
 import {
   countImage,
@@ -25,31 +26,6 @@ imageRoutes.use("/api/images/*", requireHousehold);
 
 const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
-
-/** The request body, or null as soon as it is more than `max` bytes. Never holds more than that. */
-async function readCapped(request: Request, max: number): Promise<Uint8Array | null> {
-  if (!request.body) return new Uint8Array();
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > max) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-  const bytes = new Uint8Array(total);
-  let at = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, at);
-    at += chunk.byteLength;
-  }
-  return bytes;
-}
 
 const hex = (buffer: ArrayBuffer) =>
   [...new Uint8Array(buffer)].map((byte) => byte.toString(16).padStart(2, "0")).join("");

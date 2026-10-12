@@ -33,7 +33,11 @@ import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
 import { syncRoutes } from "./sync/routes";
 import { expungeOldTrash, trashRoutes } from "./sync/trash";
+import { testSetupRoutes } from "./dev/testSetup";
 import { exportRoutes } from "./export/export";
+import { extensionLinkRoutes, extensionRoutes } from "./extension/routes";
+import { removeOldImportJobs } from "./import/jobs";
+import { importRoutes } from "./import/routes";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
@@ -172,6 +176,13 @@ app.route("/", exportRoutes);
 // Uploading and showing photos (phase D1).
 app.route("/", imageRoutes);
 
+// Reading recipes from web pages into drafts for review (phase E4).
+app.route("/", importRoutes);
+
+// The Chrome extension's connection to an account (phase E5).
+app.route("/", extensionLinkRoutes);
+app.route("/", extensionRoutes);
+
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {
   const { db, userId, household } = c.var.signedIn;
@@ -286,6 +297,9 @@ app.get("/api/dev/outbox", (c) => {
   return c.json(devOutbox.list(c.req.query("to")));
 });
 
+// Local browser tests only: setting up codes, limits and switches (worker/dev/testSetup.ts).
+app.route("/", testSetupRoutes);
+
 // The admin console's page. The API above does the real checks; this keeps the page itself
 // behind Access too.
 app.get("/admin", serveAdmin);
@@ -306,8 +320,8 @@ app.notFound((c) => {
 
 /**
  * Scheduled work (wrangler.jsonc "triggers"). Every hour: remove accounts whose email was never
- * verified (worker/account/purge.ts), and delete for good recipes in Trash for more than 30
- * days (worker/sync/trash.ts).
+ * verified (worker/account/purge.ts), delete for good recipes in Trash for more than 30 days
+ * (worker/sync/trash.ts), and remove import drafts nobody reviewed (worker/import/jobs.ts).
  */
 async function scheduled(controller: ScheduledController, env: Env) {
   const db = database(env.DB);
@@ -318,6 +332,8 @@ async function scheduled(controller: ScheduledController, env: Env) {
   }
   const expunged = await expungeOldTrash(db);
   if (expunged > 0) console.log(`Deleted ${expunged} recipe(s) from Trash for good`);
+  const drafts = await removeOldImportJobs(db);
+  if (drafts > 0) console.log(`Removed ${drafts} import draft(s) never reviewed`);
 
   // Photo housekeeping (phase D3): photos nothing shows, the 90-day grace period, then the R2
   // objects of every photo removed, and once a day a check of the rows against R2.

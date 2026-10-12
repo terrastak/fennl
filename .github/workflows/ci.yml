@@ -365,3 +365,14 @@ jobs:
           done
           echo "::error::$url did not answer /api/health within 10 minutes."
           exit 1
+      # The Chrome extension (phase E5), built to talk to this address. Download it from this
+      # run's Artifacts (docs/setup/e5-chrome-extension.md).
+      - name: Build the Chrome extension
+        run: FENNL_ORIGIN="https://$APP_HOSTNAME" npm run build:extension
+      - name: Upload the Chrome extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: fennl-chrome-extension
+          # The built folder: unzipped once, it's ready for Chrome's "Load unpacked".
+          path: dist-extension
+          if-no-files-found: error

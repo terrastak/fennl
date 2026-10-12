@@ -224,6 +224,7 @@ describe("acting as someone", () => {
       ["/api/auth/change-password", { currentPassword: "a", newPassword: "bbbbbbbbbb" }],
       ["/api/auth/update-user", { name: "Not June" }],
       ["/api/devices/takeover", { deviceId: id() }],
+      ["/api/extension/links", {}],
     ] as const;
     for (const [path, body] of refused) {
       const res = await admin.request(path, { body });

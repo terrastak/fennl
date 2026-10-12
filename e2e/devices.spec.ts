@@ -72,7 +72,11 @@ test("Premium: several browsers at once, and one can be signed out from Settings
   baseURL,
 }) => {
   const email = await useOwnAccount(context, baseURL!);
-  const code = makeCode({ tier: "individual", days: 30, allowsSignUp: false });
+  const code = await makeCode(context.request, {
+    tier: "individual",
+    days: 30,
+    allowsSignUp: false,
+  });
   const used = await context.request.post("/api/codes/redeem", {
     headers: { origin: baseURL! },
     data: { code },

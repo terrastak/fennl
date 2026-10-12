@@ -23,6 +23,11 @@ export const LIMIT_KEYS = [
   "image_uploads_per_minute",
   "image_uploads_per_day",
   "max_photos_per_recipe",
+  /**
+   * Imports that don't call the AI (web pages with recipe data, Paprika files) per person per
+   * day. 0 turns them off for the tier (the Chrome extension then says Premium is required).
+   */
+  "structured_imports_per_day",
 ] as const;
 export type LimitKey = (typeof LIMIT_KEYS)[number];
 export type Limits = Record<LimitKey, number | null>;

@@ -43,8 +43,18 @@ export interface InputFile {
 export interface Importer {
   name: string;
   kinds: readonly SampleKind[];
+  /**
+   * Reads data the source publishes as data (a page's Schema.org recipe, a Paprika file), so
+   * what decides how the dish turns out must come out exactly right on every sample: the
+   * ingredients, the directions, the times and the servings count (agreed 2026-10-11). CI fails
+   * otherwise.
+   */
+  exact?: boolean;
   run(files: InputFile[], sample: Sample): Promise<RecipeDraft[]>;
 }
+
+/** The fields an exact importer must get exactly right. */
+export const COOKING_FIELDS = ["ingredients", "directions", "times"] as const;
 
 const root = join(import.meta.dirname, "..");
 
@@ -104,6 +114,7 @@ export async function loadExpected(id: string): Promise<ExpectedRecipe[] | null>
 export interface SampleResult {
   sample: Sample;
   importer: string;
+  exact: boolean;
   /** One score per expected recipe (0 overall when nothing was found for it). */
   scores: (RecipeScore | null)[];
   overall: number;
@@ -148,6 +159,7 @@ async function runOne(importer: Importer, sample: Sample, expected: ExpectedReci
   return {
     sample,
     importer: importer.name,
+    exact: importer.exact ?? false,
     scores,
     overall,
     extra,
@@ -163,6 +175,28 @@ export interface Scorecard {
   results: SampleResult[];
   /** Kinds with samples but no importer yet. */
   uncovered: { kind: SampleKind; samples: number }[];
+}
+
+/**
+ * Where an exact importer got something that decides how the dish turns out wrong: "nyt-7up-
+ * sheet-cake: ingredients 96%". Empty when all is right.
+ */
+export function exactMisses(card: Scorecard): string[] {
+  const misses: string[] = [];
+  for (const r of card.results.filter((x) => x.exact)) {
+    const at = `${r.sample.id} (${r.importer})`;
+    if (r.problems.length) misses.push(`${at}: ${r.problems.join("; ")}`);
+    r.scores.forEach((score, i) => {
+      const which = r.scores.length > 1 ? ` recipe ${i + 1}` : "";
+      if (!score) return misses.push(`${at}${which}: not found`);
+      for (const field of COOKING_FIELDS) {
+        const value = score.fields[field];
+        if (value !== null && value < 1) misses.push(`${at}${which}: ${field} ${pct(value)}`);
+      }
+      if (score.servingsCount === 0) misses.push(`${at}${which}: servings count`);
+    });
+  }
+  return misses;
 }
 
 export async function runScorecard(importers: readonly Importer[]): Promise<Scorecard> {
@@ -255,6 +289,17 @@ export function reportMarkdown(card: Scorecard): string {
     out.push("");
   } else {
     out.push("No importers yet: they arrive with phases E3 (web pages) to E13 (Paprika).", "");
+  }
+  const misses = exactMisses(card);
+  if (card.results.some((r) => r.exact)) {
+    out.push(
+      "## Must be exact",
+      "",
+      "Importers reading published data must get the ingredients, directions, times and servings count exactly right.",
+      "",
+      ...(misses.length ? misses.map((m) => `- ${m}`) : ["All exact."]),
+      "",
+    );
   }
   if (card.uncovered.length) {
     out.push(

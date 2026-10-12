@@ -615,3 +615,32 @@ export const importJob = sqliteTable(
     index("import_job_batch_idx").on(table.batchId),
   ],
 );
+
+/**
+ * Chrome extensions connected to an account (phase E5, decided 2026-10-12: "connect once"). The
+ * person confirms in Fennl, and the extension gets a key of its own that can only send pages to
+ * import and say who it's connected to (worker/extension/). Only a hash of the key is kept. A
+ * key stops working when it's removed in Settings, unused for 90 days, or the account's password
+ * changes (password_marker no longer matches).
+ */
+export const extensionLink = sqliteTable(
+  "extension_link",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** "Chrome on Mac", from the browser that connected it. */
+    label: text("label").notNull(),
+    /** SHA-256 of the key, as hex. The key itself is never stored. */
+    keyHash: text("key_hash").notNull().unique(),
+    /** A hash of the account's password hash when connected (null: no password). */
+    passwordMarker: text("password_marker"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    lastUsedAt: integer("last_used_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    /** Why: "removed" (Settings), "disconnected" (the extension), "unused", "password_changed". */
+    revokedReason: text("revoked_reason"),
+  },
+  (table) => [index("extension_link_user_idx").on(table.userId)],
+);
