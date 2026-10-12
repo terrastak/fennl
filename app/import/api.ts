@@ -75,6 +75,8 @@ export function importProblemText(problem: ImportProblem): string {
       return "That page is too large to import. Try saving it again as “Webpage, HTML only”.";
     case "import_not_included":
       return "Importing isn't part of your plan.";
+    case "daily_limit":
+      return "That's as many imports as your plan allows today. Try again tomorrow.";
     case "rate_limited":
       return "That's a lot of pages at once. Wait a minute, then try again.";
     case "offline":

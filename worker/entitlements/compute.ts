@@ -159,6 +159,7 @@ function limitsFor(standing: Standing, inputs: EntitlementInputs): Limits {
 export function computeEntitlements(inputs: EntitlementInputs): Entitlements {
   const standing = standingFor(inputs);
   const premium = standing.tier !== "free";
+  const limits = limitsFor(standing, inputs);
   return {
     tier: standing.tier,
     source: standing.source,
@@ -166,13 +167,15 @@ export function computeEntitlements(inputs: EntitlementInputs): Entitlements {
     past_due: standing.pastDue,
     ends_at: standing.endsAt?.toISOString() ?? null,
     max_members: standing.tier === "household" ? 2 : 1,
-    ...limitsFor(standing, inputs),
+    ...limits,
     images_enabled: premium,
     offline_enabled: premium,
     history_enabled: premium,
     // Paprika files and structured web pages cost nothing to import, so every tier gets them
-    // (text only on Free). Anything that calls the AI is Premium (CLAUDE.md, "Import sources").
-    import_structured_enabled: true,
+    // (text only on Free), unless plan_limits turns them off for a tier with a daily limit of 0
+    // (decided 2026-10-12: changeable without a deploy). Anything that calls the AI is Premium
+    // (CLAUDE.md, "Import sources").
+    import_structured_enabled: limits.structured_imports_per_day !== 0,
     import_ai_enabled: premium,
   };
 }

@@ -58,7 +58,12 @@ export interface ImportWebResponse {
 }
 
 export type ImportWebError =
-  "invalid_request" | "import_not_included" | "page_too_large" | "no_recipe" | "rate_limited";
+  | "invalid_request"
+  | "import_not_included"
+  | "page_too_large"
+  | "no_recipe"
+  | "rate_limited"
+  | "daily_limit";
 
 /**
  * The address a browser recorded in a page saved with "Save Page As" (Chrome and Edge write

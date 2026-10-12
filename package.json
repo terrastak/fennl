@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "node scripts/ensure-dev-vars.mjs && npm run db:migrate:local && vite",
     "build": "vite build",
+    "build:extension": "node scripts/build-extension.mjs",
     "preview": "vite build && vite preview",
     "typegen": "wrangler types --include-env=false",
     "typecheck": "npm run typegen && tsc -b",

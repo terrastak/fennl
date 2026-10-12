@@ -162,6 +162,20 @@
       "when": 1791598691696,
       "tag": "0022_import_job",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1791779278473,
+      "tag": "0023_import_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1791779402073,
+      "tag": "0024_extension_link",
+      "breakpoints": true
     }
   ]
 }

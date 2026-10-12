@@ -35,6 +35,8 @@ const REFUSED = [
   "/api/account/password",
   "/api/feedback",
   "/api/devices/takeover",
+  // A key for the Chrome extension would outlive the session (phase E5).
+  "/api/extension/links",
 ];
 
 /** Writes that change nothing while acting as someone, so aren't worth a log entry. */

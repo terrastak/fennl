@@ -15,7 +15,8 @@ test.beforeEach(async ({ context }) => {
 
 test("signed-out visitors are sent to sign in", async ({ page }) => {
   await page.goto("/settings");
-  await expect(page).toHaveURL("/sign-in");
+  // Remembering where they were going, to come back after signing in.
+  await expect(page).toHaveURL("/sign-in?next=%2Fsettings");
   await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
   await expect(page).toHaveTitle("Sign in · Fennl");
 });

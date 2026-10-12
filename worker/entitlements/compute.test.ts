@@ -23,6 +23,7 @@ const tierLimits = (overrides: Partial<Limits>): Limits => ({
   image_uploads_per_minute: 120,
   image_uploads_per_day: 6000,
   max_photos_per_recipe: 10,
+  structured_imports_per_day: null,
   ...overrides,
 });
 
@@ -77,6 +78,7 @@ describe("free", () => {
       image_uploads_per_minute: 0,
       image_uploads_per_day: 0,
       max_photos_per_recipe: 0,
+      structured_imports_per_day: null,
       images_enabled: false,
       offline_enabled: false,
       history_enabled: false,
@@ -84,6 +86,15 @@ describe("free", () => {
       import_ai_enabled: false,
     });
   });
+});
+
+it("turns imports without the AI off when the tier's daily number is 0", () => {
+  const planLimits = {
+    ...PLAN_LIMITS,
+    free: { ...PLAN_LIMITS.free, structured_imports_per_day: 0 },
+  };
+  expect(compute({ planLimits }).import_structured_enabled).toBe(false);
+  expect(compute(sub("individual", "active")).import_structured_enabled).toBe(true);
 });
 
 describe.each(["individual", "household"] as const)("%s plan", (plan) => {
