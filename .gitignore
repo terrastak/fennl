@@ -43,6 +43,8 @@ next-env.d.ts
 /test-results
 /playwright-report
 /e2e/.auth
+/dist-extension
+/fennl-extension-*.zip
 .dev.vars*
 !.dev.vars.example
 

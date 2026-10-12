@@ -6,6 +6,7 @@ worker-configuration.d.ts
 test-results
 playwright-report
 e2e/.auth
+dist-extension
 # Owner-edited planning docs keep their own formatting.
 *.md
 .claude/settings.local.json

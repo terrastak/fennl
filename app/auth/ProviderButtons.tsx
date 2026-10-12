@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { afterSignIn } from "../navigation";
 import { authClient } from "./client";
 import styles from "./auth.module.css";
 import { useSignInMethods } from "./useSignInMethods";
@@ -68,7 +69,7 @@ export function ProviderButtons({
     }
     // The browser leaves for Google or Apple and comes back signed in, or here with an error.
     await authClient.signIn
-      .social({ provider, callbackURL: "/", errorCallbackURL: returnTo })
+      .social({ provider, callbackURL: afterSignIn(), errorCallbackURL: returnTo })
       .finally(() => setBusy(false));
   };
 

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Fennl",
+  "short_name": "Fennl",
+  "description": "Import recipes into your Fennl recipe box from the pages you visit. Needs a Fennl account.",
+  "version": "0.1.0",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Fennl",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["__FENNL_ORIGIN__/*"],
+  "content_scripts": [
+    {
+      "matches": ["__FENNL_ORIGIN__/connect-extension*"],
+      "js": ["connect.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

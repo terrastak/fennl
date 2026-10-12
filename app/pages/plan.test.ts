@@ -21,6 +21,7 @@ const FREE: Entitlements = {
   image_uploads_per_minute: 0,
   image_uploads_per_day: 0,
   max_photos_per_recipe: 0,
+  structured_imports_per_day: null,
   images_enabled: false,
   offline_enabled: false,
   history_enabled: false,
