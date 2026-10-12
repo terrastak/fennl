@@ -50,6 +50,11 @@ async function connected(premium: boolean): Promise<{ v: Visitor; key: string }>
   return { v, key };
 }
 
+/** A draft's photo, as the extension gets it with its key. */
+function getAsExtension(key: string, path: string) {
+  return app.request(`${ORIGIN}${path}`, { headers: { authorization: `Bearer ${key}` } }, env);
+}
+
 function asExtension(key: string, path: string, init: { json?: unknown; bytes?: Uint8Array }) {
   return app.request(
     `${ORIGIN}${path}`,
@@ -98,6 +103,24 @@ describe("photos the extension brings", () => {
     expect(shown.headers.get("content-type")).toBe("image/jpeg");
     expect(new Uint8Array(await shown.arrayBuffer())).toEqual(JPEG);
     expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it("tell the extension when the site refuses Fennl, so it can offer to bring them", async () => {
+    const { key } = await connected(true);
+    const job = await sendPage(key);
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response("Access Denied", { status: 403 }),
+    );
+    const refused = await getAsExtension(key, `/api/import/jobs/${job.id}/inputs/1`);
+    expect(refused.status).toBe(502);
+    expect(await refused.json()).toEqual({ error: "photo_unavailable" });
+
+    // Only for the person's own drafts, and not the key's way into anything else.
+    const other = await connected(true);
+    expect((await getAsExtension(other.key, `/api/import/jobs/${job.id}/inputs/1`)).status).toBe(
+      404,
+    );
+    expect((await getAsExtension(key, `/api/import/jobs/${job.id}`)).status).toBe(401);
   });
 
   it("must be the draft's own photos, image files, on Premium", async () => {

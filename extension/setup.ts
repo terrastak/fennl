@@ -1,5 +1,12 @@
 import "../app/styles/tokens.css";
-import { PHOTO_SITES } from "./capture";
+import {
+  PHOTO_SITES,
+  bringPhotos,
+  forgetWaitingImport,
+  reviewPath,
+  waitingImport,
+  type SentJob,
+} from "./capture";
 import { ORIGIN, savedConnection, whoAmI } from "./connection";
 import { button, el } from "./ui";
 import "./popup.css";
@@ -9,6 +16,9 @@ import "./popup.css";
 // Network, for one) only let a browser download their photos. Chrome asks only from the
 // extension's own pages, after a click, so the question waits for this page's button. "Not now"
 // leaves it to the same button in the panel (popup.ts).
+//
+// The panel also opens it (?for=import) when a site refused Fennl a recipe's photos and the
+// extension can't bring them yet: allowed, it brings them and opens the recipe's review.
 
 const app = document.getElementById("app") as HTMLElement;
 
@@ -33,7 +43,43 @@ function finish(text: string) {
   status.focus();
 }
 
+/** Asked from an import whose photos the site refused Fennl (the panel kept which drafts). */
+function askForImport(jobs: SentJob[]) {
+  const review = async () => {
+    await forgetWaitingImport();
+    location.href = `${ORIGIN}${reviewPath(jobs)}`;
+  };
+  const status = el("p", undefined, "status done");
+  status.setAttribute("role", "status");
+  const allow = button("Allow photos from any site", true, () => {
+    void chrome.permissions.request(PHOTO_SITES).then(async (granted) => {
+      const connection = granted ? await savedConnection() : null;
+      if (connection) {
+        allow.disabled = true;
+        status.textContent = "Bringing the photos…";
+        await bringPhotos(connection, jobs);
+      }
+      await review();
+    });
+  });
+  show(
+    el("h2", "Bring this recipe's photos"),
+    el(
+      "p",
+      "This site only lets a browser download its photos, so the extension brings them itself. Chrome asks you once to allow this for any site.",
+    ),
+    el("p", "The extension only downloads the photos of a recipe you import.", "muted"),
+    allow,
+    button("Open it without photos", false, () => void review()),
+    status,
+  );
+}
+
 async function start() {
+  if (new URLSearchParams(location.search).get("for") === "import") {
+    const jobs = await waitingImport();
+    if (jobs) return askForImport(jobs);
+  }
   const connection = await savedConnection();
   const result = connection ? await whoAmI(connection) : null;
   const who = el("p");

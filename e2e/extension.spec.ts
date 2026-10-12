@@ -270,6 +270,62 @@ document.head.append(data);
   }
 });
 
+/**
+ * A recipe whose photo is only on a made-up site, which Fennl's server can't reach: like Food
+ * Network's photo server, which refuses anything that isn't a browser.
+ */
+async function siteRefusingServers(context: BrowserContext) {
+  const recipeData = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Recipe",
+    name: "Black Cocoa Crinkle Cookies",
+    image: `${SITE}/photos/crinkle.png`,
+    recipeIngredient: ["1 cup flour", "1/2 cup black cocoa"],
+    recipeInstructions: [{ "@type": "HowToStep", text: "Mix, roll in sugar, bake." }],
+  });
+  await context.route(`${SITE}/**`, (route) =>
+    route.request().url().endsWith(".png")
+      ? route.fulfill({ path: "test_images/Image_chocchip.png" })
+      : route.fulfill({
+          contentType: "text/html",
+          body: `<!DOCTYPE html><html><head><title>Cookies</title><script type="application/ld+json">${recipeData}</script></head><body><h1>Cookies</h1></body></html>`,
+        }),
+  );
+  const recipe = await context.newPage();
+  await recipe.goto(`${SITE}/crinkle-cookies`);
+}
+
+/** The review screen shows the page's photo, and saving keeps it on the recipe. */
+async function photoReviewedAndSaved(review: Page) {
+  const photos = review.getByRole("region", { name: "Photos" });
+  await expect(photos.getByRole("img", { name: "Photo 1 from the page" })).toBeVisible();
+  await expect
+    .poll(() =>
+      photos
+        .getByRole("img", { name: "Photo 1 from the page" })
+        .evaluate((img: HTMLImageElement) => img.naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  await review.getByRole("button", { name: "Save recipe" }).first().click();
+  await expect(
+    review.getByRole("heading", { level: 1, name: "Black Cocoa Crinkle Cookies" }),
+  ).toBeVisible({ timeout: 60_000 });
+  await expect(
+    review.getByRole("img", { name: "Black Cocoa Crinkle Cookies", exact: true }),
+  ).toBeVisible();
+}
+
+/** Has the tests' build, which may read any site already, ask for photos as a real install would. */
+async function askForPhotos(page: Page) {
+  await page.evaluate(() =>
+    (
+      globalThis as unknown as {
+        chrome: { storage: { local: { set(items: object): Promise<void> } } };
+      }
+    ).chrome.storage.local.set({ testAskForPhotos: true }),
+  );
+}
+
 test("Premium: the extension brings photos from sites that refuse servers", async ({ baseURL }) => {
   test.setTimeout(120_000);
   const context = await withExtension(baseURL!);
@@ -277,26 +333,7 @@ test("Premium: the extension brings photos from sites that refuse servers", asyn
     await signUpConfirmed(context, baseURL!, "June Lee");
     await premium(context, baseURL!);
     await connect(context);
-    // The photo is only on this made-up site, which Fennl's server can't reach: like Food
-    // Network's photo server, which refuses anything that isn't a browser.
-    const recipeData = JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "Recipe",
-      name: "Black Cocoa Crinkle Cookies",
-      image: `${SITE}/photos/crinkle.png`,
-      recipeIngredient: ["1 cup flour", "1/2 cup black cocoa"],
-      recipeInstructions: [{ "@type": "HowToStep", text: "Mix, roll in sugar, bake." }],
-    });
-    await context.route(`${SITE}/**`, (route) =>
-      route.request().url().endsWith(".png")
-        ? route.fulfill({ path: "test_images/Image_chocchip.png" })
-        : route.fulfill({
-            contentType: "text/html",
-            body: `<!DOCTYPE html><html><head><title>Cookies</title><script type="application/ld+json">${recipeData}</script></head><body><h1>Cookies</h1></body></html>`,
-          }),
-    );
-    const recipe = await context.newPage();
-    await recipe.goto(`${SITE}/crinkle-cookies`);
+    await siteRefusingServers(context);
 
     const panel = await panelFor(context, `${SITE}/crinkle-cookies`);
     // The tests' build may read any site already, so the panel doesn't ask.
@@ -304,23 +341,7 @@ test("Premium: the extension brings photos from sites that refuse servers", asyn
     await expect(panel.getByRole("button", { name: "Allow photos from any site" })).toHaveCount(0);
     const opened = context.waitForEvent("page");
     await panel.getByRole("button", { name: "Import this page" }).click();
-    const review = await opened;
-    const photos = review.getByRole("region", { name: "Photos" });
-    await expect(photos.getByRole("img", { name: "Photo 1 from the page" })).toBeVisible();
-    await expect
-      .poll(() =>
-        photos
-          .getByRole("img", { name: "Photo 1 from the page" })
-          .evaluate((img: HTMLImageElement) => img.naturalWidth),
-      )
-      .toBeGreaterThan(0);
-    await review.getByRole("button", { name: "Save recipe" }).first().click();
-    await expect(
-      review.getByRole("heading", { level: 1, name: "Black Cocoa Crinkle Cookies" }),
-    ).toBeVisible({ timeout: 60_000 });
-    await expect(
-      review.getByRole("img", { name: "Black Cocoa Crinkle Cookies", exact: true }),
-    ).toBeVisible();
+    await photoReviewedAndSaved(await opened);
   } finally {
     await context.close();
   }
@@ -334,13 +355,7 @@ test("Premium: connecting asks once to bring photos, as its last step", async ({
     // The tests' build may read any site already: have it ask as a real install would.
     const panel = await context.newPage();
     await panel.goto(`chrome-extension://${unpackedId(EXTENSION)}/popup.html`);
-    await panel.evaluate(() =>
-      (
-        globalThis as unknown as {
-          chrome: { storage: { local: { set(items: object): Promise<void> } } };
-        }
-      ).chrome.storage.local.set({ testAskForPhotos: true }),
-    );
+    await askForPhotos(panel);
 
     // Free keeps no photos, so connecting ends on Fennl's page.
     const page = await context.newPage();
@@ -375,6 +390,43 @@ test("Premium: connecting asks once to bring photos, as its last step", async ({
     await expectAccessible(page);
     await page.getByRole("button", { name: "Open Fennl" }).click();
     await expect(page).toHaveURL((url) => url.origin === new URL(baseURL!).origin);
+  } finally {
+    await context.close();
+  }
+});
+
+test("Premium without the photo permission: a site refusing Fennl's server is offered", async ({
+  baseURL,
+}) => {
+  test.setTimeout(120_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "June Lee");
+    await premium(context, baseURL!);
+    await connect(context);
+    await siteRefusingServers(context);
+
+    const panel = await panelFor(context, `${SITE}/crinkle-cookies`);
+    await askForPhotos(panel);
+    await panel.reload();
+    await panel.getByRole("button", { name: "Import this page" }).click();
+    await expect(
+      panel.getByText(/^This site only lets a browser download its photos/),
+    ).toBeVisible();
+    await expectAccessible(panel);
+
+    // Chrome's question comes from a tab of the extension's, which then finishes the import.
+    const opened = context.waitForEvent("page");
+    await panel.getByRole("button", { name: "Allow photos from any site" }).click();
+    const setup = await opened;
+    await expect(setup).toHaveURL(/\/setup\.html\?for=import$/);
+    await expect(
+      setup.getByRole("heading", { level: 2, name: "Bring this recipe's photos" }),
+    ).toBeVisible();
+    await expectAccessible(setup);
+    await setup.getByRole("button", { name: "Allow photos from any site" }).click();
+    await expect(setup).toHaveURL(/\/import\/[\w-]+$/);
+    await photoReviewedAndSaved(setup);
   } finally {
     await context.close();
   }

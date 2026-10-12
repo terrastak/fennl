@@ -19,7 +19,8 @@ import { createLink, linkForKey, listLinks, removeLink } from "./links";
 // The Chrome extension's connection to an account (phase E5; CLAUDE.md, "Import sources").
 // Connecting happens in Fennl, signed in as usual: the person confirms, and the extension gets
 // a key of its own (worker/extension/links.ts). The key only works on the extension's routes
-// here, and on sending pages to import (E6); never on recipes, sync or the account.
+// here, and on sending pages to import and their drafts' photos (E6); never on recipes, sync or
+// the account.
 
 type SessionEnv = { Bindings: Env; Variables: { signedIn: SignedIn } };
 

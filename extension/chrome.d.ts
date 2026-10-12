@@ -9,6 +9,8 @@ declare namespace chrome {
       remove(keys: string | string[]): Promise<void>;
     }
     const local: StorageArea;
+    /** Kept until the browser closes; only the extension's own pages can read it. */
+    const session: StorageArea;
   }
   namespace tabs {
     interface Tab {

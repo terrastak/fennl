@@ -34,16 +34,21 @@ type ImportEnv = { Bindings: Env; Variables: { signedIn: SignedIn } };
 
 export const importRoutes = new Hono<ImportEnv>();
 
-/** What the Chrome extension may send with its key: a page, and the photos of its drafts. */
-const EXTENSION_PATHS = /^\/api\/import\/(?:web|jobs\/[^/]+\/inputs\/\d+)$/;
+/** What the Chrome extension may do with its key: send a page, and send or get a draft's photos. */
+const PHOTO_PATH = /^\/api\/import\/jobs\/[^/]+\/inputs\/\d+$/;
+const extensionPath = (method: string, path: string) =>
+  (method === "POST" && (path === "/api/import/web" || PHOTO_PATH.test(path))) ||
+  (method === "GET" && PHOTO_PATH.test(path));
 
 // Every import route needs a signed-in person. Sending a page (POST /api/import/web) and a
 // draft's photos (POST /api/import/jobs/:id/inputs/:n) also take the Chrome extension's key
 // instead (phase E6): the extension reads the page, and its photos, as the person's browser does,
-// and sends them here. The key works on nothing else (worker/extension/routes.ts).
+// and sends them here. Getting a draft's photo (GET, the same address) does too, so the extension
+// can tell when a site refuses Fennl its photos and offer to bring them itself. The key works on
+// nothing else (worker/extension/routes.ts).
 importRoutes.use("/api/import/*", async (c, next) => {
   const authorization = c.req.header("authorization");
-  if (c.req.method === "POST" && EXTENSION_PATHS.test(c.req.path) && authorization) {
+  if (extensionPath(c.req.method, c.req.path) && authorization) {
     const caller = await extensionCaller(c.env, authorization);
     if ("error" in caller) return c.json({ error: caller.error }, caller.status);
     c.set("signedIn", {

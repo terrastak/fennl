@@ -6,10 +6,13 @@ import {
   PHOTO_SITES,
   bringPhotos,
   capturePage,
+  keepWaitingImport,
   photosAllowed,
+  photosRefused,
   problemText,
   reviewPath,
   sendPage,
+  type SentJob,
 } from "./capture";
 import { button, el } from "./ui";
 import "./popup.css";
@@ -68,7 +71,12 @@ function showConnected(connection: Connection, me: ExtensionMe, canBringPhotos: 
     const status = el("p", undefined, "status");
     status.setAttribute("role", "status");
     const importButton = button("Import this page", true, () => {
-      void importThisPage(connection, importButton, status, me.photos && canBringPhotos);
+      void importThisPage(
+        connection,
+        importButton,
+        status,
+        me.photos ? (canBringPhotos ? "bring" : "offer") : "none",
+      );
     });
     parts.push(importButton, status);
     if (me.photos && !canBringPhotos) {
@@ -102,12 +110,16 @@ function showConnected(connection: Connection, me: ExtensionMe, canBringPhotos: 
   show(...parts);
 }
 
-/** Reads the page, sends it, and opens Fennl's review screen for it. */
+/**
+ * Reads the page, sends it, and opens Fennl's review screen for it. Photos: brought from the
+ * browser ("bring"), or, on Premium without the permission ("offer"), checked and offered when
+ * the site refuses Fennl's server.
+ */
 async function importThisPage(
   connection: Connection,
   importButton: HTMLButtonElement,
   status: HTMLElement,
-  withPhotos: boolean,
+  photos: "bring" | "offer" | "none",
 ) {
   importButton.disabled = true;
   status.className = "status";
@@ -116,9 +128,13 @@ async function importThisPage(
   if (!("problem" in page)) status.textContent = "Sending it to Fennl…";
   const sent = "problem" in page ? null : await sendPage(connection, page);
   if (sent?.ok) {
-    if (withPhotos && sent.jobs.some((job) => job.photos.length > 0)) {
+    const hasPhotos = sent.jobs.some((job) => job.photos.length > 0);
+    if (photos === "bring" && hasPhotos) {
       status.textContent = "Bringing the photos…";
       await bringPhotos(connection, sent.jobs);
+    } else if (photos === "offer" && hasPhotos) {
+      status.textContent = "Checking the photos…";
+      if (await photosRefused(connection, sent.jobs)) return offerToBringPhotos(sent.jobs);
     }
     status.textContent = "Opening it in Fennl to review…";
     return openFennl(reviewPath(sent.jobs));
@@ -130,6 +146,31 @@ async function importThisPage(
   status.className = "status problem";
   status.textContent = problemText(problem);
   importButton.disabled = false;
+}
+
+/**
+ * The site refused Fennl its photos: offer to bring them from the browser. Chrome's question is
+ * asked from a tab of the extension's own (setup.html), which then brings the photos and opens the
+ * review, since the question may close this panel.
+ */
+async function offerToBringPhotos(jobs: SentJob[]) {
+  await keepWaitingImport(jobs);
+  show(
+    el(
+      "p",
+      "This site only lets a browser download its photos, so Fennl couldn't get this recipe's photos.",
+      "note",
+    ),
+    el(
+      "p",
+      "Allow the extension to bring photos from any site, and it brings them for this recipe and the ones you import after it.",
+    ),
+    button("Allow photos from any site", true, () => {
+      void chrome.tabs.create({ url: chrome.runtime.getURL("setup.html?for=import") });
+      window.close();
+    }),
+    button("Open it without photos", false, () => openFennl(reviewPath(jobs))),
+  );
 }
 
 async function start() {

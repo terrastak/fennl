@@ -57,7 +57,7 @@ export async function capturePage(): Promise<CapturedPage | { problem: CapturePr
   return page;
 }
 
-type SentJob = ImportWebResponse["jobs"][number];
+export type SentJob = ImportWebResponse["jobs"][number];
 
 export type SendResult =
   | { ok: true; jobs: SentJob[] }
@@ -134,6 +134,48 @@ export async function bringPhotos(connection: Connection, jobs: SentJob[]): Prom
     }
   }
   return brought;
+}
+
+/**
+ * Whether Fennl's own server was refused any of the drafts' photos by their site: on Premium
+ * without the permission, the panel then offers to bring them from the browser instead.
+ */
+export async function photosRefused(connection: Connection, jobs: SentJob[]): Promise<boolean> {
+  const checks = jobs.flatMap((job) =>
+    job.photos.map(async (photo) => {
+      try {
+        const res = await fetch(`${ORIGIN}/api/import/jobs/${job.id}/inputs/${photo.input}`, {
+          headers: { authorization: `Bearer ${connection.key}` },
+          credentials: "omit",
+        });
+        await res.body?.cancel();
+        // 502: the site wouldn't let Fennl have it (any other problem isn't the site's).
+        return res.status === 502;
+      } catch {
+        return false;
+      }
+    }),
+  );
+  return (await Promise.all(checks)).some(Boolean);
+}
+
+/**
+ * An import waiting for the photo permission, which the setup page asks for and then finishes
+ * (setup.html?for=import). Kept until the browser closes.
+ */
+const WAITING_IMPORT = "waitingImport";
+
+export function keepWaitingImport(jobs: SentJob[]): Promise<void> {
+  return chrome.storage.session.set({ [WAITING_IMPORT]: jobs });
+}
+
+export async function waitingImport(): Promise<SentJob[] | null> {
+  const jobs = (await chrome.storage.session.get(WAITING_IMPORT))[WAITING_IMPORT];
+  return Array.isArray(jobs) && jobs.length > 0 ? (jobs as SentJob[]) : null;
+}
+
+export function forgetWaitingImport(): Promise<void> {
+  return chrome.storage.session.remove(WAITING_IMPORT);
 }
 
 /** Where to review what was sent: the draft, or the list when the page had several recipes. */
