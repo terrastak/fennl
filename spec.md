@@ -897,6 +897,11 @@ Import quality is the core of the product, so this stage starts by building a wa
   4. ~~Chosen photos are downloaded and stored in R2, so recipes don't rely on the original site.~~ Built in E4 (photos are downloaded when the reviewed recipe is saved).
 - **You check**: Import 5 recipes from sites you actually use, including one you're logged into.
 - **Done when**: Works end to end on the web test set.
+- **Built (2026-10-12)**:
+  1. **Import this page** in the extension's panel (`extension/capture.ts`): reads the tab the button was clicked on, as the browser shows it (after its scripts have run, signed in), from a copy without scripts (other than recipe data), styles and drawings, so pages stay small; sends it to `POST /api/import/web` with the extension's key; opens the review screen for the draft, or the Import page when the page had several recipes. Says plainly when a page can't be read (Chrome's own pages, the Web Store), has no recipe data, is over the plan's import limit, or is Fennl itself.
+  2. Permissions: `activeTab` and `scripting`. Chrome lets the extension read only the tab whose button was clicked, only then, with no install warning for it; it still has no standing access to any site. Version 0.2.0.
+  3. `POST /api/import/web` takes the extension's key as well as a signed-in session (`worker/import/routes.ts`); the key still works on nothing else. The draft is the person's own, reviewed in Fennl signed in as usual (signing in first if needed, then back to the draft).
+  4. Tests: the whole web test set sent as the extension sends it, each page becoming a draft with the right recipe (`worker/import/extensionImport.test.ts`); browser tests with the extension loaded in Chromium import a test page and save it, read a page whose recipe data a script adds, and show the message for a page without a recipe (`e2e/extension.spec.ts`, using a test-only build that can be pointed at a tab, since tests can't click Chrome's toolbar).
 
 ### E7. AI provider layer and cost controls
 - **Goal**: A safe, swappable way to call Claude.

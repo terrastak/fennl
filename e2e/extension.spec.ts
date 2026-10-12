@@ -48,7 +48,9 @@ async function expectAccessible(page: Page) {
 
 test.beforeAll(() => {
   execFileSync("node", ["scripts/build-extension.mjs"], {
-    env: { ...process.env, FENNL_ORIGIN: "http://localhost:4173" },
+    // The tests' build: the panel can be told which tab to import (a test can't click
+    // Chrome's toolbar). See scripts/build-extension.mjs.
+    env: { ...process.env, FENNL_ORIGIN: "http://localhost:4173", FENNL_EXTENSION_TEST: "1" },
     stdio: "pipe",
   });
 });
@@ -158,4 +160,111 @@ test("signing in from the connect page comes back to it", async ({ browser, base
     page.getByRole("heading", { level: 1, name: "Connect the Fennl extension" }),
   ).toBeVisible();
   await context.close();
+});
+
+/** A recipe site, served by the test from the test set's saved pages. */
+const SITE = "https://recipes.fennl-test.example";
+
+async function connect(context: BrowserContext) {
+  const page = await context.newPage();
+  await page.goto("/connect-extension");
+  await page.getByRole("button", { name: "Connect the extension" }).click();
+  await expect(page.getByText(/^Connected\./)).toBeVisible();
+  await page.close();
+}
+
+/** The panel, as if its button were clicked on the tab showing `url`. */
+async function panelFor(context: BrowserContext, url: string) {
+  const panel = await context.newPage();
+  await panel.goto(
+    `chrome-extension://${unpackedId(EXTENSION)}/popup.html?target=${encodeURIComponent(url)}`,
+  );
+  return panel;
+}
+
+test("import the page you're on, and review it in Fennl", async ({ baseURL }) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "June Lee");
+    await connect(context);
+    await context.route(`${SITE}/**`, (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        path: "test_pages/tasteofhome-big-soft-ginger-cookies.html",
+      }),
+    );
+    const recipe = await context.newPage();
+    await recipe.goto(`${SITE}/big-soft-ginger-cookies`);
+
+    const panel = await panelFor(context, `${SITE}/big-soft-ginger-cookies`);
+    await expect(panel.getByText("Connected as June Lee")).toBeVisible();
+    await expectAccessible(panel);
+    const opened = context.waitForEvent("page");
+    await panel.getByRole("button", { name: "Import this page" }).click();
+    const review = await opened;
+    await expect(review).toHaveURL(/\/import\/[0-9a-f-]{36}$/);
+    await expect(
+      review.getByRole("heading", { level: 1, name: "Review the import" }),
+    ).toBeVisible();
+    await expect(review.getByLabel("Title", { exact: true })).toHaveValue(
+      "Big Soft Ginger Cookies",
+    );
+    await review.getByRole("button", { name: "Save recipe" }).first().click();
+    await expect(
+      review.getByRole("heading", { level: 1, name: "Big Soft Ginger Cookies" }),
+    ).toBeVisible();
+  } finally {
+    await context.close();
+  }
+});
+
+test("pages are read as the browser shows them, and the panel says what went wrong", async ({
+  baseURL,
+}) => {
+  test.setTimeout(90_000);
+  const context = await withExtension(baseURL!);
+  try {
+    await signUpConfirmed(context, baseURL!, "Sam Park");
+    await connect(context);
+    const recipeData = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Recipe",
+      name: "Drawn by a Script Stew",
+      recipeIngredient: ["2 carrots", "1 onion"],
+      recipeInstructions: [{ "@type": "HowToStep", text: "Simmer it all." }],
+    });
+    await context.route(`${SITE}/**`, (route) => {
+      const url = route.request().url();
+      // The recipe data only exists once the page's script has run, as on many sites.
+      const body = url.endsWith("/drawn")
+        ? `<!DOCTYPE html><html><head><title>Stew</title></head><body><h1>Stew</h1><script>
+const data = document.createElement("script");
+data.type = "application/ld+json";
+data.textContent = ${JSON.stringify(recipeData)};
+document.head.append(data);
+</script></body></html>`
+        : "<!DOCTYPE html><html><head><title>A story</title></head><body><p>No recipe here.</p></body></html>";
+      return route.fulfill({ contentType: "text/html", body });
+    });
+
+    const drawn = await context.newPage();
+    await drawn.goto(`${SITE}/drawn`);
+    const panel = await panelFor(context, `${SITE}/drawn`);
+    const opened = context.waitForEvent("page");
+    await panel.getByRole("button", { name: "Import this page" }).click();
+    const review = await opened;
+    await expect(review.getByLabel("Title", { exact: true })).toHaveValue("Drawn by a Script Stew");
+
+    const story = await context.newPage();
+    await story.goto(`${SITE}/story`);
+    const storyPanel = await panelFor(context, `${SITE}/story`);
+    await storyPanel.getByRole("button", { name: "Import this page" }).click();
+    await expect(storyPanel.getByRole("status")).toHaveText(
+      /Fennl couldn't find a recipe on this page\./,
+    );
+    await expectAccessible(storyPanel);
+  } finally {
+    await context.close();
+  }
 });

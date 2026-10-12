@@ -36,33 +36,45 @@ type ExtensionEnv = { Bindings: Env; Variables: { extension: ExtensionCaller } }
 /** Connections made per person per hour: a guard against abuse. */
 const CONNECTS_PER_HOUR = 20;
 
+/** Why a request's key isn't accepted, as the answer to send. */
+export interface ExtensionRefusal {
+  error: "not_connected" | "password_change_required";
+  status: 401 | 403;
+}
+
 /**
- * For routes the extension calls: "Authorization: Bearer <key>". Answers 401 when the key is
- * missing, unknown, removed or expired; the extension then offers to connect again.
+ * The person an extension key belongs to, from "Authorization: Bearer <key>", or why not: a key
+ * missing, unknown, removed or expired (the extension then offers to connect again).
  */
-export const requireExtension = createMiddleware<ExtensionEnv>(async (c, next) => {
-  const key = /^Bearer (\S+)$/.exec(c.req.header("authorization") ?? "")?.[1];
-  if (!isExtensionKey(key)) return c.json({ error: "not_connected" }, 401);
-  const db = database(c.env.DB);
+export async function extensionCaller(
+  env: Env,
+  authorization: string | undefined,
+): Promise<ExtensionCaller | ExtensionRefusal> {
+  const notConnected = { error: "not_connected", status: 401 } as const;
+  const key = /^Bearer (\S+)$/.exec(authorization ?? "")?.[1];
+  if (!isExtensionKey(key)) return notConnected;
+  const db = database(env.DB);
   const link = await linkForKey(db, key);
-  if (!link) return c.json({ error: "not_connected" }, 401);
+  if (!link) return notConnected;
   const person = await db
     .select({ mustChangePassword: user.mustChangePassword })
     .from(user)
     .where(eq(user.id, link.userId))
     .get();
-  if (!person) return c.json({ error: "not_connected" }, 401);
+  if (!person) return notConnected;
   // A temporary password from support must be replaced in Fennl first (phase B7).
-  if (person.mustChangePassword) return c.json({ error: "password_change_required" }, 403);
+  if (person.mustChangePassword) return { error: "password_change_required", status: 403 };
   const householdId = await activeHouseholdFor(db, link.userId);
   const role = await membershipRole(db, link.userId, householdId);
-  if (!role) return c.json({ error: "not_connected" }, 401);
-  c.set("extension", {
-    db,
-    userId: link.userId,
-    household: { householdId, role },
-    linkId: link.id,
-  });
+  if (!role) return notConnected;
+  return { db, userId: link.userId, household: { householdId, role }, linkId: link.id };
+}
+
+/** For the extension's own routes: a working key, else 401 (or 403). */
+export const requireExtension = createMiddleware<ExtensionEnv>(async (c, next) => {
+  const caller = await extensionCaller(c.env, c.req.header("authorization"));
+  if ("error" in caller) return c.json({ error: caller.error }, caller.status);
+  c.set("extension", caller);
   await next();
 });
 
