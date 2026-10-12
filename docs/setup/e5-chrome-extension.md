@@ -29,12 +29,17 @@ Each time a change reaches `main`, GitHub builds the extension for `beta.fennl.a
    2. Click **Connect to Fennl**. Fennl opens; sign in if it asks.
    3. Click **Connect the extension**. Fennl says "Connected."
    4. Click the Fennl button again: it shows "Connected as" and your name.
+4. Import a recipe:
+   1. Open a recipe on a site you use (signed in, if it's a site you sign in to).
+   2. Click the Fennl button, then **Import this page**.
+   3. Fennl opens the recipe's review screen. Check it, then click **Save recipe**.
 
 Things to know:
 
 - Chrome doesn't update an extension loaded this way. For a newer version, download it again, replace the folder's contents, and click the reload arrow on Fennl's card in `chrome://extensions`.
 - **Settings › Chrome extension** in Fennl lists connected extensions, with **Disconnect**. Changing your password disconnects them, and one unused for 90 days disconnects itself.
-- Importing the page you're on comes in the next phase (E6).
+- Updating from version 0.1.0 (before **Import this page**): replace the folder's contents with the new download, then click the reload arrow on Fennl's card in `chrome://extensions`. The new permissions it uses (reading the page you click its button on) show no warning in Chrome ([permissions list](https://developer.chrome.com/docs/extensions/reference/permissions-list), checked 2026-10-12).
+- The extension reads only the page you click its button on, and only then.
 
 ## Part B: The Chrome Web Store (later, before testers need it)
 
