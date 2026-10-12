@@ -352,6 +352,23 @@ describe("saving and fetching recipes", () => {
     expect((await stored(recipeId))!.notes).toBe("Later, for real");
   });
 
+  it("keeps a device's changes in order when one push is slower than the next", async () => {
+    const june = await person();
+    await premium(june);
+    const recipeId = id();
+    await push(june, [create(recipeId, "Pozole", Date.now() - 60_000)]);
+    // The first edit is sent as soon as it's made, but its push takes 30 seconds to arrive. The
+    // second, made a second after the first, arrives at once.
+    const made = Date.now() - 30_000;
+    const slow = await push(june, [edit(recipeId, { title: "Red pozole" }, made)], {
+      sentAt: made,
+    });
+    expect(slow.body.results).toEqual([applied]);
+    const quick = await push(june, [edit(recipeId, { title: "Green pozole" }, made + 1_000)]);
+    expect(quick.body.results).toEqual([applied]);
+    expect((await stored(recipeId))!.title).toBe("Green pozole");
+  });
+
   it("moves a recipe to Trash and back, and other devices learn of both", async () => {
     const june = await person();
     const recipeId = id();
