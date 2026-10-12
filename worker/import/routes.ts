@@ -35,6 +35,7 @@ export const importRoutes = new Hono<ImportEnv>();
 importRoutes.use("/api/import/*", requireHousehold);
 
 const MINUTE = 60 * 1000;
+const DAY = 24 * 60 * MINUTE;
 /** Pages read per person per minute: a guard against abuse, well past what a person does. */
 const PAGES_PER_MINUTE = 30;
 /** Redirects followed when fetching a draft's photo. */
@@ -101,6 +102,15 @@ importRoutes.post("/api/import/web", async (c) => {
     .filter((draft) => draftIssues(draft).length === 0)
     .slice(0, IMPORT_RULES.recipesPerPage);
   if (drafts.length === 0) return refuse(c, "no_recipe", 422);
+  // The plan's daily number (structured_imports_per_day; none by default). Counted here, once the
+  // page has a recipe, so a page without one doesn't use up the day.
+  const perDay = plan.structured_imports_per_day;
+  if (
+    perDay !== null &&
+    !(await withinRateLimit(db, `import-structured:day:${userId}`, { max: perDay, windowMs: DAY }))
+  ) {
+    return refuse(c, "daily_limit", 429);
+  }
 
   let snapshot: string | null = recipeCardHtml(html, pageUrl);
   if (

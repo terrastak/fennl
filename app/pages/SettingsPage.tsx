@@ -11,6 +11,7 @@ import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { DevicesSection } from "../devices/DevicesSection";
 import { ExportSection } from "../export/ExportSection";
+import { ExtensionSection } from "../extension/ExtensionSection";
 import { UsageSection } from "../limits/Usage";
 import { LocalCopySection } from "../sync/LocalCopySection";
 import { PageHeader } from "./PageHeader";
@@ -144,6 +145,8 @@ export function SettingsPage() {
       <EmailSection />
 
       <DevicesSection />
+
+      <ExtensionSection />
 
       <UsageSection />
 

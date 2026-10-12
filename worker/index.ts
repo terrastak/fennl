@@ -35,6 +35,7 @@ import { syncRoutes } from "./sync/routes";
 import { expungeOldTrash, trashRoutes } from "./sync/trash";
 import { testSetupRoutes } from "./dev/testSetup";
 import { exportRoutes } from "./export/export";
+import { extensionLinkRoutes, extensionRoutes } from "./extension/routes";
 import { removeOldImportJobs } from "./import/jobs";
 import { importRoutes } from "./import/routes";
 
@@ -177,6 +178,10 @@ app.route("/", imageRoutes);
 
 // Reading recipes from web pages into drafts for review (phase E4).
 app.route("/", importRoutes);
+
+// The Chrome extension's connection to an account (phase E5).
+app.route("/", extensionLinkRoutes);
+app.route("/", extensionRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {

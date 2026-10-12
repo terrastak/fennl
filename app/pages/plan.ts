@@ -77,7 +77,9 @@ export function planDetails(e: Entitlements): { label: string; value: string }[]
       label: "Import",
       value: e.import_ai_enabled
         ? "Paprika, web pages, photos, PDFs and handwritten cards"
-        : "Paprika files and recipe web pages (text only)",
+        : e.import_structured_enabled
+          ? "Paprika files and recipe web pages (text only)"
+          : "Not included",
     },
   ];
 }

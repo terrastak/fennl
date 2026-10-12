@@ -35,3 +35,12 @@ export function navigate(to: string, options: { replace?: boolean } = {}): void 
 export function queryParam(name: string): string | null {
   return new URLSearchParams(window.location.search).get(name);
 }
+
+/**
+ * Where to go after signing in: the page someone was sent to sign in from (?next=, set by the
+ * app), only ever a path on this site, else the recipes.
+ */
+export function afterSignIn(): string {
+  const next = queryParam("next");
+  return next && /^\/(?![/\\])/.test(next) ? next : "/";
+}

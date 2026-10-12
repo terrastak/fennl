@@ -7,7 +7,7 @@ import type { ChangeResult } from "../../shared/sync";
 import { createCode } from "../codes/admin";
 import { database } from "../db/client";
 import { importJob } from "../db/schema";
-import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
+import { overrideLimit, setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
 import { removeOldImportJobs } from "./jobs";
 
 // Phase E4: reading web pages into drafts, the drafts' routes, their photos, and saving.
@@ -159,6 +159,25 @@ describe("reading a web page", () => {
     const { visitor } = await import("../test/visitor");
     const res = await visitor().request("/api/import/web", { body: { html: page([]) } });
     expect(res.status).toBe(401);
+  });
+});
+
+describe("the plan's import limit", () => {
+  it("turns imports off at 0, and counts only pages with a recipe", async () => {
+    const june = await person();
+    await overrideLimit(june.v, "structured_imports_per_day", 0);
+    expect(await importPage(june, page([recipeData("Sponge Cake")]))).toEqual({
+      status: 403,
+      body: { error: "import_not_included" },
+    });
+
+    await overrideLimit(june.v, "structured_imports_per_day", 1);
+    expect((await importPage(june, "<html><body>No recipe</body></html>")).status).toBe(422);
+    expect((await importPage(june, page([recipeData("Sponge Cake")]))).status).toBe(201);
+    expect(await importPage(june, page([recipeData("Lemon Cake")]))).toEqual({
+      status: 429,
+      body: { error: "daily_limit" },
+    });
   });
 });
 
