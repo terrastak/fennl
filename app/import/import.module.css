@@ -1,0 +1,221 @@
+/* Import (phase E4): the Import page and the review screen. Tokens only
+   (docs/design/design-direction.md). */
+
+.section {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  max-width: 44rem;
+  margin-bottom: var(--space-8);
+}
+
+.section h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.section p {
+  margin: 0;
+}
+
+.off {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.note {
+  color: var(--color-text);
+}
+
+.problem {
+  color: var(--color-danger);
+}
+
+.jobs,
+.plainList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.jobs li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+}
+
+/* --- Review ------------------------------------------------------------------------------ */
+
+.review {
+  max-width: 90rem;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+
+.smallTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.duplicates,
+.check {
+  display: grid;
+  gap: var(--space-3);
+  max-width: 44rem;
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--color-warm-soft);
+  color: var(--color-text);
+}
+
+.check {
+  margin-bottom: 0;
+}
+
+.choices {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.choices legend {
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.choices label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+}
+
+.updates {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Side by side on wide screens: the page on the left, the draft on the right. */
+.layout {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.draft {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+  gap: var(--space-6);
+  min-width: 0;
+}
+
+.draft > form {
+  width: 100%;
+}
+
+.source {
+  display: grid;
+  align-content: start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.sourceHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.sourceBody {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.sourceBody p {
+  margin: 0;
+}
+
+.frame {
+  width: 100%;
+  height: 32rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+/* On a phone the page folds away under its button. */
+@media (max-width: 899px) {
+  .source[data-open="false"] .sourceBody {
+    display: none;
+  }
+}
+
+@media (min-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    align-items: start;
+  }
+
+  .source {
+    position: sticky;
+    top: var(--space-4);
+  }
+
+  .frame {
+    height: calc(100vh - 10rem);
+  }
+
+  .sourceToggle {
+    display: none;
+  }
+}
+
+.photos {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.photos p {
+  margin: 0;
+}
+
+.photoList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo {
+  display: grid;
+  gap: var(--space-1);
+  width: 10rem;
+}
+
+.photo img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.photo label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+}
