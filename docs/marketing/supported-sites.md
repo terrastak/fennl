@@ -12,7 +12,7 @@ not been confirmed site by site: "Not checked" means exactly that. "No recipe da
 the script found none on the pages it sampled (a few of which may not be recipes); it does not
 prove the site has none, and the AI reader (Premium) covers such pages either way.
 
-Checked 220 sites: 103 read cleanly, 3 partly, 36 had no recipe data, 75 refused our script, 3 unreachable.
+Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused our script, 3 unreachable.
 
 ## Big recipe sites
 
@@ -263,4 +263,10 @@ Checked 220 sites: 103 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | handletheheat.com | Reads | [page](https://handletheheat.com/browned-butter-toffee-chocolate-chip-cookies/) | 14 ingredients, 12 steps (2026-10-13) |
 | lifeloveandsugar.com | Reads | [page](https://www.lifeloveandsugar.com/best-southern-pecan-pralines-recipe/) | 8 ingredients, 7 steps (2026-10-13) |
 | tastesbetterfromscratch.com | Reads | [page](https://tastesbetterfromscratch.com/bread-recipe/) | 6 ingredients, 11 steps (2026-10-13) |
+
+## Manual Addition
+
+| Site | Result | Checked page | Note |
+| --- | --- | --- | --- |
+| barefootcontessa.com | Reads | [page](https://barefootcontessa.com/recipes/summer-garden-pasta) | 9 ingredients, 2 steps (2026-10-13) |
 

@@ -140,6 +140,13 @@
     "checked": "2026-10-13"
   },
   {
+    "domain": "barefootcontessa.com",
+    "status": "reads",
+    "url": "https://barefootcontessa.com/recipes/summer-garden-pasta",
+    "note": "9 ingredients, 2 steps",
+    "checked": "2026-10-13"
+  },
+  {
     "domain": "bbc.co.uk",
     "status": "blocked",
     "url": null,
