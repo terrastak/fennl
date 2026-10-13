@@ -17,3 +17,7 @@ ADMIN_ALERT_EMAIL=owner@example.com
 # To send real email locally, set these (and remove DEV_EMAIL_OUTBOX):
 # RESEND_API_KEY=
 # EMAIL_FROM=Fennl <hello@mail.example.com>
+
+# Read recipes with a stand-in AI (worker/ai/fake.ts): no key, no cost. To try the real one
+# locally, remove this and set ANTHROPIC_API_KEY (docs/setup/e7-ai-import.md).
+AI_PROVIDER=fake

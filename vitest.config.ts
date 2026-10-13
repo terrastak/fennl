@@ -41,6 +41,7 @@ export default defineConfig({
                 DEV_EMAIL_OUTBOX: "true",
                 ACCESS_DEV_BYPASS: "true",
                 ADMIN_ALERT_EMAIL: "owner@example.com",
+                AI_PROVIDER: "fake",
               },
             },
           })),

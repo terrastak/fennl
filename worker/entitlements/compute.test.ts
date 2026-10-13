@@ -24,6 +24,8 @@ const tierLimits = (overrides: Partial<Limits>): Limits => ({
   image_uploads_per_day: 6000,
   max_photos_per_recipe: 10,
   structured_imports_per_day: null,
+  ai_imports_per_month: 300,
+  ai_cost_cents_per_month: 1500,
   ...overrides,
 });
 
@@ -38,6 +40,8 @@ const PLAN_LIMITS: PlanLimits = {
     image_uploads_per_minute: 0,
     image_uploads_per_day: 0,
     max_photos_per_recipe: 0,
+    ai_imports_per_month: 0,
+    ai_cost_cents_per_month: 0,
   }),
   individual: tierLimits({}),
   household: tierLimits({ max_text_bytes: 100 * MB, max_devices: 10 }),
@@ -79,6 +83,8 @@ describe("free", () => {
       image_uploads_per_day: 0,
       max_photos_per_recipe: 0,
       structured_imports_per_day: null,
+      ai_imports_per_month: 0,
+      ai_cost_cents_per_month: 0,
       images_enabled: false,
       offline_enabled: false,
       history_enabled: false,
@@ -86,6 +92,15 @@ describe("free", () => {
       import_ai_enabled: false,
     });
   });
+});
+
+it("turns AI imports off for a Premium tier whose monthly number is 0", () => {
+  expect(compute(sub("individual", "active")).import_ai_enabled).toBe(true);
+  const planLimits = {
+    ...PLAN_LIMITS,
+    individual: { ...PLAN_LIMITS.individual, ai_imports_per_month: 0 },
+  };
+  expect(compute({ ...sub("individual", "active"), planLimits }).import_ai_enabled).toBe(false);
 });
 
 it("turns imports without the AI off when the tier's daily number is 0", () => {

@@ -6,7 +6,12 @@ import type {
   RecipeField,
   RecipeImport,
 } from "../../shared/recipe";
-import type { Confidence, RecipeDraft } from "../../shared/importDraft";
+import {
+  draftContent,
+  type Confidence,
+  type DraftFields,
+  type RecipeDraft,
+} from "../../shared/importDraft";
 import type { ImportJobDetail } from "../../shared/importJobs";
 import { directionsFromText, ingredientsFromText, textFromLines } from "../../shared/recipeLines";
 import type { RecipeChange } from "../../shared/sync";
@@ -259,4 +264,52 @@ export function snapshotDocument(snapshot: string, css: string): string {
   return `<!doctype html><html><head><meta charset="utf-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
 <style>${css}</style></head><body>${snapshot}</body></html>`;
+}
+
+/** A field's value as it matters to the person: line IDs left out. */
+function personValue(field: RecipeField, content: RecipeContent): string {
+  const value = content[field];
+  if (field === "ingredients" || field === "directions") {
+    return JSON.stringify(
+      (value as (IngredientLine | DirectionStep)[]).map((l) => [l.text.trim(), l.heading]),
+    );
+  }
+  return JSON.stringify(value);
+}
+
+/**
+ * The draft after "Read again" (phase E7): the new reading, except where the person had already
+ * changed something on this screen, which is kept as they left it (decided 2026-10-12).
+ * Categories the person chose are kept too.
+ */
+export function mergeReadAgain(
+  before: RecipeDraft,
+  edited: RecipeContent,
+  after: RecipeDraft,
+  categories: string[][],
+): RecipeDraft {
+  const original = draftContent(before);
+  const fields: DraftFields = { ...after.fields };
+  const lineConfidence = { ...after.lineConfidence };
+  for (const field of RECIPE_FIELDS) {
+    if (personValue(field, edited) === personValue(field, original)) continue;
+    (fields as Record<string, unknown>)[field] = {
+      value: edited[field],
+      confidence: "high",
+      from: [],
+    };
+    if (field === "ingredients" || field === "directions") lineConfidence[field] = null;
+  }
+  return {
+    ...after,
+    fields,
+    lineConfidence,
+    categories: categories.length
+      ? {
+          value: categories.map((names) => names.join(CATEGORY_SEPARATOR)),
+          confidence: "high",
+          from: [],
+        }
+      : after.categories,
+  };
 }

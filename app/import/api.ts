@@ -1,4 +1,5 @@
 import type {
+  ReadAgainError,
   ImportJobDetail,
   ImportJobSummary,
   ImportWebError,
@@ -85,4 +86,19 @@ export function importProblemText(problem: ImportProblem): string {
     case "failed":
       return "That page couldn't be imported. Please try again.";
   }
+}
+
+/** "Read again" (phase E7): the AI reads the draft's photos once more, with a stronger model. */
+export async function readAgain(
+  id: string,
+): Promise<{ job: ImportJobDetail } | { problem: ReadAgainError | "offline" }> {
+  let res: Response;
+  try {
+    res = await fetch(`/api/import/jobs/${encodeURIComponent(id)}/read-again`, { method: "POST" });
+  } catch {
+    return { problem: "offline" };
+  }
+  if (res.ok) return { job: (await res.json()) as ImportJobDetail };
+  const error = ((await res.json().catch(() => ({}))) as { error?: ReadAgainError }).error;
+  return { problem: error ?? "unavailable" };
 }

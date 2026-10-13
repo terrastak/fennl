@@ -174,8 +174,8 @@ export function computeEntitlements(inputs: EntitlementInputs): Entitlements {
     // Paprika files and structured web pages cost nothing to import, so every tier gets them
     // (text only on Free), unless plan_limits turns them off for a tier with a daily limit of 0
     // (decided 2026-10-12: changeable without a deploy). Anything that calls the AI is Premium
-    // (CLAUDE.md, "Import sources").
+    // (CLAUDE.md, "Import sources"), and off for a tier whose monthly AI imports are 0.
     import_structured_enabled: limits.structured_imports_per_day !== 0,
-    import_ai_enabled: premium,
+    import_ai_enabled: premium && limits.ai_imports_per_month !== 0,
   };
 }

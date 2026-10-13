@@ -3,6 +3,7 @@ import type { FeedbackInbox } from "../../shared/feedback";
 import { adminRequest } from "./api";
 import { adminAuthClient, loadAdminState, type AdminMe, type AdminState } from "./client";
 import { AccountsSection } from "./AccountsSection";
+import { AiSection } from "./AiSection";
 import { ActivitySection } from "./ActivitySection";
 import { FeedbackSection } from "./FeedbackSection";
 import { CodesSection, SignUpSwitch } from "./CodesSection";
@@ -292,6 +293,7 @@ const SECTIONS = [
   { id: "feedback", name: "Feedback" },
   { id: "codes", name: "Codes and sign-up" },
   { id: "limits", name: "Plan limits" },
+  { id: "ai", name: "AI imports" },
   { id: "activity", name: "Activity" },
   { id: "you", name: "Your admin account" },
 ] as const;
@@ -357,6 +359,7 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
         </>
       ) : null}
       {section === "limits" ? <LimitsSection /> : null}
+      {section === "ai" ? <AiSection /> : null}
       {section === "activity" ? <ActivitySection /> : null}
       {section === "you" ? <You me={me} refresh={refresh} /> : null}
     </>
