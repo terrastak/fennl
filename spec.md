@@ -32,6 +32,7 @@ Recorded from the planning conversation on 2026-10-01.
 | Original card/page photos | **Always kept** with the imported recipe. They count toward the image quota. |
 | Social media / video import | **After the beta.** |
 | Paprika 3 import | **Essential for the beta.** The owner has a large library, photos included. |
+| Paprika 4 parity | Fennl must at least match Paprika 4's announced features and ideally beat them. Tracked in `docs/research/2026-10-13-paprika-4-parity.md`; gaps are proposed as post-beta phases in Stage I item 13. Beta scope is unchanged. |
 | Beta features beyond the recipe box | **Scaling and conversions** (incl. pan sizes) and **cook mode**. Grocery list and meal planner come after the beta. |
 | Recipe details in beta | Basics plus **multiple photos per recipe**, **nested categories**, **linked sub-recipes**, **nutrition** (stored and shown; automatic calculation later). |
 | Devices | **Phone and computer equally.** One web app that works at both sizes and can be installed to the home screen. |
@@ -1144,6 +1145,17 @@ Not detailed yet on purpose. Each becomes its own set of phases later.
 10. Automatic nutrition calculation.
 11. Live updates between household devices (Durable Object WebSocket, `CLAUDE.md` Phase 2).
 12. Household "smart merge" beyond per-field last-write-wins, starting with line-by-line merging of ingredient and direction lists (owner's request, 2026-10-07; line IDs from C1 make it possible).
+13. **Paprika 4 parity (proposed 2026-10-13, none approved; full table in `docs/research/2026-10-13-paprika-4-parity.md`).** Paprika 4 (open beta announced 2026-09-28) adds features Fennl should match or beat. Proposed new phases, each its own small change:
+    - **C13. Advanced search and saved searches**: filter builder (prep/cook time, servings, rating, categories, source, last made, has photo, ingredients in or out) with AND/OR groups, saved as smart lists; runs on the device's local database, so it works offline. Includes category suggestions from ingredients (rules from the person's own library first).
+    - **C14. Duplicate finder**: library-wide scan (reuses `shared/duplicates.ts`), side-by-side compare, one-step merge; the loser goes to Trash.
+    - **E15. Paste text to import**: paste text from an email, note or message (and, with item 4, a link) into the Import box; the AI reads it into a draft; same review screen (`import_ai_enabled`).
+    - **F4b. Automatic nutrition calculation** (pulls item 10 earlier): estimated from USDA FoodData Central using E2's parsed amounts, with a fixable per-ingredient match list. USDA terms are **Unverified**.
+    - **G3. Cookbooks**: curated, ordered collections (a recipe can be in many), shareable with other Fennl users or by a read-only link, printable (F6).
+    - **G4. Send a recipe to another Fennl user**: arrives in their inbox; accepting makes a copy they own (`copied_from`, photos included). Rate-limited and blockable.
+    - **With the grocery list and meal planner (items 8–9)**: private, revocable calendar feed (`.ics`) of the meal plan; shared lists and plan for the household; Web Share Target (share text or a link into Fennl).
+    - **Stage J, Pantry**: storage locations (fridge, freezer, cupboard), "what can I cook", barcode scanning where the browser supports it (Unverified), buying from the grocery list fills the pantry.
+    - **Late and owner's call**: Alexa skill (needs account linking, so a security review first); social and video import timing (item 8; Paprika 4 already ships it).
+    - **Web limits**: Apple widgets, Siri intents and Spotlight can't be done by a web app. Answered with home-screen shortcuts, Web Share Target and (later) a personal API token, unless the native question is reopened (open question 22).
 
 ## Open questions tracked by this plan
 
@@ -1172,6 +1184,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 19 | ~~Changing an account's email address~~ Decided 2026-10-06: verify the new address first, notify the old one, keep every change so support can restore an earlier address. Built in B7a | B7a |
 | 20 | ~~How long before an account never verified is removed?~~ Decided 2026-10-06: 24 hours from sign-up. An unverified email change simply expires after 24 hours. Built in B7a | B7a |
 | 21 | Illegal imagery in stored photos (researched 2026-10-08). Cloudflare's free CSAM Scanning Tool compares images served through the Cloudflare cache against known-material lists (fuzzy hashing, so near-copies match), emails the owner daily, and blocks serving with an HTTP 451. Limits: it is unconfirmed whether images served by a Worker from R2 are scanned (the docs only say "served through the Cloudflare cache"); it scans only when an image is served, not at upload; it stops serving but does not delete the file from R2 or the `image` table; it only finds known material; and the legal duty to report stays with Fennl. To settle before public launch: (a) ask Cloudflare support whether Worker-served R2 images are covered, and turn the tool on either way; (b) if not covered, decide whether to check uploads against a hash-matching service instead; (c) an admin action to remove an image and suspend an account, recorded in `admin_audit_log` (admin console, C12 style); (d) legal advice on reporting duties. Not needed for the invite-only beta | Before public launch (H2) |
+| 22 | Paprika 4 parity (see `docs/research/2026-10-13-paprika-4-parity.md`): which gap items join the first post-beta set and in what order; whether to match social import timing; whether Household should stay at 2 members (check Paprika's family limit first); match Alexa or skip; accept the web limits on widgets, Siri and Spotlight or reopen native. Suggest: pull in E15, C13, C14 and F4b first | Before Stage I is detailed |
 
 ## Notes: AI provider research (2026-10-01)
 
