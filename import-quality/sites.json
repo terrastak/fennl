@@ -1098,5 +1098,10 @@
     "domain": "tastesbetterfromscratch.com",
     "group": "Also tested by Fennl",
     "source": "fennl"
+  }  
+  {
+    "domain": "barefootcontessa.com",
+    "group": "Manual Addition",
+    "source": "manual"
   }
 ]
