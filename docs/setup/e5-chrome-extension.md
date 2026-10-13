@@ -39,6 +39,7 @@ Things to know:
 
 - Chrome doesn't update an extension loaded this way. For a newer version, download it again, replace the folder's contents, and click the reload arrow on Fennl's card in `chrome://extensions`.
 - On Fennl's **Account** page, **Where you're signed in** lists connected extensions, with **Disconnect**. Changing your password disconnects them, and one unused for 90 days disconnects itself.
+- Updating to 0.3.1 (clearer messages for pages without recipe data, which Fennl now reads with AI on Premium): replace the folder's contents and click the reload arrow. Nothing to allow. Version 0.3.0 still works; it just shows no message when a Free account sends such a page.
 - Updating to 0.3.0 (photos from any site) when already connected: replace the folder's contents and click the reload arrow as below. Then, on Premium, click the Fennl button, then **Allow photos from any site**, and allow it when Chrome asks.
 - Updating from version 0.1.0 (before **Import this page**): replace the folder's contents with the new download, then click the reload arrow on Fennl's card in `chrome://extensions`. The new permissions it uses (reading the page you click its button on) show no warning in Chrome ([permissions list](https://developer.chrome.com/docs/extensions/reference/permissions-list), checked 2026-10-12).
 - The extension reads only the page you click its button on, and only then.

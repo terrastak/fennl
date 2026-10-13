@@ -127,7 +127,15 @@ export type ImportWebError =
   | "page_too_large"
   | "no_recipe"
   | "rate_limited"
-  | "daily_limit";
+  | "daily_limit"
+  /** The page has no recipe data, and reading it with the AI isn't part of the plan (E8). */
+  | "ai_import_not_included"
+  /** This month's AI imports are used up (E7). */
+  | "monthly_limit"
+  /** AI imports are paused for everyone for now (E7). */
+  | "paused"
+  /** The AI couldn't read it just now, or isn't set up on this server. */
+  | "ai_unavailable";
 
 /**
  * The address a browser recorded in a page saved with "Save Page As" (Chrome and Edge write
