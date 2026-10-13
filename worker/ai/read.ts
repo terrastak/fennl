@@ -52,7 +52,7 @@ export interface AiReadInput {
   source: ImportSource;
   /** What to read, in order. */
   parts: AiPart[];
-  /** The draft's inputs: one per part, in the same order. */
+  /** The draft's inputs: one per part, in the same order, then any others it keeps (a page's photos). */
   inputs: DraftInput[];
   /** Inputs to keep with the recipe (a card itself, as an import original). */
   photos: DraftPhoto[];
@@ -220,13 +220,28 @@ function finish(
 export async function createAiImport(
   caller: AiCaller,
   input: AiReadInput,
-  now = new Date(),
-): Promise<{ ok: true; jobIds: string[] } | { ok: false; problem: AiReadProblem }> {
+  options: {
+    /** More to keep with each draft (a web page's address and copy, phase E8). */
+    provenance?: Record<string, unknown>;
+    /** Last touches to each draft (a web page's address as its source). */
+    finish?: (draft: RecipeDraft) => RecipeDraft;
+    /** At most this many drafts (a web page's, like its recipe data's). */
+    limit?: number;
+    now?: Date;
+  } = {},
+): Promise<
+  { ok: true; jobIds: string[]; drafts: RecipeDraft[] } | { ok: false; problem: AiReadProblem }
+> {
+  const now = options.now ?? new Date();
   const config = await aiConfig(caller.env, caller.db);
   const read = await readWithAi(caller, input, { config });
   if (!read.ok) return read;
+  const drafts = (options.finish ? read.drafts.map(options.finish) : read.drafts).slice(
+    0,
+    options.limit,
+  );
 
-  const ids = read.drafts.map(() => crypto.randomUUID());
+  const ids = drafts.map(() => crypto.randomUUID());
   const firstId = ids[0] as string;
   // Kept once, under the first draft; the others point at the same files.
   const parts: AiPartRecord[] = await Promise.all(
@@ -243,8 +258,9 @@ export async function createAiImport(
   );
   const batchId = ids.length > 1 ? crypto.randomUUID() : null;
   await caller.db.insert(importJob).values(
-    read.drafts.map((draft, index) => {
-      const provenance: AiProvenance = {
+    drafts.map((draft, index) => {
+      const provenance: AiProvenance & Record<string, unknown> = {
+        ...options.provenance,
         ai: {
           models: read.models,
           level: read.level,
@@ -270,7 +286,7 @@ export async function createAiImport(
       };
     }),
   );
-  return { ok: true, jobIds: ids };
+  return { ok: true, jobIds: ids, drafts };
 }
 
 /** Whether "Read again" is on offer for a job: AI-read, not yet read again, a stronger model left. */
@@ -372,8 +388,9 @@ export async function readAgain(
           : read.problem,
     };
   }
-  const draft = read.drafts[ai.index] ?? (read.drafts[0] as RecipeDraft);
-  const provenance: AiProvenance = {
+  const draft = keepAddress(read.drafts[ai.index] ?? (read.drafts[0] as RecipeDraft), before);
+  const provenance: AiProvenance & Record<string, unknown> = {
+    ...(JSON.parse(job.provenance) as Record<string, unknown>),
     ai: {
       ...(ai as AiProvenance["ai"]),
       models: [...(ai.models ?? []), ...read.models],
@@ -390,4 +407,21 @@ export async function readAgain(
     })
     .where(eq(importJob.id, job.id));
   return { ok: true, draft };
+}
+
+/**
+ * A web page read again (phase E8) keeps the page's address as its own ID and its source, which
+ * came from the page, not from what the AI read.
+ */
+function keepAddress(draft: RecipeDraft, before: RecipeDraft | null): RecipeDraft {
+  const source = before?.fields.source;
+  if (!before?.externalId && !source?.value.url) return draft;
+  return {
+    ...draft,
+    externalId: draft.externalId ?? before?.externalId ?? null,
+    fields:
+      source?.value.url && !draft.fields.source?.value.url
+        ? { ...draft.fields, source }
+        : draft.fields,
+  };
 }

@@ -82,7 +82,9 @@ export async function sendPage(connection: Connection, page: CapturedPage): Prom
     return { ok: false, problem: "not_connected" };
   }
   const error = ((await res.json().catch(() => ({}))) as { error?: ImportWebError }).error;
-  return { ok: false, problem: error ?? "failed" };
+  // A problem a newer Fennl has and this version doesn't know reads as a plain failure.
+  const known = error !== undefined && (problemText(error) as string | undefined) !== undefined;
+  return { ok: false, problem: known ? error : "failed" };
 }
 
 /**
@@ -196,7 +198,15 @@ export function problemText(
     case "fennl_page":
       return "This page is already in Fennl.";
     case "no_recipe":
-      return "Fennl couldn't find a recipe on this page. It reads the recipe details most recipe sites publish; pages without them will be readable later.";
+      return "Fennl couldn't find a recipe on this page.";
+    case "ai_import_not_included":
+      return "This page doesn't publish its recipe details, so Fennl would have to read it with AI. Reading with AI is part of Premium.";
+    case "monthly_limit":
+      return "This page needs reading with AI, and this month's AI imports are used up. They start again on the 1st.";
+    case "paused":
+      return "This page needs reading with AI, which is paused for now. Please try again later.";
+    case "ai_unavailable":
+      return "Fennl couldn't read this page just now. Please try again in a few minutes.";
     case "page_too_large":
       return "This page is too large to import.";
     case "import_not_included":
