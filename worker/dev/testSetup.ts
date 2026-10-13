@@ -4,6 +4,10 @@ import { createCode, availableCode } from "../codes/admin";
 import { database } from "../db/client";
 import { limitOverride } from "../db/schema";
 import { writeSetting } from "../settings/settings";
+import { FAKE_UNSURE } from "../ai/fake";
+import { createAiImport } from "../ai/read";
+import { householdEntitlements } from "../entitlements/entitlements";
+import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 
 // Test setup for the browser tests (e2e/), on the local test server only. Tests used to write
 // this data straight into the local database file from another process, which could find the
@@ -15,18 +19,61 @@ import { writeSetting } from "../settings/settings";
 // only ever a direct database command (CLAUDE.md, "Admin console"), which the tests run once,
 // before anything else (e2e/auth.setup.ts).
 
-export const testSetupRoutes = new Hono<{ Bindings: Env }>();
+export const testSetupRoutes = new Hono<{ Bindings: Env; Variables: { signedIn: SignedIn } }>();
 
 const LOCAL = new Set(["localhost", "127.0.0.1"]);
 
-testSetupRoutes.post("/api/dev/test-setup", async (c) => {
-  if (
-    c.env.DEV_EMAIL_OUTBOX !== "true" ||
-    c.env.RESEND_API_KEY ||
-    !LOCAL.has(new URL(c.req.url).hostname)
-  ) {
+/** Open only on the local test server, never with real email or a real AI set up. */
+const testServer = (env: Env, request: Request) =>
+  env.DEV_EMAIL_OUTBOX === "true" &&
+  !env.RESEND_API_KEY &&
+  LOCAL.has(new URL(request.url).hostname);
+
+/** A 1×1 PNG: the "card" a test AI import reads. */
+const PNG = Uint8Array.from(
+  atob(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC",
+  ),
+  (c) => c.charCodeAt(0),
+);
+
+// An AI import for the signed-in person (phase E7), read by the fake AI (AI_PROVIDER=fake), until
+// the import screens that make them (E8 to E12) exist. {unsure: true}: the AI is unsure of a line
+// however often it reads it.
+testSetupRoutes.post("/api/dev/test-ai-import", async (c, next) => {
+  if (!testServer(c.env, c.req.raw) || c.env.AI_PROVIDER !== "fake") {
     return c.json({ error: "not_found" }, 404);
   }
+  return requireHousehold(c, next);
+});
+testSetupRoutes.post("/api/dev/test-ai-import", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const body = (await c.req.json().catch(() => null)) as { unsure?: unknown } | null;
+  const created = await createAiImport(
+    {
+      env: c.env,
+      db,
+      householdId: household.householdId,
+      userId,
+      plan: await householdEntitlements(db, household.householdId),
+    },
+    {
+      source: "photo",
+      parts: [
+        { kind: "image", mediaType: "image/png", bytes: PNG, label: "Front of the card" },
+        ...(body?.unsure === true
+          ? [{ kind: "text" as const, text: FAKE_UNSURE, label: "Test" }]
+          : []),
+      ],
+      inputs: [{ kind: "image", name: "card.png", url: null, imageHash: null }],
+      photos: [{ input: 0, role: "import_original" }],
+    },
+  );
+  return created.ok ? c.json({ jobIds: created.jobIds }) : c.json({ error: created.problem }, 400);
+});
+
+testSetupRoutes.post("/api/dev/test-setup", async (c) => {
+  if (!testServer(c.env, c.req.raw)) return c.json({ error: "not_found" }, 404);
   const db = database(c.env.DB);
   const body = (await c.req.json().catch(() => null)) as Record<string, unknown> | null;
 

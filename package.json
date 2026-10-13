@@ -24,9 +24,11 @@
     "auth:generate": "auth generate --config worker/auth/cli.ts --output worker/db/auth-schema.ts --yes && prettier --write worker/db/auth-schema.ts",
     "db:check": "drizzle-kit check && node scripts/check-migrations.mjs",
     "db:migrate:local": "wrangler d1 migrations apply DB --local --config wrangler.jsonc",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:check && npm run test && npm run test:e2e"
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:check && npm run test && npm run test:e2e",
+    "ai:compare": "tsx import-quality/aiCompare.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
     "@better-auth/passkey": "^1.7.7",
     "@jsquash/webp": "1.5.0",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",

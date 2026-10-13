@@ -4,6 +4,7 @@ import { isColorScheme } from "../shared/appearance";
 import { healthStatus } from "../shared/health";
 import { removeUnverifiedAccounts } from "./account/purge";
 import { accountRoutes } from "./account/routes";
+import { adminAiRoutes } from "./ai/adminRoutes";
 import { adminAccountRoutes } from "./admin/accountRoutes";
 import { accountNames } from "./admin/accounts";
 import { passedAccess } from "./admin/access";
@@ -283,6 +284,8 @@ app.route("/api/admin", adminCodeRoutes);
 
 // Account lookup, password help, overrides and tier limits (phase B7).
 app.route("/api/admin", adminAccountRoutes);
+// The AI imports section: cost this month and its settings (phase E7).
+app.route("/api/admin", adminAiRoutes);
 
 // The feedback inbox (phase B8).
 app.route("/api/admin", adminFeedbackRoutes);

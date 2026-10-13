@@ -8,6 +8,7 @@ import {
   fieldUpdates,
   fieldsToCheck,
   lineMarks,
+  mergeReadAgain,
   moveLineTo,
   pathNames,
   snapshotDocument,
@@ -148,4 +149,57 @@ it("shows the page's copy in a document that can't fetch anything", () => {
   const doc = snapshotDocument("<ul><li>1 cup flour</li></ul>", "body{color:red}");
   expect(doc).toContain(`content="default-src 'none'; style-src 'unsafe-inline'"`);
   expect(doc).toContain("<li>1 cup flour</li>");
+});
+
+describe("Read again (phase E7)", () => {
+  const before = draft(content());
+  const after: RecipeDraft = {
+    ...draft(
+      content({
+        title: "Ginger Snaps",
+        ingredients: ingredientsFromText("3/4 cup butter\n2 1/4 cups flour\n1 egg"),
+      }),
+    ),
+    lineConfidence: { ingredients: ["high", "high", "low"], directions: null },
+    warnings: ["The last line is faint"],
+    producer: { importer: "ai", model: "model-b" },
+  };
+
+  it("takes the new reading where the person changed nothing", () => {
+    const merged = mergeReadAgain(before, content(), after, []);
+    expect(merged.fields.title?.value).toBe("Ginger Snaps");
+    expect(merged.fields.ingredients?.value.map((l) => l.text)).toEqual([
+      "3/4 cup butter",
+      "2 1/4 cups flour",
+      "1 egg",
+    ]);
+    expect(merged.lineConfidence.ingredients).toEqual(["high", "high", "low"]);
+    expect(merged.warnings).toEqual(["The last line is faint"]);
+    expect(merged.producer.model).toBe("model-b");
+  });
+
+  it("keeps what the person already changed, and their categories", () => {
+    const edited = content({
+      title: "Mum's Ginger Cookies",
+      ingredients: ingredientsFromText("For the dough:\n1 cup butter\n2-1/4 cups flour"),
+    });
+    const merged = mergeReadAgain(before, edited, after, [["Desserts", "Cookies"]]);
+    expect(merged.fields.title).toEqual({
+      value: "Mum's Ginger Cookies",
+      confidence: "high",
+      from: [],
+    });
+    expect(merged.fields.ingredients?.value.map((l) => l.text)).toEqual([
+      "For the dough:",
+      "1 cup butter",
+      "2-1/4 cups flour",
+    ]);
+    // The person's own lines aren't marked.
+    expect(merged.lineConfidence.ingredients).toBeNull();
+    // Untouched fields still take the new reading.
+    expect(merged.fields.directions?.value.map((l) => l.text)).toEqual(
+      after.fields.directions?.value.map((l) => l.text),
+    );
+    expect(merged.categories?.value).toEqual(["Desserts › Cookies"]);
+  });
 });

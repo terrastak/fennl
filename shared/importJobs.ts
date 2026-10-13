@@ -50,7 +50,57 @@ export interface ImportJobDetail extends ImportJobSummary {
   snapshot: string | null;
   /** The recipe it became, once saved. */
   recipeId: string | null;
+  /** Read by the AI (phase E7): whether "Read again" is still on offer, or has been used. */
+  ai: { canReadAgain: boolean; readAgain: boolean } | null;
 }
+
+/** Something the AI read, kept so "Read again" can read it again (phase E7). */
+export type AiPartRecord =
+  /** A photo or PDF, kept in R2 (IMAGES) under importPhotoKey. */
+  | {
+      kind: "image";
+      mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
+      key: string;
+      label: string;
+    }
+  | { kind: "pdf"; key: string; label: string }
+  | { kind: "text"; text: string; label: string };
+
+/**
+ * What import_job.provenance holds for a recipe the AI read (phase E7): which models read it, so
+ * "Read again" uses the next stronger one, once (decided 2026-10-12).
+ */
+export interface AiProvenance {
+  ai: {
+    /** The models that read it, in order: the first, any second look, a re-read. */
+    models: string[];
+    /** Which model, in the configured order (cheapest first), the draft's answer is from. */
+    level: number;
+    /** Why the first read got a second look; empty when it didn't. */
+    secondLook: string[];
+    /** When "Read again" was used; it can be used once. */
+    rereadAt: string | null;
+    /** Which of the recipes found in what was read this is (a card can hold two). */
+    index: number;
+    parts: AiPartRecord[];
+  };
+}
+
+/** Why "Read again" didn't happen. */
+export type ReadAgainError =
+  | "not_found"
+  | "already_read_again"
+  /** No stronger model is set up to read it. */
+  | "none_stronger"
+  | "import_not_included"
+  /** This month's AI imports are used up. */
+  | "monthly_limit"
+  /** AI imports are paused for now. */
+  | "paused"
+  /** AI reading isn't available on this server (no key), or the read failed. */
+  | "unavailable"
+  /** The photos aren't kept any more. */
+  | "inputs_gone";
 
 /** A draft's photo: which of its inputs, and where the page had it. */
 export interface ImportPhotoSource {

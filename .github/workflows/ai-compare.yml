@@ -1,0 +1,48 @@
+# The AI model comparison (phase E7; import-quality/aiCompare.ts): reads the quality test set's
+# photos, pages, screenshots and PDFs with the cheaper model alone, the stronger model alone, and
+# the cheaper model with a second look by the stronger one when needed, then reports accuracy and
+# cost side by side on the run's summary page. It calls the real API, so it costs money (about a
+# dollar for the current test set): it runs only when started by hand (Actions › AI model
+# comparison › Run workflow). Needs the repository secret ANTHROPIC_API_KEY
+# (docs/setup/e7-ai-import.md).
+name: AI model comparison
+
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "The cheaper and the stronger model, separated by a comma (blank: Fennl's own)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      AI_MODELS: ${{ inputs.models }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Compare
+        run: |
+          if [ -z "$ANTHROPIC_API_KEY" ]; then
+            echo "::error::The ANTHROPIC_API_KEY repository secret isn't set (docs/setup/e7-ai-import.md)."
+            exit 1
+          fi
+          if [ -z "$AI_MODELS" ]; then unset AI_MODELS; fi
+          npm run ai:compare
+      - name: Report
+        if: always()
+        run: |
+          if [ -f import-quality/ai-report.md ]; then
+            cat import-quality/ai-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi

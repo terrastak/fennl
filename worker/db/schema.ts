@@ -644,3 +644,40 @@ export const extensionLink = sqliteTable(
   },
   (table) => [index("extension_link_user_idx").on(table.userId)],
 );
+
+/**
+ * Every call to the AI (phase E7; CLAUDE.md, "AI import"), metered per household: which model,
+ * the tokens it used and what that cost, estimated from the provider's prices (worker/ai/). A
+ * row is written before the call, so the monthly limits are checked in the same statement that
+ * counts the call, then filled in when the answer arrives. No foreign keys: the record of what
+ * was spent stays when an account is removed.
+ */
+export const aiUsage = sqliteTable(
+  "ai_usage",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id").notNull(),
+    userId: text("user_id").notNull(),
+    importJobId: text("import_job_id"),
+    /** "read" (a new import), "second_look" (the stronger model, automatically), "reread". */
+    purpose: text("purpose").notNull(),
+    /** 1 when it counts as one of the household's AI imports this month (ai_imports_per_month). */
+    countsAsImport: integer("counts_as_import").notNull(),
+    provider: text("provider").notNull(),
+    model: text("model").notNull(),
+    /** "pending" (waiting for the answer), "ok", "refused", "cut_off", "bad_output", "failed". */
+    status: text("status").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    cacheReadTokens: integer("cache_read_tokens").notNull().default(0),
+    cacheWriteTokens: integer("cache_write_tokens").notNull().default(0),
+    /** The estimated cost in millionths of a US dollar. */
+    costMicroUsd: integer("cost_micro_usd").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    finishedAt: integer("finished_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    index("ai_usage_household_idx").on(table.householdId, table.createdAt),
+    index("ai_usage_created_idx").on(table.createdAt),
+  ],
+);

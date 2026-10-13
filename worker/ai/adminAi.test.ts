@@ -1,0 +1,165 @@
+import { env } from "cloudflare:test";
+import { desc, eq } from "drizzle-orm";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import type { AdminAiOverview, AdminAiSettings } from "../../shared/adminAi";
+import type { PlanLimitRow } from "../../shared/adminAccounts";
+import { createCode } from "../codes/admin";
+import { database } from "../db/client";
+import { adminAuditLog, session, user } from "../db/schema";
+import { householdEntitlements } from "../entitlements/entitlements";
+import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
+import { DEFAULT_MODELS } from "./config";
+import { fakeAi } from "./fake";
+import { readWithAi } from "./read";
+
+// Phase E7: the admin console's AI imports section.
+
+const db = () => database(env.DB);
+let admin: Visitor;
+
+async function freshAdmin() {
+  await db()
+    .update(session)
+    .set({ authMethod: "passkey", createdAt: new Date(), lastActiveAt: new Date() })
+    .where(eq(session.id, (await admin.session())!.session.id));
+}
+
+beforeAll(async () => {
+  await setUpDatabase();
+  admin = await signUpConfirmed("ai-admin@example.com", "Admin");
+  const id = (await admin.session())!.user.id;
+  await db().update(user).set({ role: "admin" }).where(eq(user.id, id));
+});
+
+beforeEach(async () => {
+  await freshAdmin();
+  fakeAi.reset();
+});
+
+const call = async (path: string, init: { method?: string; body?: unknown } = {}) => {
+  const res = await admin.request(path, init);
+  return { status: res.status, body: (await res.json()) as unknown };
+};
+
+describe("the AI imports section", () => {
+  it("is for admins only", async () => {
+    const someone = await signUpConfirmed("ai-curious@example.com");
+    expect((await someone.request("/api/admin/ai")).status).toBe(403);
+  });
+
+  it("starts with the decided limits", async () => {
+    const rows = (await call("/api/admin/limits")).body as PlanLimitRow[];
+    const value = (tier: string, key: string) =>
+      rows.find((r) => r.tier === tier && r.key === key)?.value;
+    expect(value("individual", "ai_imports_per_month")).toBe(300);
+    expect(value("household", "ai_imports_per_month")).toBe(300);
+    expect(value("free", "ai_imports_per_month")).toBe(0);
+    expect(value("individual", "ai_cost_cents_per_month")).toBe(1500);
+    const { settings } = (await call("/api/admin/ai")).body as AdminAiOverview;
+    expect(settings).toEqual({
+      alertCents: 5000,
+      pauseCents: 15000,
+      models: DEFAULT_MODELS,
+      missingAmounts: 2,
+      oddAmount: 24,
+    });
+  });
+
+  it("shows this month's cost, by model and by household", async () => {
+    const v = await signUpConfirmed("ai-household@example.com", "Rosa Diaz");
+    const code = await createCode(
+      db(),
+      {
+        code: "AI-ADMIN-1",
+        label: "AI admin tests",
+        tier: "individual",
+        access: { forever: true },
+        allowsSignUp: true,
+        maxUses: null,
+        redeemBy: null,
+      },
+      null,
+    );
+    await v.request("/api/codes/redeem", { body: { code: code.code } });
+    const s = (await v.session())!;
+    const householdId = s.session.activeOrganizationId!;
+    const caller = {
+      env,
+      db: db(),
+      householdId,
+      userId: s.user.id,
+      plan: await householdEntitlements(db(), householdId),
+    };
+    const input = {
+      source: "photo" as const,
+      parts: [{ kind: "text" as const, text: "a recipe", label: "Card" }],
+      inputs: [{ kind: "text" as const, name: null, url: null, imageHash: null }],
+      photos: [],
+    };
+    expect((await readWithAi(caller, input)).ok).toBe(true);
+
+    const overview = (await call("/api/admin/ai")).body as AdminAiOverview;
+    expect(overview.provider).toBe("fake");
+    expect(overview.month).toBe(new Date().toISOString().slice(0, 7));
+    expect(overview.reads).toBe(1);
+    expect(overview.secondLooks).toBe(0);
+    expect(overview.spentMicroUsd).toBe(1600);
+    expect(overview.byModel).toEqual([{ model: DEFAULT_MODELS[0], calls: 1, costMicroUsd: 1600 }]);
+    expect(overview.households).toEqual([
+      { householdId, name: expect.any(String), imports: 1, costMicroUsd: 1600 },
+    ]);
+    expect(overview.paused).toBe(false);
+  });
+
+  it("changes the settings, with the passkey again, recorded first", async () => {
+    const changed = await call("/api/admin/ai/settings", {
+      method: "PUT",
+      body: { alertCents: 2500, models: "claude-haiku-5-5, claude-sonnet-5-5" },
+    });
+    expect(changed.status).toBe(200);
+    expect(changed.body).toMatchObject({
+      alertCents: 2500,
+      pauseCents: 15000,
+      models: ["claude-haiku-5-5", "claude-sonnet-5-5"],
+    } satisfies Partial<AdminAiSettings>);
+    const audit = await db()
+      .select()
+      .from(adminAuditLog)
+      .orderBy(desc(adminAuditLog.createdAt))
+      .limit(2)
+      .all();
+    expect(audit.map((a) => [a.action, JSON.parse(a.details!).key]).sort()).toEqual([
+      ["setting.changed", "ai_alert_cents_per_month"],
+      ["setting.changed", "ai_models"],
+    ]);
+
+    for (const body of [
+      { models: "gpt-9" },
+      { models: "" },
+      { alertCents: -1 },
+      { pauseCents: 1.5 },
+      { oddAmount: "lots" },
+    ]) {
+      const res = await call("/api/admin/ai/settings", { method: "PUT", body });
+      expect(res.status, JSON.stringify(body)).toBe(400);
+    }
+
+    // An old passkey sign-in asks for the passkey again, and changes nothing.
+    await db()
+      .update(session)
+      .set({ createdAt: new Date(Date.now() - 60 * 60 * 1000) })
+      .where(eq(session.id, (await admin.session())!.session.id));
+    const stale = await call("/api/admin/ai/settings", {
+      method: "PUT",
+      body: { alertCents: 1 },
+    });
+    expect(stale.body).toMatchObject({ error: "passkey_reconfirm" });
+    await freshAdmin();
+    await call("/api/admin/ai/settings", {
+      method: "PUT",
+      body: { alertCents: 5000, models: DEFAULT_MODELS.join(",") },
+    });
+    const { settings } = (await call("/api/admin/ai")).body as AdminAiOverview;
+    expect(settings.alertCents).toBe(5000);
+  });
+});

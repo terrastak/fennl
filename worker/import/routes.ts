@@ -6,7 +6,9 @@ import {
   fetchableImageUrl,
   importPhotoKey,
   savedFromUrl,
+  type AiProvenance,
   type ImportJobDetail,
+  type ReadAgainError,
   type ImportJobSummary,
   type ImportWebError,
   type ImportWebResponse,
@@ -23,6 +25,8 @@ import { extensionCaller } from "../extension/routes";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
 import { householdMembers } from "../sync/push";
+import { aiConfig } from "../ai/config";
+import { canReadAgain, readAgain } from "../ai/read";
 import { markImportsSaved, removeJobPhotos } from "./jobs";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
@@ -230,22 +234,65 @@ importRoutes.get("/api/import/jobs", async (c) => {
   return c.json({ jobs: rows.map(summary) });
 });
 
+/** For a draft the AI read (phase E7): whether "Read again" is on offer, or was used. */
+async function aiDetail(
+  c: Context<ImportEnv>,
+  provenance: Partial<AiProvenance>,
+): Promise<ImportJobDetail["ai"]> {
+  if (!provenance.ai) return null;
+  const config = await aiConfig(c.env, c.var.signedIn.db);
+  return {
+    canReadAgain: canReadAgain(provenance, config),
+    readAgain: provenance.ai.rereadAt !== null,
+  };
+}
+
+async function jobDetail(c: Context<ImportEnv>, job: typeof importJob.$inferSelect) {
+  const provenance = JSON.parse(job.provenance) as Partial<WebProvenance & AiProvenance>;
+  const detail: ImportJobDetail = {
+    ...summary(job),
+    status: job.status as ImportJobDetail["status"],
+    draft: JSON.parse(job.draft ?? "null") as RecipeDraft,
+    page: provenance.page ?? { url: null, title: null },
+    snapshot: provenance.snapshot ?? null,
+    recipeId: job.recipeId,
+    ai: await aiDetail(c, provenance),
+  };
+  return detail;
+}
+
 // GET /api/import/jobs/:id: one draft, with the copy of its page for the review screen.
 importRoutes.get("/api/import/jobs/:id", async (c) => {
   const job = await ownJob(c);
   if (!job?.draft || (job.status !== "ready" && job.status !== "saved")) {
     return c.json({ error: "not_found" }, 404);
   }
-  const provenance = JSON.parse(job.provenance) as Partial<WebProvenance>;
-  const detail: ImportJobDetail = {
-    ...summary(job),
-    status: job.status as ImportJobDetail["status"],
-    draft: JSON.parse(job.draft) as RecipeDraft,
-    page: provenance.page ?? { url: null, title: null },
-    snapshot: provenance.snapshot ?? null,
-    recipeId: job.recipeId,
-  };
-  return c.json(detail);
+  return c.json(await jobDetail(c, job));
+});
+
+const READ_AGAIN_STATUS: Record<ReadAgainError, 403 | 404 | 409 | 410 | 429 | 503> = {
+  not_found: 404,
+  already_read_again: 409,
+  none_stronger: 409,
+  import_not_included: 403,
+  monthly_limit: 429,
+  paused: 503,
+  unavailable: 503,
+  inputs_gone: 410,
+};
+
+// POST /api/import/jobs/:id/read-again: a draft the AI read, read once more by the next stronger
+// model (phase E7, decided 2026-10-12). Once per draft; answers with the new draft.
+importRoutes.post("/api/import/jobs/:id/read-again", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  const result = await readAgain(
+    { env: c.env, db, householdId: household.householdId, userId, plan },
+    c.req.param("id"),
+  );
+  if (!result.ok) return c.json({ error: result.problem }, READ_AGAIN_STATUS[result.problem]);
+  const job = await ownJob(c);
+  return job ? c.json(await jobDetail(c, job)) : c.json({ error: "not_found" }, 404);
 });
 
 // POST /api/import/jobs/:id/discard: the person doesn't want it. Removed at once.
