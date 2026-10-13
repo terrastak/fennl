@@ -66,7 +66,7 @@ UI copy should say: recipes are stored in your account, and the browser keeps a 
 ### Plans (Leaning)
 
 - **Individual**: monthly and annual price, 1 seat.
-- **Household**: monthly and annual price, flat price, **2 seats**. Do **not** use per-seat billing; use a flat plan with a seat limit.
+- **Household**: monthly and annual price, flat price, **2 seats** (the seat count is a plan limit that can be changed later; see `max_members`). Do **not** use per-seat billing; use a flat plan with a seat limit.
 
 Exact prices: Open.
 
@@ -91,7 +91,7 @@ The **subscription attaches to the household** (Stripe plugin with organization 
 Derived entitlement fields (computed server-side by `householdEntitlements` in `worker/entitlements/`, never trusted from the client; built in B4):
 
 - `tier`: `free` | `individual` | `household`, plus `source` (`free`, `subscription`, `promo_code`), `trialing`, `past_due`, and `ends_at`
-- `max_members`: 1 or 2
+- `max_members`: 1 or 2 today (Decided 2026-10-13: Household stays at 2). It must come from `plan_limits` / `limit_override` like every other limit, not be fixed in code; built in G1
 - `max_devices`: 1 for free, a cap for Premium
 - `max_recipes`, `max_text_bytes`, `max_recipe_bytes`: the recipe limits (`null` means no limit)
 - `images_enabled`: boolean

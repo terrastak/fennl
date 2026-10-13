@@ -45,9 +45,13 @@ Import quality measured on a public test set; review-before-save on every import
 
 - **Decided:** C13, C14, E15 and F4b are the first additions after the beta, each as its own newly approved phase (drafts in `spec.md`, "Stage I drafts"). The beta plan comes first, built carefully with minimal owner involvement. No voice assistants (Alexa, Google).
 
+## Also decided (2026-10-13)
+
+- Social import after the AI import phases (E7–E12) are established and measured; research on access and site terms first.
+- Household stays at 2 members; seat count becomes a changeable plan limit (G1).
+- No native app; reopen only for compelling, high-usage reasons.
+- F4b keeps its USDA data current through a scheduled check that opens a pull request with a change report.
+
 ## Still to decide
 
-- Which Gap items join the first post-beta set, and in what order?
-- Match Paprika on social import timing (it's in their beta)?
-- Household size: stay at 2 or offer more after checking what Paprika allows?
-- Native-only features (widgets, Siri, Spotlight): accept the web limits, or reopen native?
+- Nothing blocking. Read Paprika's updated User Guides for the "minor improvements" the announcement doesn't list, and extend the table.
