@@ -20,6 +20,7 @@
     "test:e2e": "playwright test",
     "import:quality": "vitest run --project import-quality && cat import-quality/report.md",
     "import:save-page": "tsx import-quality/savePage.ts",
+    "import:check-sites": "tsx import-quality/siteCheck.ts",
     "db:generate": "drizzle-kit generate",
     "auth:generate": "auth generate --config worker/auth/cli.ts --output worker/db/auth-schema.ts --yes && prettier --write worker/db/auth-schema.ts",
     "db:check": "drizzle-kit check && node scripts/check-migrations.mjs",
