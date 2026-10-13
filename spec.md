@@ -1019,7 +1019,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   2. Only scale numbers that can safely be scaled; show which were scaled and which weren't, so a weight in parentheses never contradicts the main amount.
   3. Convert between US and metric (volume and weight where sensible).
 - **You check**: Double a recipe and convert it to metric.
-- **Done when**: Scaling tests cover tricky cases (ranges, parenthetical weights, "a pinch").
+- **Done when**: Scaling tests cover tricky cases (ranges, parenthetical weights, "a pinch"), and the failures Paprika users report (`docs/research/2026-10-13-paprika-user-requests.md`): a parenthetical weight scales with its amount ("1 bag (16 oz)" doubled never reads "2 bags (16 oz)"); friendly rounding (8 tablespoons shown as ½ cup, 16 as 1 cup); weight is never treated as liquid, and volume-to-weight conversion happens only where an ingredient's density is known (F4b's USDA portion data can supply it later); an ingredient can be held at a fixed amount.
 
 ### F2. Pan-size scaling
 - **Goal**: "I have a 9×13 pan, this recipe is for 8×8."
@@ -1056,6 +1056,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   2. Ingredients used in each step shown with that step, with amounts (scaled if scaling is on).
   3. Tap a time in a step ("bake 25 minutes") to start a timer; several timers at once.
   4. Check off ingredients and steps.
+  4a. A "Clear all checks" button (a Paprika user request).
   5. At the last step, one tap answers "Made it today?" (C1's "last made").
 - **You check**: Cook a real recipe from your phone.
 - **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop.
@@ -1145,7 +1146,7 @@ Not detailed yet on purpose. Each becomes its own set of phases later.
 10. Automatic nutrition calculation.
 11. Live updates between household devices (Durable Object WebSocket, `CLAUDE.md` Phase 2).
 12. Household "smart merge" beyond per-field last-write-wins, starting with line-by-line merging of ingredient and direction lists (owner's request, 2026-10-07; line IDs from C1 make it possible).
-13. **Paprika 4 parity (owner's direction 2026-10-13; table in `docs/research/2026-10-13-paprika-4-parity.md`).** The beta plan above comes first and is built meticulously, with as little as possible asked of the owner. After it, these are the first additions, each its own small, separately approved change, drafted below under "Stage I drafts": **C13** advanced search and saved searches, **C14** duplicate finder, **E15** paste text to import, **F4b** automatic nutrition. Later, with the grocery list and meal planner: calendar feed, shared lists, Web Share Target, then cookbooks (G3), sending a recipe to another Fennl user (G4) and Pantry (Stage J).
+13. **Paprika 4 parity (owner's direction 2026-10-13; table in `docs/research/2026-10-13-paprika-4-parity.md`).** The beta plan above comes first and is built meticulously, with as little as possible asked of the owner. After it, these are the first additions, each its own small, separately approved change, drafted below under "Stage I drafts": **C13** advanced search and saved searches, **C14** duplicate finder, **E15** paste text to import, **F4b** automatic nutrition; candidate **E16** import from other apps. What Paprika users complain about and request is in `docs/research/2026-10-13-paprika-user-requests.md` (requirements for the later grocery list, pantry and meal planner are listed there). Later, with the grocery list and meal planner: calendar feed, shared lists, Web Share Target, then cookbooks (G3), sending a recipe to another Fennl user (G4) and Pantry (Stage J).
     - **Decided not to match (2026-10-13): voice assistants.** The owner doesn't need voice. No Alexa skill and no Google/Gemini integration. Reasons on record: an Alexa skill would make Fennl an OAuth provider (a new login surface needing its own security review), and Google has no current custom-app path for a web app (Conversational Actions ended 2023). Revisit only if the owner asks.
     - **Web limits**: Apple widgets, Siri and Spotlight can't be done by a web app; Fennl stays web-first (**Decided**). Home-screen shortcuts and Web Share Target are the web answers. Native is reopened only if the owner asks (open question 22).
 
@@ -1191,6 +1192,13 @@ These follow the beta and are approved one at a time, like every phase. The desi
 - **Decisions**: The size limit; whether the draft keeps the pasted text until saved (suggest: yes, for the review screen only, removed with the draft).
 - **You check**: Paste a recipe from an email and one from a messy note; review and save.
 - **Done when**: Scored on a small pasted-text sample set added to `import-quality/` (laid-out text, messy text, several recipes in one paste, text with no recipe) with targets agreed before building, as for every importer; AI limits and metering tested.
+
+### E16. Import from other apps (candidate)
+- **Goal**: People coming from other recipe apps (and Paprika users whose data is "stranded" there) can bring their recipes in.
+- **Why**: Paprika users complain that recipes imported into one app can't come out to another. Fennl imports Paprika (E13) and its own export, nothing else.
+- **Steps**: (1) a reader for Schema.org recipe JSON-LD files, the common format many apps export, using the web-recipe reader (E3); (2) then one or two app-specific formats, chosen from what beta testers actually bring (candidates: Mela, Crouton, Recipe Keeper, MasterCook, Plan to Eat, Mealie, Tandoor); (3) same draft format, duplicate check and review screen as every import; gated by `import_structured_enabled` (no AI).
+- **Decisions**: Which formats, after asking testers.
+- **Done when**: Each supported format has samples in `import-quality/` scored like the other importers.
 
 ### F4b. Automatic nutrition calculation
 - **Goal**: Estimate per-serving nutrition from the ingredients, and say plainly that it is an estimate.
