@@ -41,10 +41,13 @@ Import quality measured on a public test set; review-before-save on every import
 3. **Grocery list and meal planner** (Stage I items 9) become the base for calendar feeds, Alexa, widget-like shortcuts, pantry and shared lists. They need detailed phases soon, since five Paprika 4 features hang off them.
 4. **Web limits** (items 15–17): Fennl can't match Apple widgets, Siri intents or Spotlight as a web app. That is a product decision, not a bug. See open question 22.
 
-## Decisions needed from the owner
+## Decisions (2026-10-13)
+
+- **Decided:** C13, C14, E15 and F4b are the first additions after the beta, each as its own newly approved phase (drafts in `spec.md`, "Stage I drafts"). The beta plan comes first, built carefully with minimal owner involvement. No voice assistants (Alexa, Google).
+
+## Still to decide
 
 - Which Gap items join the first post-beta set, and in what order?
 - Match Paprika on social import timing (it's in their beta)?
 - Household size: stay at 2 or offer more after checking what Paprika allows?
-- Alexa: match, or skip?
 - Native-only features (widgets, Siri, Spotlight): accept the web limits, or reopen native?
