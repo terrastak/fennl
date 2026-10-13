@@ -1,8 +1,9 @@
 # The AI model comparison (phase E7; import-quality/aiCompare.ts): reads the quality test set's
-# photos, pages, screenshots and PDFs with the cheaper model alone, the stronger model alone, and
-# the cheaper model with a second look by the stronger one when needed, then reports accuracy and
-# cost side by side on the run's summary page. It calls the real API, so it costs money (about a
-# dollar for the current test set): it runs only when started by hand (Actions › AI model
+# photos, pages, screenshots and PDFs (and, if chosen, its web pages with their recipe data left
+# out, phase E8) with the cheaper model alone, the stronger model alone, and the cheaper model with
+# a second look by the stronger one when needed, then reports accuracy and cost side by side on
+# the run's summary page. It calls the real API, so it costs money (about a dollar for the photos,
+# about another for the web pages): it runs only when started by hand (Actions › AI model
 # comparison › Run workflow). Needs the repository secret ANTHROPIC_API_KEY
 # (docs/setup/e7-ai-import.md).
 name: AI model comparison
@@ -14,6 +15,14 @@ on:
         description: "The cheaper and the stronger model, separated by a comma (blank: Fennl's own)"
         required: false
         default: ""
+      sets:
+        description: "What to read: photos (cards, pages, screenshots, PDFs), web (pages without their recipe data), or all"
+        type: choice
+        options:
+          - photos
+          - web
+          - all
+        default: photos
 
 permissions:
   contents: read
@@ -25,6 +34,7 @@ jobs:
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_MODELS: ${{ inputs.models }}
+      AI_COMPARE_SETS: ${{ inputs.sets }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

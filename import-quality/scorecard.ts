@@ -50,6 +50,8 @@ export interface Importer {
    * otherwise.
    */
   exact?: boolean;
+  /** Whether it reads this sample at all (the AI's web reading skips a saved copy with no text). */
+  accepts?(sample: Sample): Promise<boolean>;
   run(files: InputFile[], sample: Sample): Promise<RecipeDraft[]>;
 }
 
@@ -208,6 +210,7 @@ export async function runScorecard(importers: readonly Importer[]): Promise<Scor
     if (!expected) continue;
     answered += 1;
     for (const importer of importers.filter((i) => i.kinds.includes(sample.kind))) {
+      if (importer.accepts && !(await importer.accepts(sample))) continue;
       results.push(await runOne(importer, sample, expected));
     }
   }

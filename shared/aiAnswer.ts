@@ -418,3 +418,47 @@ export function stillUncertain(draft: RecipeDraft): boolean {
     draft.warnings.length > 0
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// Pages whose recipe data leaves something out (phase E8)
+// ---------------------------------------------------------------------------------------------
+
+const LISTS = [
+  ["ingredients", "ingredients"],
+  ["directions", "method"],
+] as const;
+
+/** A recipe's data on its page has no ingredients, or no method. */
+export function missingLists(draft: RecipeDraft): boolean {
+  return LISTS.some(([field]) => !draft.fields[field]?.value.length);
+}
+
+/**
+ * A page's recipe data with the lists it left out filled in from the AI's reading of the page.
+ * Everything the data does say is kept as it is (it's what the site published); only a missing
+ * ingredient list or method is taken from the AI, with how sure it was of each line.
+ */
+export function fillMissingLists(published: RecipeDraft, read: RecipeDraft): RecipeDraft {
+  const fields = { ...published.fields };
+  const lineConfidence = { ...published.lineConfidence };
+  const warnings = [...published.warnings];
+  let filled = false;
+  for (const [field, name] of LISTS) {
+    const theirs = read.fields[field];
+    if (published.fields[field]?.value.length || !theirs?.value.length) continue;
+    (fields as Record<string, unknown>)[field] = theirs;
+    lineConfidence[field] = read.lineConfidence[field];
+    const said = warnings.indexOf(`The page's recipe data has no ${field}.`);
+    if (said >= 0) warnings.splice(said, 1);
+    warnings.push(`The page's recipe data has no ${name}, so Fennl read it from the page itself.`);
+    filled = true;
+  }
+  if (!filled) return published;
+  return {
+    ...published,
+    fields,
+    lineConfidence,
+    warnings,
+    producer: { ...published.producer, model: read.producer.model },
+  };
+}

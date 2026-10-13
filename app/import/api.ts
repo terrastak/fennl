@@ -71,7 +71,15 @@ export const inputUrl = (jobId: string, input: number) =>
 export function importProblemText(problem: ImportProblem): string {
   switch (problem) {
     case "no_recipe":
-      return "Fennl couldn't find a recipe in that page. It reads the recipe details most recipe sites publish; pages without them will be readable later.";
+      return "Fennl couldn't find a recipe in that page.";
+    case "ai_import_not_included":
+      return "That page doesn't publish its recipe details, so Fennl would have to read it with AI. Reading with AI is part of Premium.";
+    case "monthly_limit":
+      return "That page needs reading with AI, and this month's AI imports are used up. They start again on the 1st.";
+    case "paused":
+      return "That page needs reading with AI, which is paused for now. Please try again later.";
+    case "ai_unavailable":
+      return "Fennl couldn't read that page just now. Please try again in a few minutes.";
     case "page_too_large":
       return "That page is too large to import. Try saving it again as “Webpage, HTML only”.";
     case "import_not_included":
@@ -88,7 +96,7 @@ export function importProblemText(problem: ImportProblem): string {
   }
 }
 
-/** "Read again" (phase E7): the AI reads the draft's photos once more, with a stronger model. */
+/** "Read again" (phase E7): the AI reads the draft's photos or page once more, with a stronger model. */
 export async function readAgain(
   id: string,
 ): Promise<{ job: ImportJobDetail } | { problem: ReadAgainError | "offline" }> {
