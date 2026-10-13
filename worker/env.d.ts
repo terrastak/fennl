@@ -49,6 +49,13 @@ interface FennlEnv {
   APPLE_KEY_ID?: string;
   /** The .p8 key file's contents (PEM, "-----BEGIN PRIVATE KEY-----"). */
   APPLE_PRIVATE_KEY?: string;
+  /**
+   * Anthropic API key, for reading recipes with Claude (phase E7, docs/setup/e7-ai-import.md).
+   * Without it, AI import is unavailable.
+   */
+  ANTHROPIC_API_KEY?: string;
+  /** "fake" only in tests and local development: a stand-in AI with no vendor (worker/ai/fake.ts). */
+  AI_PROVIDER?: string;
   /** "true" only in local development and tests: keep emails in memory instead of sending them. */
   DEV_EMAIL_OUTBOX?: string;
 }

@@ -183,6 +183,20 @@
       "when": 1791834060530,
       "tag": "0025_device_clock",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1791848717777,
+      "tag": "0026_ai_usage",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1791848730063,
+      "tag": "0027_ai_limits",
+      "breakpoints": true
     }
   ]
 }

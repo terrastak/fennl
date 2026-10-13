@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { DuplicateMatch } from "../../shared/duplicates";
+import { stillUncertain } from "../../shared/aiAnswer";
 import { draftContent } from "../../shared/importDraft";
-import type { ImportJobDetail } from "../../shared/importJobs";
+import type { ImportJobDetail, ReadAgainError } from "../../shared/importJobs";
 import { addBlockedBy } from "../../shared/limits";
 import { RECIPE_RULES, recipeBytes, recipeIssues } from "../../shared/recipe";
 import type { SyncChange } from "../../shared/sync";
@@ -23,13 +24,14 @@ import recipes from "../recipes/recipes.module.css";
 import type { RecipeDetail } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, saveChanges, useCategoryTree, useSyncStatus } from "../sync/useSync";
-import { discardImportJob, importJob, inputUrl, markImportSaved } from "./api";
+import { discardImportJob, importJob, inputUrl, markImportSaved, readAgain } from "./api";
 import styles from "./import.module.css";
 import {
   createChange,
   fieldUpdates,
   fieldsToCheck,
   lineMarks,
+  mergeReadAgain,
   moveLineTo,
   pathNames,
   tidiedBoxes,
@@ -56,7 +58,23 @@ interface Duplicate {
   detail: RecipeDetail;
 }
 
-function Review({ job }: { job: ImportJobDetail }) {
+const READ_AGAIN_PROBLEMS: Partial<Record<ReadAgainError | "offline", string>> = {
+  monthly_limit:
+    "This month’s AI imports are used up, so Fennl can’t read it again now. You can still correct it by hand.",
+  paused: "Reading with AI is paused for now. Try again later, or correct it by hand.",
+  inputs_gone: "The photos aren’t kept any more, so Fennl can’t read them again.",
+  import_not_included: "Reading again is part of Premium.",
+  offline: "Reading again needs a connection.",
+};
+
+function Review({
+  job,
+  onReadAgain,
+}: {
+  job: ImportJobDetail;
+  /** "Read again" brought a new reading (phase E7). */
+  onReadAgain: (job: ImportJobDetail) => void;
+}) {
   const initial = useMemo(() => draftContent(job.draft), [job]);
   const [session] = useState(
     () => new EditorSession({ id: job.id, initial, save: keepHere, delayMs: 500 }),
@@ -85,6 +103,8 @@ function Review({ job }: { job: ImportJobDetail }) {
     null,
   );
   const [announce, setAnnounce] = useState("");
+  const [reading, setReading] = useState(false);
+  const [readProblem, setReadProblem] = useState<string | null>(null);
   const problemRef = useRef<HTMLParagraphElement>(null);
 
   // "This looks like a recipe you already have": checked once, against the library here.
@@ -142,6 +162,30 @@ function Review({ job }: { job: ImportJobDetail }) {
     session.setBox("directions", boxes.directions);
     await session.flush();
     setAnnounce("Fractions and temperatures tidied. Undo puts them back.");
+  };
+
+  /** "Read again": the new reading, keeping whatever the person changed here. */
+  const readItAgain = async () => {
+    setReading(true);
+    setReadProblem(null);
+    const result = await readAgain(job.id);
+    setReading(false);
+    if ("job" in result) {
+      onReadAgain({
+        ...result.job,
+        draft: mergeReadAgain(job.draft, session.getSnapshot().draft, result.job.draft, paths),
+      });
+      return;
+    }
+    if (result.problem === "already_read_again" || result.problem === "none_stronger") {
+      const fresh = await importJob(job.id);
+      if (fresh) onReadAgain(fresh);
+      return;
+    }
+    setReadProblem(
+      READ_AGAIN_PROBLEMS[result.problem] ??
+        "Fennl couldn’t read it again just now. Try again in a moment.",
+    );
   };
 
   const lineTools = (from: "ingredients" | "directions") => [
@@ -428,6 +472,49 @@ function Review({ job }: { job: ImportJobDetail }) {
         <SourcePane job={job} />
 
         <div className={styles.draft}>
+          {job.ai?.canReadAgain ? (
+            <section className={styles.check} aria-labelledby="read-again-title">
+              <h2 id="read-again-title" className={styles.smallTitle}>
+                Not quite right?
+              </h2>
+              <p className={styles.note}>
+                Fennl can read the photos again, more carefully, once. Anything you&rsquo;ve already
+                changed here is kept. It counts as one of this month&rsquo;s AI imports.
+              </p>
+              <div>
+                <button
+                  type="button"
+                  className={recipes.secondary}
+                  onClick={() => void readItAgain()}
+                  disabled={reading || saving !== null}
+                >
+                  {reading ? "Reading again…" : "Read again more carefully"}
+                </button>
+              </div>
+              {reading ? (
+                <p role="status" className={styles.note}>
+                  Reading again. This can take up to a minute.
+                </p>
+              ) : null}
+              {readProblem ? (
+                <p role="alert" className={styles.problem}>
+                  {readProblem}
+                </p>
+              ) : null}
+            </section>
+          ) : job.ai && stillUncertain(job.draft) ? (
+            <section className={styles.check} aria-labelledby="best-effort-title">
+              <h2 id="best-effort-title" className={styles.smallTitle}>
+                Fennl has read this as carefully as it can
+              </h2>
+              <p className={styles.note}>
+                The parts marked &ldquo;Check this&rdquo; may not be right. Check them against the
+                photo and correct them by hand. If the photo is blurry or dark, a clearer one may
+                read better.
+              </p>
+            </section>
+          ) : null}
+
           {toCheck.length > 0 || job.draft.warnings.length > 0 ? (
             <section className={styles.check} aria-labelledby="check-title">
               <h2 id="check-title" className={styles.smallTitle}>
@@ -799,5 +886,6 @@ export function ReviewPage({ id }: { id: string }) {
       </>
     );
   }
-  return <Review key={job.id} job={job} />;
+  // A new reading ("Read again") starts the screen afresh, with the person's changes kept in it.
+  return <Review key={`${job.id}:${job.ai?.readAgain ?? false}`} job={job} onReadAgain={setJob} />;
 }

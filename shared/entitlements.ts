@@ -28,6 +28,17 @@ export const LIMIT_KEYS = [
    * day. 0 turns them off for the tier (the Chrome extension then says Premium is required).
    */
   "structured_imports_per_day",
+  /**
+   * Imports read by the AI per household per calendar month (phase E7; 300 on Premium, decided
+   * 2026-10-12). The automatic second look by a stronger model doesn't count; "Read again" does.
+   * 0 turns AI import off for the tier (import_ai_enabled).
+   */
+  "ai_imports_per_month",
+  /**
+   * A hidden backstop: the estimated AI cost per household per calendar month, in US cents ($15
+   * on Premium, decided 2026-10-12). Nobody is expected to reach it; it stops runaway costs.
+   */
+  "ai_cost_cents_per_month",
 ] as const;
 export type LimitKey = (typeof LIMIT_KEYS)[number];
 export type Limits = Record<LimitKey, number | null>;

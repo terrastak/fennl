@@ -65,7 +65,11 @@ export function passwordResetEmail(to: { email: string; name: string }, url: str
 export function adminAlertEmail(to: string, subject: string, lines: string[]): EmailMessage {
   const closing =
     "If this wasn't you, change the admin account's password and remove its passkeys right away.";
-  const paragraphs = [...lines, closing];
+  return ownerNoticeEmail(to, subject, [...lines, closing]);
+}
+
+/** A plain notice to the owner (ADMIN_ALERT_EMAIL), such as the AI's monthly cost (phase E7). */
+export function ownerNoticeEmail(to: string, subject: string, paragraphs: string[]): EmailMessage {
   return {
     to,
     subject,

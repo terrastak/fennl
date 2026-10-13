@@ -14,7 +14,7 @@
 # APP_HOSTNAME (see docs/setup/a1-cloudflare-and-github.md), plus the email and sign-in settings
 # in docs/setup/b2-email-and-sign-in.md (RESEND_API_KEY, EMAIL_FROM, GOOGLE_*, APPLE_*), and the
 # admin area settings in docs/setup/b4a-admin-access.md (ADMIN_HOSTNAME, ACCESS_*, ADMIN_ALERT_EMAIL,
-# CF_ACCESS_CLIENT_ID/SECRET).
+# CF_ACCESS_CLIENT_ID/SECRET), and ANTHROPIC_API_KEY for AI import (docs/setup/e7-ai-import.md).
 #
 # Worker secrets are written to a temporary file and uploaded with each version (--secrets-file).
 # BETTER_AUTH_SECRET is generated here, never stored in GitHub: production creates it once and
@@ -87,6 +87,9 @@ jobs:
       ACCESS_TEAM_DOMAIN: ${{ vars.ACCESS_TEAM_DOMAIN }}
       ACCESS_AUD: ${{ vars.ACCESS_AUD_PREVIEW }}
       ADMIN_ALERT_EMAIL: ${{ vars.ADMIN_ALERT_EMAIL }}
+      # Reading recipes with Claude (docs/setup/e7-ai-import.md). Previews have their own
+      # database, so their own monthly AI limits.
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       # Lets CI's own checks past Cloudflare Access (docs/setup/b4a-admin-access.md).
       CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
       CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
@@ -156,7 +159,8 @@ jobs:
           # Google and Apple only accept sign-ins at addresses registered with them, and preview
           # links change with every pull request, so previews offer email and password only.
           node scripts/worker-secrets.mjs "$RUNNER_TEMP/secrets.json" \
-            RESEND_API_KEY EMAIL_FROM ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL --new-auth-secret
+            RESEND_API_KEY EMAIL_FROM ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL \
+            ANTHROPIC_API_KEY --new-auth-secret
           if [ -z "${RESEND_API_KEY:-}" ] || [ -z "${EMAIL_FROM:-}" ]; then
             echo "::warning::RESEND_API_KEY or EMAIL_FROM isn't set, so this preview can't send sign-up emails (docs/setup/b2-email-and-sign-in.md)."
           fi
@@ -254,6 +258,7 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
       APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
     steps:
       - name: Require APP_HOSTNAME and email settings
         run: |
@@ -342,7 +347,7 @@ jobs:
           node scripts/worker-secrets.mjs "$RUNNER_TEMP/secrets.json" \
             RESEND_API_KEY EMAIL_FROM GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET \
             APPLE_CLIENT_ID APPLE_TEAM_ID APPLE_KEY_ID APPLE_PRIVATE_KEY \
-            ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL "${extra[@]}"
+            ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL ANTHROPIC_API_KEY "${extra[@]}"
       - name: Deploy
         run: npx wrangler deploy --message "main at ${GITHUB_SHA:0:7}" --secrets-file "$RUNNER_TEMP/secrets.json"
       - name: Remove the secrets file
