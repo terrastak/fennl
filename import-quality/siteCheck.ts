@@ -221,7 +221,7 @@ await Promise.all(
 );
 for (const r of results) previous.set(r.domain, r);
 const all = [...previous.values()].sort((a, b) => a.domain.localeCompare(b.domain));
-await writeFile(statusPath, `${JSON.stringify(all, null, 1)}\n`);
+await writeFile(statusPath, `${JSON.stringify(all, null, 2)}\n`);
 
 const label: Record<Status, string> = {
   reads: "Reads",
