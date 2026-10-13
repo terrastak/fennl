@@ -83,3 +83,11 @@ recipe (3 images) and 2 PDFs.
 
 For each new sample, add it to `samples.json` and the file to `test_images/`, and I'll write the
 first draft of its correct answer for you to check.
+
+## Which sites are read (marketing list)
+
+`sites.json` lists the recipe sites Fennl advertises (Paprika's list, plus sites found since; add new ones
+there). `npm run import:check-sites [domain ...]` finds a recipe page on each, runs the web importer over
+it, and rewrites `sites-status.json` and `docs/marketing/supported-sites.md`. It needs the network and
+takes a few minutes, so it is not part of CI. Sites that refuse a script's download are listed as not
+checked; check them by hand in a browser with the extension.
