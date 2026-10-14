@@ -33,6 +33,8 @@ describe("AI imports and devices", () => {
     enabled: true,
     used: 58,
     max: 300,
+    usedUp: false,
+    paused: false,
     resetsAt: "2026-11-01T00:00:00.000Z",
     ...over,
   });
@@ -40,9 +42,10 @@ describe("AI imports and devices", () => {
   it("say how many are used this month, and when they start again", () => {
     expect(aiImportsLine(ai())).toBe("58 of 300 AI imports this month");
     expect(aiImportsLine(ai({ used: 1, max: null }))).toBe("1 AI import this month");
-    expect(aiResetText(ai(), "en-GB")).toBe("They start again on 1 November.");
-    expect(aiResetText(ai({ used: 300 }), "en-GB")).toBe(
-      "This month's AI imports are used up. They start again on 1 November.",
+    expect(aiResetText(ai())).toBe("They start again on November 1.");
+    // Used up by the plan's number or the hidden cost backstop alike.
+    expect(aiResetText(ai({ used: 120, usedUp: true }))).toBe(
+      "This month's AI imports are used up. They start again on November 1.",
     );
   });
 

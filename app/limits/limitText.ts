@@ -106,17 +106,23 @@ export function aiImportsLine(ai: AiImportUsage): string {
     : `${ai.used.toLocaleString()} of ${imports(ai.max)} this month`;
 }
 
-/** "They start again on 1 November." (the first of the month, in UTC, when the count resets). */
-export function aiResetText(ai: AiImportUsage, locale?: string): string {
-  const day = new Date(ai.resetsAt).toLocaleDateString(locale, {
+/**
+ * "They start again on November 1." (the first of the month, in UTC, when the count resets), or
+ * that they're used up until then.
+ */
+export function aiResetText(ai: AiImportUsage): string {
+  // US style for now ("November 1"; the owner's choice, 2026-10-14).
+  const day = new Date(ai.resetsAt).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     timeZone: "UTC",
   });
-  return ai.max !== null && ai.used >= ai.max
+  return ai.usedUp
     ? `This month's AI imports are used up. They start again on ${day}.`
     : `They start again on ${day}.`;
 }
+
+export const AI_PAUSED_TEXT = "Reading with AI is paused for now. Please try again later.";
 
 /** "2 of 5 devices signed in", or "3 devices signed in" with no limit. */
 export function devicesLine(count: number, max: number | null): string {

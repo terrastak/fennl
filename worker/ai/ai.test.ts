@@ -427,8 +427,43 @@ describe("the household's own view (Account › Usage and limits)", () => {
       enabled: true,
       used: 1,
       max: 300,
+      usedUp: false,
+      paused: false,
       resetsAt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString(),
     });
+  });
+
+  it("reads as used up at the hidden cost backstop, without saying what it is", async () => {
+    const { v, caller } = await person();
+    // One costly import: the household's $15 backstop, long before its 300 imports.
+    await db().insert(aiUsage).values({
+      id: crypto.randomUUID(),
+      householdId: caller.householdId,
+      userId: caller.userId,
+      importJobId: null,
+      purpose: "read",
+      countsAsImport: 1,
+      provider: "fake",
+      model: FIRST,
+      status: "ok",
+      costMicroUsd: 15_000_000,
+      createdAt: new Date(),
+    });
+    const res = await v.request("/api/ai/usage");
+    const text = await res.text();
+    expect(JSON.parse(text)).toMatchObject({ used: 1, max: 300, usedUp: true, paused: false });
+    expect(text).not.toMatch(/cost|cents|usd|15000/i);
+  });
+
+  it("says when AI imports are paused for everyone", async () => {
+    const { v } = await person();
+    await writeText(db(), "ai_pause_cents_per_month", "0", null);
+    try {
+      const body = (await (await v.request("/api/ai/usage")).json()) as Record<string, unknown>;
+      expect(body).toMatchObject({ paused: true });
+    } finally {
+      await writeText(db(), "ai_pause_cents_per_month", "15000", null);
+    }
   });
 
   it("says when the plan doesn't include AI imports", async () => {

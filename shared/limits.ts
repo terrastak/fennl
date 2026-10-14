@@ -114,6 +114,13 @@ export interface AiImportUsage {
   used: number;
   /** ai_imports_per_month; null: no limit. */
   max: number | null;
+  /**
+   * No more AI imports this month: the plan's number is reached, or the household's hidden cost
+   * backstop is (whose amount is never sent).
+   */
+  usedUp: boolean;
+  /** AI imports are paused for everyone for now (Fennl's monthly pause amount is reached). */
+  paused: boolean;
   /** When the count starts again (ISO time): midnight UTC on the first of next month. */
   resetsAt: string;
 }

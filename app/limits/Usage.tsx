@@ -12,6 +12,7 @@ import { Link } from "../router";
 import {
   NOTHING_LOST,
   addBlockedText,
+  AI_PAUSED_TEXT,
   aiImportsLine,
   aiResetText,
   devicesLine,
@@ -198,6 +199,18 @@ function AiMeter({ ai }: { ai: AiImportUsage }) {
   if (!ai.enabled && ai.used === 0) {
     return <p className={limits.meterText}>Reading recipes with AI is part of Premium.</p>;
   }
+  if (ai.enabled && ai.paused) {
+    return (
+      <p role="status" className={limits.note}>
+        {AI_PAUSED_TEXT}
+      </p>
+    );
+  }
+  // Used up, by the plan's number or the hidden cost backstop (decided 2026-10-14): a full bar
+  // and when they start again, without the count, which could read as room left.
+  if (ai.enabled && ai.usedUp) {
+    return <UsageMeter label="AI imports this month" used={1} max={1} text={aiResetText(ai)} />;
+  }
   return (
     <>
       <UsageMeter
@@ -206,7 +219,7 @@ function AiMeter({ ai }: { ai: AiImportUsage }) {
         max={ai.enabled ? ai.max : null}
         text={aiImportsLine(ai)}
       />
-      {ai.enabled && ai.max !== null ? <p className={styles.help}>{aiResetText(ai)}</p> : null}
+      {ai.enabled ? <p className={styles.help}>{aiResetText(ai)}</p> : null}
     </>
   );
 }
