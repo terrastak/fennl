@@ -5,6 +5,7 @@ import { healthStatus } from "../shared/health";
 import { removeUnverifiedAccounts } from "./account/purge";
 import { accountRoutes } from "./account/routes";
 import { adminAiRoutes } from "./ai/adminRoutes";
+import { aiRoutes } from "./ai/routes";
 import { adminAccountRoutes } from "./admin/accountRoutes";
 import { accountNames } from "./admin/accounts";
 import { passedAccess } from "./admin/access";
@@ -179,6 +180,9 @@ app.route("/", imageRoutes);
 
 // Reading recipes from web pages into drafts for review (phase E4).
 app.route("/", importRoutes);
+
+// The household's AI imports this month, for the Account page (phase E7).
+app.route("/", aiRoutes);
 
 // The Chrome extension's connection to an account (phase E5).
 app.route("/", extensionLinkRoutes);

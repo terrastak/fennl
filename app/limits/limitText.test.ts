@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import type { Usage } from "../../shared/limits";
-import { addBlockedText, recipesLine, restoreBlockedText, textLine } from "./limitText";
+import type { AiImportUsage, Usage } from "../../shared/limits";
+import {
+  addBlockedText,
+  aiImportsLine,
+  aiResetText,
+  devicesLine,
+  recipesLine,
+  restoreBlockedText,
+  textLine,
+} from "./limitText";
 
 const usage = (over: Partial<Usage> = {}): Usage => ({
   recipes: 87,
@@ -17,6 +25,33 @@ describe("usage lines", () => {
     expect(textLine(usage())).toBe("1.5 MB of 3 MB of recipe text");
     expect(recipesLine(usage({ recipes: 1, maxRecipes: null }))).toBe("1 recipe");
     expect(textLine(usage({ textBytes: 2048, maxTextBytes: null }))).toBe("2 KB of recipe text");
+  });
+});
+
+describe("AI imports and devices", () => {
+  const ai = (over: Partial<AiImportUsage> = {}): AiImportUsage => ({
+    enabled: true,
+    used: 58,
+    max: 300,
+    usedUp: false,
+    paused: false,
+    resetsAt: "2026-11-01T00:00:00.000Z",
+    ...over,
+  });
+
+  it("say how many are used this month, and when they start again", () => {
+    expect(aiImportsLine(ai())).toBe("58 of 300 AI imports this month");
+    expect(aiImportsLine(ai({ used: 1, max: null }))).toBe("1 AI import this month");
+    expect(aiResetText(ai())).toBe("They start again on November 1.");
+    // Used up by the plan's number or the hidden cost backstop alike.
+    expect(aiResetText(ai({ used: 120, usedUp: true }))).toBe(
+      "This month's AI imports are used up. They start again on November 1.",
+    );
+  });
+
+  it("say how many devices are signed in", () => {
+    expect(devicesLine(1, 1)).toBe("1 of 1 device signed in");
+    expect(devicesLine(3, null)).toBe("3 devices signed in");
   });
 });
 

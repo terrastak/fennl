@@ -260,7 +260,7 @@ export function PhotoEditor({
           ) : null}
           {quota && level !== "fine" ? (
             <p className={styles.note}>
-              {photosNearText(quota, quotaFull)} <Link href="/settings#usage">Recipe storage</Link>
+              {photosNearText(quota, quotaFull)} <Link href="/account#usage">Usage and limits</Link>
             </p>
           ) : null}
         </>
