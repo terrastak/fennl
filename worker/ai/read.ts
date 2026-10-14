@@ -4,15 +4,11 @@ import {
   answerToDrafts,
   isAiAnswer,
   secondLookReasons,
+  withoutBadParts,
   type SecondLookReason,
 } from "../../shared/aiAnswer";
 import type { Entitlements } from "../../shared/entitlements";
-import {
-  draftIssues,
-  type DraftInput,
-  type DraftPhoto,
-  type RecipeDraft,
-} from "../../shared/importDraft";
+import type { DraftInput, DraftPhoto, RecipeDraft } from "../../shared/importDraft";
 import {
   importPhotoKey,
   type AiPartRecord,
@@ -144,7 +140,11 @@ async function attempt(
       inputs: input.inputs,
       photos: input.photos,
       model,
-    }).filter((draft) => draftIssues(draft, plan.max_recipe_bytes).length === 0);
+    }).flatMap((draft) => {
+      // One part that breaks the rules (an odd web address) loses only that part.
+      const kept = withoutBadParts(draft, plan.max_recipe_bytes);
+      return kept ? [kept] : [];
+    });
     // An answer whose every recipe broke the rules isn't usable either.
     if (drafts.length === 0 && result.output.recipes.length > 0) drafts = null;
   }
