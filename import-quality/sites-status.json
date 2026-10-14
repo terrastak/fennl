@@ -1,12 +1,5 @@
 [
   {
-    "domain": "10.com.au",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 31 pages tried",
-    "checked": "2026-10-13"
-  },
-  {
     "domain": "100daysofrealfood.com",
     "status": "reads",
     "url": "https://www.100daysofrealfood.com/recipe-the-best-whole-chicken-in-a-crock-pot/",
@@ -25,13 +18,6 @@
     "status": "no-data",
     "url": null,
     "note": "no recipe data on 31 pages tried",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "ah.nl",
-    "status": "unreachable",
-    "url": null,
-    "note": "home page answered 500",
     "checked": "2026-10-13"
   },
   {
@@ -91,13 +77,6 @@
     "checked": "2026-10-13"
   },
   {
-    "domain": "aol.com",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 31 pages tried",
-    "checked": "2026-10-13"
-  },
-  {
     "domain": "arla.dk",
     "status": "reads",
     "url": "https://www.arla.dk/opskrifter/sprode-gnocchi-med-tomat-og-salsiccia/",
@@ -138,6 +117,13 @@
     "url": "https://bakefromscratch.com/jumbo-pumpkin-pecan-sweet-rolls/",
     "note": "24 ingredients, 12 steps",
     "checked": "2026-10-13"
+  },
+  {
+    "domain": "barefootcontessa.com",
+    "status": "reads",
+    "url": "https://barefootcontessa.com/recipes/summer-garden-pasta",
+    "note": "9 ingredients, 2 steps",
+    "checked": "2026-10-14"
   },
   {
     "domain": "bbc.co.uk",
@@ -371,13 +357,6 @@
     "checked": "2026-10-13"
   },
   {
-    "domain": "cotta.jp",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 31 pages tried",
-    "checked": "2026-10-13"
-  },
-  {
     "domain": "damndelicious.net",
     "status": "blocked",
     "url": null,
@@ -452,13 +431,6 @@
     "status": "no-data",
     "url": null,
     "note": "no recipe data on 31 pages tried",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "elsbro.com",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe page found from the home page",
     "checked": "2026-10-13"
   },
   {
@@ -637,13 +609,6 @@
     "checked": "2026-10-13"
   },
   {
-    "domain": "hln.be",
-    "status": "blocked",
-    "url": null,
-    "note": "the site refuses downloads by a script; needs a check in a browser",
-    "checked": "2026-10-13"
-  },
-  {
     "domain": "hungry-girl.com",
     "status": "reads",
     "url": "https://www.hungry-girl.com/weekly-recipes/air-fryer-bacon-cheese-meatballs-recipe",
@@ -662,13 +627,6 @@
     "status": "reads",
     "url": "https://www.ichkoche.at/ultimate-cheese-taco-extra-kaese-extra-genuss-rezept-243078",
     "note": "8 ingredients, 8 steps",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "iga.net",
-    "status": "blocked",
-    "url": null,
-    "note": "the site refuses downloads by a script; needs a check in a browser",
     "checked": "2026-10-13"
   },
   {
@@ -774,13 +732,6 @@
     "status": "reads",
     "url": "https://www.latartinegourmande.com/2012/12/11/chocolate-berry-gratin-gluten-free-prince-edward-island/",
     "note": "11 ingredients, 8 steps",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "lcbo.com",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 31 pages tried",
     "checked": "2026-10-13"
   },
   {
@@ -1040,13 +991,6 @@
     "status": "reads",
     "url": "https://www.przyslijprzepis.pl/przepis/tort-imieninowy-z-dekoracja-waflowa",
     "note": "15 ingredients, 24 steps",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "publix.com",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 30 pages tried",
     "checked": "2026-10-13"
   },
   {
@@ -1456,13 +1400,6 @@
     "checked": "2026-10-13"
   },
   {
-    "domain": "webmd.com",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 31 pages tried",
-    "checked": "2026-10-13"
-  },
-  {
     "domain": "weightwatchers.ca",
     "status": "no-data",
     "url": null,
@@ -1530,13 +1467,6 @@
     "status": "reads",
     "url": "https://www.xiachufang.com/recipe/103966717/",
     "note": "11 ingredients, 1 steps",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "yogajournal.com",
-    "status": "no-data",
-    "url": null,
-    "note": "no recipe data on 31 pages tried",
     "checked": "2026-10-13"
   }
 ]
