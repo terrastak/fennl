@@ -85,30 +85,24 @@ Why: the site turns away downloads by a script, so it is not known either way.
 - [ ] https://williams-sonoma.com/
 - [ ] https://womansday.com/
 
-## No recipe data found by the script: check a recipe page with the extension (36)
+## No recipe data found by the script: check a recipe page with the extension (28)
 
 Why: the script sampled pages without finding recipe data; it may have picked pages that aren't recipes.
 
-- [ ] https://10.com.au/
 - [ ] https://againstallgrain.com/
-- [ ] https://aol.com/
 - [ ] https://brokeassgourmet.com/
 - [ ] https://cdkitchen.com/
 - [ ] https://chefmichaelsmith.com/
 - [ ] https://chowhound.com/
 - [ ] https://civilizedcaveman.com/
 - [ ] https://cookpad.com/
-- [ ] https://cotta.jp/
 - [ ] https://donnahay.com.au/
 - [ ] https://elisastable.wordpress.com/
-- [ ] https://elsbro.com/
 - [ ] https://food.com/
 - [ ] https://goodmorningamerica.com/
 - [ ] https://iquitsugar.com/
 - [ ] https://joyofbaking.com/
-- [ ] https://lcbo.com/
 - [ ] https://muirglen.com/
-- [ ] https://publix.com/
 - [ ] https://purewow.com/
 - [ ] https://rachaelray.com/
 - [ ] https://sippitysup.com/
@@ -119,12 +113,10 @@ Why: the script sampled pages without finding recipe data; it may have picked pa
 - [ ] https://therecipecritic.com/
 - [ ] https://theyummylife.com/
 - [ ] https://tine.no/
-- [ ] https://webmd.com/
 - [ ] https://weightwatchers.ca/
 - [ ] https://weightwatchers.com/
 - [ ] https://weightwatchers.fr/
 - [ ] https://wholefoodsmarket.com/
-- [ ] https://yogajournal.com/
 
 ## Partly read: check these (3)
 
@@ -134,11 +126,10 @@ Why: recipe data was found but some of it was missing.
 - [ ] https://pauladeen.com/ (page the script tried: https://www.pauladeen.com/video/halloween-at-home-2/)
 - [ ] https://rippedrecipes.com/ (page the script tried: https://rippedrecipes.com/recipe/chocolate-carrot-protein-pancake-449.html)
 
-## Did not answer the script: check the site opens at all (3)
+## Did not answer the script: check the site opens at all (2)
 
 Why: the site answered with an error to the script, or not at all.
 
-- [ ] https://ah.nl/
 - [ ] https://colruyt.be/
 - [ ] https://cookingismessy.com/
 

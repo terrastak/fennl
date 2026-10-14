@@ -200,11 +200,6 @@
     "source": "paprika"
   },
   {
-    "domain": "webmd.com",
-    "group": "Big recipe sites",
-    "source": "paprika"
-  },
-  {
     "domain": "deliaonline.com",
     "group": "TV and celebrity cooks",
     "source": "paprika"
@@ -510,11 +505,6 @@
     "source": "paprika"
   },
   {
-    "domain": "elsbro.com",
-    "group": "Food blogs",
-    "source": "paprika"
-  },
-  {
     "domain": "thewoksoflife.com",
     "group": "Food blogs",
     "source": "paprika"
@@ -535,22 +525,12 @@
     "source": "paprika"
   },
   {
-    "domain": "yogajournal.com",
-    "group": "Food blogs",
-    "source": "paprika"
-  },
-  {
     "domain": "101cookbooks.com",
     "group": "Brands, magazines and more",
     "source": "paprika"
   },
   {
     "domain": "againstallgrain.com",
-    "group": "Brands, magazines and more",
-    "source": "paprika"
-  },
-  {
-    "domain": "aol.com",
     "group": "Brands, magazines and more",
     "source": "paprika"
   },
@@ -665,11 +645,6 @@
     "source": "paprika"
   },
   {
-    "domain": "publix.com",
-    "group": "Brands, magazines and more",
-    "source": "paprika"
-  },
-  {
     "domain": "rd.com",
     "group": "Brands, magazines and more",
     "source": "paprika"
@@ -765,11 +740,6 @@
     "source": "paprika"
   },
   {
-    "domain": "ah.nl",
-    "group": "International",
-    "source": "paprika"
-  },
-  {
     "domain": "arla.dk",
     "group": "International",
     "source": "paprika"
@@ -811,11 +781,6 @@
   },
   {
     "domain": "cookpad.com",
-    "group": "International",
-    "source": "paprika"
-  },
-  {
-    "domain": "cotta.jp",
     "group": "International",
     "source": "paprika"
   },
@@ -900,22 +865,12 @@
     "source": "paprika"
   },
   {
-    "domain": "lcbo.com",
-    "group": "International",
-    "source": "paprika"
-  },
-  {
     "domain": "maggi.com.au",
     "group": "International",
     "source": "paprika"
   },
   {
     "domain": "marmiton.org",
-    "group": "International",
-    "source": "paprika"
-  },
-  {
-    "domain": "10.com.au",
     "group": "International",
     "source": "paprika"
   },

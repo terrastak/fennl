@@ -12,7 +12,7 @@ not been confirmed site by site: "Not checked" means exactly that. "No recipe da
 the script found none on the pages it sampled (a few of which may not be recipes); it does not
 prove the site has none, and the AI reader (Premium) covers such pages either way.
 
-Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused our script, 3 unreachable.
+Checked 212 sites: 104 read cleanly, 3 partly, 28 had no recipe data, 75 refused our script, 2 unreachable.
 
 ## Big recipe sites
 
@@ -58,7 +58,6 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | goodhousekeeping.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | midwestliving.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | realsimple.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
-| webmd.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 
 ## TV and celebrity cooks
 
@@ -130,12 +129,10 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | thegraciouspantry.com | Reads | [page](https://www.thegraciouspantry.com/pecan-crusted-chicken-recipe/) | 7 ingredients, 6 steps (2026-10-13) |
 | thehealthychef.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 | therecipecritic.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
-| elsbro.com | No recipe data found by script |  | no recipe page found from the home page (2026-10-13) |
 | thewoksoflife.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | theyummylife.com | No recipe data found by script |  | no recipe data on 2 pages tried (2026-10-13) |
 | vegweb.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | vegetariantimes.com | Reads | [page](https://www.vegetariantimes.com/recipes/vegetarian-samosa-recipe/?scope=anon) | 29 ingredients, 7 steps (2026-10-13) |
-| yogajournal.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 
 ## Brands, magazines and more
 
@@ -143,7 +140,6 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | --- | --- | --- | --- |
 | 101cookbooks.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | againstallgrain.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
-| aol.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 | atkins.com | Reads | [page](https://www.atkins.com/recipes/low-carb-nutty-quinoa-chocolate-bars) | 12 ingredients, 1 steps (2026-10-13) |
 | bobsredmill.com | Reads | [page](https://www.bobsredmill.com/recipes/how-to-make/earl-grey-snowball-cookies) | 7 ingredients, 14 steps (2026-10-13) |
 | californiaavocado.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
@@ -166,7 +162,6 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | mrfood.com | Reads | [page](https://www.mrfood.com/Cookie-Recipes/Potato-Chip-Cookies-from-Mr-Food) | 5 ingredients, 3 steps (2026-10-13) |
 | muirglen.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 | nourishedkitchen.com | Reads | [page](https://nourishedkitchen.com/beet-kvass-recipe/) | 4 ingredients, 3 steps (2026-10-13) |
-| publix.com | No recipe data found by script |  | no recipe data on 30 pages tried (2026-10-13) |
 | rd.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | readersdigest.ca | Reads | [page](https://www.readersdigest.ca/food/recipes/lavender-earl-grey-shorties/) | 6 ingredients, 4 steps (2026-10-13) |
 | realmomkitchen.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
@@ -191,7 +186,6 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 
 | Site | Result | Checked page | Note |
 | --- | --- | --- | --- |
-| ah.nl | Not reachable |  | home page answered 500 (2026-10-13) |
 | arla.dk | Reads | [page](https://www.arla.dk/opskrifter/sprode-gnocchi-med-tomat-og-salsiccia/) | 13 ingredients, 6 steps (2026-10-13) |
 | arla.se | Reads | [page](https://www.arla.se/recept/torsk-i-ugn-med-citronsas-och-dill/) | 13 ingredients, 9 steps (2026-10-13) |
 | atria.fi | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
@@ -201,7 +195,6 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | colruyt.be | Not reachable |  | home page answered 456 (2026-10-13) |
 | cookaround.com | Reads | [page](https://www.cookaround.com/ricetta/Focaccia-alta-con-farina-di-castagne.html) | 10 ingredients, 6 steps (2026-10-13) |
 | cookpad.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
-| cotta.jp | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 | douguo.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | enreceptem.hu | Reads | [page](https://www.enreceptem.hu/recept/sutotokos-csokis-muffin) | 10 ingredients, 6 steps (2026-10-13) |
 | foodnetwork.co.uk | Reads | [page](https://foodnetwork.co.uk/recipes/prawn-white-bean-and-feta-skillet-for-two) | 10 ingredients, 2 steps (2026-10-13) |
@@ -218,10 +211,8 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 | kotiliesi.fi | Reads | [page](https://kotiliesi.fi/resepti/tacos-al-pastor/) | 23 ingredients, 14 steps (2026-10-13) |
 | kraftheinz.com | Reads | [page](https://www.kraftheinz.com/claussen/recipes/568939-the-best-deviled-eggs-recipe) | 6 ingredients, 3 steps (2026-10-13) |
 | kyounoryouri.jp | Reads | [page](https://www.kyounoryouri.jp/recipe/604914_%E3%81%95%E3%81%A4%E3%81%BE%E3%81%84%E3%82%82%E3%81%AE%E3%81%8B%E3%81%8D%E6%8F%9A%E3%81%92.html) | 5 ingredients, 3 steps (2026-10-13) |
-| lcbo.com | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 | maggi.com.au | Reads | [page](https://www.maggi.com.au/recipes/homestyle-tomato-and-chicken-noodles) | 8 ingredients, 2 steps (2026-10-13) |
 | marmiton.org | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
-| 10.com.au | No recipe data found by script |  | no recipe data on 31 pages tried (2026-10-13) |
 | matprat.no | Reads | [page](https://www.matprat.no/oppskrifter/kos/fetakrem-med-biff-og-beter/) | 19 ingredients, 11 steps (2026-10-13) |
 | metro.ca | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | migusto.migros.ch | Reads | [page](https://migusto.migros.ch/de/rezepte/spaghetti-aglio-olio-e-peperoncino) | 7 ingredients, 3 steps (2026-10-13) |
@@ -268,5 +259,5 @@ Checked 221 sites: 104 read cleanly, 3 partly, 36 had no recipe data, 75 refused
 
 | Site | Result | Checked page | Note |
 | --- | --- | --- | --- |
-| barefootcontessa.com | Reads | [page](https://barefootcontessa.com/recipes/summer-garden-pasta) | 9 ingredients, 2 steps (2026-10-13) |
+| barefootcontessa.com | Reads | [page](https://barefootcontessa.com/recipes/summer-garden-pasta) | 9 ingredients, 2 steps (2026-10-14) |
 
