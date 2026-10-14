@@ -102,3 +102,18 @@ export function photoLevel(photos: PhotoUsage): UsageLevel {
   const b = usageLevel(photos.count, photos.maxCount);
   return ORDER.indexOf(a) >= ORDER.indexOf(b) ? a : b;
 }
+
+/**
+ * A household's AI imports this month (GET /api/ai/usage): photos, PDFs and pages without recipe
+ * data read by the AI. Months are calendar months in UTC. The hidden cost backstop is never sent.
+ */
+export interface AiImportUsage {
+  /** Whether the plan includes AI imports. */
+  enabled: boolean;
+  /** AI imports this month (the automatic second look doesn't count; "Read again" does). */
+  used: number;
+  /** ai_imports_per_month; null: no limit. */
+  max: number | null;
+  /** When the count starts again (ISO time): midnight UTC on the first of next month. */
+  resetsAt: string;
+}

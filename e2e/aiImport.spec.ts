@@ -77,4 +77,15 @@ test("a clear reading needs no notice; Read again stays on offer", async ({
   await expect(
     page.getByRole("region", { name: "Fennl has read this as carefully as it can" }),
   ).toHaveCount(0);
+
+  // The Account page counts it against the month's AI imports.
+  await page.goto("/account");
+  const usage = page.getByRole("region", { name: "Usage and limits" });
+  await expect(usage.getByRole("meter", { name: "AI imports this month" })).toHaveAttribute(
+    "aria-valuetext",
+    "1 of 300 AI imports this month",
+  );
+  await expect(usage).toContainText("They start again on");
+  await expect(usage).toContainText(/\d+ of \d+ devices? signed in/);
+  await expectAccessible(page);
 });

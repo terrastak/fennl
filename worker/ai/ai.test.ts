@@ -414,3 +414,26 @@ describe("Fennl-wide spending", () => {
     }
   });
 });
+
+describe("the household's own view (Account › Usage and limits)", () => {
+  it("shows this month's AI imports against the plan, never the cost", async () => {
+    const { v, caller } = await person();
+    expect((await createAiImport(caller, card())).ok).toBe(true);
+    const res = await v.request("/api/ai/usage");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    const now = new Date();
+    expect(body).toEqual({
+      enabled: true,
+      used: 1,
+      max: 300,
+      resetsAt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString(),
+    });
+  });
+
+  it("says when the plan doesn't include AI imports", async () => {
+    const { v } = await person(false);
+    const body = (await (await v.request("/api/ai/usage")).json()) as Record<string, unknown>;
+    expect(body).toMatchObject({ enabled: false, used: 0, max: 0 });
+  });
+});

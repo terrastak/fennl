@@ -82,9 +82,9 @@ test("The bar warns, then blocks Add recipe; editing and download still work; Tr
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByText("Even better the next day.")).toBeVisible();
 
-  // Settings shows the same, and the download is there.
-  await page.goto("/settings");
-  const section = page.getByRole("region", { name: "Recipe storage" });
+  // The Account page shows the same, and the download is there.
+  await page.goto("/account");
+  const section = page.getByRole("region", { name: "Usage and limits" });
   await expect(section.getByRole("meter", { name: "Recipes" })).toBeVisible();
   await expect(section).toContainText("5 of 5 recipes");
   await expect(section).toContainText("of 3 MB of recipe text");
