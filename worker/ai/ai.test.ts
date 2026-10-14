@@ -414,3 +414,61 @@ describe("Fennl-wide spending", () => {
     }
   });
 });
+
+describe("the household's own view (Account › Usage and limits)", () => {
+  it("shows this month's AI imports against the plan, never the cost", async () => {
+    const { v, caller } = await person();
+    expect((await createAiImport(caller, card())).ok).toBe(true);
+    const res = await v.request("/api/ai/usage");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    const now = new Date();
+    expect(body).toEqual({
+      enabled: true,
+      used: 1,
+      max: 300,
+      usedUp: false,
+      paused: false,
+      resetsAt: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString(),
+    });
+  });
+
+  it("reads as used up at the hidden cost backstop, without saying what it is", async () => {
+    const { v, caller } = await person();
+    // One costly import: the household's $15 backstop, long before its 300 imports.
+    await db().insert(aiUsage).values({
+      id: crypto.randomUUID(),
+      householdId: caller.householdId,
+      userId: caller.userId,
+      importJobId: null,
+      purpose: "read",
+      countsAsImport: 1,
+      provider: "fake",
+      model: FIRST,
+      status: "ok",
+      costMicroUsd: 15_000_000,
+      createdAt: new Date(),
+    });
+    const res = await v.request("/api/ai/usage");
+    const text = await res.text();
+    expect(JSON.parse(text)).toMatchObject({ used: 1, max: 300, usedUp: true, paused: false });
+    expect(text).not.toMatch(/cost|cents|usd|15000/i);
+  });
+
+  it("says when AI imports are paused for everyone", async () => {
+    const { v } = await person();
+    await writeText(db(), "ai_pause_cents_per_month", "0", null);
+    try {
+      const body = (await (await v.request("/api/ai/usage")).json()) as Record<string, unknown>;
+      expect(body).toMatchObject({ paused: true });
+    } finally {
+      await writeText(db(), "ai_pause_cents_per_month", "15000", null);
+    }
+  });
+
+  it("says when the plan doesn't include AI imports", async () => {
+    const { v } = await person(false);
+    const body = (await (await v.request("/api/ai/usage")).json()) as Record<string, unknown>;
+    expect(body).toMatchObject({ enabled: false, used: 0, max: 0 });
+  });
+});

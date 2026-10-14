@@ -10,7 +10,6 @@ import { useAppearance } from "../appearance/appearance";
 import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { ExportSection } from "../export/ExportSection";
-import { UsageSection } from "../limits/Usage";
 import { LocalCopySection } from "../sync/LocalCopySection";
 import { Link } from "../router";
 import { PageHeader } from "./PageHeader";
@@ -151,7 +150,13 @@ export function SettingsPage() {
         </p>
       </section>
 
-      <UsageSection />
+      <section aria-labelledby="usage-title" className={styles.section}>
+        <h2 id="usage-title">Usage and limits</h2>
+        <p className={styles.help}>
+          How many recipes, photos and AI imports you&rsquo;re using, against your plan, is on your{" "}
+          <Link href="/account#usage">Account</Link> page.
+        </p>
+      </section>
 
       <ExportSection />
 

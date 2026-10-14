@@ -324,7 +324,7 @@ export function RecipeEditor({ id, isNew }: { id: string; isNew: boolean }) {
           {addBlockedText(start.blocked, usage)} {NOTHING_LOST}
         </p>
         <p>
-          <Link href="/settings#usage">Recipe storage</Link> · <Link href="/trash">Trash</Link>
+          <Link href="/account#usage">Usage and limits</Link> · <Link href="/trash">Trash</Link>
         </p>
       </>
     );

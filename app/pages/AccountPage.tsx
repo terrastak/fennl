@@ -2,6 +2,7 @@ import { useEffect, useId, useState, type FormEvent } from "react";
 import type { Entitlements } from "../../shared/entitlements";
 import { authClient, useSession } from "../auth/client";
 import { SignedInSection } from "../account/SignedInSection";
+import { UsageCard } from "../limits/Usage";
 import { codeErrorMessage } from "../auth/signUpCode";
 import { navigate } from "../navigation";
 import { Link } from "../router";
@@ -80,6 +81,7 @@ export function AccountPage() {
         </button>
       </section>
       {plan ? <PlanSection plan={plan} /> : null}
+      <UsageCard className={`${styles.card} ${styles.stacked}`} />
       <SignedInSection />
       <CodeSection onUsed={setPlan} />
       <section className={`${styles.card} ${styles.stacked}`} aria-labelledby="feedback-title">

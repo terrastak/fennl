@@ -36,7 +36,7 @@ export function SyncNotices() {
     });
   }
   if (status.held > 0) {
-    notices.push({ key: "held", text: HELD_TEXT, href: "/settings#usage" });
+    notices.push({ key: "held", text: HELD_TEXT, href: "/account#usage" });
   }
   if (status.phase === "signed_out") {
     notices.push({
@@ -63,7 +63,7 @@ export function SyncNotices() {
               {notice.action}
             </button>
           ) : null}
-          {notice.href ? <Link href={notice.href}>Recipe storage</Link> : null}
+          {notice.href ? <Link href={notice.href}>Usage and limits</Link> : null}
         </div>
       ))}
     </div>
