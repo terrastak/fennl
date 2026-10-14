@@ -51,3 +51,4 @@ next-env.d.ts
 # Personal Claude Code settings
 .claude/settings.local.json
 /import-quality/ai-report.md
+/import-quality/ai-answers.json

@@ -30,7 +30,7 @@ permissions:
 jobs:
   compare:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     env:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_MODELS: ${{ inputs.models }}
@@ -56,3 +56,15 @@ jobs:
           if [ -f import-quality/ai-report.md ]; then
             cat import-quality/ai-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
+      # Every answer the AI gave, so the second-look rules can be re-checked on them for free
+      # (npm run ai:replay). Kept with the run for 30 days.
+      - name: Keep the answers
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ai-answers
+          path: |
+            import-quality/ai-answers.json
+            import-quality/ai-report.md
+          if-no-files-found: ignore
+          retention-days: 30
