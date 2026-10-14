@@ -14,7 +14,13 @@ import { readWebRecipes } from "../shared/webRecipe";
  * refused this script, not that Fennl can't read it.
  */
 
-type Site = { domain: string; group: string; source: "paprika" | "fennl" | "manual" };
+type Site = {
+  domain: string;
+  group: string;
+  source: "paprika" | "fennl" | "manual";
+  /** Set when a person has tried the site in the browser extension. */
+  byHand?: { date: string; note: string };
+};
 type Status = "reads" | "partial" | "no-data" | "blocked" | "unreachable";
 type Result = { domain: string; status: Status; url: string | null; note: string; checked: string };
 
@@ -235,6 +241,9 @@ const all_sites = JSON.parse(
 ) as Site[];
 const byDomain = new Map(all.map((r) => [r.domain, r]));
 const count = (s: Status) => all.filter((r) => r.status === s).length;
+const handChecked = all_sites.filter(
+  (s) => s.byHand && byDomain.get(s.domain)?.status !== "reads",
+).length;
 const lines = [
   "# Recipe sites Fennl can import",
   "",
@@ -245,14 +254,20 @@ const lines = [
   "Fennl reads a recipe from the page's Schema.org data, not from site-specific code, so it works on",
   "any site that publishes it, and the AI reader (Premium) covers pages that don't. The check below",
   "downloads a recipe page from a server, which some sites refuse. The Chrome extension reads the",
-  "page as the person's browser shows it, so a refusal here is expected to be fine there, but it has",
-  'not been confirmed site by site: "Not checked" means exactly that. "No recipe data found" means',
+  "page as the person's browser shows it, so a refusal here does not stop it working there.",
+  'The script alone often cannot tell: "Not checked" means it was refused. "No recipe data found" means',
   "the script found none on the pages it sampled (a few of which may not be recipes); it does not",
   "prove the site has none, and the AI reader (Premium) covers such pages either way.",
+  "",
+  '"Checked by hand" means the owner opened the site, confirmed it has recipes, and imported from it',
+  "with the extension. Importing worked, with varying quality that was not",
+  "recorded per site.",
   "",
   `Checked ${all.length} sites: ${count("reads")} read cleanly, ${count("partial")} partly, ` +
     `${count("no-data")} had no recipe data, ${count("blocked")} refused our script, ` +
     `${count("unreachable")} unreachable.`,
+  `${handChecked} of the sites the script could not confirm were tried by hand in the extension and ` +
+    "import (how well varies).",
   "",
 ];
 for (const group of [...new Set(all_sites.map((s) => s.group))]) {
@@ -264,6 +279,12 @@ for (const group of [...new Set(all_sites.map((s) => s.group))]) {
   );
   for (const s of all_sites.filter((x) => x.group === group)) {
     const r = byDomain.get(s.domain);
+    if (r && r.status !== "reads" && s.byHand) {
+      lines.push(
+        `| ${s.domain} | Imports in the extension (checked by hand) | | Checked by hand ${s.byHand.date}. Script alone: ${label[r.status].toLowerCase()}. |`,
+      );
+      continue;
+    }
     lines.push(
       r
         ? `| ${s.domain} | ${label[r.status]} | ${r.url ? `[page](${r.url})` : ""} | ${r.note} (${r.checked}) |`
@@ -321,6 +342,7 @@ const check_lines = [
 for (const t of todo) {
   const rows = all_sites
     .map((site) => ({ site, r: byDomain.get(site.domain) }))
+    .filter(({ site }) => !site.byHand)
     .filter(({ r }) => (r ? r.status === t.status : t.status === "unchecked"));
   if (rows.length === 0) continue;
   check_lines.push(`## ${t.title} (${rows.length})`, "", `Why: ${t.why}.`, "");
@@ -329,6 +351,9 @@ for (const t of todo) {
     check_lines.push(`- [ ] https://${site.domain}/${sample}`);
   }
   check_lines.push("");
+}
+if (!check_lines.some((l) => l.startsWith("- [ ]"))) {
+  check_lines.push("Nothing left to check: every site is confirmed, by the script or by hand.", "");
 }
 await writeFile(
   join(root, "docs", "marketing", "sites-to-check.md"),
