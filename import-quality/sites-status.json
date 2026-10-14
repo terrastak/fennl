@@ -609,13 +609,6 @@
     "checked": "2026-10-13"
   },
   {
-    "domain": "hln.be",
-    "status": "blocked",
-    "url": null,
-    "note": "the site refuses downloads by a script; needs a check in a browser",
-    "checked": "2026-10-13"
-  },
-  {
     "domain": "hungry-girl.com",
     "status": "reads",
     "url": "https://www.hungry-girl.com/weekly-recipes/air-fryer-bacon-cheese-meatballs-recipe",
@@ -634,13 +627,6 @@
     "status": "reads",
     "url": "https://www.ichkoche.at/ultimate-cheese-taco-extra-kaese-extra-genuss-rezept-243078",
     "note": "8 ingredients, 8 steps",
-    "checked": "2026-10-13"
-  },
-  {
-    "domain": "iga.net",
-    "status": "blocked",
-    "url": null,
-    "note": "the site refuses downloads by a script; needs a check in a browser",
     "checked": "2026-10-13"
   },
   {

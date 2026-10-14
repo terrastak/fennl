@@ -12,7 +12,7 @@ not been confirmed site by site: "Not checked" means exactly that. "No recipe da
 the script found none on the pages it sampled (a few of which may not be recipes); it does not
 prove the site has none, and the AI reader (Premium) covers such pages either way.
 
-Checked 212 sites: 104 read cleanly, 3 partly, 28 had no recipe data, 75 refused our script, 2 unreachable.
+Checked 210 sites: 104 read cleanly, 3 partly, 28 had no recipe data, 73 refused our script, 2 unreachable.
 
 ## Big recipe sites
 
@@ -201,9 +201,7 @@ Checked 212 sites: 104 read cleanly, 3 partly, 28 had no recipe data, 75 refused
 | giallozafferano.it | Partly | [page](https://www.giallozafferano.it/ricette-cat/facili-e-veloci/) | recipe data found, but 0 ingredients and 0 steps (2026-10-13) |
 | gourmettraveller.com.au | Reads | [page](https://www.gourmettraveller.com.au/recipe/fast-recipes/barramundi-fish-cakes-with-spanakorizo-orzo/) | 21 ingredients, 5 steps (2026-10-13) |
 | gustave.com | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
-| hln.be | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | ichkoche.at | Reads | [page](https://www.ichkoche.at/ultimate-cheese-taco-extra-kaese-extra-genuss-rezept-243078) | 8 ingredients, 8 steps (2026-10-13) |
-| iga.net | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | k-ruoka.fi | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | kochbar.de | Not checked (refused our script) |  | the site refuses downloads by a script; needs a check in a browser (2026-10-13) |
 | koket.se | Reads | [page](https://www.koket.se/negroni-david-kringlunds-recept) | 3 ingredients, 2 steps (2026-10-13) |

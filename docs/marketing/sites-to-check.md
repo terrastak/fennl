@@ -5,7 +5,7 @@ results in `import-quality/sites.json` and re-run. These are the sites the scrip
 Fennl reads. For each: open the link, find a recipe, click **Import this page** in the Chrome
 extension, and see whether the ingredients and steps come through.
 
-## Refused the script: open a recipe on the site and use Import this page (75)
+## Refused the script: open a recipe on the site and use Import this page (73)
 
 Why: the site turns away downloads by a script, so it is not known either way.
 
@@ -44,9 +44,7 @@ Why: the site turns away downloads by a script, so it is not known either way.
 - [ ] https://goya.com/
 - [ ] https://grouprecipes.com/
 - [ ] https://gustave.com/
-- [ ] https://hln.be/
 - [ ] https://hunts.com/
-- [ ] https://iga.net/
 - [ ] https://justonecookbook.com/
 - [ ] https://k-ruoka.fi/
 - [ ] https://kochbar.de/
