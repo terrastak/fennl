@@ -32,6 +32,7 @@ Recorded from the planning conversation on 2026-10-01.
 | Original card/page photos | **Always kept** with the imported recipe. They count toward the image quota. |
 | Social media / video import | **After the beta.** |
 | Paprika 3 import | **Essential for the beta.** The owner has a large library, photos included. |
+| Paprika 4 parity | Fennl must at least match Paprika 4's announced features and ideally beat them. Tracked in `docs/research/2026-10-13-paprika-4-parity.md`; gaps are proposed as post-beta phases in Stage I item 13. Beta scope is unchanged. |
 | Beta features beyond the recipe box | **Scaling and conversions** (incl. pan sizes) and **cook mode**. Grocery list and meal planner come after the beta. |
 | Recipe details in beta | Basics plus **multiple photos per recipe**, **nested categories**, **linked sub-recipes**, **nutrition** (stored and shown; automatic calculation later). |
 | Devices | **Phone and computer equally.** One web app that works at both sizes and can be installed to the home screen. |
@@ -1026,7 +1027,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   2. Only scale numbers that can safely be scaled; show which were scaled and which weren't, so a weight in parentheses never contradicts the main amount.
   3. Convert between US and metric (volume and weight where sensible).
 - **You check**: Double a recipe and convert it to metric.
-- **Done when**: Scaling tests cover tricky cases (ranges, parenthetical weights, "a pinch").
+- **Done when**: Scaling tests cover tricky cases (ranges, parenthetical weights, "a pinch"), and the failures Paprika users report (`docs/research/2026-10-13-paprika-user-requests.md`): a parenthetical weight scales with its amount ("1 bag (16 oz)" doubled never reads "2 bags (16 oz)"); friendly rounding (8 tablespoons shown as ½ cup, 16 as 1 cup); weight is never treated as liquid, and volume-to-weight conversion happens only where an ingredient's density is known (F4b's USDA portion data can supply it later); an ingredient can be held at a fixed amount.
 
 ### F2. Pan-size scaling
 - **Goal**: "I have a 9×13 pan, this recipe is for 8×8."
@@ -1063,6 +1064,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   2. Ingredients used in each step shown with that step, with amounts (scaled if scaling is on).
   3. Tap a time in a step ("bake 25 minutes") to start a timer; several timers at once.
   4. Check off ingredients and steps.
+  4a. A "Clear all checks" button (a Paprika user request).
   5. At the last step, one tap answers "Made it today?" (C1's "last made").
 - **You check**: Cook a real recipe from your phone.
 - **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop.
@@ -1079,7 +1081,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### G1. Households: invite and join (merged recipe box)
 - **Goal**: Two people share one recipe box (rules decided 2026-10-03; see `CLAUDE.md`, "Recipe ownership in households").
 - **Steps**:
-  1. Invite one person by email (max 2 members, enforce `max_members`).
+  1. Invite one person by email. The seat count is a plan limit, not a number in code (owner's request, 2026-10-13: stay at 2 for now, changeable later): add `max_members` to `plan_limits` (Individual 1, Household 2, Free 1; per-account exceptions through `limit_override`), read it in `householdEntitlements` in place of today's fixed 2 in `worker/entitlements/compute.ts`, and enforce it here. Raising it later is then an admin-console edit. Billing and split rules that assume two partners (`CLAUDE.md`, "Household billing rules") would need their own review before it goes above 2.
   2. On joining, both people's devices download the other's recipes. Nothing is moved or copied on the server, and every recipe keeps its owner.
   3. Beta grants on joining: handled as decided in open question 15.
 - **You check**: Invite a second test account. After accepting, both see one combined recipe box.
@@ -1147,11 +1149,86 @@ Not detailed yet on purpose. Each becomes its own set of phases later.
 5. Phone share-button import.
 6. Extensions for Edge, Firefox, Safari.
 7. Manual "clip a field" fallback in the extension.
-8. Social and video import.
+8. Social and video import. **Decided order (2026-10-13): only after the AI import phases (E7–E12) are built and measured**, since it rests on them. It also needs its own research first: how a post's caption, transcript or frames can be obtained within each site's terms and without special access (the hard part, more than the AI step), and what the AI cost per video is. Until then, screenshots (E11) and pasted text (E15) cover the same recipes.
 9. Grocery list and meal planner.
 10. Automatic nutrition calculation.
 11. Live updates between household devices (Durable Object WebSocket, `CLAUDE.md` Phase 2).
 12. Household "smart merge" beyond per-field last-write-wins, starting with line-by-line merging of ingredient and direction lists (owner's request, 2026-10-07; line IDs from C1 make it possible).
+13. **Paprika 4 parity (owner's direction 2026-10-13; table in `docs/research/2026-10-13-paprika-4-parity.md`).** The beta plan above comes first and is built meticulously, with as little as possible asked of the owner. After it, these are the first additions, each its own small, separately approved change, drafted below under "Stage I drafts": **C13** advanced search and saved searches, **C14** duplicate finder, **E15** paste text to import, **F4b** automatic nutrition; candidates **E16** import from other apps and **E17** import many links at once. How people were asked what they want, and a ranked list of further ways to find out (opt-in measurement, fake-door buttons, interviews, import-failure logs): `docs/research/2026-10-13-finding-what-people-want.md`. What Paprika users complain about and request is in `docs/research/2026-10-13-paprika-user-requests.md` (requirements for the later grocery list, pantry and meal planner are listed there). Later, with the grocery list and meal planner: calendar feed, shared lists, Web Share Target, then cookbooks (G3), sending a recipe to another Fennl user (G4) and Pantry (Stage J).
+    - **Decided not to match (2026-10-13): voice assistants.** The owner doesn't need voice. No Alexa skill and no Google/Gemini integration. Reasons on record: an Alexa skill would make Fennl an OAuth provider (a new login surface needing its own security review), and Google has no current custom-app path for a web app (Conversational Actions ended 2023). Revisit only if the owner asks.
+    - **Web limits**: Apple widgets, Siri and Spotlight can't be done by a web app; Fennl stays web-first (**Decided**). Home-screen shortcuts and Web Share Target are the web answers. Native is reopened only if the owner asks (open question 22).
+
+## Stage I drafts: the first post-beta additions (drafted 2026-10-13, not approved)
+
+These follow the beta and are approved one at a time, like every phase. The design rule for all four: **they work by themselves.** No new accounts, keys or settings for the owner, no new dependencies without asking, nothing that changes what a person has already saved without showing them first.
+
+### C13. Advanced search and saved searches
+- **Goal**: Find recipes by what they are, not just by words ("under 30 minutes, serves 4+, rated 4 and up, in Dinners, no mushrooms").
+- **Builds on**: C8's on-device search (`app/sync/search.ts`, SQLite on the person's device, so it already works offline and is fast at 10,000 recipes), C7 categories, C5 list.
+- **Steps**:
+  1. Filters that stack: prep time, cook time, total time, servings, rating, favorite, category (several), source, last made, has photo (once D2 is in, the "has photo" filter C8 left waiting), has nutrition, and ingredient included or excluded (matched on the ingredient text already indexed).
+  2. Combine with "all of these" and "any of these" groups, plus the existing words search. Every state is kept in the address, as C8 does, so reload and links keep it.
+  3. Save a search by name. A saved search is a rule, not a list of recipes, so it stays current as recipes change. It follows the person to their other devices: stored per user in the synced records like categories (a new synced kind, so the sync schema version and a client migration are needed, per the data-model rules). Saved searches are the person's own; they are not shown to a household partner.
+  4. Times and servings are free text today in places; use what the recipe model already stores as numbers, and say plainly when a recipe has none ("Time not set") instead of guessing.
+  4a. Easy combinations (Paprika and Mela users ask for these): two or more categories at once ("Soup" and "Vegan"), "none of these" (leave out a category or an ingredient), search reachable from any screen, and a "Surprise me" / "Something I haven't made in a while" button using last-made data (on the device, no AI).
+  5. Category suggestions in the editor: offer the person's own existing categories that recipes with similar ingredients already use (computed on the device from their library, no AI, no cost). Suggest only; never create a category or file a recipe without a tap.
+- **Decisions**: None expected. Dependent on whether times and servings are stored as numbers in the recipe model (check in `shared/recipe.ts` when approved).
+- **You check**: Build "under 30 minutes, 4 stars and up, in Dinners", save it, open it on your phone; add a recipe that matches and see it appear.
+- **Done when**: Filter logic is tested for every filter and for AND/OR; the search-speed test still passes at 10,000 recipes with filters on; saved searches sync and survive a restore from Trash; offline works on Premium.
+
+### C14. Duplicate finder
+- **Goal**: Find recipes saved twice and tidy them up safely.
+- **Builds on**: `shared/duplicates.ts` (E4: same page, or a title that reads the same with mostly the same ingredients), Trash (C9) for undo.
+- **Steps**:
+  1. A "Find duplicates" page scans the library on the device and lists groups of likely duplicates, with the reason ("same page", "same title and ingredients"). It scans only recipes the person can see; a partner's recipe can be compared but a merge never changes whose recipe it is (owner stays, per the household rules).
+  2. Side-by-side compare with differences marked. For each group: keep one, or merge: choose per field which version to keep (reuse G2's field comparison when it exists; until then, the plain field list).
+  3. The kept recipe takes the chosen fields; photos, categories and "made it" days from both are kept; the other goes to Trash (restorable for 30 days). Nothing is deleted outright, and nothing merges without a confirmation showing exactly what changes.
+  4. "Not a duplicate" is remembered per pair so it isn't offered again.
+  5. Runs only when asked (no background scanning, no cost to Free or Premium).
+- **Decisions**: What to do with a pair owned by two household members (suggest: merge into the first person's recipe only with the other's recipe going to Trash, where either can restore it).
+- **You check**: Import a recipe you already have; find it as a duplicate; merge, then restore the removed one from Trash.
+- **Done when**: Tests cover similar and different recipes (including the near-misses already in `duplicates.test.ts`), field-by-field merge, the Trash undo, "not a duplicate", and a household pair.
+
+### E15. Paste text to import
+- **Goal**: Paste a recipe from an email, note, document or message and get a reviewed draft.
+- **Builds on**: E7 (the AI layer already accepts text input; `readWithAi` / `createAiImport`), E4's review screen, E8's web-page-text path.
+- **Steps**:
+  1. A "Paste recipe text" box on the Import page. Works on phone and computer, no extension needed.
+  2. If the text is a single web address, say it isn't supported until paste-a-link import (Stage I item 4) rather than silently fetching anything.
+  3. First try the cheap, no-AI reading where the text is clearly laid out (a "Ingredients" heading and a "Directions" heading, using E2's ingredient reader). Only when that doesn't find a recipe, send the text to the AI (`import_ai_enabled`, the household's monthly limits, `ai_usage` metering, cheaper model first with the automatic second look, as for every AI import). Free accounts therefore get the no-AI reading and see a clear "needs Premium" message when the AI would be needed (the free-tier teaser question stays open, #14).
+  4. Size limit on pasted text, checked on the server. The text is not kept after the draft is saved or removed; the draft keeps a source label "Pasted text" and no copy of the original. (Unlike photos, there is no original to store; state this on the review screen.)
+  5. Same review screen, same duplicate check, same "Read again" once.
+- **Decisions**: The size limit; whether the draft keeps the pasted text until saved (suggest: yes, for the review screen only, removed with the draft).
+- **You check**: Paste a recipe from an email and one from a messy note; review and save.
+- **Done when**: Scored on a small pasted-text sample set added to `import-quality/` (laid-out text, messy text, several recipes in one paste, text with no recipe) with targets agreed before building, as for every importer; AI limits and metering tested.
+
+### E16. Import from other apps (candidate)
+- **Goal**: People coming from other recipe apps (and Paprika users whose data is "stranded" there) can bring their recipes in.
+- **Why**: Paprika users complain that recipes imported into one app can't come out to another. Fennl imports Paprika (E13) and its own export, nothing else.
+- **Steps**: (1) a reader for Schema.org recipe JSON-LD files, the common format many apps export, using the web-recipe reader (E3); (2) then one or two app-specific formats, chosen from what beta testers actually bring (candidates: Mela, Crouton, Recipe Keeper, MasterCook, Plan to Eat, Mealie, Tandoor); (3) same draft format, duplicate check and review screen as every import; gated by `import_structured_enabled` (no AI).
+- **Decisions**: Which formats, after asking testers.
+- **Done when**: Each supported format has samples in `import-quality/` scored like the other importers.
+
+### E17. Import many links at once (candidate)
+- **Goal**: Start using Fennl without saving recipes one at a time. Paprika users ask for batch import of bookmarks.
+- **Steps**: paste a list of addresses (or choose browser bookmarks exported as a file); each becomes a draft as in E3/E8, in a batch (`batch_id`) reviewed one by one or together; sites that fail are listed so the person can fix or skip them. Needs paste-a-link import (Stage I item 4) first. Respects `structured_imports_per_day` and the AI limits.
+- **Done when**: a 50-link batch reviews cleanly, with failures listed and no duplicates saved.
+
+### F4b. Automatic nutrition calculation
+- **Goal**: Estimate per-serving nutrition from the ingredients, and say plainly that it is an estimate.
+- **Builds on**: F4's stored nutrition (`RecipeNutrition`, the nine `NUTRIENTS`), E2's ingredient reader (`readIngredient`, amounts and units), F1's unit conversion.
+- **Steps**:
+  1. **Data source (check before building, Unverified)**: USDA FoodData Central is public-domain US government data. Before the phase starts I read its current terms and data downloads and report what I found. Preferred approach needing nothing from the owner: use a downloaded, trimmed copy of the USDA foods (stored with the app, no live API key, no per-call cost, works offline). A live API would need a key the owner would have to create, so it is not the default.
+  1a. **Keeping the data current (owner's request, 2026-10-13).** The bundled USDA copy records which USDA release it came from (name, release date, a fingerprint of the source files) in a small manifest. A scheduled GitHub Action (monthly, or as USDA's publishing schedule allows, checked when approved) compares USDA's latest release with the manifest. When it differs, the Action rebuilds the trimmed data with the same script, writes a short report (foods added, removed, changed values for foods in common) and opens a pull request for the owner to approve. Nothing changes in the live app until that is merged; the owner's only step is to read the report and merge. A failed check or a source whose layout changed also opens an issue, never fails silently. Each calculated nutrition result stores the data release it used. Recipes are never recalculated silently: after a data update, a recipe whose estimate would change by more than a small amount is offered "Recalculate?" showing old and new values.
+  2. Match each ingredient line to a food ("2 cups all-purpose flour" to the flour entry) and convert its amount to grams (using the food's own portion data, and F1's unit conversions; "a pinch" and "to taste" count as zero and are marked).
+  3. Show the result on the recipe page and as a standard nutrition label, per serving, with each ingredient's match listed beneath: matched, guessed, or not found. The person can correct a match or exclude a line; their corrections are kept with the recipe and survive edits to unrelated lines (line IDs, C1).
+  4. Never overwrite nutrition the person typed or imported (F4's `manual`, `paprika`, `website`): calculated values are a separate, clearly labelled estimate until the person chooses to use it. Adds a new source value ("calculated") to `NUTRITION_SOURCES`, an additive change to the recipe model and sync schema (client migration, per the data-model rules).
+  5. Sub-recipes (F3) contribute their own calculated nutrition scaled by the amount used; loops are already prevented.
+  6. F4's setting to hide nutrition everywhere also hides this. Wording is "estimate", never "exact", and not medical advice.
+  7. Free or Premium: no marginal cost (no AI, no per-call fee), so available on every plan unless the owner decides otherwise.
+- **Decisions**: Confirm the USDA data terms and the bundled-copy approach (after my check); which plan gets it.
+- **You check**: Calculate nutrition for three of your recipes, fix a wrong match, and compare to a package label you trust.
+- **Done when**: A test set of recipes with known results (a published label per recipe) is scored; matches and conversions are tested for tricky amounts (ranges, "a pinch", parenthetical weights, sub-recipes); typed nutrition is never overwritten.
 
 ## Open questions tracked by this plan
 
@@ -1180,6 +1257,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 19 | ~~Changing an account's email address~~ Decided 2026-10-06: verify the new address first, notify the old one, keep every change so support can restore an earlier address. Built in B7a | B7a |
 | 20 | ~~How long before an account never verified is removed?~~ Decided 2026-10-06: 24 hours from sign-up. An unverified email change simply expires after 24 hours. Built in B7a | B7a |
 | 21 | Illegal imagery in stored photos (researched 2026-10-08). Cloudflare's free CSAM Scanning Tool compares images served through the Cloudflare cache against known-material lists (fuzzy hashing, so near-copies match), emails the owner daily, and blocks serving with an HTTP 451. Limits: it is unconfirmed whether images served by a Worker from R2 are scanned (the docs only say "served through the Cloudflare cache"); it scans only when an image is served, not at upload; it stops serving but does not delete the file from R2 or the `image` table; it only finds known material; and the legal duty to report stays with Fennl. To settle before public launch: (a) ask Cloudflare support whether Worker-served R2 images are covered, and turn the tool on either way; (b) if not covered, decide whether to check uploads against a hash-matching service instead; (c) an admin action to remove an image and suspend an account, recorded in `admin_audit_log` (admin console, C12 style); (d) legal advice on reporting duties. Not needed for the invite-only beta | Before public launch (H2) |
+| 22 | Paprika 4 parity (`docs/research/2026-10-13-paprika-4-parity.md`). Decided 2026-10-13: C13, C14, E15 and F4b are the first additions after the beta (drafts above, each approved separately); no voice assistants. Social import comes after the AI import phases are established (Stage I item 8). Household stays at 2 members, with the seat count a changeable plan limit (G1). Native app: not wanted; reopen only for compelling, high-usage reasons the owner agrees with. Still open: nothing from Paprika parity until their User Guides are read | Before Stage I is detailed |
 
 ## Notes: AI provider research (2026-10-01)
 
