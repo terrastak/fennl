@@ -1,3 +1,4 @@
+import type { CropBox } from "../scan/pages";
 import { readJpegInfo, swapsSides, type JpegInfo } from "./jpegInfo";
 import { PHOTO_SETTINGS, fittedSize, keepOriginal, type PhotoKind } from "./settings";
 import type { WebpEncoder } from "./webpEncoder";
@@ -101,6 +102,46 @@ export function draw(image: Drawable, maxEdge: number): HTMLCanvasElement {
   return result;
 }
 
+/**
+ * Draws part of the picture (`crop`, fractions of it as it is upright), turned `turns` quarters
+ * clockwise, with its longest side at most `maxEdge` (phase E9: pages arranged before reading).
+ * Cropped and made smaller first, then turned, so the canvas is never bigger than the result.
+ */
+export function drawEdited(
+  image: Drawable,
+  crop: CropBox | null,
+  turns: number,
+  maxEdge: number,
+): HTMLCanvasElement {
+  const size = sizeOf(image);
+  const box = crop ?? { x: 0, y: 0, width: 1, height: 1 };
+  const sx = Math.round(box.x * size.width);
+  const sy = Math.round(box.y * size.height);
+  const sw = Math.max(1, Math.min(size.width - sx, Math.round(box.width * size.width)));
+  const sh = Math.max(1, Math.min(size.height - sy, Math.round(box.height * size.height)));
+  const target = fittedSize(sw, sh, maxEdge);
+  const cropped = document.createElement("canvas");
+  cropped.width = target.width;
+  cropped.height = target.height;
+  const context = cropped.getContext("2d");
+  if (!context) throw new Error("This browser couldn't make a drawing surface for the photo.");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, sx, sy, sw, sh, 0, 0, target.width, target.height);
+  const quarter = ((turns % 4) + 4) % 4;
+  if (quarter === 0) return cropped;
+  const turnedCanvas = document.createElement("canvas");
+  turnedCanvas.width = quarter % 2 ? target.height : target.width;
+  turnedCanvas.height = quarter % 2 ? target.width : target.height;
+  const turning = turnedCanvas.getContext("2d");
+  if (!turning) throw new Error("This browser couldn't make a drawing surface for the photo.");
+  turning.translate(turnedCanvas.width / 2, turnedCanvas.height / 2);
+  turning.rotate((quarter * Math.PI) / 2);
+  turning.drawImage(cropped, -target.width / 2, -target.height / 2);
+  release(cropped);
+  return turnedCanvas;
+}
+
 function paint(source: CanvasImageSource, width: number, height: number): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -178,17 +219,28 @@ export async function preparePhoto(
   kind: PhotoKind,
   encoder: WebpEncoder,
   maxFileBytes: number | null,
+  /** Turned and cropped as the person arranged it (a page to import, phase E9). */
+  edit: { crop: CropBox | null; turns: number } | null = null,
 ): Promise<Prepared> {
   const settings = PHOTO_SETTINGS[kind];
   const original = await inspect(file);
   const source = await open(file, original);
   const size = sizeOf(source);
-  const canvas = draw(source, settings.maxEdge);
+  const edited = Boolean(edit && (edit.crop || edit.turns % 4 !== 0));
+  const canvas =
+    edit && edited
+      ? drawEdited(source, edit.crop, edit.turns, settings.maxEdge)
+      : draw(source, settings.maxEdge);
   if (source instanceof ImageBitmap) source.close();
   try {
     const thumbCanvas = draw(canvas, THUMB.maxEdge);
     const thumb = await encodeBest(thumbCanvas, THUMB.quality, encoder);
     release(thumbCanvas);
+    // A turned or cropped photo is always the new version.
+    if (edited) {
+      const prepared = await encodeBest(canvas, settings.quality, encoder);
+      return { file: prepared, width: canvas.width, height: canvas.height, thumb };
+    }
     // A GIF is kept as it is (animation and all) whenever it fits.
     if (original.type === "image/gif" && (maxFileBytes === null || file.size <= maxFileBytes)) {
       return { file, width: size.width, height: size.height, thumb };

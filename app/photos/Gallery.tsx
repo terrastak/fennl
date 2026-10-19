@@ -76,6 +76,54 @@ export function Gallery({
   );
 }
 
+/**
+ * The photos a recipe was imported from (a card's two sides, cookbook pages: phase E9), kept with
+ * it out of its gallery. Small copies that open full screen, to read the original.
+ */
+export function Originals({ photos, title }: { photos: RecipePhoto[]; title: string }) {
+  const [open, setOpen] = useState<number | null>(null);
+  if (photos.length === 0) return null;
+  const one = photos.length === 1;
+  return (
+    <section aria-labelledby="originals-title">
+      <h2 id="originals-title">{one ? "The original" : "The originals"}</h2>
+      <ul className={styles.strip}>
+        {photos.map((photo, i) => (
+          <li key={photo.id}>
+            <button
+              type="button"
+              className={styles.thumbButton}
+              onClick={() => setOpen(i)}
+              aria-label={
+                one ? "Open the original full screen" : `Open original ${i + 1} full screen`
+              }
+            >
+              <PhotoImage
+                hash={photo.imageHash}
+                size="thumb"
+                width={photo.width}
+                height={photo.height}
+                alt=""
+                className={styles.thumb}
+              />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {open !== null ? (
+        <Viewer
+          photos={photos}
+          index={open}
+          title={title}
+          addedBy={() => null}
+          onIndex={setOpen}
+          onClose={() => setOpen(null)}
+        />
+      ) : null}
+    </section>
+  );
+}
+
 function Viewer({
   photos,
   index,

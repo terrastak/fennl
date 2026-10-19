@@ -2,6 +2,8 @@ import type {
   ReadAgainError,
   ImportJobDetail,
   ImportJobSummary,
+  ImportPhotosError,
+  ImportPhotosResponse,
   ImportWebError,
   ImportWebResponse,
 } from "../../shared/importJobs";
@@ -28,6 +30,54 @@ export async function importWebPage(
   if (res.ok) return (await res.json()) as ImportWebResponse;
   const error = ((await res.json().catch(() => ({}))) as { error?: ImportWebError }).error;
   return { problem: error ?? "failed" };
+}
+
+/** Photos of one recipe's pages, already uploaded, to be read into drafts (phase E9). */
+export async function importPhotoPages(
+  hashes: string[],
+): Promise<{ jobs: ImportJobSummary[] } | { problem: ImportPhotosError | "offline" | "failed" }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/import/photos", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pages: hashes }),
+    });
+  } catch {
+    return { problem: "offline" };
+  }
+  if (res.ok) return (await res.json()) as ImportPhotosResponse;
+  const error = ((await res.json().catch(() => ({}))) as { error?: ImportPhotosError }).error;
+  return { problem: error ?? "failed" };
+}
+
+/** What to tell people when reading photos didn't work. */
+export function photoProblemText(problem: ImportPhotosError | "offline" | "failed"): string {
+  switch (problem) {
+    case "no_recipe":
+      return "Fennl couldn't find a recipe in those photos. If they're blurry or dark, clearer ones may help.";
+    case "ai_import_not_included":
+      return "Reading recipes from photos is part of Premium.";
+    case "monthly_limit":
+      return "This month's AI imports are used up. They start again on the 1st.";
+    case "paused":
+      return "Reading with AI is paused for now. Please try again later.";
+    case "ai_unavailable":
+      return "Fennl couldn't read the photos just now. Please try again in a few minutes.";
+    case "too_many_pages":
+      return "That's more photos than one recipe takes. Remove a few and try again.";
+    case "pages_too_large":
+      return "Those photos are too large to read together. Remove a page or two and try again.";
+    case "page_missing":
+      return "One of the photos couldn't be found. Please try again.";
+    case "rate_limited":
+      return "That's a lot of recipes at once. Wait a minute, then try again.";
+    case "offline":
+      return "Importing needs a connection. Try again when you're back online.";
+    case "invalid_request":
+    case "failed":
+      return "The photos couldn't be read. Please try again.";
+  }
 }
 
 /** The drafts waiting for review. Null when they can't be fetched. */

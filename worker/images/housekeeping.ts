@@ -23,12 +23,13 @@ export const UNUSED_DAYS = 7;
 const ROWS_PER_RUN = 500;
 
 /**
- * Removes photos nothing has shown for UNUSED_DAYS: no recipe photo uses them, and none stopped
- * using them in that time. One statement, so a photo added to a recipe at the same moment either
+ * Removes photos nothing has shown for UNUSED_DAYS: no recipe photo uses them, none stopped
+ * using them in that time, and no import draft waiting for review holds them (a page photo,
+ * phase E9). One statement, so a photo added to a recipe at the same moment either
  * keeps it or (if this ran first) is turned away and can be uploaded again. Returns how many.
  *
- * Anything else that comes to hold on to a photo (version history, import drafts) must be added
- * to the "in use" test here.
+ * Anything else that comes to hold on to a photo (version history) must be added to the "in use"
+ * test here.
  */
 export async function markUnusedImages(db: Database, now = Date.now()): Promise<number> {
   const cutoff = now - UNUSED_DAYS * DAY;
@@ -42,6 +43,10 @@ export async function markUnusedImages(db: Database, now = Date.now()): Promise<
             select 1 from recipe_photo p
             where p.owner_user_id = i.owner_user_id and p.image_hash = i.hash
               and (p.deleted_at is null or p.updated_at >= ?2))
+          and not exists (
+            select 1 from import_job j, json_each(j.draft, '$.inputs') e
+            where j.user_id = i.owner_user_id and j.status = 'ready'
+              and json_extract(e.value, '$.imageHash') = i.hash)
         limit ?3)
       returning hash`,
     )
