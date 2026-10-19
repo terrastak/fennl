@@ -14,7 +14,7 @@ import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
-import { Gallery } from "../photos/Gallery";
+import { Gallery, Originals } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { noteTrashed } from "./trashNotice";
@@ -537,6 +537,10 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
       <Notes detail={detail} name={name} shared={members.length > 1} me="" />
       <Nutrition recipe={recipe} />
       <div className={styles.section}>
+        <Originals
+          photos={detail.photos.filter((p) => p.role === "import_original")}
+          title={recipe.title}
+        />
         <Source recipe={recipe} />
       </div>
     </article>
@@ -653,6 +657,10 @@ export function RecipePage({ id }: { id: string }) {
       <Yours detail={detail} me={me} myName={name(me)} shared={shared} editable={editable} />
       <Nutrition recipe={recipe} />
       <div className={styles.section}>
+        <Originals
+          photos={detail.photos.filter((p) => p.role === "import_original")}
+          title={recipe.title}
+        />
         <Source recipe={recipe} />
       </div>
 

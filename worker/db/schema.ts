@@ -613,6 +613,8 @@ export const importJob = sqliteTable(
   (table) => [
     index("import_job_household_idx").on(table.householdId, table.createdAt),
     index("import_job_batch_idx").on(table.batchId),
+    // Photo housekeeping asks whether a person's waiting drafts hold a photo (phase E9).
+    index("import_job_user_status_idx").on(table.userId, table.status),
   ],
 );
 

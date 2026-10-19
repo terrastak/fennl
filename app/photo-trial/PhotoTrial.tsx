@@ -12,11 +12,15 @@ import {
 } from "../photos/prepare";
 import { PHOTO_SETTINGS, keepOriginal, type PhotoKind } from "../photos/settings";
 import { WebpEncoder } from "../photos/webpEncoder";
+import { smallCopy } from "../scan/preview";
+import { BLURRY_BELOW, SHARPNESS_EDGE, sharpness } from "../scan/sharpness";
 import styles from "./photoTrial.module.css";
 
 // The photo test page (phase D2): how does this device handle the photos Fennl will store? It
 // prepares photos exactly as the app will (upright, resized, encoded three ways) and reports the
-// times and sizes. Nothing is uploaded: the photos never leave this device.
+// times and sizes. Nothing is uploaded: the photos never leave this device. Phase E9 added each
+// photo's sharpness score (app/scan/sharpness.ts) and what the live camera can control (torch,
+// zoom, focus), to measure near and far shots of pages.
 
 /** Fennl's file limit (plan_limits, decided 2026-10-08); only used here to judge "keep as is". */
 const FILE_LIMIT = 5 * 1024 * 1024;
@@ -58,6 +62,8 @@ interface PhotoResult {
   canvasJpeg: Encoded | null;
   wasmWebp: Encoded | { error: string };
   keep: boolean;
+  /** How sharp it looks (app/scan/sharpness.ts); null when it couldn't be measured. */
+  sharpness: number | null;
   preview: string | null;
 }
 
@@ -83,6 +89,40 @@ interface LiveCamera {
   /** Previews, to see by eye whether the pictures came out upright and sharp. */
   framePreview?: string;
   stillPreview?: string;
+  /** What the camera lets a page control: torch, zoom, focus (phase E9). */
+  features?: string;
+  frameSharpness?: number | null;
+  stillSharpness?: number | null;
+}
+
+/** The camera's controls that matter for pages, in words. */
+function cameraFeatures(track: MediaStreamTrack | undefined): string {
+  const c = (track?.getCapabilities?.() ?? {}) as Record<string, unknown>;
+  const range = (value: unknown) => {
+    const r = value as { min?: number; max?: number } | undefined;
+    return r && typeof r.min === "number" && typeof r.max === "number"
+      ? `${r.min} to ${r.max}`
+      : "no";
+  };
+  const list = (value: unknown) =>
+    Array.isArray(value) && value.length ? value.join(", ") : "not listed";
+  return [
+    `torch ${c.torch === true ? "yes" : "no"}`,
+    `zoom ${range(c.zoom)}`,
+    `focus modes ${list(c.focusMode)}`,
+    `focus distance ${range(c.focusDistance)}`,
+  ].join("; ");
+}
+
+const sharpnessOf = (blob: Blob) =>
+  smallCopy(blob).then(
+    (copy) => copy.sharpness,
+    () => null,
+  );
+
+function sharpnessText(score: number | null | undefined): string {
+  if (score === null || score === undefined) return "not measured";
+  return `${Math.round(score)}${score < BLURRY_BELOW ? " (Fennl would offer a retake)" : ""}`;
 }
 
 /** Whether the browser's own canvas can make WebP (Safari gives a PNG instead). */
@@ -141,6 +181,14 @@ export function PhotoTrial() {
       const canvasJpeg = jpeg ? { bytes: jpeg.size, ms: performance.now() - started } : null;
 
       const size = { width: canvas.width, height: canvas.height };
+      const measured = draw(canvas, SHARPNESS_EDGE);
+      let score: number | null = null;
+      try {
+        score = sharpness(pixels(measured));
+      } catch {
+        score = null;
+      }
+      release(measured);
       const data = pixels(canvas);
       release(canvas);
       encoder.current ??= new WebpEncoder();
@@ -177,6 +225,7 @@ export function PhotoTrial() {
         canvasJpeg,
         wasmWebp,
         keep,
+        sharpness: score,
         preview: previewBlob ? URL.createObjectURL(previewBlob) : null,
       };
     } catch (error) {
@@ -227,6 +276,7 @@ export function PhotoTrial() {
         state: "on",
         stream: { width: settings.width ?? 0, height: settings.height ?? 0 },
         imageCapture: "ImageCapture" in window,
+        features: cameraFeatures(media.getVideoTracks()[0]),
       });
     } catch (error) {
       setLive({
@@ -247,8 +297,10 @@ export function PhotoTrial() {
     const frameBlob = await encodeWithCanvas(canvas, "image/jpeg", 0.9);
     release(canvas);
     const framePreview = frameBlob ? URL.createObjectURL(frameBlob) : undefined;
+    const frameSharpness = frameBlob ? await sharpnessOf(frameBlob) : null;
     let still: LiveCamera["still"];
     let stillPreview: string | undefined;
+    let stillSharpness: number | null = null;
     const track = stream.current.getVideoTracks()[0];
     const Capture = (
       window as Window & {
@@ -261,6 +313,7 @@ export function PhotoTrial() {
         const image = await decode(blob);
         still = { width: image.naturalWidth, height: image.naturalHeight };
         stillPreview = URL.createObjectURL(blob);
+        stillSharpness = await sharpnessOf(blob);
       } catch (error) {
         still = { error: error instanceof Error ? error.message : String(error) };
       }
@@ -268,6 +321,8 @@ export function PhotoTrial() {
     setLive((current) => ({
       ...current,
       frame,
+      frameSharpness,
+      stillSharpness,
       ...(still ? { still } : {}),
       ...(framePreview ? { framePreview } : {}),
       ...(stillPreview ? { stillPreview } : {}),
@@ -385,7 +440,9 @@ export function PhotoTrial() {
         <h2 id="live-title">Live camera</h2>
         <p className={styles.hint}>
           Checks how sharp a picture from a live camera view inside a web page can be, compared with
-          the phone&rsquo;s own camera above.
+          the phone&rsquo;s own camera above. Photograph a recipe card or page from close up, then
+          from further back: each picture gets a sharpness score, and the results list what the
+          camera lets Fennl control (light, zoom, focus).
         </p>
         <video
           ref={video}
@@ -515,6 +572,7 @@ function photoLines(r: PhotoResult): string[] {
     `  Browser JPEG: ${r.canvasJpeg ? `${kb(r.canvasJpeg.bytes)} in ${time(r.canvasJpeg.ms)}` : "failed"}`,
     `  WebAssembly WebP: ${"error" in r.wasmWebp ? `failed (${r.wasmWebp.error})` : `${kb(r.wasmWebp.bytes)} in ${time(r.wasmWebp.ms)}`}`,
     `  Upload: ${r.keep ? "the original, as it is" : "the prepared version"}`,
+    `  Sharpness: ${sharpnessText(r.sharpness)}`,
   ];
   return lines;
 }
@@ -522,12 +580,17 @@ function photoLines(r: PhotoResult): string[] {
 function liveLine(live: LiveCamera): string {
   if (!live.stream) return "";
   const parts = [`Live view: ${live.stream.width}×${live.stream.height}`];
-  if (live.frame) parts.push(`picture from it: ${live.frame.width}×${live.frame.height}`);
+  if (live.features) parts.push(`camera: ${live.features}`);
+  if (live.frame) {
+    parts.push(
+      `picture from it: ${live.frame.width}×${live.frame.height}, sharpness ${sharpnessText(live.frameSharpness)}`,
+    );
+  }
   if (live.still) {
     parts.push(
       "error" in live.still
         ? `full photo (ImageCapture): failed, ${live.still.error}`
-        : `full photo (ImageCapture): ${live.still.width}×${live.still.height}`,
+        : `full photo (ImageCapture): ${live.still.width}×${live.still.height}, sharpness ${sharpnessText(live.stillSharpness)}`,
     );
   } else if (live.imageCapture === false) {
     parts.push("full photo (ImageCapture): not available");

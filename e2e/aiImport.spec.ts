@@ -5,8 +5,8 @@ import { useOwnAccount } from "./support";
 
 // Phase E7: a recipe the AI read, on the review screen. "Read again" has a stronger model read it
 // once more, keeping what the person already changed; after that, if parts are still uncertain,
-// Fennl says it has done what it can. The import screens that send photos come in E9 and E10;
-// until then the local test server makes the import, read by its stand-in AI.
+// Fennl says it has done what it can. The local test server makes the import, read by its
+// stand-in AI, so the AI's answer can be made unsure (the Import page's photos: scan.spec.ts).
 
 async function aiImport(page: Page, baseURL: string, unsure: boolean): Promise<string> {
   const res = await page.request.post("/api/dev/test-ai-import", {
