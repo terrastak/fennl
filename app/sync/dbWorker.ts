@@ -23,7 +23,7 @@ import type {
 } from "./dbProtocol";
 import { MIGRATIONS } from "./schema";
 import { findDuplicates, type DuplicateMatch, type DuplicateQuery } from "../../shared/duplicates";
-import { indexRecipe, searchRecipes, unindexRecords } from "./search";
+import { indexRecipe, ingredientMatches, searchRecipes, unindexRecords } from "./search";
 import {
   keyOf,
   ownerOfRecord,
@@ -320,6 +320,12 @@ function listRecipes(): RecipeSummary[] {
       .map((o) => [o.recipeId, o]),
   );
   const coverOf = covers();
+  const lastMade = new Map<string, string>();
+  for (const made of values<RecipeMade>("made")) {
+    if (made.deletedAt) continue;
+    const before = lastMade.get(made.recipeId);
+    if (!before || made.madeOn > before) lastMade.set(made.recipeId, made.madeOn);
+  }
   return values<Recipe>("recipe")
     .filter((recipe) => !recipe.deletedAt)
     .map((recipe) => ({
@@ -338,6 +344,12 @@ function listRecipes(): RecipeSummary[] {
         const photo = coverOf.get(recipe.id);
         return photo ? { hash: photo.imageHash, width: photo.width, height: photo.height } : null;
       })(),
+      prepMinutes: recipe.times.prep.minutes,
+      cookMinutes: recipe.times.cook.minutes,
+      servings: recipe.servings.count,
+      sourceName: recipe.source.name,
+      hasNutrition: recipe.nutrition !== null,
+      lastMadeOn: lastMade.get(recipe.id) ?? null,
     }))
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 }
@@ -479,6 +491,9 @@ scope.onmessage = (event) => {
           break;
         case "search":
           value = searchRecipes(database(), request.query, recipeCategories());
+          break;
+        case "ingredientMatches":
+          value = ingredientMatches(database(), request.words);
           break;
         case "wipe":
           wipe();

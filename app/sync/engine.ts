@@ -343,6 +343,11 @@ export class SyncEngine {
     return this.db.call({ op: "search", query });
   }
 
+  /** Which recipes have each word in their ingredients (phase C13a). */
+  ingredientMatches(words: string[]): Promise<Record<string, string[]>> {
+    return this.db.call({ op: "ingredientMatches", words });
+  }
+
   listTrash(): Promise<TrashItem[]> {
     return this.db.call({ op: "listTrash" });
   }

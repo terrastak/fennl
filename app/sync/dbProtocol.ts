@@ -29,6 +29,16 @@ export interface RecipeSummary {
   favorite: boolean;
   /** The cover: the first gallery photo (phase D2), or null for none. */
   cover: PhotoRef | null;
+  /** For the list's filters (phase C13a). Null when the recipe doesn't say. */
+  prepMinutes: number | null;
+  cookMinutes: number | null;
+  /** How many it serves (`servings.count`). */
+  servings: number | null;
+  /** Where it came from: the site, cookbook or person. */
+  sourceName: string | null;
+  hasNutrition: boolean;
+  /** The latest day anyone in the household made it ("2026-10-03"), or null if never. */
+  lastMadeOn: string | null;
 }
 
 /** Enough to show a photo: its image, and its size to make room for it. */
@@ -87,6 +97,7 @@ export type DbRequest =
   | { op: "getRecipe"; recipeId: string }
   | { op: "getCategories" }
   | { op: "search"; query: string }
+  | { op: "ingredientMatches"; words: string[] }
   | { op: "listTrash" }
   | { op: "photoHashes" }
   | { op: "findDuplicates"; query: DuplicateQuery }
@@ -103,6 +114,7 @@ export interface DbResults {
   getRecipe: RecipeDetail | null;
   getCategories: CategoryData;
   search: SearchResults;
+  ingredientMatches: Record<string, string[]>;
   listTrash: TrashItem[];
   /** Every image a photo here shows (phase D2), so each device can keep their small copies. */
   photoHashes: string[];

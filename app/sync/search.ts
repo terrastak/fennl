@@ -221,3 +221,35 @@ export function searchRecipes(
   }
   return { terms, ids, titleIds, hits };
 }
+
+/**
+ * Which recipes have each of these words in their ingredients (phase C13a's "with" and
+ * "without" filters). A word given as several ("green onion") must find all of them. Words are
+ * matched as the start of a word, as in search, so "mushroom" finds "mushrooms". Keyed by the
+ * word as given.
+ */
+export function ingredientMatches(db: Database, words: string[]): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const word of words) {
+    const terms = searchTerms(word);
+    if (terms.length === 0) {
+      result[word] = [];
+      continue;
+    }
+    let ids = null as Set<string> | null;
+    for (const term of terms) {
+      const found = new Set(
+        db.selectValues(
+          `select s.recipe_id from recipe_search s
+            join record r on r.rowid = s.rowid and r.kind = 'recipe' and r.key = s.recipe_id
+            where recipe_search match ?`,
+          [`{ingredients} : "${term}"*`],
+        ) as string[],
+      );
+      const before = ids;
+      ids = before ? new Set([...before].filter((id) => found.has(id))) : found;
+    }
+    result[word] = [...(ids ?? [])];
+  }
+  return result;
+}

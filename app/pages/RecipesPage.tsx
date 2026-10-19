@@ -1,13 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
-import { underPath } from "../categories/tree";
 import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
 import { UsageNote } from "../limits/Usage";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { navigate, queryParam } from "../navigation";
+import { FilterPanel } from "../recipes/FilterPanel";
+import {
+  activeFilterCount,
+  applyFilters,
+  filterChips,
+  filtersFromParams,
+  filtersToParams,
+  ingredientWords,
+  NO_FILTERS,
+  UNFILED,
+  type RatingFilter,
+  type RecipeFilters,
+} from "../recipes/filters";
+import categoryStyles from "../categories/categories.module.css";
 import { minutesText } from "../recipes/format";
 import { Highlight } from "../recipes/Highlight";
 import { forgetTrashed, recentlyTrashed } from "../recipes/trashNotice";
@@ -21,6 +34,7 @@ import type { SearchHit } from "../sync/search";
 import {
   activeSyncClient,
   useCategoryTree,
+  useIngredientMatches,
   useRecipeList,
   useSearch,
   useSyncStatus,
@@ -31,8 +45,9 @@ import { PageHeader } from "./PageHeader";
 // The recipe list (phase C5): cards from this browser's copy, sorting, the empty state from
 // docs/design/design-direction.md, and sample recipes to try. "Add recipe" opens the editor
 // (phase C6) on a new recipe. Phase C7 adds the category filter and Select, for filing many
-// recipes at once. Phase C8 adds search (app/sync/search.ts) and the rating filter. The search
-// and filters are kept in the address (?q=, ?category=, ?rating=).
+// recipes at once. Phase C8 adds search (app/sync/search.ts) and the rating filter. Phase C13a
+// adds "More filters" (app/recipes/filters.ts). The search and filters are kept in the address
+// (?q=, ?category=, ?rating=, and the others filtersToParams writes).
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -206,16 +221,6 @@ function EmptyState({
   );
 }
 
-/** The category filter: everything, a category (and what's inside it), or nothing filed. */
-const UNFILED = "__unfiled";
-
-function filterFromAddress(): string {
-  const category = queryParam("category");
-  return category ? category.toLocaleLowerCase() : "";
-}
-
-type RatingFilter = "" | "favorite" | "5" | "4" | "3" | "none";
-
 const RATINGS: { value: RatingFilter; label: string }[] = [
   { value: "", label: "Any rating" },
   { value: "favorite", label: "My favorites" },
@@ -225,26 +230,26 @@ const RATINGS: { value: RatingFilter; label: string }[] = [
   { value: "none", label: "Not rated yet" },
 ];
 
-/** Your own rating and favorite (CLAUDE.md: opinions are per person). */
-function rated(recipe: RecipeSummary, rating: RatingFilter): boolean {
-  if (!rating) return true;
-  if (rating === "favorite") return recipe.favorite;
-  if (rating === "none") return recipe.myRating === null;
-  return (recipe.myRating ?? 0) >= Number(rating);
-}
-
-function ratingFromAddress(): RatingFilter {
-  const value = queryParam("rating");
-  return RATINGS.some((r) => r.value === value) ? (value as RatingFilter) : "";
+/** Today as a day ("2026-10-20") in this person's own calendar, as "made it" days are. */
+function today(): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 /** Recipes shown at a time; more on request, so a big recipe box stays quick. */
 const PAGE = 100;
 
-function matches(recipe: RecipeSummary, filter: string): boolean {
-  if (!filter) return true;
-  if (filter === UNFILED) return recipe.categories.length === 0;
-  return recipe.categories.some((path) => underPath(path, filter));
+/** Recipes a time or servings filter left out because they don't say (CLAUDE.md: never guess). */
+function unknownNote(unknown: { time: number; servings: number }, filters: RecipeFilters): string {
+  const parts: string[] = [];
+  if (filters.maxMinutes !== null && unknown.time > 0) {
+    parts.push(`${unknown.time} with no time written down`);
+  }
+  if (filters.minServings !== null && unknown.servings > 0) {
+    parts.push(`${unknown.servings} with no number served`);
+  }
+  return parts.length > 0 ? ` Not shown: ${parts.join(" and ")}.` : "";
 }
 
 export function RecipesPage() {
@@ -258,11 +263,15 @@ export function RecipesPage() {
   const add = () =>
     addBlocked ? limitNote.current?.focus() : navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
-  const [filter, setFilter] = useState(filterFromAddress);
-  const [rating, setRating] = useState<RatingFilter>(ratingFromAddress);
+  const [filters, setFilters] = useState<RecipeFilters>(() =>
+    filtersFromParams(new URLSearchParams(window.location.search)),
+  );
+  const moreCount = filterChips(filters, (key) => key).length;
+  const [showMore, setShowMore] = useState(() => moreCount > 0);
   const [query, setQuery] = useState(() => queryParam("q") ?? "");
   const [limit, setLimit] = useState(PAGE);
   const search = useSearch(query);
+  const ingredientAnswer = useIngredientMatches(ingredientWords(filters));
   const [addingSamples, setAddingSamples] = useState(false);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
@@ -280,38 +289,26 @@ export function RecipesPage() {
   };
 
   /** Search and filters go in the address too, so they survive a reload and can be shared. */
-  const remember = (next: { q?: string; category?: string; rating?: RatingFilter }) => {
-    const params = new URLSearchParams();
-    const q = next.q ?? query;
-    const path = tree?.byKey.get(next.category ?? filter)?.path;
-    const r = next.rating ?? rating;
-    if (q.trim()) params.set("q", q);
-    if (path) params.set("category", path);
-    if (r) params.set("rating", r);
+  const remember = (nextQuery: string, next: RecipeFilters) => {
+    const params = filtersToParams(nextQuery, next, (key) => tree?.byKey.get(key)?.path);
     const search = params.toString();
     window.history.replaceState(null, "", search ? `/?${search}` : "/");
     setLimit(PAGE);
   };
 
-  const chooseFilter = (value: string) => {
-    setFilter(value);
-    remember({ category: value });
-  };
-
-  const chooseRating = (value: RatingFilter) => {
-    setRating(value);
-    remember({ rating: value });
+  const changeFilters = (next: RecipeFilters) => {
+    setFilters(next);
+    remember(query, next);
   };
 
   const typeQuery = (value: string) => {
     setQuery(value);
-    remember({ q: value });
+    remember(value, filters);
   };
 
   const clearAll = () => {
     setQuery("");
-    setFilter("");
-    setRating("");
+    setFilters(NO_FILTERS);
     window.history.replaceState(null, "", "/");
     setLimit(PAGE);
   };
@@ -326,15 +323,16 @@ export function RecipesPage() {
 
   const list = recipes ?? [];
   const searching = query.trim() !== "";
-  const narrowed = list.filter((recipe) => matches(recipe, filter) && rated(recipe, rating));
+  const found = applyFilters(list, filters, ingredientAnswer, today());
+  const narrowed = found.recipes;
   let shown: RecipeSummary[];
   if (!searching) shown = sorted(narrowed, sortBy);
   else if (!search) shown = [];
   else {
     // Recipes with every word in the title first, then the rest; each in the chosen order.
-    const found = new Set(search.ids);
+    const inSearch = new Set(search.ids);
     const inTitle = new Set(search.titleIds);
-    const hits = narrowed.filter((recipe) => found.has(recipe.id));
+    const hits = narrowed.filter((recipe) => inSearch.has(recipe.id));
     shown = [
       ...sorted(
         hits.filter((recipe) => inTitle.has(recipe.id)),
@@ -346,7 +344,8 @@ export function RecipesPage() {
       ),
     ];
   }
-  const narrowing = searching || filter !== "" || rating !== "";
+  const filtering = activeFilterCount(filters);
+  const narrowing = searching || filtering > 0;
   const chosen = shown.filter((recipe) => selected.has(recipe.id)).map((recipe) => recipe.id);
   const select = (id: string, on: boolean) =>
     setSelected((before) => {
@@ -360,7 +359,11 @@ export function RecipesPage() {
     setSelected(new Set());
   };
   const filterName =
-    filter === UNFILED ? "not in a category" : (tree?.byKey.get(filter)?.path ?? filter);
+    filters.category === UNFILED
+      ? "not in a category"
+      : (tree?.byKey.get(filters.category)?.path ?? filters.category);
+  const nameOf = (key: string) => tree?.byKey.get(key)?.path ?? key;
+  const chips = filterChips(filters, nameOf);
   const hasCategories = (tree?.nodes.length ?? 0) > 0;
 
   return (
@@ -406,13 +409,13 @@ export function RecipesPage() {
             </button>
           </div>
           <div className={styles.toolbarEnd}>
-            {hasCategories || filter ? (
+            {hasCategories || filters.category ? (
               <label className={styles.sort}>
                 Category
                 <select
                   className={styles.select}
-                  value={filter}
-                  onChange={(e) => chooseFilter(e.target.value)}
+                  value={filters.category}
+                  onChange={(e) => changeFilters({ ...filters, category: e.target.value })}
                 >
                   <option value="">All recipes</option>
                   {tree?.nodes.map((node) => (
@@ -420,8 +423,10 @@ export function RecipesPage() {
                       {node.path} ({node.count})
                     </option>
                   ))}
-                  {filter && filter !== UNFILED && !tree?.byKey.has(filter) ? (
-                    <option value={filter}>{filterName}</option>
+                  {filters.category &&
+                  filters.category !== UNFILED &&
+                  !tree?.byKey.has(filters.category) ? (
+                    <option value={filters.category}>{filterName}</option>
                   ) : null}
                   <option value={UNFILED}>Not in a category</option>
                 </select>
@@ -431,8 +436,10 @@ export function RecipesPage() {
               Rating
               <select
                 className={styles.select}
-                value={rating}
-                onChange={(e) => chooseRating(e.target.value as RatingFilter)}
+                value={filters.rating}
+                onChange={(e) =>
+                  changeFilters({ ...filters, rating: e.target.value as RatingFilter })
+                }
               >
                 {RATINGS.map((r) => (
                   <option key={r.value} value={r.value}>
@@ -441,6 +448,15 @@ export function RecipesPage() {
                 ))}
               </select>
             </label>
+            <button
+              type="button"
+              className={styles.secondary}
+              aria-expanded={showMore}
+              aria-controls="more-filters"
+              onClick={() => setShowMore(!showMore)}
+            >
+              {moreCount > 0 ? `More filters (${moreCount})` : "More filters"}
+            </button>
             {list.length > 1 ? (
               <label className={styles.sort}>
                 Sort by
@@ -465,6 +481,29 @@ export function RecipesPage() {
             </Link>
           </div>
         </div>
+      ) : null}
+
+      {list.length > 0 && showMore ? (
+        <div id="more-filters">
+          <FilterPanel filters={filters} tree={tree} onChange={changeFilters} />
+        </div>
+      ) : null}
+      {list.length > 0 && chips.length > 0 ? (
+        <ul className={styles.activeFilters} aria-label="Filters on">
+          {chips.map((chip) => (
+            <li key={chip.id} className={categoryStyles.chip}>
+              {chip.label}
+              <button
+                type="button"
+                className={categoryStyles.chipRemove}
+                aria-label={`Remove filter: ${chip.label}`}
+                onClick={() => changeFilters(chip.remove(filters))}
+              >
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
       ) : null}
 
       {list.length > 0 ? <UsageNote id="add-blocked" ref={limitNote} /> : null}
@@ -503,10 +542,10 @@ export function RecipesPage() {
             <span aria-live="polite">
               {!narrowing
                 ? ""
-                : searching && !search
+                : (searching && !search) || found.pending
                   ? "Searching…"
                   : shown.length === 0
-                    ? filter === UNFILED && !searching && !rating
+                    ? filters.category === UNFILED && !searching && filtering === 1
                       ? "Every recipe is in a category."
                       : "No recipes found."
                     : `Showing ${shown.length} of ${list.length}${
@@ -514,6 +553,7 @@ export function RecipesPage() {
                           ? "; titles with every word come first"
                           : ""
                       }.`}
+              {unknownNote(found.unknown, filters)}
             </span>{" "}
             {narrowing ? (
               <button type="button" className={styles.textButton} onClick={clearAll}>
