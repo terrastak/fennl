@@ -139,6 +139,19 @@ describe("servings", () => {
   });
 });
 
+describe("recipes that say neither time nor servings", () => {
+  it("are counted under both filters, and only when nothing else rules them out", () => {
+    const list = [recipe("blank"), recipe("filed", { categories: ["A"] })];
+    const result = run(list, { maxMinutes: 30, minServings: 4 });
+    expect(result.recipes).toEqual([]);
+    expect(result.unknown).toEqual({ time: 2, servings: 2 });
+    expect(run(list, { maxMinutes: 30, minServings: 4, category: "a" }).unknown).toEqual({
+      time: 1,
+      servings: 1,
+    });
+  });
+});
+
 describe("photo, nutrition, source", () => {
   const cover = { hash: "h", width: 1, height: 1 };
   const list = [

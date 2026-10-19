@@ -51,7 +51,7 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   await openFilters(page);
 
   // Time: up to 30 minutes.
-  await panel(page).getByLabel("Time").selectOption("30");
+  await panel(page).getByRole("combobox", { name: /^Time/ }).selectOption("30");
   await expect(titles(page)).toHaveText([
     "Black Bean Tacos with Lime Crema",
     "Buttermilk Pancakes",
@@ -62,12 +62,12 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   // Together with servings: 6 or more leaves nothing that is also quick.
   await panel(page).getByLabel("Serves").selectOption("6");
   await expect(page.getByText("No recipes found.")).toBeVisible();
-  await panel(page).getByLabel("Time").selectOption("");
+  await panel(page).getByRole("combobox", { name: /^Time/ }).selectOption("");
   await expect(titles(page)).toHaveText(["Green Chile Stew", "Lemon Olive Oil Cake"]);
   await panel(page).getByLabel("Serves").selectOption("");
 
   // Two categories at once ("Mexican" and "Vegetarian"), then either of them.
-  await page.getByLabel("Category", { exact: true }).selectOption({ label: "Mexican (2)" });
+  await page.getByRole("combobox", { name: /^Category/ }).selectOption({ label: "Mexican (2)" });
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema", "Green Chile Stew"]);
   await pickCategory(page, "Also in category", "vegetarian");
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
@@ -76,7 +76,7 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   await panel(page).getByLabel("all of these categories").check();
 
   // Leaving a category out.
-  await page.getByLabel("Category", { exact: true }).selectOption({ label: "All recipes" });
+  await page.getByRole("combobox", { name: /^Category/ }).selectOption({ label: "All recipes" });
   await expect(page.getByRole("list", { name: "Filters on" })).toBeVisible();
   await page.getByRole("button", { name: /^Remove filter: Also in/ }).click();
   await pickCategory(page, "Not in category", "mexican");
@@ -125,7 +125,7 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await addSamples(page);
   await openFilters(page);
 
-  await panel(page).getByLabel("Time").selectOption("60");
+  await panel(page).getByRole("combobox", { name: /^Time/ }).selectOption("60");
   await panel(page).getByLabel("Without ingredient").fill("cumin");
   await panel(page).getByLabel("Without ingredient").press("Enter");
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("lemon");
@@ -163,7 +163,7 @@ test("A recipe with no time written down is left out of a time filter, and the l
   await expect(recipeCard(page, "Mystery Soup")).toBeVisible();
 
   await openFilters(page);
-  await panel(page).getByLabel("Time").selectOption("30");
+  await panel(page).getByRole("combobox", { name: /^Time/ }).selectOption("30");
   await expect(titles(page)).toHaveText([
     "Black Bean Tacos with Lime Crema",
     "Buttermilk Pancakes",

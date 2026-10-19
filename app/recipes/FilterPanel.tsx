@@ -101,6 +101,7 @@ function CategoriesField({
         tree={tree}
         label={label}
         allowNew={false}
+        closeOnChoose
         exclude={[...keys, ...taken]}
         onChoose={(names) => onChange([...keys, pathKey(names)])}
       />

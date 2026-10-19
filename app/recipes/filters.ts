@@ -271,9 +271,12 @@ export function applyFilters(
     };
     const failed = Object.entries(answers).filter(([, value]) => value !== "yes");
     if (failed.length === 0) result.recipes.push(recipe);
-    else if (failed.length === 1 && failed[0]?.[1] === "unknown") {
-      if (failed[0][0] === "time") result.unknown.time++;
-      else result.unknown.servings++;
+    // Left out only for not saying: counted under each filter it couldn't answer.
+    else if (failed.every(([, value]) => value === "unknown")) {
+      for (const [name] of failed) {
+        if (name === "time") result.unknown.time++;
+        else result.unknown.servings++;
+      }
     }
   }
   return result;
