@@ -29,7 +29,7 @@ import { householdMembers } from "../sync/push";
 import { aiConfig } from "../ai/config";
 import { canReadAgain, readAgain } from "../ai/read";
 import { fillFromPage, importPageWithAi } from "./aiWeb";
-import { markImportsSaved, removeJobPhotos } from "./jobs";
+import { markImportsSaved, recordDiscarded, removeJobPhotos } from "./jobs";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
 // drafts and keeps them in the account until the person reviews them: nothing becomes a recipe
@@ -339,6 +339,7 @@ importRoutes.post("/api/import/jobs/:id/read-again", async (c) => {
 importRoutes.post("/api/import/jobs/:id/discard", async (c) => {
   const job = await ownJob(c);
   if (!job || job.status !== "ready") return c.json({ error: "not_found" }, 404);
+  await recordDiscarded(c.var.signedIn.db, job);
   await c.var.signedIn.db.delete(importJob).where(eq(importJob.id, job.id));
   await removeJobPhotos(c.env.IMAGES, job.id);
   return c.json({ ok: true });

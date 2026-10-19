@@ -1,11 +1,11 @@
 import { env } from "cloudflare:test";
 import { desc, eq } from "drizzle-orm";
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { AdminAiOverview, AdminAiSettings } from "../../shared/adminAi";
+import type { AdminAiOutcomes, AdminAiOverview, AdminAiSettings } from "../../shared/adminAi";
 import type { PlanLimitRow } from "../../shared/adminAccounts";
 import { createCode } from "../codes/admin";
 import { database } from "../db/client";
-import { adminAuditLog, session, user } from "../db/schema";
+import { adminAuditLog, aiOutcome, session, user } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
 import { DEFAULT_MODELS } from "./config";
@@ -161,5 +161,72 @@ describe("the AI imports section", () => {
     });
     const { settings } = (await call("/api/admin/ai")).body as AdminAiOverview;
     expect(settings.alertCents).toBe(5000);
+  });
+});
+
+describe("how AI reads turned out (decided 2026-10-19)", () => {
+  const outcome = (
+    over: Partial<typeof aiOutcome.$inferInsert>,
+  ): typeof aiOutcome.$inferInsert => ({
+    id: crypto.randomUUID(),
+    importJobId: crypto.randomUUID(),
+    source: "photo",
+    outcome: "saved",
+    path: "read+second_look",
+    setup: "abc12345",
+    reads: JSON.stringify([
+      {
+        purpose: "read",
+        model: "claude-haiku-5-5",
+        shown: false,
+        ingredients: { exact: 1, saved: 3 },
+        directions: { exact: 2, saved: 2 },
+        closeness: 0.6,
+      },
+      {
+        purpose: "second_look",
+        model: "claude-sonnet-5-5",
+        shown: true,
+        ingredients: { exact: 3, saved: 3 },
+        directions: { exact: 2, saved: 2 },
+        closeness: 1,
+      },
+    ]),
+    linesFixed: 0,
+    createdAt: new Date(Date.UTC(2026, 9, 5)),
+    decidedAt: new Date(Date.UTC(2026, 9, 5)),
+    ...over,
+  });
+
+  it("are summed up for a month, a quarter or a year, by model", async () => {
+    await db()
+      .insert(aiOutcome)
+      .values([
+        outcome({}),
+        outcome({ source: "website", decidedAt: new Date(Date.UTC(2026, 7, 20)) }),
+        outcome({
+          outcome: "discarded",
+          path: "read",
+          reads: JSON.stringify([{ purpose: "read", model: "claude-haiku-5-5", shown: true }]),
+          linesFixed: null,
+          decidedAt: new Date(Date.UTC(2026, 9, 6)),
+        }),
+      ]);
+    const october = (await call("/api/admin/ai/outcomes?period=2026-10")).body as AdminAiOutcomes;
+    expect(october.label).toBe("October 2026");
+    expect(october.summary).toMatchObject({ drafts: 2, saved: 1, discarded: 1 });
+    expect(october.summary.secondLook).toEqual({ count: 1, better: 1, same: 0, worse: 0 });
+    expect(october.summary.byModel.map((m) => [m.model, m.shown, m.untouched]).sort()).toEqual([
+      ["claude-haiku-5-5", 1, 0],
+      ["claude-sonnet-5-5", 1, 1],
+    ]);
+    const quarter = (await call("/api/admin/ai/outcomes?period=2026-Q3")).body as AdminAiOutcomes;
+    expect(quarter.summary.drafts).toBe(1);
+    expect(quarter.summary.bySource[0]?.source).toBe("website");
+    const year = (await call("/api/admin/ai/outcomes?period=2026")).body as AdminAiOutcomes;
+    expect(year.summary.drafts).toBe(3);
+    expect(year.periods.month.map((p) => p.key)).toContain("2026-08");
+    expect(year.periods.quarter.map((p) => p.key)).toContain("2026-Q3");
+    expect((await call("/api/admin/ai/outcomes?period=last-week")).status).toBe(400);
   });
 });
