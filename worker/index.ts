@@ -39,6 +39,7 @@ import { testSetupRoutes } from "./dev/testSetup";
 import { exportRoutes } from "./export/export";
 import { extensionLinkRoutes, extensionRoutes } from "./extension/routes";
 import { removeImportPhotos, removeOldImportJobs } from "./import/jobs";
+import { removeOldOutcomes } from "./ai/outcomes";
 import { importRoutes } from "./import/routes";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
@@ -341,6 +342,8 @@ async function scheduled(controller: ScheduledController, env: Env) {
   if (expunged > 0) console.log(`Deleted ${expunged} recipe(s) from Trash for good`);
   const drafts = await removeOldImportJobs(db);
   if (drafts > 0) console.log(`Removed ${drafts} import draft(s) never reviewed`);
+  const outcomes = await removeOldOutcomes(db);
+  if (outcomes > 0) console.log(`Removed ${outcomes} AI import outcome(s) over two years old`);
   const importPhotos = await removeImportPhotos(db, env.IMAGES);
   if (importPhotos > 0) console.log(`Removed ${importPhotos} photo(s) kept for finished imports`);
 

@@ -97,7 +97,9 @@ export function normalize(text: string): string {
       .replace(/[‘’]/g, "'")
       .replace(/[“”]/g, '"')
       .replace(/[–—]/g, "-")
-      .replace(/^\s*(?:[•◦▪●○■□▢☐*-]|\d+[.)]|step\s*\d+\s*[.:)-]?)\s+/iu, "")
+      .replace(/^\s*(?:[•◦▪●○■□▢☐*-]|\d+[.)])\s+/u, "")
+      // "Step 1 Spread…", and "Step 1Spread…" as some pages run the two together.
+      .replace(/^\s*step\s*\d+\s*[.:)-]?\s*(?=\S)/iu, "")
       .toLowerCase()
       .replace(/\s+/g, " ")
       .replace(/\s*([,.;:!?)])/g, "$1")

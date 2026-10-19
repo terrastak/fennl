@@ -21,6 +21,7 @@ import { importJob } from "../db/schema";
 import { aiConfig, effortFor, MAX_OUTPUT_TOKENS, type AiConfig } from "./config";
 import { instructionFor, SYSTEM_PROMPT } from "./prompt";
 import { NO_TOKENS, type AiPart, type AiProblem, type AiResult } from "./provider";
+import type { OutcomeLists, ReadAnswer } from "../../shared/aiOutcome";
 import { checkSpending, finishCall, reserveCall, type AiPurpose } from "./usage";
 
 // Reading a recipe with the AI (phase E7; decided by the owner 2026-10-12):
@@ -72,8 +73,26 @@ export type AiReadResult =
       /** Every model that read it, in order. */
       models: string[];
       secondLook: SecondLookReason[];
+      /** Every usable answer, in order; `shown` is the one the drafts are from. */
+      answers: { purpose: AiPurpose; model: string; drafts: RecipeDraft[] }[];
+      shown: number;
+      /** A short fingerprint of the instructions and rules it was read with (setupVersion). */
+      setup: string;
     }
   | { ok: false; problem: AiReadProblem };
+
+/**
+ * A short fingerprint of what Fennl asks the AI and when it asks again: the instructions for this
+ * kind of import and the second-look thresholds. Kept with each outcome (shared/aiOutcome.ts), so
+ * a change of ours can be told apart from a change of model in the admin console.
+ */
+export async function setupVersion(config: AiConfig, source: ImportSource): Promise<string> {
+  const text = JSON.stringify([SYSTEM_PROMPT, instructionFor(source), config.rules]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest).slice(0, 4)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 interface Attempt {
   /** Null: no usable answer. Empty: an answer with no recipe in it. */
@@ -180,25 +199,38 @@ export async function readWithAi(
   if (!config || level >= config.models.length) return { ok: false, problem: "unavailable" };
   const jobId = options.importJobId ?? null;
 
-  const first = await attempt(caller, config, input, level, options.purpose ?? "read", jobId);
+  const purpose = options.purpose ?? "read";
+  const setup = await setupVersion(config, input.source);
+  const first = await attempt(caller, config, input, level, purpose, jobId);
   if (first.refusal) return { ok: false, problem: first.refusal };
   const used = [config.models[level] as string];
+  const answers: Extract<AiReadResult, { ok: true }>["answers"] = [];
+  if (first.drafts?.length) {
+    answers.push({ purpose, model: config.models[level] as string, drafts: first.drafts });
+  }
+  const done = (drafts: RecipeDraft[] | null, at: number, reasons: SecondLookReason[]) =>
+    finish(drafts, at, used, reasons, answers, setup);
   // No recipe found on what the person chose to import is itself suspect: it gets a second look.
   const reasons = first.drafts
     ? secondLookReasons(first.drafts, config.rules)
     : ["no_answer" as const];
   if (reasons.length === 0 || options.secondLook === false || level + 1 >= config.models.length) {
-    return finish(first.drafts, level, used, reasons);
+    return done(first.drafts, level, reasons);
   }
 
   const second = await attempt(caller, config, input, level + 1, "second_look", jobId);
   if (second.drafts && second.drafts.length > 0) {
     used.push(config.models[level + 1] as string);
-    return finish(second.drafts, level + 1, used, reasons);
+    answers.push({
+      purpose: "second_look",
+      model: config.models[level + 1] as string,
+      drafts: second.drafts,
+    });
+    return done(second.drafts, level + 1, reasons);
   }
   if (second.drafts === null && !second.refusal) used.push(config.models[level + 1] as string);
   // The second look found nothing usable (or wasn't allowed): keep what the first found.
-  return finish(first.drafts, level, used, reasons);
+  return done(first.drafts, level, reasons);
 }
 
 function finish(
@@ -206,10 +238,44 @@ function finish(
   level: number,
   models: string[],
   secondLook: SecondLookReason[],
+  answers: Extract<AiReadResult, { ok: true }>["answers"],
+  setup: string,
 ): AiReadResult {
   if (drafts === null) return { ok: false, problem: "unavailable" };
   if (drafts.length === 0) return { ok: false, problem: "no_recipe" };
-  return { ok: true, drafts, level, models, secondLook };
+  const shown = answers.findIndex((a) => a.drafts === drafts);
+  return { ok: true, drafts, level, models, secondLook, answers, shown, setup };
+}
+
+/** A draft's ingredient and method lines, as an outcome compares them (shared/aiOutcome.ts). */
+export function listsOf(draft: RecipeDraft): OutcomeLists {
+  const lines = (list: { text: string; heading: boolean }[] | undefined) =>
+    (list ?? []).map((l) => ({ text: l.text, heading: l.heading }));
+  return {
+    ingredients: lines(draft.fields.ingredients?.value),
+    directions: lines(draft.fields.directions?.value),
+  };
+}
+
+/**
+ * Each model's answer for the draft at `index` (the same recipe in each answer: the one of the
+ * same title, else the one at the same place), kept with the draft until it's decided.
+ */
+function answersFor(
+  read: Extract<AiReadResult, { ok: true }>,
+  index: number,
+  shownDraft: RecipeDraft,
+): ReadAnswer[] {
+  const title = (d: RecipeDraft) => d.fields.title?.value.trim().toLowerCase() ?? "";
+  return read.answers.flatMap((a, k): ReadAnswer[] => {
+    const draft =
+      k === read.shown
+        ? shownDraft
+        : (a.drafts.find((d) => title(d) && title(d) === title(shownDraft)) ?? a.drafts[index]);
+    return draft
+      ? [{ purpose: a.purpose, model: a.model, shown: k === read.shown, lists: listsOf(draft) }]
+      : [];
+  });
 }
 
 /**
@@ -268,6 +334,9 @@ export async function createAiImport(
           rereadAt: null,
           index,
           parts,
+          // Each model's answer, until the draft is decided (worker/ai/outcomes.ts).
+          answers: answersFor(read, index, draft),
+          setup: read.setup,
         },
       };
       return {
@@ -389,10 +458,21 @@ export async function readAgain(
     };
   }
   const draft = keepAddress(read.drafts[ai.index] ?? (read.drafts[0] as RecipeDraft), before);
+  // The earlier answers stay, no longer the one shown; this one is shown now.
+  const earlier = (ai.answers ?? []).map((a) => ({ ...a, shown: false }));
   const provenance: AiProvenance & Record<string, unknown> = {
     ...(JSON.parse(job.provenance) as Record<string, unknown>),
     ai: {
       ...(ai as AiProvenance["ai"]),
+      answers: [
+        ...earlier,
+        {
+          purpose: "reread",
+          model: read.models[0] ?? "",
+          shown: true,
+          lists: listsOf(draft),
+        },
+      ],
       models: [...(ai.models ?? []), ...read.models],
       level,
       rereadAt: now.toISOString(),

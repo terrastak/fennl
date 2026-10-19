@@ -1,3 +1,5 @@
+import type { OutcomeSummary, PeriodKind } from "./aiOutcome";
+
 /**
  * The admin console's AI imports section (phase E7): what the AI has cost this month, and the
  * settings that limit it (decided 2026-10-12). Money is in millionths of a US dollar unless the
@@ -33,4 +35,19 @@ export interface AdminAiOverview {
   byModel: { model: string; calls: number; costMicroUsd: number }[];
   /** The households that cost most this month, most first. */
   households: { householdId: string; name: string; imports: number; costMicroUsd: number }[];
+}
+
+/**
+ * Admin console › AI imports › how the reads turned out (decided 2026-10-19; shared/aiOutcome.ts):
+ * one month, quarter or year (UTC) of AI-read drafts, decided in it.
+ */
+export interface AdminAiOutcomes {
+  /** "2026-10", "2026-Q4" or "2026". */
+  period: string;
+  label: string;
+  /** The periods with records, newest first, to choose from. */
+  periods: Record<PeriodKind, { key: string; label: string }[]>;
+  summary: OutcomeSummary;
+  /** What each kind of read cost in the period, in millionths of a dollar (ai_usage). */
+  cost: { read: number; secondLook: number; reread: number };
 }

@@ -397,8 +397,17 @@ export interface SecondLookRules {
 export const SECOND_LOOK_DEFAULTS: SecondLookRules = { missingAmounts: 2, oddAmount: 24 };
 
 /** Lines that rightly have no amount. */
-const NO_AMOUNT_NEEDED =
-  /\b(to taste|as needed|as desired|pinch|dash|for (serving|garnish|greasing|dusting|the pan|frying)|optional|some|a little|few)\b/i;
+const NO_AMOUNT_NEEDED = new RegExp(
+  [
+    String.raw`\b(to taste|as needed|as desired|pinch|dash|optional|some|a little|few)\b`,
+    // "Butter, for the muffins", "Oil for frying".
+    String.raw`(^|,|\s)for\s`,
+    // Seasoning and frying oil, rarely measured: "Kosher salt", "salt and pepper", "Vegetable oil".
+    String.raw`^\s*((kosher|sea|table|flaky|coarse|fine|freshly|ground|cracked|black|white)\s+)*(salt|pepper)\b`,
+    String.raw`^\s*([\w-]+\s+)?oil\s*$`,
+  ].join("|"),
+  "i",
+);
 
 /** Units where a big number is a misreading (volumes people measure by hand). */
 const HAND_MEASURES = new Set([
@@ -447,7 +456,9 @@ export function secondLookFindings(
         if (c === "low") add("unsure", `${list} line unsure: ${lines[i]?.text ?? "?"}`);
       });
     }
-    for (const note of draft.warnings) add("unsure", `said unclear: ${note}`);
+    // The AI's own notes ("the page gives no prep time") are shown for review but don't call for
+    // a second look: in the model comparison (2026-10-19) they set off 32 of 37 second looks,
+    // 24 on answers already right, and the stronger model never did better (owner's go-ahead).
 
     const noAmount: string[] = [];
     for (const line of ingredients) {
