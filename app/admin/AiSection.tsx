@@ -1,6 +1,7 @@
 import { useEffect, useId, useState, type FormEvent } from "react";
 import type { AdminAiOverview, AdminAiSettings } from "../../shared/adminAi";
 import { adminRequest, errorOf } from "./api";
+import { AiOutcomesSection } from "./AiOutcomesSection";
 import { centsAsDollars, dollars, parseDollars } from "./aiMoney";
 import styles from "./admin.module.css";
 
@@ -132,6 +133,8 @@ export function AiSection() {
           </div>
         </section>
       ) : null}
+
+      <AiOutcomesSection />
 
       <AiSettingsForm
         settings={settings}

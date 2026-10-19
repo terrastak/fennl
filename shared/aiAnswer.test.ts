@@ -128,12 +128,15 @@ describe("a second look", () => {
     ]);
   });
 
-  it("is needed when the AI was unsure of something that matters, or said so", () => {
+  it("is needed when the AI was unsure of something that matters, not for its notes", () => {
     const lowLine = recipe({ ingredients: [line("2 1/4 cup flour", "low")] });
     expect(secondLookReasons(drafts(lowLine))).toEqual(["unsure"]);
     const lowTimes = recipe({ times: { ...recipe().times, confidence: "low" } });
     expect(secondLookReasons(drafts(lowTimes))).toEqual(["unsure"]);
-    expect(secondLookReasons(drafts(recipe({ unclear: ["smudged"] })))).toEqual(["unsure"]);
+    // A note is for the person reviewing it ("the page gives no prep time"), not a doubt to settle.
+    expect(secondLookReasons(drafts(recipe({ unclear: ["the page gives no prep time"] })))).toEqual(
+      [],
+    );
     // Medium is fine, and so is an unsure headnote.
     const fine = recipe({
       ingredients: [line("1 C walnuts", "medium")],
@@ -150,6 +153,20 @@ describe("a second look", () => {
       ingredients: [line("walnuts"), line("Salt and pepper to taste"), line("Butter for the pan")],
     });
     expect(secondLookReasons(drafts(fine))).toEqual([]);
+    // Seasoning and frying oil are rarely measured (seen in the model comparison, 2026-10-19).
+    const seasoned = recipe({
+      ingredients: [
+        line("Kosher salt"),
+        line("Freshly ground black pepper"),
+        line("Vegetable oil"),
+        line("Softened unsalted butter, for muffins"),
+        line("1 egg"),
+      ],
+    });
+    expect(secondLookReasons(drafts(seasoned))).toEqual([]);
+    // But an oil named with more ("oil-packed tuna") or another ingredient still counts.
+    const unmeasured = recipe({ ingredients: [line("oil-packed tuna"), line("sugar")] });
+    expect(secondLookReasons(drafts(unmeasured))).toEqual(["missing_amounts"]);
     expect(secondLookReasons(drafts(recipe({ ingredients: [line("35 cups flour")] })))).toEqual([
       "odd_amount",
     ]);

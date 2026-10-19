@@ -8,6 +8,7 @@ import {
   uniqueEmail,
   useFreshAddress,
 } from "./support";
+import { premium } from "./recipes";
 
 // The admin console, locally at /admin (ACCESS_DEV_BYPASS stands in for Cloudflare Access).
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -307,6 +308,62 @@ test("an admin reads feedback, replies by email, and marks it done", async ({
   await done.getByRole("button", { expanded: false }).click();
   await done.getByRole("button", { name: "Open their account" }).click();
   await expect(page.getByRole("heading", { level: 2, name: "Lena Park" })).toBeVisible();
+});
+
+test("an admin sees how AI reads turned out, by month, quarter or year", async ({
+  page,
+  context,
+  browser,
+  baseURL,
+}, testInfo) => {
+  // A tester's AI import, discarded: an outcome with no scores (decided 2026-10-19).
+  const tester = await browser.newContext({
+    baseURL: baseURL!,
+    storageState: { cookies: [], origins: [] },
+  });
+  await useFreshAddress(tester);
+  await signUpConfirmed(tester, baseURL!, "Ana Ruiz");
+  await premium(tester, baseURL!);
+  const made = await tester.request.post("/api/dev/test-ai-import", {
+    headers: { origin: baseURL! },
+    data: { unsure: true },
+  });
+  expect(made.ok()).toBe(true);
+  const { jobIds } = (await made.json()) as { jobIds: string[] };
+  const discarded = await tester.request.post(`/api/import/jobs/${jobIds[0]}/discard`, {
+    headers: { origin: baseURL! },
+  });
+  expect(discarded.ok()).toBe(true);
+  await tester.close();
+
+  const email = adminEmail(testInfo, "ai-outcomes");
+  await context.clearCookies();
+  await addVirtualAuthenticator(context, page);
+  await signInWithPassword(page, email);
+  await page.getByRole("button", { name: "Add a passkey" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Admin console" })).toBeVisible();
+  await page
+    .getByRole("navigation", { name: "Admin sections" })
+    .getByRole("button", { name: "AI imports" })
+    .click();
+
+  const section = page.getByRole("region", { name: "How AI reads turned out" });
+  const heading = section.getByRole("term");
+  await expect(heading).toHaveText(/^Drafts in \w+ \d{4}$/);
+  await expect(section).toContainText(/\d+ saved, [1-9]\d* discarded/);
+  await expect(
+    section.getByRole("table", { name: "Is the stronger model worth it?" }),
+  ).toBeVisible();
+  await expect(section.getByRole("table", { name: "By kind of import" })).toContainText("Photos");
+  await expectAccessible(page);
+
+  // The same by quarter and by year.
+  await section.getByLabel("Show by").selectOption("quarter");
+  await expect(section.getByLabel("Period")).toHaveValue(/^\d{4}-Q[1-4]$/);
+  await expect(heading).toHaveText(/^Drafts in Q[1-4] \d{4} \(/);
+  await section.getByLabel("Show by").selectOption("year");
+  await expect(section.getByLabel("Period")).toHaveValue(/^\d{4}$/);
+  await expect(heading).toHaveText(/^Drafts in \d{4}$/);
 });
 
 test("an ordinary account can't use the admin area", async ({ page, context, baseURL }) => {

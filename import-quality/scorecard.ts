@@ -276,6 +276,24 @@ export function reportMarkdown(card: Scorecard): string {
     }
     out.push(
       "",
+      "Lines exactly right, in the recipes found (what the import targets measure; spec.md E8):",
+      "",
+      "| Importer | Ingredient lines | Method lines | Recipes not found |",
+      "| --- | --- | --- | --- |",
+    );
+    for (const name of importers) {
+      const rs = card.results.filter((r) => r.importer === name);
+      const sum = (k: "ingredients" | "directions") => {
+        const counts = rs.flatMap((r) => r.scores.map((s) => s?.[k] ?? null));
+        const exact = counts.reduce((n, c) => n + (c?.exact ?? 0), 0);
+        const expected = counts.reduce((n, c) => n + (c?.expected ?? 0), 0);
+        return expected ? `${exact} of ${expected} (${pct(exact / expected)})` : "–";
+      };
+      const lost = rs.reduce((n, r) => n + r.scores.filter((s) => s === null).length, 0);
+      out.push(`| ${name} | ${sum("ingredients")} | ${sum("directions")} | ${lost} |`);
+    }
+    out.push(
+      "",
       "## Samples",
       "",
       "| Sample | Kind | Importer | Overall | Ingredients | Directions | Notes |",

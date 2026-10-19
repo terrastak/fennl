@@ -135,6 +135,7 @@ export const ADMIN_ACCOUNTS = {
   restores: "Support",
   feedback: "Support",
   acts: "Ada Admin",
+  "ai-outcomes": "Analyst",
 } as const;
 export type AdminLabel = keyof typeof ADMIN_ACCOUNTS;
 /** Where the admin tests run (the console is checked on a computer). */

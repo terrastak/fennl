@@ -1,3 +1,4 @@
+import type { ReadAnswer } from "./aiOutcome";
 import type { RecipeDraft } from "./importDraft";
 
 /**
@@ -83,6 +84,14 @@ export interface AiProvenance {
     /** Which of the recipes found in what was read this is (a card can hold two). */
     index: number;
     parts: AiPartRecord[];
+    /**
+     * Each model's answer for this draft, kept until it's saved, discarded or removed, then
+     * measured against what was saved (worker/ai/outcomes.ts). Missing on drafts made before
+     * 2026-10-19.
+     */
+    answers?: ReadAnswer[];
+    /** The instructions' fingerprint when it was read (worker/ai/read.ts, setupVersion). */
+    setup?: string;
   };
 }
 

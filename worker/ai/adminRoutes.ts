@@ -1,9 +1,18 @@
-import { and, desc, eq, gte, sql, sum } from "drizzle-orm";
+import { and, desc, eq, gte, lt, sql, sum } from "drizzle-orm";
 import { Hono } from "hono";
-import type { AdminAiOverview, AdminAiSettings } from "../../shared/adminAi";
+import type { AdminAiOutcomes, AdminAiOverview, AdminAiSettings } from "../../shared/adminAi";
+import {
+  periodKey,
+  periodLabel,
+  periodRange,
+  periodsBetween,
+  summarize,
+  type AiOutcome,
+  type PeriodKind,
+} from "../../shared/aiOutcome";
 import { recordAdminAction } from "../admin/audit";
 import { freshPasskeyProblem, requireAdmin, type AdminContext } from "../admin/requireAdmin";
-import { aiUsage, organization } from "../db/schema";
+import { aiOutcome, aiUsage, organization } from "../db/schema";
 import { writeText, type TextSettingKey } from "../settings/settings";
 import { knownAnthropicModel } from "./anthropic";
 import { aiProvider, aiSettings, parseModels } from "./config";
@@ -139,4 +148,57 @@ adminAiRoutes.put("/ai/settings", async (c) => {
     await writeText(admin.db, key, value, admin.userId);
   }
   return c.json(await aiSettings(admin.db, knows(c.env)));
+});
+
+// GET /api/admin/ai/outcomes?period=2026-10 (or 2026-Q4, or 2026): how AI-read drafts decided in
+// the period turned out, by model and by kind of import, and what each kind of read cost
+// (decided 2026-10-19). Without a period, this month.
+adminAiRoutes.get("/ai/outcomes", async (c) => {
+  const db = c.var.admin.db;
+  const now = Date.now();
+  const period = c.req.query("period") ?? periodKey("month", now);
+  const range = periodRange(period);
+  if (!range) return c.json({ error: "invalid_period" }, 400);
+  const inPeriod = and(
+    gte(aiOutcome.decidedAt, new Date(range.from)),
+    lt(aiOutcome.decidedAt, new Date(range.to)),
+  );
+  const rows = await db.select().from(aiOutcome).where(inPeriod).all();
+  const outcomes: AiOutcome[] = rows.map((row) => ({
+    source: row.source,
+    outcome: row.outcome as AiOutcome["outcome"],
+    path: row.path,
+    setup: row.setup,
+    reads: JSON.parse(row.reads) as AiOutcome["reads"],
+    linesFixed: row.linesFixed,
+    createdAt: row.createdAt.getTime(),
+    decidedAt: row.decidedAt.getTime(),
+  }));
+  const costs = await db
+    .select({
+      purpose: aiUsage.purpose,
+      cost: sql<number>`coalesce(sum(${aiUsage.costMicroUsd}), 0)`,
+    })
+    .from(aiUsage)
+    .where(
+      and(gte(aiUsage.createdAt, new Date(range.from)), lt(aiUsage.createdAt, new Date(range.to))),
+    )
+    .groupBy(aiUsage.purpose)
+    .all();
+  const costOf = (purpose: string) => Number(costs.find((x) => x.purpose === purpose)?.cost ?? 0);
+  const first = await db
+    .select({ at: sql<number | null>`min(${aiOutcome.decidedAt})` })
+    .from(aiOutcome)
+    .get();
+  const since = first?.at ?? now;
+  const list = (kind: PeriodKind) =>
+    periodsBetween(kind, since, now).map((key) => ({ key, label: periodLabel(key) }));
+  const body: AdminAiOutcomes = {
+    period,
+    label: periodLabel(period),
+    periods: { month: list("month"), quarter: list("quarter"), year: list("year") },
+    summary: summarize(outcomes),
+    cost: { read: costOf("read"), secondLook: costOf("second_look"), reread: costOf("reread") },
+  };
+  return c.json(body);
 });

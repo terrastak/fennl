@@ -23,6 +23,9 @@ describe("normalizing text", () => {
     expect(normalize("• ½ cup sugar")).toBe("1/2 cup sugar");
     expect(normalize("Step 2: Don’t stir")).toBe("don't stir");
     expect(normalize("3) Bake 10–12 minutes")).toBe("bake 10-12 minutes");
+    // Some pages run the step number into the text.
+    expect(normalize("Step 1Spread out the bread")).toBe("spread out the bread");
+    expect(normalize("Steps vary by oven")).toBe("steps vary by oven");
   });
 });
 
