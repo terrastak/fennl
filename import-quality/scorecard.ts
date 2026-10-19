@@ -142,6 +142,23 @@ async function runOne(importer: Importer, sample: Sample, expected: ExpectedReci
   } catch (error) {
     problems.push(`failed: ${String(error)}`);
   }
+  const scored = scoreDrafts(expected, drafts);
+  return {
+    sample,
+    importer: importer.name,
+    exact: importer.exact ?? false,
+    ...scored,
+    problems: [...problems, ...scored.problems],
+    ms: Math.round(performance.now() - started),
+  } satisfies SampleResult;
+}
+
+/** How a sample's drafts compare with its correct answers (invalid drafts count as not found). */
+export function scoreDrafts(
+  expected: ExpectedRecipe[],
+  drafts: RecipeDraft[],
+): Pick<SampleResult, "scores" | "overall" | "extra" | "problems"> {
+  const problems: string[] = [];
   const valid = drafts.filter((d, i) => {
     const issues = draftIssues(d);
     if (issues.length) {
@@ -158,16 +175,7 @@ async function runOne(importer: Importer, sample: Sample, expected: ExpectedReci
     return recipe ? scoreRecipe(expected[p.expected] as ExpectedRecipe, recipe) : null;
   });
   const overall = scores.reduce((s, r) => s + (r?.overall ?? 0), 0) / Math.max(1, scores.length);
-  return {
-    sample,
-    importer: importer.name,
-    exact: importer.exact ?? false,
-    scores,
-    overall,
-    extra,
-    problems,
-    ms: Math.round(performance.now() - started),
-  } satisfies SampleResult;
+  return { scores, overall, extra, problems };
 }
 
 export interface Scorecard {

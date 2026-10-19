@@ -73,7 +73,9 @@ The form has a box for what to read:
 1. On GitHub, click the **Actions** tab.
 2. In the left sidebar, click **AI model comparison**.
 3. Click **Run workflow**, leave the branch as `main` and the models blank, pick what to read, and click **Run workflow**.
-4. When the run finishes (a few minutes), open it. The report is on its summary page.
+4. When the run finishes (up to about 30 minutes for **all**), open it. The report is on its summary page, including a **Second looks** section: for each rule that makes Sonnet read a recipe again, how often it caught a real mistake and how often it fired for nothing.
+
+The run also keeps every answer the AI gave (**ai-answers** at the bottom of the run's page, kept 30 days). With those, the second-look rules can be re-checked as often as needed at no cost (`npm run ai:replay`), so a change to the rules doesn't need another paid run.
 
 The more handwritten cards the test set has, the more the comparison says. Today it has two (`import-quality/README.md` has the checklist for adding more).
 

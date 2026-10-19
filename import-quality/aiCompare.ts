@@ -5,19 +5,30 @@ import {
   SECOND_LOOK_DEFAULTS,
   answerToDrafts,
   isAiAnswer,
-  secondLookReasons,
+  secondLookFindings,
+  withoutBadParts,
 } from "../shared/aiAnswer";
 import type { DraftInput, RecipeDraft } from "../shared/importDraft";
 import { pageForAi } from "../shared/pageText";
 import type { ImportSource } from "../shared/recipe";
 import { AnthropicProvider } from "../worker/ai/anthropic";
+import { FakeProvider } from "../worker/ai/fake";
 import { DEFAULT_MODELS, MAX_OUTPUT_TOKENS, effortFor } from "../worker/ai/models";
 import { instructionFor, SYSTEM_PROMPT } from "../worker/ai/prompt";
 import type { AiPart, AiProvider, ImageType } from "../worker/ai/provider";
 import { MIN_PAGE_TEXT, pageAiPart } from "../worker/import/aiPage";
 import {
+  cookingScore,
+  secondLookSection,
+  type LookRecord,
+  type SavedAnswer,
+  type Way,
+} from "./secondLookReport";
+import {
+  loadExpected,
   reportMarkdown,
   runScorecard,
+  scoreDrafts,
   type Importer,
   type InputFile,
   type Sample,
@@ -34,6 +45,7 @@ import {
 //   Fennl does, decided 2026-10-12), with the mistakes that setup let through.
 //
 //   ANTHROPIC_API_KEY=... npm run ai:compare
+//   AI_COMPARE_FAKE=1 npm run ai:compare     (the stand-in AI: checks the script, costs nothing)
 //
 // AI_COMPARE_SETS picks what it reads: "photos" (the default: the photos, cookbook pages,
 // screenshots and PDFs), "web" (the web pages with their recipe data left out, read from the
@@ -118,6 +130,9 @@ const tally = (): Tally => ({
   looked: new Map(),
 });
 
+const answers: SavedAnswer[] = [];
+const looks: LookRecord[] = [];
+
 async function read(
   provider: AiProvider,
   model: string,
@@ -125,6 +140,7 @@ async function read(
   sample: Sample,
   files: InputFile[],
   spent: Tally,
+  record: { set: SetName; way: Way },
 ): Promise<RecipeDraft[] | null> {
   const source = SOURCE[sample.kind] ?? "photo";
   const { parts, inputs } = toParts(files, sample);
@@ -138,7 +154,19 @@ async function read(
     maxOutputTokens: MAX_OUTPUT_TOKENS,
   });
   spent.calls += 1;
-  spent.microUsd += provider.costMicroUsd(model, result.tokens);
+  const cost = provider.costMicroUsd(model, result.tokens);
+  spent.microUsd += cost;
+  answers.push({
+    ...record,
+    sample: sample.id,
+    model,
+    source,
+    inputs,
+    ok: result.ok,
+    problem: result.ok ? null : `${result.problem} ${result.detail ?? ""}`.trim(),
+    output: result.ok ? result.output : null,
+    costMicroUsd: cost,
+  });
   if (!result.ok) {
     console.warn(`${sample.id} (${model}): ${result.problem} ${result.detail ?? ""}`);
     return null;
@@ -147,7 +175,11 @@ async function read(
     console.warn(`${sample.id} (${model}): answer of the wrong shape`);
     return null;
   }
-  return answerToDrafts(result.output, { source, inputs, photos: [], model });
+  // As Fennl keeps them (worker/ai/read.ts): a part that breaks the rules is left out.
+  return answerToDrafts(result.output, { source, inputs, photos: [], model }).flatMap((d) => {
+    const kept = withoutBadParts(d, null);
+    return kept ? [kept] : [];
+  });
 }
 
 function importers(provider: AiProvider, cheap: string, strong: string, set: SetName) {
@@ -169,7 +201,7 @@ function importers(provider: AiProvider, cheap: string, strong: string, set: Set
     ...(accepts ? { accepts } : {}),
     run: async (files, sample) => {
       t.samples += 1;
-      return (await read(provider, model, level, sample, files, t)) ?? [];
+      return (await read(provider, model, level, sample, files, t, { set, way: "alone" })) ?? [];
     },
   });
   const switching: Importer = {
@@ -179,12 +211,27 @@ function importers(provider: AiProvider, cheap: string, strong: string, set: Set
     run: async (files, sample) => {
       const t = spent.switching;
       t.samples += 1;
-      const first = await read(provider, cheap, 0, sample, files, t);
-      const reasons = first ? secondLookReasons(first, SECOND_LOOK_DEFAULTS) : ["no_answer"];
-      t.looked.set(sample.id, reasons.length > 0);
-      if (reasons.length === 0) return first ?? [];
+      const first = await read(provider, cheap, 0, sample, files, t, { set, way: "first" });
+      const findings = first
+        ? secondLookFindings(first, SECOND_LOOK_DEFAULTS)
+        : [{ reason: "no_answer" as const, detail: "no usable answer" }];
+      const expected = (await loadExpected(sample.id)) ?? [];
+      const look: LookRecord = {
+        set,
+        sample: sample.id,
+        findings,
+        first: cookingScore(scoreDrafts(expected, first ?? [])),
+        second: null,
+      };
+      looks.push(look);
+      t.looked.set(sample.id, findings.length > 0);
+      if (findings.length === 0) return first ?? [];
       t.secondLooks += 1;
-      const second = await read(provider, strong, 1, sample, files, t);
+      const second = await read(provider, strong, 1, sample, files, t, {
+        set,
+        way: "second_look",
+      });
+      look.second = cookingScore(scoreDrafts(expected, second ?? []));
       return second && second.length > 0 ? second : (first ?? []);
     },
   };
@@ -198,14 +245,16 @@ const dollars = (micro: number) => `$${(micro / 1_000_000).toFixed(3)}`;
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 async function main() {
+  // AI_COMPARE_FAKE=1: Fennl's stand-in AI (worker/ai/fake.ts), to check the script itself for free.
+  const fake = process.env.AI_COMPARE_FAKE === "1";
   const key = process.env.ANTHROPIC_API_KEY;
-  if (!key) {
+  if (!key && !fake) {
     console.error("Set ANTHROPIC_API_KEY to run the model comparison (it calls the real API).");
     process.exit(2);
   }
   const [cheap, strong] = (process.env.AI_MODELS?.split(",").map((m) => m.trim()) ??
     DEFAULT_MODELS) as [string, string];
-  const provider = new AnthropicProvider(key);
+  const provider: AiProvider = fake ? new FakeProvider() : new AnthropicProvider(key ?? "");
   if (!provider.knows(cheap) || !provider.knows(strong)) {
     console.error(`Unknown model in ${cheap}, ${strong}`);
     process.exit(2);
@@ -280,9 +329,14 @@ async function main() {
     "",
     ...(missedLines.length ? missedLines : ["None."]),
     "",
-    `Prices: Anthropic's (worker/ai/anthropic.ts). Run on ${new Date().toISOString().slice(0, 10)}.`,
+    ...secondLookSection(looks),
+    `Prices: Anthropic's (worker/ai/anthropic.ts). Run on ${new Date().toISOString().slice(0, 10)}. Every answer is saved in ai-answers.json, kept with the run.`,
   ].join("\n");
   await writeFile(join(import.meta.dirname, "ai-report.md"), `${out}\n`);
+  await writeFile(
+    join(import.meta.dirname, "ai-answers.json"),
+    `${JSON.stringify({ cheap, strong, answers }, null, 1)}\n`,
+  );
   console.log(out);
 }
 
