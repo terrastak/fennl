@@ -4,6 +4,8 @@ import {
   isAiAnswer,
   secondLookReasons,
   stillUncertain,
+  webAddress,
+  withoutBadParts,
   type AiLine,
   type AiRecipe,
 } from "./aiAnswer";
@@ -174,5 +176,48 @@ describe("what's still uncertain after reading again", () => {
     expect(stillUncertain(drafts(recipe({ directions: [line("Bake at 3?0", "low")] }))[0]!)).toBe(
       true,
     );
+  });
+});
+
+describe("an odd part of an answer", () => {
+  it("doesn't lose the recipe: a web address is made whole, or left out", () => {
+    expect(webAddress("https://june.example.com/cake")).toBe("https://june.example.com/cake");
+    expect(webAddress("instagram.com/junebakes")).toBe("https://instagram.com/junebakes");
+    expect(webAddress("www.example.com")).toBe("https://www.example.com/");
+    expect(webAddress("@junebakes")).toBeNull();
+    expect(webAddress("June's blog")).toBeNull();
+    expect(webAddress("javascript:alert(1)")).toBeNull();
+
+    // The screenshot a stronger model read (2026-10-14): a handle where an address goes.
+    const [draft] = drafts(
+      recipe({
+        source: {
+          kind: "website",
+          name: "June Bakes",
+          author: null,
+          page: null,
+          url: "@junebakes on Instagram",
+          ...sure,
+        },
+      }),
+    );
+    expect(draft?.fields.source?.value).toMatchObject({ name: "June Bakes", url: null });
+    expect(draftIssues(draft)).toEqual([]);
+  });
+
+  it("leaves out only the part that breaks the rules", () => {
+    const [draft] = drafts(recipe());
+    const broken = {
+      ...draft!,
+      fields: {
+        ...draft!.fields,
+        notes: { value: "x".repeat(300_000), confidence: "high" as const, from: [] },
+      },
+    };
+    expect(draftIssues(broken).length).toBeGreaterThan(0);
+    const kept = withoutBadParts(broken, null);
+    expect(kept?.fields.notes).toBeUndefined();
+    expect(kept?.fields.ingredients?.value).toHaveLength(3);
+    expect(draftIssues(kept)).toEqual([]);
   });
 });
