@@ -613,6 +613,8 @@ export const importJob = sqliteTable(
   (table) => [
     index("import_job_household_idx").on(table.householdId, table.createdAt),
     index("import_job_batch_idx").on(table.batchId),
+    // Photo housekeeping asks whether a person's waiting drafts hold a photo (phase E9).
+    index("import_job_user_status_idx").on(table.userId, table.status),
   ],
 );
 
@@ -680,4 +682,35 @@ export const aiUsage = sqliteTable(
     index("ai_usage_household_idx").on(table.householdId, table.createdAt),
     index("ai_usage_created_idx").on(table.createdAt),
   ],
+);
+
+/**
+ * How an AI-read draft turned out (decided by the owner 2026-10-19; shared/aiOutcome.ts): saved,
+ * discarded or never reviewed, and, when saved, how close each model's answer was to what the
+ * person kept. Only scores, never the recipe. Kept two years (worker/ai/outcomes.ts) and shown in
+ * the admin console by month, quarter and year, so the stronger model's cost can be judged on
+ * real imports. No foreign keys: the record stays when a draft or an account is removed.
+ */
+export const aiOutcome = sqliteTable(
+  "ai_outcome",
+  {
+    id: text("id").primaryKey(),
+    /** One outcome per draft. */
+    importJobId: text("import_job_id").notNull().unique(),
+    /** Where the recipe came from: "website", "photo", "screenshot", "pdf". */
+    source: text("source").notNull(),
+    /** "saved", "discarded" or "expired". */
+    outcome: text("outcome").notNull(),
+    /** The reads in order: "read", "read+second_look", "read+second_look+reread"... */
+    path: text("path").notNull(),
+    /** A short fingerprint of Fennl's instructions and second-look rules at the time. */
+    setup: text("setup").notNull(),
+    /** JSON: each answer's model and, when saved, how close it was (shared/aiOutcome.ts). */
+    reads: text("reads").notNull(),
+    /** Lines the person changed, added or removed from what they were shown (saved only). */
+    linesFixed: integer("lines_fixed"),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    decidedAt: integer("decided_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("ai_outcome_decided_idx").on(table.decidedAt)],
 );

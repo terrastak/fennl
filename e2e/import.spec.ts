@@ -24,7 +24,7 @@ async function expectAccessible(page: Page) {
 async function importSavedPage(page: Page, file: string) {
   await page.goto("/import");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
-  await page.locator('input[type="file"]').setInputFiles(`test_pages/${file}`);
+  await page.locator('input[type="file"][accept*="html"]').setInputFiles(`test_pages/${file}`);
   await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { level: 1, name: "Review the import" })).toBeVisible();
 }

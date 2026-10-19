@@ -1,5 +1,6 @@
 import {
   DRAFT_VERSION,
+  draftIssues,
   type Confidence,
   type DraftFields,
   type DraftInput,
@@ -232,6 +233,57 @@ export const AI_IMPORTER = "ai";
 
 const AI_EVIDENCE: Evidence[] = [{ kind: "ai", input: null, detail: null }];
 
+/**
+ * A source address as a full web address: "instagram.com/june" (as a photo of a screen shows
+ * it) gains "https://"; anything that isn't one ("@june", "Grandma's blog") is left out. An
+ * address the draft can't keep would otherwise lose the whole recipe (found by the model
+ * comparison, 2026-10-14).
+ */
+export function webAddress(text: string | null): string | null {
+  const t = text?.trim();
+  if (!t || /\s/.test(t)) return null;
+  const candidate = /^https?:\/\//i.test(t)
+    ? t
+    : /^[\w-]+(\.[\w-]+)+(\/|$)/.test(t)
+      ? `https://${t}`
+      : null;
+  if (!candidate || candidate.length > 2000) return null;
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A draft with any part that breaks the recipe rules left out, rather than losing the whole
+ * recipe to one odd part. Null when it still breaks them (nothing usable left).
+ */
+export function withoutBadParts(
+  draft: RecipeDraft,
+  maxRecipeBytes: number | null,
+): RecipeDraft | null {
+  const issues = draftIssues(draft, maxRecipeBytes);
+  if (issues.length === 0) return draft;
+  const bad = new Set(
+    issues.flatMap((i) => {
+      const m = /^fields\.(\w+)/.exec(i.path);
+      return m ? [m[1] as keyof DraftFields] : [];
+    }),
+  );
+  if (bad.size === 0) return null;
+  const fields = Object.fromEntries(
+    Object.entries(draft.fields).filter(([key]) => !bad.has(key as keyof DraftFields)),
+  ) as DraftFields;
+  const lineConfidence = {
+    ingredients: bad.has("ingredients") ? null : draft.lineConfidence.ingredients,
+    directions: bad.has("directions") ? null : draft.lineConfidence.directions,
+  };
+  const repaired: RecipeDraft = { ...draft, fields, lineConfidence };
+  return draftIssues(repaired, maxRecipeBytes).length === 0 ? repaired : null;
+}
+
 /** An AI answer as recipe drafts, one per recipe it found. Empty: nothing was a recipe. */
 export function answerToDrafts(answer: AiAnswer, context: AnswerContext): RecipeDraft[] {
   const newId = context.newId ?? (() => crypto.randomUUID());
@@ -285,10 +337,11 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
         );
       }
       const s = r.source;
-      if (s.name || s.author || s.page || s.url) {
+      const url = webAddress(s.url);
+      if (s.name || s.author || s.page || url) {
         put(
           "source",
-          { kind: s.kind, name: s.name, url: s.url, author: s.author, page: s.page },
+          { kind: s.kind, name: s.name, url, author: s.author, page: s.page },
           s.confidence,
         );
       }
@@ -344,8 +397,17 @@ export interface SecondLookRules {
 export const SECOND_LOOK_DEFAULTS: SecondLookRules = { missingAmounts: 2, oddAmount: 24 };
 
 /** Lines that rightly have no amount. */
-const NO_AMOUNT_NEEDED =
-  /\b(to taste|as needed|as desired|pinch|dash|for (serving|garnish|greasing|dusting|the pan|frying)|optional|some|a little|few)\b/i;
+const NO_AMOUNT_NEEDED = new RegExp(
+  [
+    String.raw`\b(to taste|as needed|as desired|pinch|dash|optional|some|a little|few)\b`,
+    // "Butter, for the muffins", "Oil for frying".
+    String.raw`(^|,|\s)for\s`,
+    // Seasoning and frying oil, rarely measured: "Kosher salt", "salt and pepper", "Vegetable oil".
+    String.raw`^\s*((kosher|sea|table|flaky|coarse|fine|freshly|ground|cracked|black|white)\s+)*(salt|pepper)\b`,
+    String.raw`^\s*([\w-]+\s+)?oil\s*$`,
+  ].join("|"),
+  "i",
+);
 
 /** Units where a big number is a misreading (volumes people measure by hand). */
 const HAND_MEASURES = new Set([
@@ -361,45 +423,66 @@ const HAND_MEASURES = new Set([
 /** The fields a second look is about: what decides how the dish turns out, and its name. */
 const KEY_FIELDS = ["title", "ingredients", "directions", "times", "servings"] as const;
 
+/** One thing that set off a second look, with what it was ("ingredient line: Salt"). */
+export interface SecondLookFinding {
+  reason: SecondLookReason;
+  detail: string;
+}
+
 /**
- * Why these drafts should be read again by a stronger model; empty when they look right. A
- * read that found nothing has no drafts, and always gets a second look.
+ * Why a read's answer looks wrong enough for a second look, each with what set it off (for the
+ * model comparison, which counts how often each catches a real mistake). Empty: it looks right.
  */
-export function secondLookReasons(
+export function secondLookFindings(
   drafts: RecipeDraft[],
   rules: SecondLookRules = SECOND_LOOK_DEFAULTS,
-): SecondLookReason[] {
-  if (drafts.length === 0) return ["no_answer"];
-  const reasons = new Set<SecondLookReason>();
+): SecondLookFinding[] {
+  if (drafts.length === 0) return [{ reason: "no_answer", detail: "no recipe" }];
+  const found: SecondLookFinding[] = [];
+  const add = (reason: SecondLookReason, detail: string) => found.push({ reason, detail });
   for (const draft of drafts) {
     const f = draft.fields;
     const ingredients = (f.ingredients?.value ?? []).filter((l) => !l.heading);
     const directions = (f.directions?.value ?? []).filter((l) => !l.heading);
-    if (!f.title?.value.trim() || ingredients.length === 0 || directions.length === 0) {
-      reasons.add("missing_part");
+    if (!f.title?.value.trim()) add("missing_part", "no title");
+    if (ingredients.length === 0) add("missing_part", "no ingredients");
+    if (directions.length === 0) add("missing_part", "no method");
+    for (const key of KEY_FIELDS) {
+      if (f[key]?.confidence === "low") add("unsure", `${key} marked unsure`);
     }
-    const unsure =
-      KEY_FIELDS.some((key) => f[key]?.confidence === "low") ||
-      draft.lineConfidence.ingredients?.includes("low") ||
-      draft.lineConfidence.directions?.includes("low") ||
-      draft.warnings.length > 0;
-    if (unsure) reasons.add("unsure");
+    for (const list of ["ingredients", "directions"] as const) {
+      const lines = f[list]?.value ?? [];
+      draft.lineConfidence[list]?.forEach((c, i) => {
+        if (c === "low") add("unsure", `${list} line unsure: ${lines[i]?.text ?? "?"}`);
+      });
+    }
+    // The AI's own notes ("the page gives no prep time") are shown for review but don't call for
+    // a second look: in the model comparison (2026-10-19) they set off 32 of 37 second looks,
+    // 24 on answers already right, and the stronger model never did better (owner's go-ahead).
 
-    let noAmount = 0;
+    const noAmount: string[] = [];
     for (const line of ingredients) {
       const read = readIngredient(line.text);
-      if (!read.quantity && !NO_AMOUNT_NEEDED.test(line.text)) noAmount += 1;
+      if (!read.quantity && !NO_AMOUNT_NEEDED.test(line.text)) noAmount.push(line.text);
       const unit = read.unit ? unitNamed(read.unit) : undefined;
       const most = read.quantity ? Math.max(read.quantity.low, read.quantity.high ?? 0) : 0;
       if (rules.oddAmount > 0 && unit && HAND_MEASURES.has(unit.name) && most > rules.oddAmount) {
-        reasons.add("odd_amount");
+        add("odd_amount", line.text);
       }
     }
-    if (rules.missingAmounts > 0 && noAmount >= rules.missingAmounts) {
-      reasons.add("missing_amounts");
+    if (rules.missingAmounts > 0 && noAmount.length >= rules.missingAmounts) {
+      add("missing_amounts", noAmount.join(" · "));
     }
   }
-  return [...reasons];
+  return found;
+}
+
+/** Why a read gets a second look (the kinds of finding, once each). Empty: it looks right. */
+export function secondLookReasons(
+  drafts: RecipeDraft[],
+  rules: SecondLookRules = SECOND_LOOK_DEFAULTS,
+): SecondLookReason[] {
+  return [...new Set(secondLookFindings(drafts, rules).map((f) => f.reason))];
 }
 
 /**
@@ -417,4 +500,48 @@ export function stillUncertain(draft: RecipeDraft): boolean {
     Boolean(draft.lineConfidence.directions?.includes("low")) ||
     draft.warnings.length > 0
   );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Pages whose recipe data leaves something out (phase E8)
+// ---------------------------------------------------------------------------------------------
+
+const LISTS = [
+  ["ingredients", "ingredients"],
+  ["directions", "method"],
+] as const;
+
+/** A recipe's data on its page has no ingredients, or no method. */
+export function missingLists(draft: RecipeDraft): boolean {
+  return LISTS.some(([field]) => !draft.fields[field]?.value.length);
+}
+
+/**
+ * A page's recipe data with the lists it left out filled in from the AI's reading of the page.
+ * Everything the data does say is kept as it is (it's what the site published); only a missing
+ * ingredient list or method is taken from the AI, with how sure it was of each line.
+ */
+export function fillMissingLists(published: RecipeDraft, read: RecipeDraft): RecipeDraft {
+  const fields = { ...published.fields };
+  const lineConfidence = { ...published.lineConfidence };
+  const warnings = [...published.warnings];
+  let filled = false;
+  for (const [field, name] of LISTS) {
+    const theirs = read.fields[field];
+    if (published.fields[field]?.value.length || !theirs?.value.length) continue;
+    (fields as Record<string, unknown>)[field] = theirs;
+    lineConfidence[field] = read.lineConfidence[field];
+    const said = warnings.indexOf(`The page's recipe data has no ${field}.`);
+    if (said >= 0) warnings.splice(said, 1);
+    warnings.push(`The page's recipe data has no ${name}, so Fennl read it from the page itself.`);
+    filled = true;
+  }
+  if (!filled) return published;
+  return {
+    ...published,
+    fields,
+    lineConfidence,
+    warnings,
+    producer: { ...published.producer, model: read.producer.model },
+  };
 }

@@ -1,0 +1,1472 @@
+[
+  {
+    "domain": "100daysofrealfood.com",
+    "status": "reads",
+    "url": "https://www.100daysofrealfood.com/recipe-the-best-whole-chicken-in-a-crock-pot/",
+    "note": "9 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "101cookbooks.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "againstallgrain.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "alaskafromscratch.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "alldayidreamaboutfood.com",
+    "status": "reads",
+    "url": "https://alldayidreamaboutfood.com/keto-overnight-oats/",
+    "note": "9 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "allrecipes.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "altonbrown.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ambitiouskitchen.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "americastestkitchen.com",
+    "status": "reads",
+    "url": "https://www.americastestkitchen.com/recipes/17454-spicy-tomato-soup-with-tortellini-and-sausage",
+    "note": "11 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "amidstthechaos.ca",
+    "status": "reads",
+    "url": "https://amidstthechaos.ca/2017/05/greek-salad-hummus-layer-dip/",
+    "note": "9 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "angiesrecipes.blogspot.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "arla.dk",
+    "status": "reads",
+    "url": "https://www.arla.dk/opskrifter/sprode-gnocchi-med-tomat-og-salsiccia/",
+    "note": "13 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "arla.se",
+    "status": "reads",
+    "url": "https://www.arla.se/recept/torsk-i-ugn-med-citronsas-och-dill/",
+    "note": "13 ingredients, 9 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "atkins.com",
+    "status": "reads",
+    "url": "https://www.atkins.com/recipes/low-carb-nutty-quinoa-chocolate-bars",
+    "note": "12 ingredients, 1 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "atria.fi",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bakedbree.com",
+    "status": "reads",
+    "url": "https://bakedbree.com/oreo-cheesecake-recipe",
+    "note": "9 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bakefromscratch.com",
+    "status": "reads",
+    "url": "https://bakefromscratch.com/jumbo-pumpkin-pecan-sweet-rolls/",
+    "note": "24 ingredients, 12 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "barefootcontessa.com",
+    "status": "reads",
+    "url": "https://barefootcontessa.com/recipes/summer-garden-pasta",
+    "note": "9 ingredients, 2 steps",
+    "checked": "2026-10-14"
+  },
+  {
+    "domain": "bbc.co.uk",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bbcgoodfood.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bestrecipes.com.au",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bettycrocker.com",
+    "status": "reads",
+    "url": "https://www.bettycrocker.com/recipes/pumpkin-streusel-cheesecake-bars/35777889-f94f-413d-91cc-e02a009eca2e",
+    "note": "16 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "beyondkimchee.com",
+    "status": "reads",
+    "url": "https://www.beyondkimchee.com/salmon-fried-rice/",
+    "note": "11 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bhg.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bigoven.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "blog.fatfreevegan.com",
+    "status": "reads",
+    "url": "https://blog.fatfreevegan.com/2024/02/easy-vegan-lasagna-soup.html",
+    "note": "17 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bobsredmill.com",
+    "status": "reads",
+    "url": "https://www.bobsredmill.com/recipes/how-to-make/earl-grey-snowball-cookies",
+    "note": "7 ingredients, 14 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "bonappetit.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "brokeassgourmet.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "budgetbytes.com",
+    "status": "reads",
+    "url": "https://www.budgetbytes.com/overnight-oats-base-recipe-plus-variations/",
+    "note": "21 ingredients, 14 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "californiaavocado.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "campbells.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "canadianliving.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cdkitchen.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe page found from the home page",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "chefkoch.de",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "chefmichaelsmith.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "chowhound.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "citronetvanille.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "civilizedcaveman.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cleaneatingmag.com",
+    "status": "reads",
+    "url": "https://www.cleaneatingmag.com/recipes/quick-stove-top-beef-chili-recipe/?scope=anon",
+    "note": "16 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "clickgratis.com.br",
+    "status": "reads",
+    "url": "https://www.clickgratis.com.br/receita/lanches-e-salgadinhos/empadinha-de-frango.html",
+    "note": "17 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "closetcooking.com",
+    "status": "reads",
+    "url": "https://www.closetcooking.com/prasorizo-greek-leeks-and-rice/",
+    "note": "10 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "colruyt.be",
+    "status": "unreachable",
+    "url": null,
+    "note": "home page answered 456",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cookaround.com",
+    "status": "reads",
+    "url": "https://www.cookaround.com/ricetta/Focaccia-alta-con-farina-di-castagne.html",
+    "note": "10 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cookieandkate.com",
+    "status": "reads",
+    "url": "https://cookieandkate.com/pumpkin-pancakes-recipe/",
+    "note": "11 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cookiesandcups.com",
+    "status": "reads",
+    "url": "https://cookiesandcups.com/crumbl-cookie-recipe-copycat-chocolate-chip-cookie/",
+    "note": "10 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cooking.nytimes.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cookingismessy.com",
+    "status": "unreachable",
+    "url": null,
+    "note": "home page answered 406",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cookpad.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cooks.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "cookscountry.com",
+    "status": "reads",
+    "url": "https://www.americastestkitchen.com/recipes/17049-shio-koji-marinated-flank-steak",
+    "note": "6 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "damndelicious.net",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "davidlebovitz.com",
+    "status": "reads",
+    "url": "https://www.davidlebovitz.com/moelleux-of-summer-fruits-cake-recipe-plums-peaches/",
+    "note": "10 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "deliaonline.com",
+    "status": "reads",
+    "url": "https://www.deliaonline.com/recipes/collections/easy-meat-free-recipes/angel-hair-pasta-with-thai-spiced-prawns",
+    "note": "12 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "delish.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ditchthewheat.com",
+    "status": "reads",
+    "url": "https://ditchthewheat.com/paleo-sandwich-bun-recipe-sneak-peek-recipe-ditch-wheat-cookbook/",
+    "note": "11 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "donnahay.com.au",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "douguo.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "downshiftology.com",
+    "status": "reads",
+    "url": "https://downshiftology.com/recipes/slow-cooker-mississippi-pot-roast/",
+    "note": "17 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "eatingwell.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "elanaspantry.com",
+    "status": "reads",
+    "url": "https://elanaspantry.com/instant-pot-navy-bean-soup-recipe/",
+    "note": "10 ingredients, 9 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "elisastable.wordpress.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "emerils.com",
+    "status": "reads",
+    "url": "https://www.emerils.com/120789/emerils-chili",
+    "note": "21 ingredients, 21 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "enreceptem.hu",
+    "status": "reads",
+    "url": "https://www.enreceptem.hu/recept/sutotokos-csokis-muffin",
+    "note": "10 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "epicurious.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "firstlookthencook.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "food.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "food52.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "foodandspice.com",
+    "status": "reads",
+    "url": "https://www.foodandspice.com/2026/10/healthy-peanut-butter-chocolate-cups.html",
+    "note": "8 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "foodandwine.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "foodgeeks.com",
+    "status": "reads",
+    "url": "https://foodgeeks.com/recipes/awesome-apple-bread-2901.html",
+    "note": "10 ingredients, 1 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "foodland.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "foodnetwork.co.uk",
+    "status": "reads",
+    "url": "https://foodnetwork.co.uk/recipes/prawn-white-bean-and-feta-skillet-for-two",
+    "note": "10 ingredients, 2 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "foodnetwork.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "giadzy.com",
+    "status": "reads",
+    "url": "https://giadzy.com/blogs/recipes/layerless-lasagna-cups",
+    "note": "14 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "giallozafferano.it",
+    "status": "partial",
+    "url": "https://www.giallozafferano.it/ricette-cat/facili-e-veloci/",
+    "note": "recipe data found, but 0 ingredients and 0 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "gimmesomeoven.com",
+    "status": "reads",
+    "url": "https://www.gimmesomeoven.com/potsticker-soup-recipe/",
+    "note": "12 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "goodhousekeeping.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "goodmorningamerica.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "goodnes.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "gourmettraveller.com.au",
+    "status": "reads",
+    "url": "https://www.gourmettraveller.com.au/recipe/fast-recipes/barramundi-fish-cakes-with-spanakorizo-orzo/",
+    "note": "21 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "goya.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "grouprecipes.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "gustave.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "halfbakedharvest.com",
+    "status": "reads",
+    "url": "https://www.halfbakedharvest.com/golden-chicken-noodle-soup/",
+    "note": "19 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "handletheheat.com",
+    "status": "reads",
+    "url": "https://handletheheat.com/browned-butter-toffee-chocolate-chip-cookies/",
+    "note": "14 ingredients, 12 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "herbivoracious.com",
+    "status": "reads",
+    "url": "https://herbivoracious.com/2014/06/chanterelle-tostadas-recipes/",
+    "note": "12 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "hungry-girl.com",
+    "status": "reads",
+    "url": "https://www.hungry-girl.com/weekly-recipes/air-fryer-bacon-cheese-meatballs-recipe",
+    "note": "11 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "hunts.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ichkoche.at",
+    "status": "reads",
+    "url": "https://www.ichkoche.at/ultimate-cheese-taco-extra-kaese-extra-genuss-rezept-243078",
+    "note": "8 ingredients, 8 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "iquitsugar.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "jamieoliver.com",
+    "status": "reads",
+    "url": "https://www.jamieoliver.com/recipes/chicken/sticky-orange-chicken/",
+    "note": "13 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "joyofbaking.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "justapinch.com",
+    "status": "reads",
+    "url": "https://www.justapinch.com/recipes/main-course/chicken/shut-the-fffront-door-sausage-chicken-2.html",
+    "note": "18 ingredients, 14 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "justonecookbook.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "k-ruoka.fi",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "katieatthekitchendoor.com",
+    "status": "reads",
+    "url": "http://katieatthekitchendoor.com/2019/03/16/pastina-for-grown-ups/",
+    "note": "5 ingredients, 2 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "kingarthurbaking.com",
+    "status": "reads",
+    "url": "https://www.kingarthurbaking.com/recipes/maple-pecan-cheesecake-recipe",
+    "note": "20 ingredients, 16 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "kochbar.de",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "koket.se",
+    "status": "reads",
+    "url": "https://www.koket.se/negroni-david-kringlunds-recept",
+    "note": "3 ingredients, 2 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "kotikokki.net",
+    "status": "reads",
+    "url": "https://www.kotikokki.net/reseptit/nayta/882708/Cowboy-keitto/",
+    "note": "12 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "kotiliesi.fi",
+    "status": "reads",
+    "url": "https://kotiliesi.fi/resepti/tacos-al-pastor/",
+    "note": "23 ingredients, 14 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "kraftheinz.com",
+    "status": "reads",
+    "url": "https://www.kraftheinz.com/claussen/recipes/568939-the-best-deviled-eggs-recipe",
+    "note": "6 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "kyounoryouri.jp",
+    "status": "reads",
+    "url": "https://www.kyounoryouri.jp/recipe/604914_%E3%81%95%E3%81%A4%E3%81%BE%E3%81%84%E3%82%82%E3%81%AE%E3%81%8B%E3%81%8D%E6%8F%9A%E3%81%92.html",
+    "note": "5 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "latartinegourmande.com",
+    "status": "reads",
+    "url": "https://www.latartinegourmande.com/2012/12/11/chocolate-berry-gratin-gluten-free-prince-edward-island/",
+    "note": "11 ingredients, 8 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "leitesculinaria.com",
+    "status": "reads",
+    "url": "https://leitesculinaria.com/87783/recipes-hot-buttered-rum-apple-pie.html",
+    "note": "13 ingredients, 9 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "lifeloveandsugar.com",
+    "status": "reads",
+    "url": "https://www.lifeloveandsugar.com/best-southern-pecan-pralines-recipe/",
+    "note": "8 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "loveandlemons.com",
+    "status": "reads",
+    "url": "https://www.loveandlemons.com/white-bean-kale-soup/",
+    "note": "17 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "loveandoliveoil.com",
+    "status": "reads",
+    "url": "https://www.loveandoliveoil.com/2026/10/raspberry-red-pepper-jelly.html",
+    "note": "7 ingredients, 9 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "maggi.com.au",
+    "status": "reads",
+    "url": "https://www.maggi.com.au/recipes/homestyle-tomato-and-chicken-noodles",
+    "note": "8 ingredients, 2 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "mariamindbodyhealth.com",
+    "status": "reads",
+    "url": "https://mariamindbodyhealth.com/no-bake-german-chocolate-pie-with-a-carnivore-crust/",
+    "note": "21 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "marmiton.org",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "marthastewart.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "matprat.no",
+    "status": "reads",
+    "url": "https://www.matprat.no/oppskrifter/kos/fetakrem-med-biff-og-beter/",
+    "note": "19 ingredients, 11 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "mccormick.com",
+    "status": "reads",
+    "url": "https://www.mccormick.com/blogs/recipes/bubbling-witches-brew-cocktail",
+    "note": "7 ingredients, 1 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "metro.ca",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "midwestliving.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "migrainereliefrecipes.com",
+    "status": "reads",
+    "url": "https://migrainereliefrecipes.com/summer-corn-salad/",
+    "note": "8 ingredients, 2 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "migusto.migros.ch",
+    "status": "reads",
+    "url": "https://migusto.migros.ch/de/rezepte/spaghetti-aglio-olio-e-peperoncino",
+    "note": "7 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "minimalistbaker.com",
+    "status": "reads",
+    "url": "https://minimalistbaker.com/honey-almond-snack-cake/",
+    "note": "10 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "mrfood.com",
+    "status": "reads",
+    "url": "https://www.mrfood.com/Cookie-Recipes/Potato-Chip-Cookies-from-Mr-Food",
+    "note": "5 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "muirglen.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "mygourmetconnection.com",
+    "status": "reads",
+    "url": "https://www.mygourmetconnection.com/pork-squash-skillet-dinner/",
+    "note": "11 ingredients, 8 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "myrecipes.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "natashaskitchen.com",
+    "status": "reads",
+    "url": "https://natashaskitchen.com/zuppa-toscana-recipe-video/",
+    "note": "11 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "naturallyella.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "nigella.com",
+    "status": "reads",
+    "url": "https://www.nigella.com/recipes/chicken-schnitzel-with-bacon-and-white-wine",
+    "note": "4 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "nine.com.au",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "norecipes.com",
+    "status": "reads",
+    "url": "https://norecipes.com/chicken-rendang-recipe/",
+    "note": "16 ingredients, 8 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "nosalty.hu",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "nourishedkitchen.com",
+    "status": "reads",
+    "url": "https://nourishedkitchen.com/beet-kvass-recipe/",
+    "note": "4 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ntv.co.jp",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ofbatteranddough.com",
+    "status": "reads",
+    "url": "https://ofbatteranddough.com/hot-fudge-recipe/",
+    "note": "12 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "onceuponachef.com",
+    "status": "reads",
+    "url": "https://www.onceuponachef.com/recipes/quick-easy-polenta.html",
+    "note": "7 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "orangepage.net",
+    "status": "reads",
+    "url": "https://www.orangepage.net/recipes/305790",
+    "note": "9 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ourbestbites.com",
+    "status": "reads",
+    "url": "https://ourbestbites.com/apple-squash-chop-kale-salad/",
+    "note": "16 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "paleomg.com",
+    "status": "reads",
+    "url": "https://paleomg.com/dutch-oven-chicken-vegetables/",
+    "note": "18 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "pauladeen.com",
+    "status": "partial",
+    "url": "https://www.pauladeen.com/video/halloween-at-home-2/",
+    "note": "recipe data found, but 0 ingredients and 0 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "pillsbury.com",
+    "status": "reads",
+    "url": "https://www.pillsbury.com/recipes/easy-homemade-monkey-bread/7a1e41b1-4708-4028-8ce6-fcb5baebbc19",
+    "note": "7 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "pinchofyum.com",
+    "status": "reads",
+    "url": "https://pinchofyum.com/apple-streusel-meal-prep-muffins",
+    "note": "15 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "prima.co.uk",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "przyslijprzepis.pl",
+    "status": "reads",
+    "url": "https://www.przyslijprzepis.pl/przepis/tort-imieninowy-z-dekoracja-waflowa",
+    "note": "15 ingredients, 24 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "purewow.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "rachaelray.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "rasamalaysia.com",
+    "status": "reads",
+    "url": "https://rasamalaysia.com/pork-dumpling-soup-recipe/",
+    "note": "22 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "rd.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "readersdigest.ca",
+    "status": "reads",
+    "url": "https://www.readersdigest.ca/food/recipes/lavender-earl-grey-shorties/",
+    "note": "6 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "realfood.tesco.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "realmomkitchen.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "realsimple.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "receitas.globo.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "recettes.qc.ca",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "recipelion.com",
+    "status": "reads",
+    "url": "https://www.recipelion.com/Soup-Recipes/Old-Fashioned-Potato-Soup-103-Cookbooks",
+    "note": "10 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "recipes.net",
+    "status": "reads",
+    "url": "https://recipes.net/breakfast/bread-doughs/moist-banana-bread-recipe/",
+    "note": "10 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "recipetineats.com",
+    "status": "reads",
+    "url": "https://www.recipetineats.com/chicken-mince-recipes-ground-chicken/",
+    "note": "19 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "rezeptwelt.de",
+    "status": "reads",
+    "url": "https://www.rezeptwelt.de/hauptgerichte-mit-gemuese-rezepte/kuerbis-risotto/36b98cw0-e5173-623504-cfcd2-vsuvmxcr",
+    "note": "14 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "ricardocuisine.com",
+    "status": "reads",
+    "url": "https://www.ricardocuisine.com/recettes/11441-planches-de-fromage-a-la-creme-fouette-et-ses-deux-garnitures-cream-cheese-butter-boards",
+    "note": "20 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "rippedrecipes.com",
+    "status": "partial",
+    "url": "https://rippedrecipes.com/recipe/chocolate-carrot-protein-pancake-449.html",
+    "note": "recipe data found, but 10 ingredients and 0 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "runnersworld.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "sallysbakingaddiction.com",
+    "status": "reads",
+    "url": "https://sallysbakingaddiction.com/best-banana-bread-recipe/",
+    "note": "11 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "saveur.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "sbs.com.au",
+    "status": "reads",
+    "url": "https://www.sbs.com.au/food/recipe/nut-free-baklava/xwlxo6byb",
+    "note": "13 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "seriouseats.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "simplyrecipes.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "sippitysup.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "skinnyms.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "skinnytaste.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "smh.com.au",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "smittenkitchen.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "spendwithpennies.com",
+    "status": "reads",
+    "url": "https://www.spendwithpennies.com/burger-bowl-recipe/",
+    "note": "12 ingredients, 4 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "splendidtable.org",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "steamykitchen.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "sugarspunrun.com",
+    "status": "reads",
+    "url": "https://sugarspunrun.com/apple-crumble-recipe/",
+    "note": "16 ingredients, 9 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tablefortwoblog.com",
+    "status": "reads",
+    "url": "https://www.tablefortwoblog.com/zucchini-cakes-recipe/",
+    "note": "8 ingredients, 8 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "taste.com.au",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tasteline.com",
+    "status": "reads",
+    "url": "https://www.tasteline.com/recept/fishtaco-med-mango-och-avokadosallad/",
+    "note": "19 ingredients, 8 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tasteofhome.com",
+    "status": "reads",
+    "url": "https://www.tasteofhome.com/recipes/copycat-taco-bell-crunchwrap-supreme/",
+    "note": "12 ingredients, 10 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tastesbetterfromscratch.com",
+    "status": "reads",
+    "url": "https://tastesbetterfromscratch.com/bread-recipe/",
+    "note": "6 ingredients, 11 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tastingtable.com",
+    "status": "reads",
+    "url": "https://www.tastingtable.com/2274928/cabbage-parmesan-recipe/",
+    "note": "12 ingredients, 17 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tasty.co",
+    "status": "reads",
+    "url": "https://tasty.co/recipe/creamy-lemon-chicken",
+    "note": "13 ingredients, 15 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "the-girl-who-ate-everything.com",
+    "status": "reads",
+    "url": "https://www.the-girl-who-ate-everything.com/classic-chili-recipe/",
+    "note": "14 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "thegraciouspantry.com",
+    "status": "reads",
+    "url": "https://www.thegraciouspantry.com/pecan-crusted-chicken-recipe/",
+    "note": "7 ingredients, 6 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "thehealthychef.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "thekitchn.com",
+    "status": "reads",
+    "url": "https://www.thekitchn.com/beef-stew-recipe-23846522",
+    "note": "19 ingredients, 11 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "thepioneerwoman.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "therecipecritic.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "thespruceeats.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "thewoksoflife.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "theyummylife.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 2 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tine.no",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 9 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "today.com",
+    "status": "reads",
+    "url": "https://www.today.com/recipes/dirty-bird-wings-alabama-white-sauce-t302280",
+    "note": "25 ingredients, 10 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "toprecepty.cz",
+    "status": "reads",
+    "url": "https://www.toprecepty.cz/recept/18981-nadychany-hrneckovy-pernik/",
+    "note": "17 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "troisfoisparjour.com",
+    "status": "reads",
+    "url": "https://www.troisfoisparjour.com/fr/recettes/entrees/potages/potage-aux-poires-caramelisees-aux-poireaux-garniture-de-bacon/",
+    "note": "8 ingredients, 5 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "tudogostoso.com.br",
+    "status": "reads",
+    "url": "https://www.tudogostoso.com.br/receita/23-bolo-de-cenoura.html",
+    "note": "12 ingredients, 9 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "vareni.cz",
+    "status": "reads",
+    "url": "https://www.vareni.cz/recepty/pravy-salat-coleslaw/",
+    "note": "10 ingredients, 16 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "vegetariantimes.com",
+    "status": "reads",
+    "url": "https://www.vegetariantimes.com/recipes/vegetarian-samosa-recipe/?scope=anon",
+    "note": "29 ingredients, 7 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "vegweb.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "waitrose.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "washingtonpost.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "weber.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "weightwatchers.ca",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 24 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "weightwatchers.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 30 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "weightwatchers.fr",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 24 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "whats4eats.com",
+    "status": "reads",
+    "url": "https://www.whats4eats.com/appetizers/gefuellte-eier-recipe",
+    "note": "5 ingredients, 3 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "wholefoodsmarket.com",
+    "status": "no-data",
+    "url": null,
+    "note": "no recipe data on 31 pages tried",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "wikihow.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "williams-sonoma.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "womansday.com",
+    "status": "blocked",
+    "url": null,
+    "note": "the site refuses downloads by a script; needs a check in a browser",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "womensweeklyfood.com.au",
+    "status": "reads",
+    "url": "https://www.womensweeklyfood.com.au/recipe/baking/buttery-pecan-slab-cake/",
+    "note": "18 ingredients, 18 steps",
+    "checked": "2026-10-13"
+  },
+  {
+    "domain": "xiachufang.com",
+    "status": "reads",
+    "url": "https://www.xiachufang.com/recipe/103966717/",
+    "note": "11 ingredients, 1 steps",
+    "checked": "2026-10-13"
+  }
+]

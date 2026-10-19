@@ -5,11 +5,13 @@ import { PageHeader } from "../pages/PageHeader";
 import pages from "../pages/pages.module.css";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
+import { PhotoImport } from "../scan/PhotoImport";
 import { importJobs, importProblemText, importWebPage } from "./api";
 import styles from "./import.module.css";
 
-// The Import page (phase E4): a saved web page read into drafts, and the drafts waiting for
-// review. The Chrome extension (E6) sends pages to the same place.
+// The Import page (phase E4): a saved web page read into drafts, photos of a recipe's pages read
+// by the AI (E9, app/scan/), and the drafts waiting for review. The Chrome extension (E6) sends
+// pages to the same place.
 
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
 
@@ -52,6 +54,19 @@ export function ImportPage() {
     }
     setMessage({
       text: `Found ${result.jobs.length} recipes on that page. Review each one below.`,
+      problem: false,
+    });
+    load();
+  };
+
+  const imported = (found: ImportJobSummary[]) => {
+    const [only] = found;
+    if (found.length === 1 && only) {
+      navigate(`/import/${only.id}`);
+      return;
+    }
+    setMessage({
+      text: `Found ${found.length} recipes in those photos. Review each one below.`,
       problem: false,
     });
     load();
@@ -107,6 +122,8 @@ export function ImportPage() {
         ) : null}
       </section>
 
+      <PhotoImport onImported={imported} />
+
       {jobs && jobs.length > 0 ? (
         <section className={styles.section} aria-labelledby="import-waiting-title">
           <h2 id="import-waiting-title">Waiting for review</h2>
@@ -133,7 +150,6 @@ export function ImportPage() {
         <h2 id="import-soon-title">What you&rsquo;ll also be able to import</h2>
         <ul className={pages.list}>
           <li>Recipes from websites in one click, with the Fennl extension for Chrome</li>
-          <li>Photos of handwritten recipe cards and cookbook pages</li>
           <li>Screenshots and PDFs</li>
           <li>Your whole Paprika library, photos included</li>
         </ul>

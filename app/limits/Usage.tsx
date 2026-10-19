@@ -1,10 +1,21 @@
-import { forwardRef, useEffect } from "react";
-import { overallLevel, usageLevel, type PhotoUsage, type Usage } from "../../shared/limits";
+import { forwardRef, useEffect, useState } from "react";
+import type { DeviceList } from "../../shared/devices";
+import {
+  overallLevel,
+  usageLevel,
+  type AiImportUsage,
+  type PhotoUsage,
+  type Usage,
+} from "../../shared/limits";
 import styles from "../pages/SettingsPage.module.css";
 import { Link } from "../router";
 import {
   NOTHING_LOST,
   addBlockedText,
+  AI_PAUSED_TEXT,
+  aiImportsLine,
+  aiResetText,
+  devicesLine,
   graceText,
   memberPhotosLine,
   photoCountLine,
@@ -15,8 +26,8 @@ import {
 import { useAddBlocked, useUsage } from "./useLimits";
 import limits from "./limits.module.css";
 
-// Usage bars (phase C11): in Settings, and a small one beside "Add recipe" when near or over a
-// limit. Rules in shared/limits.ts; wording in limitText.ts.
+// Usage bars (phase C11): on the Account page, and a small one beside "Add recipe" when near or
+// over a limit. Rules in shared/limits.ts; wording in limitText.ts.
 
 /** One bar: how much of a limit is used. With no limit, just the words. */
 export function UsageMeter({
@@ -108,21 +119,65 @@ function PhotoMeters({ photos }: { photos: PhotoUsage }) {
   );
 }
 
-/** Settings › Recipe storage. */
-export function UsageSection() {
+/** The household's AI imports this month, and the devices signed in, as the server has them. */
+function useAccountUsage() {
+  const [ai, setAi] = useState<AiImportUsage | null>(null);
+  const [devices, setDevices] = useState<DeviceList | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    const load = <T,>(url: string, set: (value: T) => void) =>
+      fetch(url)
+        .then((res) => (res.ok ? (res.json() as Promise<T>) : null))
+        .then((body) => {
+          if (!cancelled && body) set(body);
+        })
+        .catch(() => {});
+    void load<AiImportUsage>("/api/ai/usage", setAi);
+    void load<DeviceList>("/api/devices", setDevices);
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  return { ai, devices };
+}
+
+/**
+ * Account › Usage and limits (moved from Settings 2026-10-14, the owner's choice): recipes,
+ * recipe text, photos, this month's AI imports and the devices signed in, each against the plan.
+ * Bars turn amber at 80% and red when full.
+ */
+export function UsageCard({ className }: { className: string }) {
   const usage = useUsage();
   const blocked = useAddBlocked();
-  // Arriving from a "Recipe storage" link.
+  const { ai, devices } = useAccountUsage();
+  // Arriving from a link to the usage.
   useEffect(() => {
     if (window.location.hash === "#usage") document.getElementById("usage")?.scrollIntoView();
   }, []);
   return (
-    <section aria-labelledby="usage-title" className={styles.section} id="usage">
-      <h2 id="usage-title">Recipe storage</h2>
+    <section aria-labelledby="usage-title" className={className} id="usage">
+      <h2 id="usage-title">Usage and limits</h2>
       {usage ? (
         <>
           <Meters usage={usage} />
           {usage.photos ? <PhotoMeters photos={usage.photos} /> : null}
+        </>
+      ) : (
+        <p className={styles.help}>
+          Recipes and photos show once this device has reached your account.
+        </p>
+      )}
+      {ai ? <AiMeter ai={ai} /> : null}
+      {devices ? (
+        <UsageMeter
+          label="Devices"
+          used={devices.devices.length}
+          max={null}
+          text={devicesLine(devices.devices.length, devices.max)}
+        />
+      ) : null}
+      {usage ? (
+        <>
           <p className={styles.help}>
             Recipes in Trash don&rsquo;t count toward the number of recipes, but their text counts
             until they&rsquo;re deleted for good.
@@ -134,10 +189,38 @@ export function UsageSection() {
             </p>
           ) : null}
         </>
-      ) : (
-        <p className={styles.help}>Shown once this device has reached your account.</p>
-      )}
+      ) : null}
     </section>
+  );
+}
+
+/** This month's AI imports against the plan's number, and when they start again. */
+function AiMeter({ ai }: { ai: AiImportUsage }) {
+  if (!ai.enabled && ai.used === 0) {
+    return <p className={limits.meterText}>Reading recipes with AI is part of Premium.</p>;
+  }
+  if (ai.enabled && ai.paused) {
+    return (
+      <p role="status" className={limits.note}>
+        {AI_PAUSED_TEXT}
+      </p>
+    );
+  }
+  // Used up, by the plan's number or the hidden cost backstop (decided 2026-10-14): a full bar
+  // and when they start again, without the count, which could read as room left.
+  if (ai.enabled && ai.usedUp) {
+    return <UsageMeter label="AI imports this month" used={1} max={1} text={aiResetText(ai)} />;
+  }
+  return (
+    <>
+      <UsageMeter
+        label="AI imports this month"
+        used={ai.used}
+        max={ai.enabled ? ai.max : null}
+        text={aiImportsLine(ai)}
+      />
+      {ai.enabled ? <p className={styles.help}>{aiResetText(ai)}</p> : null}
+    </>
   );
 }
 
@@ -171,7 +254,7 @@ export const UsageNote = forwardRef<HTMLParagraphElement, { id: string }>(functi
           text={textLine(usage)}
         />
       )}
-      <Link href="/settings#usage">Recipe storage</Link>
+      <Link href="/account#usage">Usage and limits</Link>
       {blocked ? (
         <p id={id} ref={ref} tabIndex={-1} className={limits.blocked}>
           {addBlockedText(blocked, usage)} {NOTHING_LOST}

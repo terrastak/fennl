@@ -50,6 +50,8 @@ export interface Importer {
    * otherwise.
    */
   exact?: boolean;
+  /** Whether it reads this sample at all (the AI's web reading skips a saved copy with no text). */
+  accepts?(sample: Sample): Promise<boolean>;
   run(files: InputFile[], sample: Sample): Promise<RecipeDraft[]>;
 }
 
@@ -140,6 +142,23 @@ async function runOne(importer: Importer, sample: Sample, expected: ExpectedReci
   } catch (error) {
     problems.push(`failed: ${String(error)}`);
   }
+  const scored = scoreDrafts(expected, drafts);
+  return {
+    sample,
+    importer: importer.name,
+    exact: importer.exact ?? false,
+    ...scored,
+    problems: [...problems, ...scored.problems],
+    ms: Math.round(performance.now() - started),
+  } satisfies SampleResult;
+}
+
+/** How a sample's drafts compare with its correct answers (invalid drafts count as not found). */
+export function scoreDrafts(
+  expected: ExpectedRecipe[],
+  drafts: RecipeDraft[],
+): Pick<SampleResult, "scores" | "overall" | "extra" | "problems"> {
+  const problems: string[] = [];
   const valid = drafts.filter((d, i) => {
     const issues = draftIssues(d);
     if (issues.length) {
@@ -156,16 +175,7 @@ async function runOne(importer: Importer, sample: Sample, expected: ExpectedReci
     return recipe ? scoreRecipe(expected[p.expected] as ExpectedRecipe, recipe) : null;
   });
   const overall = scores.reduce((s, r) => s + (r?.overall ?? 0), 0) / Math.max(1, scores.length);
-  return {
-    sample,
-    importer: importer.name,
-    exact: importer.exact ?? false,
-    scores,
-    overall,
-    extra,
-    problems,
-    ms: Math.round(performance.now() - started),
-  } satisfies SampleResult;
+  return { scores, overall, extra, problems };
 }
 
 export interface Scorecard {
@@ -208,6 +218,7 @@ export async function runScorecard(importers: readonly Importer[]): Promise<Scor
     if (!expected) continue;
     answered += 1;
     for (const importer of importers.filter((i) => i.kinds.includes(sample.kind))) {
+      if (importer.accepts && !(await importer.accepts(sample))) continue;
       results.push(await runOne(importer, sample, expected));
     }
   }
@@ -262,6 +273,24 @@ export function reportMarkdown(card: Scorecard): string {
       out.push(
         `| ${name} | ${rs.length} | ${pct(overall)} | ${SCORED_FIELDS.map((f) => pct(fieldMean(rs, f))).join(" | ")} |`,
       );
+    }
+    out.push(
+      "",
+      "Lines exactly right, in the recipes found (what the import targets measure; spec.md E8):",
+      "",
+      "| Importer | Ingredient lines | Method lines | Recipes not found |",
+      "| --- | --- | --- | --- |",
+    );
+    for (const name of importers) {
+      const rs = card.results.filter((r) => r.importer === name);
+      const sum = (k: "ingredients" | "directions") => {
+        const counts = rs.flatMap((r) => r.scores.map((s) => s?.[k] ?? null));
+        const exact = counts.reduce((n, c) => n + (c?.exact ?? 0), 0);
+        const expected = counts.reduce((n, c) => n + (c?.expected ?? 0), 0);
+        return expected ? `${exact} of ${expected} (${pct(exact / expected)})` : "–";
+      };
+      const lost = rs.reduce((n, r) => n + r.scores.filter((s) => s === null).length, 0);
+      out.push(`| ${name} | ${sum("ingredients")} | ${sum("directions")} | ${lost} |`);
     }
     out.push(
       "",

@@ -25,6 +25,7 @@ import type { RecipeDetail } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, saveChanges, useCategoryTree, useSyncStatus } from "../sync/useSync";
 import { discardImportJob, importJob, inputUrl, markImportSaved, readAgain } from "./api";
+import { keepOriginals, originalHashes } from "./originals";
 import styles from "./import.module.css";
 import {
   createChange,
@@ -289,10 +290,28 @@ function Review({
       return;
     }
     if (choice.kind === "update") await markImportSaved(job.id, id);
+    // The photos it was read from (phase E9), kept with it out of its gallery.
+    const cache = currentPhotoCache();
+    let originalsKept = true;
+    if (cache && originalHashes(job.draft).length > 0) {
+      setSaving("Keeping the photos…");
+      originalsKept = await keepOriginals({
+        draft: job.draft,
+        recipeId: id,
+        ownerUserId: owner,
+        me,
+        existing: detail?.photos ?? [],
+        cache,
+      });
+    }
     const photoProblem = await addKeptPhotos(id, owner, detail);
     setSaving(null);
-    if (photoProblem) {
-      setSavedWithProblem({ id, text: `The recipe is saved. ${photoProblem}` });
+    const problems = [
+      originalsKept ? null : "The photos it was read from couldn't be kept with it.",
+      photoProblem,
+    ].filter(Boolean);
+    if (problems.length > 0) {
+      setSavedWithProblem({ id, text: `The recipe is saved. ${problems.join(" ")}` });
       return;
     }
     navigate(`/recipes/${id}`);
@@ -478,8 +497,9 @@ function Review({
                 Not quite right?
               </h2>
               <p className={styles.note}>
-                Fennl can read the photos again, more carefully, once. Anything you&rsquo;ve already
-                changed here is kept. It counts as one of this month&rsquo;s AI imports.
+                Fennl can read {job.draft.source === "website" ? "the page" : "the photos"} again,
+                more carefully, once. Anything you&rsquo;ve already changed here is kept. It counts
+                as one of this month&rsquo;s AI imports.
               </p>
               <div>
                 <button

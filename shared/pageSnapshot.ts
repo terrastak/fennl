@@ -168,6 +168,14 @@ function cardParts(doc: Document, html: string, url: string | null): string[] {
 }
 
 /**
+ * A part of a page as HTML with only text and structure (no scripts, styles, pictures, links or
+ * forms), for the review screen's copy of a page read by the AI (phase E8, shared/pageText.ts).
+ */
+export function cleanedHtml(el: Element): string {
+  return cleaned(el, false);
+}
+
+/**
  * The page's recipe card as HTML: only text and structure, with classes and hidden parts kept
  * (no scripts, styles, pictures, links or forms). Empty when the page shows no card the importer
  * found.

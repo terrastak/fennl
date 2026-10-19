@@ -5,8 +5,8 @@ import { useOwnAccount } from "./support";
 
 // Phase E7: a recipe the AI read, on the review screen. "Read again" has a stronger model read it
 // once more, keeping what the person already changed; after that, if parts are still uncertain,
-// Fennl says it has done what it can. The import screens that send photos come in E9 and E10;
-// until then the local test server makes the import, read by its stand-in AI.
+// Fennl says it has done what it can. The local test server makes the import, read by its
+// stand-in AI, so the AI's answer can be made unsure (the Import page's photos: scan.spec.ts).
 
 async function aiImport(page: Page, baseURL: string, unsure: boolean): Promise<string> {
   const res = await page.request.post("/api/dev/test-ai-import", {
@@ -77,4 +77,15 @@ test("a clear reading needs no notice; Read again stays on offer", async ({
   await expect(
     page.getByRole("region", { name: "Fennl has read this as carefully as it can" }),
   ).toHaveCount(0);
+
+  // The Account page counts it against the month's AI imports.
+  await page.goto("/account");
+  const usage = page.getByRole("region", { name: "Usage and limits" });
+  await expect(usage.getByRole("meter", { name: "AI imports this month" })).toHaveAttribute(
+    "aria-valuetext",
+    "1 of 300 AI imports this month",
+  );
+  await expect(usage).toContainText("They start again on");
+  await expect(usage).toContainText(/\d+ of \d+ devices? signed in/);
+  await expectAccessible(page);
 });

@@ -4,6 +4,8 @@ import {
   isAiAnswer,
   secondLookReasons,
   stillUncertain,
+  webAddress,
+  withoutBadParts,
   type AiLine,
   type AiRecipe,
 } from "./aiAnswer";
@@ -126,12 +128,15 @@ describe("a second look", () => {
     ]);
   });
 
-  it("is needed when the AI was unsure of something that matters, or said so", () => {
+  it("is needed when the AI was unsure of something that matters, not for its notes", () => {
     const lowLine = recipe({ ingredients: [line("2 1/4 cup flour", "low")] });
     expect(secondLookReasons(drafts(lowLine))).toEqual(["unsure"]);
     const lowTimes = recipe({ times: { ...recipe().times, confidence: "low" } });
     expect(secondLookReasons(drafts(lowTimes))).toEqual(["unsure"]);
-    expect(secondLookReasons(drafts(recipe({ unclear: ["smudged"] })))).toEqual(["unsure"]);
+    // A note is for the person reviewing it ("the page gives no prep time"), not a doubt to settle.
+    expect(secondLookReasons(drafts(recipe({ unclear: ["the page gives no prep time"] })))).toEqual(
+      [],
+    );
     // Medium is fine, and so is an unsure headnote.
     const fine = recipe({
       ingredients: [line("1 C walnuts", "medium")],
@@ -148,6 +153,20 @@ describe("a second look", () => {
       ingredients: [line("walnuts"), line("Salt and pepper to taste"), line("Butter for the pan")],
     });
     expect(secondLookReasons(drafts(fine))).toEqual([]);
+    // Seasoning and frying oil are rarely measured (seen in the model comparison, 2026-10-19).
+    const seasoned = recipe({
+      ingredients: [
+        line("Kosher salt"),
+        line("Freshly ground black pepper"),
+        line("Vegetable oil"),
+        line("Softened unsalted butter, for muffins"),
+        line("1 egg"),
+      ],
+    });
+    expect(secondLookReasons(drafts(seasoned))).toEqual([]);
+    // But an oil named with more ("oil-packed tuna") or another ingredient still counts.
+    const unmeasured = recipe({ ingredients: [line("oil-packed tuna"), line("sugar")] });
+    expect(secondLookReasons(drafts(unmeasured))).toEqual(["missing_amounts"]);
     expect(secondLookReasons(drafts(recipe({ ingredients: [line("35 cups flour")] })))).toEqual([
       "odd_amount",
     ]);
@@ -174,5 +193,48 @@ describe("what's still uncertain after reading again", () => {
     expect(stillUncertain(drafts(recipe({ directions: [line("Bake at 3?0", "low")] }))[0]!)).toBe(
       true,
     );
+  });
+});
+
+describe("an odd part of an answer", () => {
+  it("doesn't lose the recipe: a web address is made whole, or left out", () => {
+    expect(webAddress("https://june.example.com/cake")).toBe("https://june.example.com/cake");
+    expect(webAddress("instagram.com/junebakes")).toBe("https://instagram.com/junebakes");
+    expect(webAddress("www.example.com")).toBe("https://www.example.com/");
+    expect(webAddress("@junebakes")).toBeNull();
+    expect(webAddress("June's blog")).toBeNull();
+    expect(webAddress("javascript:alert(1)")).toBeNull();
+
+    // The screenshot a stronger model read (2026-10-14): a handle where an address goes.
+    const [draft] = drafts(
+      recipe({
+        source: {
+          kind: "website",
+          name: "June Bakes",
+          author: null,
+          page: null,
+          url: "@junebakes on Instagram",
+          ...sure,
+        },
+      }),
+    );
+    expect(draft?.fields.source?.value).toMatchObject({ name: "June Bakes", url: null });
+    expect(draftIssues(draft)).toEqual([]);
+  });
+
+  it("leaves out only the part that breaks the rules", () => {
+    const [draft] = drafts(recipe());
+    const broken = {
+      ...draft!,
+      fields: {
+        ...draft!.fields,
+        notes: { value: "x".repeat(300_000), confidence: "high" as const, from: [] },
+      },
+    };
+    expect(draftIssues(broken).length).toBeGreaterThan(0);
+    const kept = withoutBadParts(broken, null);
+    expect(kept?.fields.notes).toBeUndefined();
+    expect(kept?.fields.ingredients?.value).toHaveLength(3);
+    expect(draftIssues(kept)).toEqual([]);
   });
 });

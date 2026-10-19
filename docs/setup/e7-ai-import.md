@@ -62,12 +62,20 @@ The next deploy hands it to the Worker. Previews get it too: they have their own
 
 ## Part D: Run the model comparison
 
-This reads the quality test set's cards, cookbook pages, screenshots and PDFs three ways (Haiku alone, Sonnet alone, and Haiku with Sonnet when needed) and reports accuracy and cost side by side. It calls the real API: about a dollar each run with today's test set.
+This reads the quality test set three ways (Haiku alone, Sonnet alone, and Haiku with Sonnet when needed) and reports accuracy and cost side by side. It calls the real API, so each run costs money. It runs only when you start it, never on its own or for a pull request.
+
+The form has a box for what to read:
+
+- `photos` (the default): the cards, cookbook pages, screenshots and PDFs. About a dollar.
+- `web`: the web pages with their recipe data left out, read from the page's text as Fennl reads a blog without recipe data (phase E8). About another dollar.
+- `all`: both, about two dollars.
 
 1. On GitHub, click the **Actions** tab.
 2. In the left sidebar, click **AI model comparison**.
-3. Click **Run workflow**, leave the branch as `main` and the models blank, and click **Run workflow**.
-4. When the run finishes (a few minutes), open it. The report is on its summary page.
+3. Click **Run workflow**, leave the branch as `main` and the models blank, pick what to read, and click **Run workflow**.
+4. When the run finishes (up to about 30 minutes for **all**), open it. The report is on its summary page, including a **Second looks** section: for each rule that makes Sonnet read a recipe again, how often it caught a real mistake and how often it fired for nothing.
+
+The run also keeps every answer the AI gave (**ai-answers** at the bottom of the run's page, kept 30 days). With those, the second-look rules can be re-checked as often as needed at no cost (`npm run ai:replay`), so a change to the rules doesn't need another paid run.
 
 The more handwritten cards the test set has, the more the comparison says. Today it has two (`import-quality/README.md` has the checklist for adding more).
 

@@ -16,8 +16,9 @@ const webStructured: Importer = {
 };
 
 /**
- * Every importer the scorecard runs. Each phase that builds one adds it here: structured web
- * data (E3), the AI fallback for pages (E8), cards and printed pages (E10), screenshots (E11),
- * PDFs (E12) and Paprika files (E13).
+ * Every importer the scorecard runs on each pull request. Each phase that builds one adds it
+ * here: structured web data (E3) and Paprika files (E13). Importers that call the AI (pages
+ * without recipe data, E8; cards, pages, screenshots and PDFs, E10 to E12) cost money each time,
+ * so they're measured by the AI model comparison instead (aiCompare.ts), started by hand.
  */
 export const IMPORTERS: readonly Importer[] = [webStructured];

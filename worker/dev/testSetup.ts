@@ -37,9 +37,9 @@ const PNG = Uint8Array.from(
   (c) => c.charCodeAt(0),
 );
 
-// An AI import for the signed-in person (phase E7), read by the fake AI (AI_PROVIDER=fake), until
-// the import screens that make them (E8 to E12) exist. {unsure: true}: the AI is unsure of a line
-// however often it reads it.
+// An AI import for the signed-in person (phase E7), read by the fake AI (AI_PROVIDER=fake), for
+// browser tests that need its answer just so. {unsure: true}: the AI is unsure of a line however
+// often it reads it.
 testSetupRoutes.post("/api/dev/test-ai-import", async (c, next) => {
   if (!testServer(c.env, c.req.raw) || c.env.AI_PROVIDER !== "fake") {
     return c.json({ error: "not_found" }, 404);

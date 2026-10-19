@@ -4,15 +4,11 @@ import {
   answerToDrafts,
   isAiAnswer,
   secondLookReasons,
+  withoutBadParts,
   type SecondLookReason,
 } from "../../shared/aiAnswer";
 import type { Entitlements } from "../../shared/entitlements";
-import {
-  draftIssues,
-  type DraftInput,
-  type DraftPhoto,
-  type RecipeDraft,
-} from "../../shared/importDraft";
+import type { DraftInput, DraftPhoto, RecipeDraft } from "../../shared/importDraft";
 import {
   importPhotoKey,
   type AiPartRecord,
@@ -25,6 +21,7 @@ import { importJob } from "../db/schema";
 import { aiConfig, effortFor, MAX_OUTPUT_TOKENS, type AiConfig } from "./config";
 import { instructionFor, SYSTEM_PROMPT } from "./prompt";
 import { NO_TOKENS, type AiPart, type AiProblem, type AiResult } from "./provider";
+import type { OutcomeLists, ReadAnswer } from "../../shared/aiOutcome";
 import { checkSpending, finishCall, reserveCall, type AiPurpose } from "./usage";
 
 // Reading a recipe with the AI (phase E7; decided by the owner 2026-10-12):
@@ -52,10 +49,15 @@ export interface AiReadInput {
   source: ImportSource;
   /** What to read, in order. */
   parts: AiPart[];
-  /** The draft's inputs: one per part, in the same order. */
+  /** The draft's inputs: one per part, in the same order, then any others it keeps (a page's photos). */
   inputs: DraftInput[];
   /** Inputs to keep with the recipe (a card itself, as an import original). */
   photos: DraftPhoto[];
+  /**
+   * Where each part is already kept in R2, if it is (a page photo uploaded to the person's
+   * photos, phase E9): read from there by "Read again" instead of being copied.
+   */
+  storedAt?: (string | null)[];
 }
 
 export type AiReadProblem =
@@ -76,8 +78,26 @@ export type AiReadResult =
       /** Every model that read it, in order. */
       models: string[];
       secondLook: SecondLookReason[];
+      /** Every usable answer, in order; `shown` is the one the drafts are from. */
+      answers: { purpose: AiPurpose; model: string; drafts: RecipeDraft[] }[];
+      shown: number;
+      /** A short fingerprint of the instructions and rules it was read with (setupVersion). */
+      setup: string;
     }
   | { ok: false; problem: AiReadProblem };
+
+/**
+ * A short fingerprint of what Fennl asks the AI and when it asks again: the instructions for this
+ * kind of import and the second-look thresholds. Kept with each outcome (shared/aiOutcome.ts), so
+ * a change of ours can be told apart from a change of model in the admin console.
+ */
+export async function setupVersion(config: AiConfig, source: ImportSource): Promise<string> {
+  const text = JSON.stringify([SYSTEM_PROMPT, instructionFor(source), config.rules]);
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(digest).slice(0, 4)]
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
 
 interface Attempt {
   /** Null: no usable answer. Empty: an answer with no recipe in it. */
@@ -144,7 +164,11 @@ async function attempt(
       inputs: input.inputs,
       photos: input.photos,
       model,
-    }).filter((draft) => draftIssues(draft, plan.max_recipe_bytes).length === 0);
+    }).flatMap((draft) => {
+      // One part that breaks the rules (an odd web address) loses only that part.
+      const kept = withoutBadParts(draft, plan.max_recipe_bytes);
+      return kept ? [kept] : [];
+    });
     // An answer whose every recipe broke the rules isn't usable either.
     if (drafts.length === 0 && result.output.recipes.length > 0) drafts = null;
   }
@@ -180,25 +204,38 @@ export async function readWithAi(
   if (!config || level >= config.models.length) return { ok: false, problem: "unavailable" };
   const jobId = options.importJobId ?? null;
 
-  const first = await attempt(caller, config, input, level, options.purpose ?? "read", jobId);
+  const purpose = options.purpose ?? "read";
+  const setup = await setupVersion(config, input.source);
+  const first = await attempt(caller, config, input, level, purpose, jobId);
   if (first.refusal) return { ok: false, problem: first.refusal };
   const used = [config.models[level] as string];
+  const answers: Extract<AiReadResult, { ok: true }>["answers"] = [];
+  if (first.drafts?.length) {
+    answers.push({ purpose, model: config.models[level] as string, drafts: first.drafts });
+  }
+  const done = (drafts: RecipeDraft[] | null, at: number, reasons: SecondLookReason[]) =>
+    finish(drafts, at, used, reasons, answers, setup);
   // No recipe found on what the person chose to import is itself suspect: it gets a second look.
   const reasons = first.drafts
     ? secondLookReasons(first.drafts, config.rules)
     : ["no_answer" as const];
   if (reasons.length === 0 || options.secondLook === false || level + 1 >= config.models.length) {
-    return finish(first.drafts, level, used, reasons);
+    return done(first.drafts, level, reasons);
   }
 
   const second = await attempt(caller, config, input, level + 1, "second_look", jobId);
   if (second.drafts && second.drafts.length > 0) {
     used.push(config.models[level + 1] as string);
-    return finish(second.drafts, level + 1, used, reasons);
+    answers.push({
+      purpose: "second_look",
+      model: config.models[level + 1] as string,
+      drafts: second.drafts,
+    });
+    return done(second.drafts, level + 1, reasons);
   }
   if (second.drafts === null && !second.refusal) used.push(config.models[level + 1] as string);
   // The second look found nothing usable (or wasn't allowed): keep what the first found.
-  return finish(first.drafts, level, used, reasons);
+  return done(first.drafts, level, reasons);
 }
 
 function finish(
@@ -206,10 +243,44 @@ function finish(
   level: number,
   models: string[],
   secondLook: SecondLookReason[],
+  answers: Extract<AiReadResult, { ok: true }>["answers"],
+  setup: string,
 ): AiReadResult {
   if (drafts === null) return { ok: false, problem: "unavailable" };
   if (drafts.length === 0) return { ok: false, problem: "no_recipe" };
-  return { ok: true, drafts, level, models, secondLook };
+  const shown = answers.findIndex((a) => a.drafts === drafts);
+  return { ok: true, drafts, level, models, secondLook, answers, shown, setup };
+}
+
+/** A draft's ingredient and method lines, as an outcome compares them (shared/aiOutcome.ts). */
+export function listsOf(draft: RecipeDraft): OutcomeLists {
+  const lines = (list: { text: string; heading: boolean }[] | undefined) =>
+    (list ?? []).map((l) => ({ text: l.text, heading: l.heading }));
+  return {
+    ingredients: lines(draft.fields.ingredients?.value),
+    directions: lines(draft.fields.directions?.value),
+  };
+}
+
+/**
+ * Each model's answer for the draft at `index` (the same recipe in each answer: the one of the
+ * same title, else the one at the same place), kept with the draft until it's decided.
+ */
+function answersFor(
+  read: Extract<AiReadResult, { ok: true }>,
+  index: number,
+  shownDraft: RecipeDraft,
+): ReadAnswer[] {
+  const title = (d: RecipeDraft) => d.fields.title?.value.trim().toLowerCase() ?? "";
+  return read.answers.flatMap((a, k): ReadAnswer[] => {
+    const draft =
+      k === read.shown
+        ? shownDraft
+        : (a.drafts.find((d) => title(d) && title(d) === title(shownDraft)) ?? a.drafts[index]);
+    return draft
+      ? [{ purpose: a.purpose, model: a.model, shown: k === read.shown, lists: listsOf(draft) }]
+      : [];
+  });
 }
 
 /**
@@ -220,31 +291,55 @@ function finish(
 export async function createAiImport(
   caller: AiCaller,
   input: AiReadInput,
-  now = new Date(),
-): Promise<{ ok: true; jobIds: string[] } | { ok: false; problem: AiReadProblem }> {
+  options: {
+    /** More to keep with each draft (a web page's address and copy, phase E8). */
+    provenance?: Record<string, unknown>;
+    /** Last touches to each draft (a web page's address as its source). */
+    finish?: (draft: RecipeDraft) => RecipeDraft;
+    /** At most this many drafts (a web page's, like its recipe data's). */
+    limit?: number;
+    now?: Date;
+  } = {},
+): Promise<
+  { ok: true; jobIds: string[]; drafts: RecipeDraft[] } | { ok: false; problem: AiReadProblem }
+> {
+  const now = options.now ?? new Date();
   const config = await aiConfig(caller.env, caller.db);
   const read = await readWithAi(caller, input, { config });
   if (!read.ok) return read;
-
-  const ids = read.drafts.map(() => crypto.randomUUID());
-  const firstId = ids[0] as string;
-  // Kept once, under the first draft; the others point at the same files.
-  const parts: AiPartRecord[] = await Promise.all(
-    input.parts.map(async (part, n): Promise<AiPartRecord> => {
-      if (part.kind === "text") return { kind: "text", text: part.text, label: part.label };
-      const key = importPhotoKey(firstId, n);
-      await caller.env.IMAGES.put(key, part.bytes, {
-        httpMetadata: { contentType: part.kind === "pdf" ? "application/pdf" : part.mediaType },
-      });
-      return part.kind === "pdf"
-        ? { kind: "pdf", key, label: part.label }
-        : { kind: "image", mediaType: part.mediaType, key, label: part.label };
-    }),
+  const drafts = (options.finish ? read.drafts.map(options.finish) : read.drafts).slice(
+    0,
+    options.limit,
   );
+
+  const ids = drafts.map(() => crypto.randomUUID());
+  // Each draft keeps its own copy of what was read (unless it's already kept, like an uploaded
+  // photo), so discarding one of a card's two recipes leaves the other able to read it again.
+  const partsFor = (jobId: string): Promise<AiPartRecord[]> =>
+    Promise.all(
+      input.parts.map(async (part, n): Promise<AiPartRecord> => {
+        if (part.kind === "text") return { kind: "text", text: part.text, label: part.label };
+        let key = input.storedAt?.[n] ?? null;
+        if (!key) {
+          key = importPhotoKey(jobId, n);
+          await caller.env.IMAGES.put(key, part.bytes, {
+            httpMetadata: {
+              contentType: part.kind === "pdf" ? "application/pdf" : part.mediaType,
+            },
+          });
+        }
+        return part.kind === "pdf"
+          ? { kind: "pdf", key, label: part.label }
+          : { kind: "image", mediaType: part.mediaType, key, label: part.label };
+      }),
+    );
+  const partsById = await Promise.all(ids.map(partsFor));
   const batchId = ids.length > 1 ? crypto.randomUUID() : null;
   await caller.db.insert(importJob).values(
-    read.drafts.map((draft, index) => {
-      const provenance: AiProvenance = {
+    drafts.map((draft, index) => {
+      const parts = partsById[index] as AiPartRecord[];
+      const provenance: AiProvenance & Record<string, unknown> = {
+        ...options.provenance,
         ai: {
           models: read.models,
           level: read.level,
@@ -252,6 +347,9 @@ export async function createAiImport(
           rereadAt: null,
           index,
           parts,
+          // Each model's answer, until the draft is decided (worker/ai/outcomes.ts).
+          answers: answersFor(read, index, draft),
+          setup: read.setup,
         },
       };
       return {
@@ -270,7 +368,7 @@ export async function createAiImport(
       };
     }),
   );
-  return { ok: true, jobIds: ids };
+  return { ok: true, jobIds: ids, drafts };
 }
 
 /** Whether "Read again" is on offer for a job: AI-read, not yet read again, a stronger model left. */
@@ -372,10 +470,22 @@ export async function readAgain(
           : read.problem,
     };
   }
-  const draft = read.drafts[ai.index] ?? (read.drafts[0] as RecipeDraft);
-  const provenance: AiProvenance = {
+  const draft = keepAddress(read.drafts[ai.index] ?? (read.drafts[0] as RecipeDraft), before);
+  // The earlier answers stay, no longer the one shown; this one is shown now.
+  const earlier = (ai.answers ?? []).map((a) => ({ ...a, shown: false }));
+  const provenance: AiProvenance & Record<string, unknown> = {
+    ...(JSON.parse(job.provenance) as Record<string, unknown>),
     ai: {
       ...(ai as AiProvenance["ai"]),
+      answers: [
+        ...earlier,
+        {
+          purpose: "reread",
+          model: read.models[0] ?? "",
+          shown: true,
+          lists: listsOf(draft),
+        },
+      ],
       models: [...(ai.models ?? []), ...read.models],
       level,
       rereadAt: now.toISOString(),
@@ -390,4 +500,21 @@ export async function readAgain(
     })
     .where(eq(importJob.id, job.id));
   return { ok: true, draft };
+}
+
+/**
+ * A web page read again (phase E8) keeps the page's address as its own ID and its source, which
+ * came from the page, not from what the AI read.
+ */
+function keepAddress(draft: RecipeDraft, before: RecipeDraft | null): RecipeDraft {
+  const source = before?.fields.source;
+  if (!before?.externalId && !source?.value.url) return draft;
+  return {
+    ...draft,
+    externalId: draft.externalId ?? before?.externalId ?? null,
+    fields:
+      source?.value.url && !draft.fields.source?.value.url
+        ? { ...draft.fields, source }
+        : draft.fields,
+  };
 }

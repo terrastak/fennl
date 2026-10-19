@@ -1,4 +1,4 @@
-import type { AddLimit, MemberPhotos, PhotoUsage, Usage } from "../../shared/limits";
+import type { AddLimit, AiImportUsage, MemberPhotos, PhotoUsage, Usage } from "../../shared/limits";
 import { formatBytes } from "../pages/plan";
 
 // What the app says about plan limits (phase C11; rules in shared/limits.ts). Plain and kind:
@@ -96,4 +96,36 @@ export function photosNearText(photos: PhotoUsage, full: boolean): string {
   return full
     ? `${line} It’s full, so photos can’t be added. Remove some photos to make room.`
     : line;
+}
+
+/** "58 of 300 AI imports this month", or "58 AI imports this month" with no limit. */
+export function aiImportsLine(ai: AiImportUsage): string {
+  const imports = (n: number) => `${n.toLocaleString()} AI ${n === 1 ? "import" : "imports"}`;
+  return ai.max === null
+    ? `${imports(ai.used)} this month`
+    : `${ai.used.toLocaleString()} of ${imports(ai.max)} this month`;
+}
+
+/**
+ * "They start again on November 1." (the first of the month, in UTC, when the count resets), or
+ * that they're used up until then.
+ */
+export function aiResetText(ai: AiImportUsage): string {
+  // US style for now ("November 1"; the owner's choice, 2026-10-14).
+  const day = new Date(ai.resetsAt).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+  });
+  return ai.usedUp
+    ? `This month's AI imports are used up. They start again on ${day}.`
+    : `They start again on ${day}.`;
+}
+
+export const AI_PAUSED_TEXT = "Reading with AI is paused for now. Please try again later.";
+
+/** "2 of 5 devices signed in", or "3 devices signed in" with no limit. */
+export function devicesLine(count: number, max: number | null): string {
+  const devices = (n: number) => `${n} ${n === 1 ? "device" : "devices"}`;
+  return max === null ? `${devices(count)} signed in` : `${count} of ${devices(max)} signed in`;
 }

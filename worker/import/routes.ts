@@ -1,4 +1,4 @@
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { draftIssues, type RecipeDraft } from "../../shared/importDraft";
 import {
@@ -10,6 +10,8 @@ import {
   type ImportJobDetail,
   type ReadAgainError,
   type ImportJobSummary,
+  type ImportPhotoSource,
+  type ImportPhotosResponse,
   type ImportWebError,
   type ImportWebResponse,
   type WebProvenance,
@@ -27,7 +29,9 @@ import { withinRateLimit } from "../rateLimit";
 import { householdMembers } from "../sync/push";
 import { aiConfig } from "../ai/config";
 import { canReadAgain, readAgain } from "../ai/read";
-import { markImportsSaved, removeJobPhotos } from "./jobs";
+import { fillFromPage, importPageWithAi } from "./aiWeb";
+import { markImportsSaved, recordDiscarded, removeJobPhotos } from "./jobs";
+import { importPhotos } from "./photoImport";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
 // drafts and keeps them in the account until the person reviews them: nothing becomes a recipe
@@ -71,12 +75,18 @@ const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 /** Pages read per person per minute: a guard against abuse, well past what a person does. */
 const PAGES_PER_MINUTE = 30;
+/** Recipes read from photos per person per minute (phase E9): the same kind of guard. */
+const PHOTO_IMPORTS_PER_MINUTE = 10;
 /** Redirects followed when fetching a draft's photo. */
 const MAX_REDIRECTS = 3;
 /** How long a photo's site gets to answer. */
 const PHOTO_TIMEOUT_MS = 15_000;
 
-function refuse(c: Context<ImportEnv>, error: ImportWebError, status: 400 | 403 | 413 | 422 | 429) {
+function refuse(
+  c: Context<ImportEnv>,
+  error: ImportWebError,
+  status: 400 | 403 | 413 | 422 | 429 | 503,
+) {
   return c.json({ error }, status);
 }
 
@@ -96,8 +106,17 @@ const summary = (row: {
   };
 };
 
+/** A draft's photos on the web, for the extension to bring when the site refuses Fennl's server. */
+function draftPhotos(draft: RecipeDraft | null): ImportPhotoSource[] {
+  return (draft?.photos ?? []).flatMap((photo) => {
+    const url = draft?.inputs[photo.input]?.url;
+    return photo.role === "photo" && url ? [{ input: photo.input, url }] : [];
+  });
+}
+
 // POST /api/import/web {html, url}: a web page as the browser has it (a saved page now, the
-// extension's capture in E6). One draft per recipe its structured data describes.
+// extension's capture in E6). One draft per recipe its structured data describes; a page with
+// none is read by the AI on a plan that includes it (E8).
 importRoutes.post("/api/import/web", async (c) => {
   const { db, userId, household } = c.var.signedIn;
   const plan = await householdEntitlements(db, household.householdId);
@@ -131,10 +150,41 @@ importRoutes.post("/api/import/web", async (c) => {
   const pageUrl =
     (typeof url === "string" && /^https?:\/\//i.test(url) ? url : null) ?? savedFromUrl(html);
 
-  const drafts = readWebRecipes(html, pageUrl)
+  let drafts = readWebRecipes(html, pageUrl)
     .filter((draft) => draftIssues(draft).length === 0)
     .slice(0, IMPORT_RULES.recipesPerPage);
-  if (drafts.length === 0) return refuse(c, "no_recipe", 422);
+  // Phase E8: a page without recipe data is read by the AI (Premium), and data that leaves out
+  // the ingredients or the method has them filled in from the page.
+  const caller = { env: c.env, db, householdId: household.householdId, userId, plan };
+  if (drafts.length === 0) {
+    const read = await importPageWithAi(caller, html, pageUrl, bytes);
+    if (!read.ok) return refuse(c, read.error, read.status);
+    const rows = await db
+      .select({
+        id: importJob.id,
+        draft: importJob.draft,
+        provenance: importJob.provenance,
+        createdAt: importJob.createdAt,
+      })
+      .from(importJob)
+      .where(inArray(importJob.id, read.jobIds))
+      .all();
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    const response: ImportWebResponse = {
+      jobs: read.jobIds.flatMap((id) => {
+        const row = byId.get(id);
+        return row
+          ? [
+              {
+                ...summary(row),
+                photos: draftPhotos(JSON.parse(row.draft ?? "null") as RecipeDraft | null),
+              },
+            ]
+          : [];
+      }),
+    };
+    return c.json(response, 201);
+  }
   // The plan's daily number (structured_imports_per_day; none by default). Counted here, once the
   // page has a recipe, so a page without one doesn't use up the day.
   const perDay = plan.structured_imports_per_day;
@@ -144,6 +194,7 @@ importRoutes.post("/api/import/web", async (c) => {
   ) {
     return refuse(c, "daily_limit", 429);
   }
+  drafts = await fillFromPage(caller, html, pageUrl, drafts);
 
   let snapshot: string | null = recipeCardHtml(html, pageUrl);
   if (
@@ -181,14 +232,45 @@ importRoutes.post("/api/import/web", async (c) => {
   });
   await db.insert(importJob).values(rows);
   const response: ImportWebResponse = {
-    jobs: rows.map((row, i) => {
-      const draft = drafts[i];
-      const photos = (draft?.photos ?? []).flatMap((photo) => {
-        const url = draft?.inputs[photo.input]?.url;
-        return photo.role === "photo" && url ? [{ input: photo.input, url }] : [];
-      });
-      return { ...summary(row), photos };
-    }),
+    jobs: rows.map((row, i) => ({ ...summary(row), photos: draftPhotos(drafts[i] ?? null) })),
+  };
+  return c.json(response, 201);
+});
+
+// POST /api/import/photos {pages: [hash, ...]}: photos of one recipe's pages (a card's front and
+// back, a few cookbook pages), already uploaded to the person's photos, read by the AI into
+// drafts (phase E9; worker/import/photoImport.ts).
+importRoutes.post("/api/import/photos", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  if (!plan.import_ai_enabled) return c.json({ error: "ai_import_not_included" }, 403);
+  if (
+    !(await withinRateLimit(db, `import-photos:${userId}`, {
+      max: PHOTO_IMPORTS_PER_MINUTE,
+      windowMs: MINUTE,
+    }))
+  ) {
+    return c.json({ error: "rate_limited" }, 429);
+  }
+  const body = (await c.req.json().catch(() => null)) as { pages?: unknown } | null;
+  const result = await importPhotos(
+    { env: c.env, db, householdId: household.householdId, userId, plan },
+    body?.pages,
+  );
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  const rows = await db
+    .select({
+      id: importJob.id,
+      draft: importJob.draft,
+      provenance: importJob.provenance,
+      createdAt: importJob.createdAt,
+    })
+    .from(importJob)
+    .where(inArray(importJob.id, result.jobIds))
+    .all();
+  const order = new Map(result.jobIds.map((id, i) => [id, i]));
+  const response: ImportPhotosResponse = {
+    jobs: rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(summary),
   };
   return c.json(response, 201);
 });
@@ -299,6 +381,7 @@ importRoutes.post("/api/import/jobs/:id/read-again", async (c) => {
 importRoutes.post("/api/import/jobs/:id/discard", async (c) => {
   const job = await ownJob(c);
   if (!job || job.status !== "ready") return c.json({ error: "not_found" }, 404);
+  await recordDiscarded(c.var.signedIn.db, job);
   await c.var.signedIn.db.delete(importJob).where(eq(importJob.id, job.id));
   await removeJobPhotos(c.env.IMAGES, job.id);
   return c.json({ ok: true });
