@@ -53,6 +53,11 @@ export interface AiReadInput {
   inputs: DraftInput[];
   /** Inputs to keep with the recipe (a card itself, as an import original). */
   photos: DraftPhoto[];
+  /**
+   * Where each part is already kept in R2, if it is (a page photo uploaded to the person's
+   * photos, phase E9): read from there by "Read again" instead of being copied.
+   */
+  storedAt?: (string | null)[];
 }
 
 export type AiReadProblem =
@@ -308,23 +313,31 @@ export async function createAiImport(
   );
 
   const ids = drafts.map(() => crypto.randomUUID());
-  const firstId = ids[0] as string;
-  // Kept once, under the first draft; the others point at the same files.
-  const parts: AiPartRecord[] = await Promise.all(
-    input.parts.map(async (part, n): Promise<AiPartRecord> => {
-      if (part.kind === "text") return { kind: "text", text: part.text, label: part.label };
-      const key = importPhotoKey(firstId, n);
-      await caller.env.IMAGES.put(key, part.bytes, {
-        httpMetadata: { contentType: part.kind === "pdf" ? "application/pdf" : part.mediaType },
-      });
-      return part.kind === "pdf"
-        ? { kind: "pdf", key, label: part.label }
-        : { kind: "image", mediaType: part.mediaType, key, label: part.label };
-    }),
-  );
+  // Each draft keeps its own copy of what was read (unless it's already kept, like an uploaded
+  // photo), so discarding one of a card's two recipes leaves the other able to read it again.
+  const partsFor = (jobId: string): Promise<AiPartRecord[]> =>
+    Promise.all(
+      input.parts.map(async (part, n): Promise<AiPartRecord> => {
+        if (part.kind === "text") return { kind: "text", text: part.text, label: part.label };
+        let key = input.storedAt?.[n] ?? null;
+        if (!key) {
+          key = importPhotoKey(jobId, n);
+          await caller.env.IMAGES.put(key, part.bytes, {
+            httpMetadata: {
+              contentType: part.kind === "pdf" ? "application/pdf" : part.mediaType,
+            },
+          });
+        }
+        return part.kind === "pdf"
+          ? { kind: "pdf", key, label: part.label }
+          : { kind: "image", mediaType: part.mediaType, key, label: part.label };
+      }),
+    );
+  const partsById = await Promise.all(ids.map(partsFor));
   const batchId = ids.length > 1 ? crypto.randomUUID() : null;
   await caller.db.insert(importJob).values(
     drafts.map((draft, index) => {
+      const parts = partsById[index] as AiPartRecord[];
       const provenance: AiProvenance & Record<string, unknown> = {
         ...options.provenance,
         ai: {

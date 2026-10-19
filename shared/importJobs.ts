@@ -16,6 +16,16 @@ export const IMPORT_RULES = {
   recipesPerPage: 20,
   /** Drafts not saved or discarded are removed after this many days. */
   keepDays: 30,
+  /**
+   * Photos read as one recipe (phase E9): a card's two sides, a few cookbook pages. Not a plan
+   * limit: what one AI read handles well.
+   */
+  photoPages: 10,
+  /**
+   * Their total size: the AI takes at most 32 MB a request, and photos travel as base64 text
+   * (a third larger). Prepared pages are about 1 to 2 MB each.
+   */
+  photoBytes: 20 * 1024 * 1024,
 } as const;
 
 /** The page a draft came from. */
@@ -57,7 +67,10 @@ export interface ImportJobDetail extends ImportJobSummary {
 
 /** Something the AI read, kept so "Read again" can read it again (phase E7). */
 export type AiPartRecord =
-  /** A photo or PDF, kept in R2 (IMAGES) under importPhotoKey. */
+  /**
+   * A photo or PDF, kept in R2 (IMAGES) under importPhotoKey, or a page photo the person
+   * uploaded (phase E9), under its own key among their photos.
+   */
   | {
       kind: "image";
       mediaType: "image/jpeg" | "image/png" | "image/gif" | "image/webp";
@@ -110,6 +123,33 @@ export type ReadAgainError =
   | "unavailable"
   /** The photos aren't kept any more. */
   | "inputs_gone";
+
+/**
+ * POST /api/import/photos (phase E9): photos of one recipe's pages, already uploaded to the
+ * person's photos (POST /api/images/upload), in reading order.
+ */
+export interface ImportPhotosRequest {
+  pages: string[];
+}
+
+export type ImportPhotosError =
+  | "invalid_request"
+  /** Reading photos needs AI import, which isn't part of the plan. */
+  | "ai_import_not_included"
+  | "too_many_pages"
+  | "pages_too_large"
+  /** A page isn't among the person's photos (not uploaded, or removed since). */
+  | "page_missing"
+  | "rate_limited"
+  | "monthly_limit"
+  | "paused"
+  | "ai_unavailable"
+  | "no_recipe";
+
+/** POST /api/import/photos: one job for each recipe found on the pages. */
+export interface ImportPhotosResponse {
+  jobs: ImportJobSummary[];
+}
 
 /** A draft's photo: which of its inputs, and where the page had it. */
 export interface ImportPhotoSource {

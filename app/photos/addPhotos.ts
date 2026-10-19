@@ -2,7 +2,7 @@ import type { PhotoChange } from "../../shared/sync";
 import { saveChanges } from "../sync/useSync";
 import { PhotoCache } from "./cache";
 import { orderAfter } from "./order";
-import { preparePhoto } from "./prepare";
+import { preparePhoto, type Prepared } from "./prepare";
 import type { PhotoKind } from "./settings";
 import { WebpEncoder } from "./webpEncoder";
 
@@ -44,7 +44,13 @@ export interface AddPhotosResult {
 
 let encoder: WebpEncoder | null = null;
 
-class UploadProblem extends Error {
+/** The WebP encoder, started once and shared. */
+export function photoEncoder(): WebpEncoder {
+  encoder ??= new WebpEncoder();
+  return encoder;
+}
+
+export class UploadProblem extends Error {
   constructor(readonly problem: AddPhotoProblem) {
     super(problem);
   }
@@ -67,27 +73,40 @@ async function send(url: string, body: Blob): Promise<Response> {
   throw new UploadProblem("failed");
 }
 
+/**
+ * Uploads a prepared photo and its small copy for `ownerUserId` and keeps both on this device.
+ * Returns its hash. Throws an UploadProblem.
+ */
+export async function uploadPrepared(
+  prepared: Prepared,
+  ownerUserId: string,
+  cache: PhotoCache,
+): Promise<string> {
+  const owner = `?owner=${encodeURIComponent(ownerUserId)}`;
+  const uploaded = await send(`/api/images/upload${owner}`, prepared.file);
+  const { hash } = (await uploaded.json()) as { hash: string };
+  await send(`/api/images/${hash}/thumb${owner}`, prepared.thumb);
+  await cache.keep(hash, "full", prepared.file);
+  await cache.keep(hash, "thumb", prepared.thumb);
+  return hash;
+}
+
 export async function addPhotos(request: AddPhotosRequest): Promise<AddPhotosResult> {
   const { files, recipeId, ownerUserId, cache } = request;
   if (!navigator.onLine) return { added: 0, problem: "offline" };
   const wanted = request.room === null ? files : files.slice(0, Math.max(0, request.room));
   const orders = [...request.existingOrders];
   let added = 0;
-  encoder ??= new WebpEncoder();
+  const webp = photoEncoder();
   try {
     for (const file of wanted) {
       request.onProgress?.(added, wanted.length);
-      const prepared = await preparePhoto(file, request.kind, encoder, request.maxFileBytes).catch(
+      const prepared = await preparePhoto(file, request.kind, webp, request.maxFileBytes).catch(
         () => {
           throw new UploadProblem("not_a_photo");
         },
       );
-      const owner = `?owner=${encodeURIComponent(ownerUserId)}`;
-      const uploaded = await send(`/api/images/upload${owner}`, prepared.file);
-      const { hash } = (await uploaded.json()) as { hash: string };
-      await send(`/api/images/${hash}/thumb${owner}`, prepared.thumb);
-      await cache.keep(hash, "full", prepared.file);
-      await cache.keep(hash, "thumb", prepared.thumb);
+      const hash = await uploadPrepared(prepared, ownerUserId, cache);
       const sortOrder = orderAfter(orders);
       orders.push(sortOrder);
       const change: PhotoChange = {

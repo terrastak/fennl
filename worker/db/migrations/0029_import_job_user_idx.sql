@@ -1,0 +1,1 @@
+CREATE INDEX `import_job_user_status_idx` ON `import_job` (`user_id`,`status`);

@@ -154,6 +154,27 @@
   background: var(--color-surface);
 }
 
+/* The photos a recipe was read from (phase E9). */
+.pagePhotos {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pagePhoto {
+  display: block;
+}
+
+.pagePhoto img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
 /* On a phone the page folds away under its button. */
 @media (max-width: 899px) {
   .source[data-open="false"] .sourceBody {
@@ -174,6 +195,11 @@
 
   .frame {
     height: calc(100vh - 10rem);
+  }
+
+  .pagePhotos {
+    max-height: calc(100vh - 10rem);
+    overflow: auto;
   }
 
   .sourceToggle {

@@ -11,6 +11,7 @@ import {
   type ReadAgainError,
   type ImportJobSummary,
   type ImportPhotoSource,
+  type ImportPhotosResponse,
   type ImportWebError,
   type ImportWebResponse,
   type WebProvenance,
@@ -30,6 +31,7 @@ import { aiConfig } from "../ai/config";
 import { canReadAgain, readAgain } from "../ai/read";
 import { fillFromPage, importPageWithAi } from "./aiWeb";
 import { markImportsSaved, recordDiscarded, removeJobPhotos } from "./jobs";
+import { importPhotos } from "./photoImport";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
 // drafts and keeps them in the account until the person reviews them: nothing becomes a recipe
@@ -73,6 +75,8 @@ const MINUTE = 60 * 1000;
 const DAY = 24 * 60 * MINUTE;
 /** Pages read per person per minute: a guard against abuse, well past what a person does. */
 const PAGES_PER_MINUTE = 30;
+/** Recipes read from photos per person per minute (phase E9): the same kind of guard. */
+const PHOTO_IMPORTS_PER_MINUTE = 10;
 /** Redirects followed when fetching a draft's photo. */
 const MAX_REDIRECTS = 3;
 /** How long a photo's site gets to answer. */
@@ -229,6 +233,44 @@ importRoutes.post("/api/import/web", async (c) => {
   await db.insert(importJob).values(rows);
   const response: ImportWebResponse = {
     jobs: rows.map((row, i) => ({ ...summary(row), photos: draftPhotos(drafts[i] ?? null) })),
+  };
+  return c.json(response, 201);
+});
+
+// POST /api/import/photos {pages: [hash, ...]}: photos of one recipe's pages (a card's front and
+// back, a few cookbook pages), already uploaded to the person's photos, read by the AI into
+// drafts (phase E9; worker/import/photoImport.ts).
+importRoutes.post("/api/import/photos", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  if (!plan.import_ai_enabled) return c.json({ error: "ai_import_not_included" }, 403);
+  if (
+    !(await withinRateLimit(db, `import-photos:${userId}`, {
+      max: PHOTO_IMPORTS_PER_MINUTE,
+      windowMs: MINUTE,
+    }))
+  ) {
+    return c.json({ error: "rate_limited" }, 429);
+  }
+  const body = (await c.req.json().catch(() => null)) as { pages?: unknown } | null;
+  const result = await importPhotos(
+    { env: c.env, db, householdId: household.householdId, userId, plan },
+    body?.pages,
+  );
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  const rows = await db
+    .select({
+      id: importJob.id,
+      draft: importJob.draft,
+      provenance: importJob.provenance,
+      createdAt: importJob.createdAt,
+    })
+    .from(importJob)
+    .where(inArray(importJob.id, result.jobIds))
+    .all();
+  const order = new Map(result.jobIds.map((id, i) => [id, i]));
+  const response: ImportPhotosResponse = {
+    jobs: rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(summary),
   };
   return c.json(response, 201);
 });

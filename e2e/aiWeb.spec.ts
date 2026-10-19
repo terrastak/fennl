@@ -19,7 +19,7 @@ const BLOG = `<!DOCTYPE html><html><head><title>Sugar Butter Balls | June Bakes<
 async function importBlog(page: Page) {
   await page.goto("/import");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
-  await page.locator('input[type="file"]').setInputFiles({
+  await page.locator('input[type="file"][accept*="html"]').setInputFiles({
     name: "sugar-butter-balls.html",
     mimeType: "text/html",
     buffer: Buffer.from(BLOG),

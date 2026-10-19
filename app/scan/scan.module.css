@@ -1,0 +1,352 @@
+/* Importing from photos (phase E9): the pages, the live camera and cropping. Tokens only
+   (docs/design/design-direction.md). */
+
+.section {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  max-width: 44rem;
+  margin-bottom: var(--space-8);
+}
+
+.section h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.section p {
+  margin: 0;
+}
+
+.addButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.off {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.problem {
+  color: var(--color-danger);
+}
+
+/* --- The pages, in order ----------------------------------------------------------------- */
+
+.pagesTitle {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-lg);
+}
+
+.pages {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.page {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.pagePicture {
+  display: grid;
+  place-items: center;
+  width: 6rem;
+  height: 6rem;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+}
+
+.pagePicture img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.pageText {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.pageName {
+  font-weight: var(--weight-semibold);
+}
+
+.blurNote {
+  color: var(--color-warm-text);
+  font-size: var(--text-sm);
+}
+
+.pageTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.tool,
+.cameraButton {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tool:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.cameraButton[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+/* --- The live camera --------------------------------------------------------------------- */
+
+.camera,
+.cropDialog {
+  width: 100vw;
+  max-width: 100vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.camera[open] {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto auto;
+}
+
+.camera::backdrop,
+.cropDialog::backdrop {
+  background: rgb(0 0 0 / 0.6);
+}
+
+.cameraBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+}
+
+.cameraTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.cameraTools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.viewfinder {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+}
+
+.video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Where the page goes: well inside the view, so the phone stays far enough back to focus. */
+.guide {
+  position: absolute;
+  inset: 12% 10%;
+  border: 2px dashed var(--color-on-accent);
+  border-radius: var(--radius-md);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  pointer-events: none;
+}
+
+.cameraStatus {
+  position: absolute;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.cameraTip {
+  margin: 0;
+  padding: var(--space-2) var(--space-4) 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.blurry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-2) var(--space-4) 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-warm);
+  border-radius: var(--radius-md);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.blurry p {
+  margin: 0;
+  font-weight: var(--weight-semibold);
+}
+
+.cameraControls {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
+}
+
+.cameraCount {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.shutter {
+  width: 4.5rem;
+  height: 4.5rem;
+  border: 4px solid var(--color-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  box-shadow:
+    inset 0 0 0 4px var(--color-surface),
+    inset 0 0 0 2rem var(--color-accent);
+  cursor: pointer;
+}
+
+.shutter:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.shutter:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shutter:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+.cameraDone {
+  justify-self: end;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-5);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+/* --- Cropping ---------------------------------------------------------------------------- */
+
+.cropDialog[open] {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.cropBar {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+}
+
+.cropTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.cropHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.cropStage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: var(--space-6);
+  overflow: hidden;
+  background: var(--color-surface-sunken);
+}
+
+.cropFrame {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  touch-action: none;
+  user-select: none;
+}
+
+.cropFrame img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100dvh - 14rem);
+}
+
+.cropBox {
+  position: absolute;
+  border: 2px solid var(--color-accent);
+  box-shadow: 0 0 0 100vmax rgb(0 0 0 / 0.45);
+  pointer-events: none;
+}
+
+.cropHandle {
+  position: absolute;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  margin: calc(var(--tap-target) / -2) 0 0 calc(var(--tap-target) / -2);
+  padding: 0;
+  border: 3px solid var(--color-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  cursor: grab;
+  touch-action: none;
+}
+
+.cropButtons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
+}
