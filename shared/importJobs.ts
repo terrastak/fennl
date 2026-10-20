@@ -26,6 +26,7 @@ export const IMPORT_RULES = {
    * (a third larger). Prepared pages are about 1 to 2 MB each.
    */
   photoBytes: 20 * 1024 * 1024,
+  /** Pasted text (phase E15) is held to PASTED_TEXT_CHARS, in shared/pastedText.ts. */
 } as const;
 
 /** The page a draft came from. */
@@ -34,6 +35,11 @@ export interface ImportPage {
   url: string | null;
   /** The page's own title. */
   title: string | null;
+}
+
+/** What import_job.provenance holds for pasted text (phase E15): kept until saved or removed. */
+export interface PastedProvenance {
+  pasted: { text: string };
 }
 
 /** What import_job.provenance holds for a web page. */
@@ -61,6 +67,8 @@ export interface ImportJobDetail extends ImportJobSummary {
   snapshot: string | null;
   /** The recipe it became, once saved. */
   recipeId: string | null;
+  /** The text a recipe was read from, for the review screen (phase E15); null for any other. */
+  pastedText: string | null;
   /** Read by the AI (phase E7): whether "Read again" is still on offer, or has been used. */
   ai: { canReadAgain: boolean; readAgain: boolean } | null;
 }
@@ -185,6 +193,32 @@ export type ImportWebError =
   | "paused"
   /** The AI couldn't read it just now, or isn't set up on this server. */
   | "ai_unavailable";
+
+/** POST /api/import/text (phase E15): the pasted text. */
+export interface ImportTextRequest {
+  text: string;
+}
+
+export type ImportTextError =
+  | "invalid_request"
+  | "text_too_large"
+  /** Nothing in it looks like a recipe, and it was too short or plain to be worth an AI read. */
+  | "no_recipe"
+  /** A web address on its own: reading pages from a link isn't built yet. */
+  | "web_address"
+  /** The text needs reading with the AI, which the plan doesn't include. */
+  | "ai_import_not_included"
+  | "import_not_included"
+  | "daily_limit"
+  | "rate_limited"
+  | "monthly_limit"
+  | "paused"
+  | "ai_unavailable";
+
+/** POST /api/import/text: one job for each recipe found. */
+export interface ImportTextResponse {
+  jobs: ImportJobSummary[];
+}
 
 /**
  * The address a browser recorded in a page saved with "Save Page As" (Chrome and Edge write

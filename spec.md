@@ -1243,9 +1243,15 @@ These follow the beta and are approved one at a time, like every phase. The desi
   3. First try the cheap, no-AI reading where the text is clearly laid out (a "Ingredients" heading and a "Directions" heading, using E2's ingredient reader). Only when that doesn't find a recipe, send the text to the AI (`import_ai_enabled`, the household's monthly limits, `ai_usage` metering, cheaper model first with the automatic second look, and recorded in `ai_outcome` so real-use accuracy is tracked, as for every AI import). Free accounts therefore get the no-AI reading and see a clear "needs Premium" message when the AI would be needed (the free-tier teaser question stays open, #14).
   4. Size limit on pasted text, checked on the server. The text is not kept after the draft is saved or removed; the draft keeps a source label "Pasted text" and no copy of the original. (Unlike photos, there is no original to store; state this on the review screen.)
   5. Same review screen, same duplicate check, same "Read again" once.
-- **Decisions**: The size limit; whether the draft keeps the pasted text until saved (suggest: yes, for the review screen only, removed with the draft).
+- **Decisions (owner, 2026-10-20)**: at most **60,000 characters** per paste (the same cap as a web page's text; longer is refused with a clear message, never cut off); the draft **keeps the pasted text until it is saved or removed**, for the review screen only (step 4 above is changed accordingly: the review screen shows "The pasted text" beside the draft and says it is kept only until you save or discard).
 - **You check**: Paste a recipe from an email and one from a messy note; review and save.
 - **Done when**: Scored on a small pasted-text sample set added to `import-quality/` (laid-out text, messy text, several recipes in one paste, text with no recipe) with targets agreed before building, as for every importer; AI limits and metering tested.
+
+- **Built, E15 (2026-10-20)** (`shared/pastedText.ts` `readPastedText`, `worker/import/pastedImport.ts`, `POST /api/import/text`, `app/import/ImportPage.tsx` "Paste a recipe", `SourcePane.tsx` "The pasted text", sample set `import-quality/test_text/`; no migration):
+  - New import source `text`. **Clearly laid out** means exactly one "Ingredients" and one "Directions" heading (also "Method", "Instructions", "Steps" and the like; markdown, capitals, colons and bullets all fine, either order), a title above them, at least two ingredients and a direction. Serving and time lines ("Serves 4", "Makes 24 cookies", "Prep time: 15 minutes") and a "Notes" section are picked up. A lone bold line is a section heading. This is read by Fennl's own rules, costs nothing, and needs `import_structured_enabled` (so Free can use it, with the daily number counted like a web page's).
+  - Anything else (no headings, a recipe in a paragraph, several recipes, chat around it) goes to the AI through `createAiImport` (`import_ai_enabled`, the monthly limits, `ai_usage`, cheaper model first with the automatic second look, `ai_outcome`, "Read again" once). Free sees "needs reading with AI, which is part of Premium" and the text stays in the box. Text under 40 characters, or a lone web address, is turned away without any AI call; a web address is never fetched.
+  - The text is kept in the draft's provenance (`pasted`, and the AI's text part) and removed when the draft is saved (`markImportsSaved`) or discarded or expires. The recipe's own source field is left empty; `import.source` records `text`.
+  - Scored on six samples (`by: "rules"` three, read on every pull request and **must be exact**, like web data; `by: "ai"` three: a friendly email, two recipes in a message, a note with no recipe, measured by the manual model comparison with `AI_COMPARE_SETS=text`). The scorecard caught two real gaps during the build (bold section headings; "Yield: 12 pancakes" giving no count), both fixed.
 
 ### E16. Import from other apps (candidate)
 - **Goal**: People coming from other recipe apps (and Paprika users whose data is "stranded" there) can bring their recipes in.
@@ -1353,5 +1359,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C13a | Done 2026-10-20 (merged) |
 | C13b | Done 2026-10-20 (merged) |
 | C13c | Done 2026-10-20 (merged). C13 is complete |
-| C14 | Built 2026-10-20, waiting for review |
+| C14 | Done 2026-10-20 (merged) |
+| E15 | Built 2026-10-20, waiting for review |
 | All others | Not started |

@@ -84,7 +84,39 @@ function PhotosPane({ hashes }: { hashes: string[] }) {
 
 export function SourcePane({ job }: { job: ImportJobDetail }) {
   const hashes = originalHashes(job.draft);
+  if (job.pastedText !== null) return <TextPane text={job.pastedText} />;
   return hashes.length > 0 ? <PhotosPane hashes={hashes} /> : <PageSource job={job} />;
+}
+
+/** The text a recipe was read from (phase E15), kept only until the draft is saved or removed. */
+function TextPane({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className={styles.source} data-open={open} aria-labelledby="source-title">
+      <div className={styles.sourceHead}>
+        <h2 id="source-title" className={styles.sectionTitle}>
+          The pasted text
+        </h2>
+        <button
+          type="button"
+          className={`${recipes.secondary} ${styles.sourceToggle}`}
+          aria-expanded={open}
+          aria-controls="source-body"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Hide the pasted text" : "Show the pasted text"}
+        </button>
+      </div>
+      <div id="source-body" className={styles.sourceBody}>
+        <p className={recipes.hint}>
+          Fennl keeps this text only until you save the recipe or discard it.
+        </p>
+        <pre className={styles.pasted} tabIndex={0} aria-label="The text you pasted">
+          {text}
+        </pre>
+      </div>
+    </section>
+  );
 }
 
 function PageSource({ job }: { job: ImportJobDetail }) {

@@ -1,0 +1,18 @@
+{
+  "title": "Roasted Tomato Soup",
+  "ingredients": [
+    "## For the soup:",
+    "2 lb tomatoes, halved",
+    "1 onion, quartered",
+    "3 cups vegetable stock",
+    "## To finish:",
+    "1/2 cup cream",
+    "salt and pepper"
+  ],
+  "directions": [
+    "Roast the tomatoes and onion at 400°F for 40 minutes.",
+    "Blend with the stock until smooth.",
+    "Stir in the cream and season to taste."
+  ],
+  "servings": { "count": 6, "yield": null }
+}

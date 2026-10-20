@@ -1,0 +1,22 @@
+{
+  "title": "Grandma's Banana Bread",
+  "description": "The loaf we make every Sunday.",
+  "ingredients": [
+    "3 ripe bananas",
+    "1/2 cup butter, melted",
+    "3/4 cup sugar",
+    "1 egg, beaten",
+    "1 tsp vanilla",
+    "1 tsp baking soda",
+    "1 1/2 cups flour"
+  ],
+  "directions": [
+    "Preheat the oven to 350°F and grease a loaf pan.",
+    "Mash the bananas and stir in the butter, sugar, egg and vanilla.",
+    "Fold in the baking soda and flour until just combined.",
+    "Bake for 1 hour, until a toothpick comes out clean."
+  ],
+  "times": { "prep": 15, "cook": 60, "total": null },
+  "servings": { "count": 8, "yield": null },
+  "notes": "Keeps three days wrapped."
+}

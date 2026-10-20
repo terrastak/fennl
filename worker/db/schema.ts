@@ -737,7 +737,7 @@ export const aiOutcome = sqliteTable(
     id: text("id").primaryKey(),
     /** One outcome per draft. */
     importJobId: text("import_job_id").notNull().unique(),
-    /** Where the recipe came from: "website", "photo", "screenshot", "pdf". */
+    /** Where the recipe came from: "website", "photo", "screenshot", "pdf", "text". */
     source: text("source").notNull(),
     /** "saved", "discarded" or "expired". */
     outcome: text("outcome").notNull(),

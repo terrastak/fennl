@@ -22,6 +22,7 @@ const SOURCES: Record<string, string> = {
   photo: "Photos",
   screenshot: "Screenshots",
   pdf: "PDFs",
+  text: "Pasted text",
 };
 
 const pct = (n: number, of: number) => (of > 0 ? `${Math.round((n / of) * 100)}%` : "–");

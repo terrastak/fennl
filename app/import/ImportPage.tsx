@@ -1,12 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { IMPORT_RULES, type ImportJobSummary } from "../../shared/importJobs";
+import { PASTED_TEXT_CHARS } from "../../shared/pastedText";
 import { navigate } from "../navigation";
 import { PageHeader } from "../pages/PageHeader";
 import pages from "../pages/pages.module.css";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
 import { PhotoImport } from "../scan/PhotoImport";
-import { importJobs, importProblemText, importWebPage } from "./api";
+import {
+  importJobs,
+  importPastedText,
+  importProblemText,
+  importWebPage,
+  pastedProblemText,
+} from "./api";
 import styles from "./import.module.css";
 
 // The Import page (phase E4): a saved web page read into drafts, photos of a recipe's pages read
@@ -29,6 +36,7 @@ export function ImportPage() {
   const [jobs, setJobs] = useState<ImportJobSummary[] | null>(null);
   const [reading, setReading] = useState(false);
   const [message, setMessage] = useState<{ text: string; problem: boolean } | null>(null);
+  const [pasted, setPasted] = useState("");
   const messageRef = useRef<HTMLParagraphElement>(null);
 
   const load = () => void importJobs().then((list) => setJobs(list ?? []));
@@ -59,6 +67,28 @@ export function ImportPage() {
     load();
   };
 
+  const readPasted = async () => {
+    setReading(true);
+    setMessage(null);
+    const result = await importPastedText(pasted);
+    setReading(false);
+    if ("problem" in result) {
+      setMessage({ text: pastedProblemText(result.problem), problem: true });
+      return;
+    }
+    const [only] = result.jobs;
+    if (result.jobs.length === 1 && only) {
+      navigate(`/import/${only.id}`);
+      return;
+    }
+    setPasted("");
+    setMessage({
+      text: `Found ${result.jobs.length} recipes in that text. Review each one below.`,
+      problem: false,
+    });
+    load();
+  };
+
   const imported = (found: ImportJobSummary[]) => {
     const [only] = found;
     if (found.length === 1 && only) {
@@ -80,6 +110,24 @@ export function ImportPage() {
           saved.
         </p>
       </PageHeader>
+
+      <div>
+        {reading ? (
+          <p role="status" className={recipes.hint}>
+            Reading. This can take up to a minute.
+          </p>
+        ) : null}
+        {message ? (
+          <p
+            ref={messageRef}
+            tabIndex={-1}
+            role={message.problem ? "alert" : "status"}
+            className={message.problem ? styles.problem : styles.note}
+          >
+            {message.text}
+          </p>
+        ) : null}
+      </div>
 
       <section className={styles.section} aria-labelledby="import-page-title">
         <h2 id="import-page-title">From a web page</h2>
@@ -105,21 +153,36 @@ export function ImportPage() {
           />
           Import a saved web page
         </label>
-        {reading ? (
-          <p role="status" className={recipes.hint}>
-            Reading the page…
-          </p>
-        ) : null}
-        {message ? (
-          <p
-            ref={messageRef}
-            tabIndex={-1}
-            role={message.problem ? "alert" : "status"}
-            className={message.problem ? styles.problem : styles.note}
+      </section>
+
+      <section className={styles.section} aria-labelledby="import-paste-title">
+        <h2 id="import-paste-title">Paste a recipe</h2>
+        <p>
+          Copy a recipe from an email, note, document or message and paste it here. Fennl reads it
+          for you to check before anything is saved.
+        </p>
+        <label htmlFor="import-paste" className="visually-hidden">
+          Recipe text
+        </label>
+        <textarea
+          id="import-paste"
+          className={styles.pasteBox}
+          value={pasted}
+          maxLength={PASTED_TEXT_CHARS}
+          placeholder="Paste the recipe here"
+          disabled={reading}
+          onChange={(event) => setPasted(event.currentTarget.value)}
+        />
+        <div className={styles.pasteRow}>
+          <button
+            type="button"
+            className={recipes.primary}
+            disabled={reading || pasted.trim().length === 0}
+            onClick={() => void readPasted()}
           >
-            {message.text}
-          </p>
-        ) : null}
+            {reading ? "Reading…" : "Read this recipe"}
+          </button>
+        </div>
       </section>
 
       <PhotoImport onImported={imported} />

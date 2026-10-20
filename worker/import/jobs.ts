@@ -41,8 +41,11 @@ export async function markImportsSaved(
       .set({
         status: "saved",
         recipeId,
-        // The answers kept for the outcome go too; the outcome keeps only their scores.
-        provenance: sql`json_remove(${importJob.provenance}, '$.snapshot', '$.ai.answers')`,
+        // The answers kept for the outcome go too; the outcome keeps only their scores. Pasted
+        // text (phase E15) is kept only while the draft waits for review.
+        provenance: sql`CASE WHEN ${importJob.source} = 'text'
+          THEN json_remove(${importJob.provenance}, '$.snapshot', '$.ai.answers', '$.pasted', '$.ai.parts')
+          ELSE json_remove(${importJob.provenance}, '$.snapshot', '$.ai.answers') END`,
         updatedAt: now,
       })
       .where(

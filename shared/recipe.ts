@@ -140,7 +140,7 @@ export interface RecipeNutrition {
   source: NutritionSource;
 }
 
-export const IMPORT_SOURCES = ["paprika", "website", "photo", "screenshot", "pdf"] as const;
+export const IMPORT_SOURCES = ["paprika", "website", "photo", "screenshot", "pdf", "text"] as const;
 export type ImportSource = (typeof IMPORT_SOURCES)[number];
 
 /** Where an imported recipe came from, so a re-import updates instead of duplicating. */

@@ -49,7 +49,8 @@ import {
 //
 // AI_COMPARE_SETS picks what it reads: "photos" (the default: the photos, cookbook pages,
 // screenshots and PDFs), "web" (the web pages with their recipe data left out, read from the
-// page's text as Fennl does for a page without data, phase E8), or "all".
+// page's text as Fennl does for a page without data, phase E8), "text" (pasted text, phase E15),
+// or "all".
 //
 // It calls the real API, so it costs money: about a dollar for the photos, and about another
 // dollar for the web pages. Run it from GitHub (Actions › AI model comparison › Run workflow;
@@ -59,6 +60,7 @@ import {
 const SETS = {
   photos: { label: "photos", kinds: ["card", "cookbook", "screenshot", "pdf"] },
   web: { label: "web pages without recipe data", kinds: ["web"] },
+  text: { label: "pasted text", kinds: ["text"] },
 } as const satisfies Record<string, { label: string; kinds: readonly SampleKind[] }>;
 
 type SetName = keyof typeof SETS;
@@ -69,6 +71,7 @@ const SOURCE: Partial<Record<SampleKind, ImportSource>> = {
   screenshot: "screenshot",
   pdf: "pdf",
   web: "website",
+  text: "text",
 };
 
 /** A page without its recipe data, as Fennl gives it to the AI (worker/import/aiWeb.ts). */
@@ -93,6 +96,14 @@ function toParts(files: InputFile[], sample: Sample): { parts: AiPart[]; inputs:
     return {
       parts: [pageAiPart(page, url)],
       inputs: [{ kind: "page", name: page.title, url, imageHash: null }],
+    };
+  }
+  if (sample.kind === "text" && first) {
+    return {
+      parts: [
+        { kind: "text", label: "The pasted text", text: new TextDecoder().decode(first.bytes) },
+      ],
+      inputs: [{ kind: "text", name: "Pasted text", url: null, imageHash: null }],
     };
   }
   const parts = files.map((file, i): AiPart => {
@@ -261,9 +272,9 @@ async function main() {
   }
   const wanted = process.env.AI_COMPARE_SETS?.trim() || "photos";
   const sets: SetName[] =
-    wanted === "all" ? ["photos", "web"] : wanted in SETS ? [wanted as SetName] : [];
+    wanted === "all" ? ["photos", "web", "text"] : wanted in SETS ? [wanted as SetName] : [];
   if (!sets.length) {
-    console.error(`AI_COMPARE_SETS must be photos, web or all, not ${wanted}`);
+    console.error(`AI_COMPARE_SETS must be photos, web, text or all, not ${wanted}`);
     process.exit(2);
   }
   const groups = sets.map((set) => importers(provider, cheap, strong, set));
@@ -311,6 +322,12 @@ async function main() {
 
   const out = [
     reportMarkdown(card).replace("# Import quality", "# AI model comparison"),
+    ...(sets.includes("text")
+      ? [
+          "Pasted text is read as Fennl reads text its own rules can't follow (phase E15). The clearly laid out samples are read too, to show what the AI adds over Fennl's free reading.",
+          "",
+        ]
+      : []),
     ...(sets.includes("web")
       ? [
           "Web pages are read from their text with the recipe data left out, as Fennl reads a page that has none. The saved copies keep only the recipe card, so this measures reading the recipe itself, not finding it on a long page; copies that keep no text of the page are left out.",
