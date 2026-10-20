@@ -1344,5 +1344,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C12 | Approved 2026-10-08; built, waiting for review |
 | C13a | Done 2026-10-20 (merged) |
 | C13b | Done 2026-10-20 (merged) |
-| C13c | Built 2026-10-20, waiting for review |
+| C13c | Done 2026-10-20 (merged). C13 is complete |
 | All others | Not started |
