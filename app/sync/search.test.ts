@@ -7,6 +7,7 @@ import {
   ingredientMatches,
   searchRecipes,
   searchTerms,
+  similarByIngredients,
   unindexRecords,
 } from "./search";
 
@@ -271,5 +272,68 @@ describe("ingredient matches (phase C13a)", () => {
     const { db, stew } = box();
     put(db, { ...stew, deletedAt: "2026-10-09T00:00:00Z" });
     expect(ingredientMatches(db, ["mushroom"])).toEqual({ mushroom: [] });
+  });
+});
+
+describe("recipes like one (phase C13c)", () => {
+  function box() {
+    const db = freshDb();
+    const soupA = recipe({
+      title: "Mushroom soup",
+      ingredients: lines("2 cups mushrooms", "1 onion", "4 cups broth"),
+    });
+    const soupB = recipe({
+      title: "Cream of mushroom",
+      ingredients: lines("3 cups mushrooms", "1 cup cream", "2 cups broth"),
+    });
+    const stew = recipe({
+      title: "Onion stew",
+      ingredients: lines("3 onions", "2 cups broth", "1 lb beef"),
+    });
+    const cake = recipe({
+      title: "Lemon cake",
+      ingredients: lines("2 cups flour", "3 lemons", "4 eggs"),
+    });
+    const mine = recipe({
+      title: "My soup",
+      ingredients: lines("1 cup mushrooms", "1 onion", "2 cups broth"),
+    });
+    for (const r of [soupA, soupB, stew, cake, mine]) put(db, r);
+    return { db, soupA, soupB, stew, cake, mine };
+  }
+
+  it("finds recipes sharing ingredient words, and not the recipe itself", () => {
+    const { db, mine, cake } = box();
+    const like = similarByIngredients(db, mine.id, ["mushroom", "onion", "broth"], 10);
+    expect(like).not.toContain(mine.id);
+    expect(like).not.toContain(cake.id);
+    expect(like).toHaveLength(3);
+  });
+
+  it("puts the closest first: more of the words, and rarer ones", () => {
+    const { db, mine, soupA, soupB, stew } = box();
+    const like = similarByIngredients(db, mine.id, ["mushroom", "onion", "broth"], 10);
+    // 'Mushroom soup' has all three; the other two have two each.
+    expect(like[0]).toBe(soupA.id);
+    expect(new Set(like.slice(1))).toEqual(new Set([soupB.id, stew.id]));
+  });
+
+  it("looks at ingredients only, and respects the limit", () => {
+    const { db, mine } = box();
+    // 'soup' is in titles but in no ingredient list.
+    expect(similarByIngredients(db, mine.id, ["soup"], 10)).toEqual([]);
+    expect(similarByIngredients(db, mine.id, ["mushroom", "onion", "broth"], 2)).toHaveLength(2);
+  });
+
+  it("gives nothing for no words, or words with no letters", () => {
+    const { db, mine } = box();
+    expect(similarByIngredients(db, mine.id, [], 10)).toEqual([]);
+    expect(similarByIngredients(db, mine.id, ["?!"], 10)).toEqual([]);
+  });
+
+  it("leaves out a recipe in Trash", () => {
+    const { db, mine, soupA } = box();
+    put(db, { ...soupA, deletedAt: "2026-10-09T00:00:00Z" });
+    expect(similarByIngredients(db, mine.id, ["mushroom"], 10)).not.toContain(soupA.id);
   });
 });

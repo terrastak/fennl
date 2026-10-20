@@ -253,3 +253,27 @@ export function ingredientMatches(db: Database, words: string[]): Record<string,
   }
   return result;
 }
+
+/**
+ * The recipes most like one, by what is in their ingredients (phase C13c's category
+ * suggestions): those with any of its ingredient words, best match first. A word counts for
+ * more the fewer recipes have it (SQLite's bm25), so "mushroom" says more than "garlic". Words
+ * are matched as the start of a word, like search. Not the recipe itself.
+ */
+export function similarByIngredients(
+  db: Database,
+  recipeId: string,
+  keywords: string[],
+  limit: number,
+): string[] {
+  const terms = searchTerms(keywords.join(" "));
+  if (terms.length === 0) return [];
+  return db.selectValues(
+    `select s.recipe_id from recipe_search s
+      join record r on r.rowid = s.rowid and r.kind = 'recipe' and r.key = s.recipe_id
+      where recipe_search match ? and s.recipe_id != ?
+      order by bm25(recipe_search), s.recipe_id
+      limit ?`,
+    [`{ingredients} : (${terms.map((term) => `"${term}"*`).join(" OR ")})`, recipeId, limit],
+  ) as string[];
+}

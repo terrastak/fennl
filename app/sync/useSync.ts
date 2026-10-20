@@ -198,6 +198,41 @@ export function useIngredientMatches(words: string[]): Record<string, string[]> 
   return results?.key === key ? results.value : null;
 }
 
+/**
+ * Categories worth suggesting for a recipe (phase C13c), from the recipes most like it, read
+ * again a moment after the local copy changes. Empty until there is an answer.
+ */
+export function useCategorySuggestions(recipeId: string): string[] {
+  const client = activeSyncClient();
+  const [found, setFound] = useState<{ recipeId: string; paths: string[] } | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const load = () => {
+      const call = ++latest;
+      client
+        .suggestCategories(recipeId)
+        .then((paths) => {
+          if (call === latest) setFound({ recipeId, paths });
+        })
+        .catch(() => undefined);
+    };
+    const soon = () => {
+      clearTimeout(timer);
+      timer = setTimeout(load, 400);
+    };
+    soon();
+    const unsubscribe = client.subscribeChanges(soon);
+    return () => {
+      latest = -1;
+      clearTimeout(timer);
+      unsubscribe();
+    };
+  }, [client, recipeId]);
+  return found?.recipeId === recipeId ? found.paths : [];
+}
+
 /** What's in Trash (phase C9), read again whenever the local copy changes. Null while loading. */
 export function useTrash(): TrashItem[] | null {
   const client = activeSyncClient();

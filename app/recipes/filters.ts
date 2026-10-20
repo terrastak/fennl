@@ -399,3 +399,17 @@ export function searchKey(q: string, filters: RecipeFilters): string {
     (key) => key,
   ).toString();
 }
+
+/**
+ * One recipe at random from those given (phase C13c's "Surprise me"), never the one picked last
+ * time when there is another to pick. Null with none. `random` is for tests.
+ */
+export function pickSurprise(
+  recipes: RecipeSummary[],
+  last: string | null,
+  random: () => number = Math.random,
+): RecipeSummary | null {
+  const others = recipes.filter((recipe) => recipe.id !== last);
+  const from = others.length > 0 ? others : recipes;
+  return from[Math.min(from.length - 1, Math.floor(random() * from.length))] ?? null;
+}

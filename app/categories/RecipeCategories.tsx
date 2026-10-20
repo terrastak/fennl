@@ -1,4 +1,4 @@
-import { activeSyncClient, useCategoryTree } from "../sync/useSync";
+import { activeSyncClient, useCategorySuggestions, useCategoryTree } from "../sync/useSync";
 import { CategoryCombobox } from "./CategoryCombobox";
 import styles from "./categories.module.css";
 import { fileRecipes, unfileRecipes, type CategoryNode, type PlanContext } from "./tree";
@@ -15,6 +15,7 @@ function planContext(): PlanContext {
 export function RecipeCategories({ recipeId, disabled }: { recipeId: string; disabled: boolean }) {
   const tree = useCategoryTree();
   const { done, failed, run, undo } = useUndoable();
+  const suggested = useCategorySuggestions(recipeId);
   if (!tree) return null;
 
   const saved = recipeId in tree.recipeOwners;
@@ -26,6 +27,14 @@ export function RecipeCategories({ recipeId, disabled }: { recipeId: string; dis
         .filter((node): node is CategoryNode => Boolean(node)),
     ),
   ].sort((a, b) => a.path.localeCompare(b.path));
+
+  // Suggestions are the person's own categories (phase C13c); one gone since is skipped.
+  const taken = new Set(mine.map((node) => node.key));
+  const suggestions: CategoryNode[] = [];
+  for (const path of suggested) {
+    const node = tree.byKey.get(path.toLocaleLowerCase());
+    if (node && !taken.has(node.key)) suggestions.push(node);
+  }
 
   return (
     <section className={styles.recipeCategories} aria-labelledby="recipe-categories-title">
@@ -54,6 +63,33 @@ export function RecipeCategories({ recipeId, disabled }: { recipeId: string; dis
             </li>
           ))}
         </ul>
+      ) : null}
+      {saved && !disabled && suggestions.length > 0 ? (
+        <div className={styles.suggestions}>
+          <p id="suggested-title" className={styles.hint}>
+            Suggested, from recipes with similar ingredients:
+          </p>
+          <ul className={styles.chips} aria-labelledby="suggested-title">
+            {suggestions.map((node) => (
+              <li key={node.key}>
+                <button
+                  type="button"
+                  className={styles.suggestion}
+                  onClick={() =>
+                    void run(
+                      fileRecipes(tree, [recipeId], node.names, planContext()),
+                      `Added to ${node.path}.`,
+                    )
+                  }
+                >
+                  <span aria-hidden="true">+ </span>
+                  {node.path}
+                  <span className="visually-hidden">: add this category</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
       <CategoryCombobox
         tree={tree}
