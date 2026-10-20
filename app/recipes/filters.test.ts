@@ -8,6 +8,8 @@ import {
   filtersFromParams,
   filtersToParams,
   NO_FILTERS,
+  parseSearch,
+  searchKey,
   recipeMinutes,
   UNFILED,
   type RecipeFilters,
@@ -347,5 +349,43 @@ describe("chips", () => {
   it("says hours in whole hours", () => {
     const [chip] = filterChips(withFilters({ maxMinutes: 120 }), nameOf);
     expect(chip?.label).toBe("Up to 2 hours");
+  });
+});
+
+describe("telling whether the list is showing a saved search", () => {
+  const key = (saved: string) => {
+    const { q, filters } = parseSearch(saved);
+    return searchKey(q, filters);
+  };
+
+  it("reads a saved search back into words and filters", () => {
+    const { q, filters } = parseSearch("q=soup&time=30&without=mushroom&category=Dinners");
+    expect(q).toBe("soup");
+    expect(filters).toMatchObject({ maxMinutes: 30, without: ["mushroom"], category: "dinners" });
+    expect(parseSearch("?rating=4").filters.rating).toBe("4");
+  });
+
+  it("is the same however the choices were ordered or cased", () => {
+    expect(key("also=Vegan&also=Soups&with=Garlic&with=onion")).toBe(
+      key("with=ONION&with=garlic&also=soups&also=vegan"),
+    );
+    expect(key("category=Desserts+%E2%80%BA+Cakes")).toBe(key("category=desserts+%E2%80%BA+cakes"));
+  });
+
+  it("is the same with spaces around the typed words", () => {
+    expect(searchKey("  soup ", NO_FILTERS)).toBe(searchKey("soup", NO_FILTERS));
+  });
+
+  it("differs when anything differs", () => {
+    expect(key("q=soup&time=30")).not.toBe(key("q=soup&time=45"));
+    expect(key("q=soup")).not.toBe(key("q=stew"));
+    expect(key("with=garlic")).not.toBe(key("without=garlic"));
+    expect(key("also=a&any=1")).not.toBe(key("also=a"));
+  });
+
+  it("matches what the list writes for the current search", () => {
+    const filters = withFilters({ category: "dinners", maxMinutes: 30, without: ["Kale"] });
+    const written = filtersToParams("soup", filters, (k) => k).toString();
+    expect(key(written)).toBe(searchKey("soup", filters));
   });
 });

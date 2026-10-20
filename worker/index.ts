@@ -38,6 +38,7 @@ import { expungeOldTrash, trashRoutes } from "./sync/trash";
 import { testSetupRoutes } from "./dev/testSetup";
 import { exportRoutes } from "./export/export";
 import { extensionLinkRoutes, extensionRoutes } from "./extension/routes";
+import { savedSearchRoutes } from "./savedSearches/routes";
 import { removeImportPhotos, removeOldImportJobs } from "./import/jobs";
 import { removeOldOutcomes } from "./ai/outcomes";
 import { importRoutes } from "./import/routes";
@@ -188,6 +189,9 @@ app.route("/", aiRoutes);
 // The Chrome extension's connection to an account (phase E5).
 app.route("/", extensionLinkRoutes);
 app.route("/", extensionRoutes);
+
+// A person's saved searches for the recipe list (phase C13b).
+app.route("/", savedSearchRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {

@@ -374,3 +374,28 @@ export function filterChips(filters: RecipeFilters, nameOf: (key: string) => str
   }
   return chips;
 }
+
+/** A saved search's text (shared/savedSearch.ts), read back into the words and filters it holds. */
+export function parseSearch(query: string): { q: string; filters: RecipeFilters } {
+  const params = new URLSearchParams(query.replace(/^\?/, ""));
+  return { q: params.get("q") ?? "", filters: filtersFromParams(params) };
+}
+
+/**
+ * A search as one text that is the same however it was written (categories by key, repeated
+ * choices in order, no stray spaces), for telling whether the list is showing a saved search.
+ */
+export function searchKey(q: string, filters: RecipeFilters): string {
+  const ordered = (values: string[]) => [...values].sort((a, b) => a.localeCompare(b));
+  return filtersToParams(
+    q.trim(),
+    {
+      ...filters,
+      alsoIn: ordered(filters.alsoIn),
+      notIn: ordered(filters.notIn),
+      with: ordered(filters.with.map((w) => w.toLocaleLowerCase())),
+      without: ordered(filters.without.map((w) => w.toLocaleLowerCase())),
+    },
+    (key) => key,
+  ).toString();
+}
