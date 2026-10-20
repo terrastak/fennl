@@ -96,3 +96,135 @@ export function findDuplicates(
     limit,
   );
 }
+
+// ---------------------------------------------------------------------------------------------
+// Looking through the whole library (phase C14)
+// ---------------------------------------------------------------------------------------------
+
+/** A recipe in the library, for finding pairs: who owns it matters, since only a person's own are paired. */
+export interface PairCandidate extends DuplicateCandidate {
+  ownerId: string;
+}
+
+/** Two recipes that may be the same one. `a` is the smaller id, so a pair has one spelling. */
+export interface DuplicatePair {
+  a: string;
+  b: string;
+  reason: DuplicateReason;
+}
+
+/** One spelling for a pair of recipes, whichever way round they were given. */
+export const pairKey = (x: string, y: string): string => (x < y ? `${x}|${y}` : `${y}|${x}`);
+
+export interface PairOptions {
+  /** Most pairs to give: the surest first. */
+  maxPairs?: number;
+  /** A title word in more recipes than this says too little to compare them by. */
+  commonWord?: number;
+  /** Most recipes one page address is compared across. */
+  maxSamePage?: number;
+}
+
+const FILLER = new Set(["the", "and", "with", "for", "from"]);
+
+const titleWords = (title: string): string[] => [
+  ...new Set(
+    title
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLocaleLowerCase()
+      .split(/[^\p{L}\p{N}]+/u)
+      .filter((word) => word.length >= 3 && !FILLER.has(word)),
+  ),
+];
+
+/**
+ * Pairs of recipes in a library that look like the same recipe saved twice: the same page, or a
+ * title that reads the same with mostly the same ingredients (the same rule as an import's
+ * duplicate check, `findDuplicates`). Only recipes of one owner are paired. To stay quick on a
+ * big library it compares recipes only when they share a page address or a title word that isn't
+ * in too many recipes, rather than every recipe with every other.
+ */
+export function findDuplicatePairs(
+  library: readonly PairCandidate[],
+  { maxPairs = 500, commonWord = 60, maxSamePage = 25 }: PairOptions = {},
+): DuplicatePair[] {
+  const byOwner = new Map<string, PairCandidate[]>();
+  for (const recipe of library) {
+    byOwner.set(recipe.ownerId, [...(byOwner.get(recipe.ownerId) ?? []), recipe]);
+  }
+
+  const samePage: (DuplicatePair & { score: number })[] = [];
+  const similar: (DuplicatePair & { score: number })[] = [];
+  const seen = new Set<string>();
+  const add = (x: string, y: string, reason: DuplicateReason, score = 0) => {
+    const [a, b] = x < y ? [x, y] : [y, x];
+    (reason === "same_page" ? samePage : similar).push({ a, b, reason, score });
+  };
+
+  for (const recipes of byOwner.values()) {
+    const byId = new Map(recipes.map((recipe) => [recipe.id, recipe]));
+
+    // The same page.
+    const pages = new Map<string, string[]>();
+    for (const recipe of recipes) {
+      const keys = new Set(recipe.urls.map(pageKey).filter((k): k is string => k !== null));
+      for (const key of keys) pages.set(key, [...(pages.get(key) ?? []), recipe.id]);
+    }
+    for (const ids of pages.values()) {
+      if (ids.length < 2 || ids.length > maxSamePage) continue;
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const key = pairKey(ids[i] as string, ids[j] as string);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          add(ids[i] as string, ids[j] as string, "same_page");
+        }
+      }
+    }
+
+    // Titles that share a word.
+    const words = new Map<string, string[]>();
+    for (const recipe of recipes) {
+      for (const word of titleWords(recipe.title)) {
+        words.set(word, [...(words.get(word) ?? []), recipe.id]);
+      }
+    }
+    for (const ids of words.values()) {
+      if (ids.length < 2 || ids.length > commonWord) continue;
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const first = byId.get(ids[i] as string);
+          const second = byId.get(ids[j] as string);
+          if (!first || !second) continue;
+          const key = pairKey(first.id, second.id);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const title = textScore(first.title, second.title);
+          if (title < TITLE_ALIKE) continue;
+          const mine = first.ingredients.filter((line) => !line.heading);
+          const theirs = second.ingredients.filter((line) => !line.heading);
+          if (mine.length === 0 || theirs.length === 0) {
+            if (title >= TITLE_SAME) add(first.id, second.id, "similar", title);
+            continue;
+          }
+          const ingredients = linesScore(mine, theirs).score;
+          if (ingredients >= INGREDIENTS_ALIKE) {
+            add(first.id, second.id, "similar", title + ingredients);
+          }
+        }
+      }
+    }
+  }
+
+  similar.sort((x, y) => y.score - x.score || pairKey(x.a, x.b).localeCompare(pairKey(y.a, y.b)));
+  samePage.sort((x, y) => pairKey(x.a, x.b).localeCompare(pairKey(y.a, y.b)));
+  return [...samePage, ...similar].slice(0, maxPairs).map(({ a, b, reason }) => ({ a, b, reason }));
+}
+
+/** A sanity cap on "not a duplicate" answers per account. */
+export const MAX_DISMISSALS = 5000;
+
+/** Whether text looks like a recipe's id (they are UUIDs), before it is stored. */
+export const isRecipeId = (value: unknown): value is string =>
+  typeof value === "string" && /^[A-Za-z0-9-]{8,64}$/.test(value);

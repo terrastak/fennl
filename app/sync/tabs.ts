@@ -1,4 +1,4 @@
-import type { DuplicateMatch, DuplicateQuery } from "../../shared/duplicates";
+import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type { SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type { RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
@@ -22,6 +22,7 @@ interface Calls {
   listTrash: { args: []; result: TrashItem[] };
   photoHashes: { args: []; result: string[] };
   findDuplicates: { args: [DuplicateQuery]; result: DuplicateMatch[] };
+  findDuplicatePairs: { args: []; result: DuplicatePair[] };
   emptyTrash: { args: [string[] | undefined]; result: number };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
@@ -148,6 +149,10 @@ export class SyncClient {
     return this.call("findDuplicates", [query]);
   }
 
+  findDuplicatePairs() {
+    return this.call("findDuplicatePairs", []);
+  }
+
   emptyTrash(recipeIds?: string[]) {
     return this.call("emptyTrash", [recipeIds]);
   }
@@ -225,6 +230,8 @@ export class SyncClient {
         return engine.photoHashes();
       case "findDuplicates":
         return engine.findDuplicates(args[0] as DuplicateQuery);
+      case "findDuplicatePairs":
+        return engine.findDuplicatePairs();
       case "emptyTrash":
         return engine.emptyTrash(args[0] as string[] | undefined);
       case "getRecipe":

@@ -527,6 +527,9 @@ export function RecipesPage() {
             <Link href="/categories" className={styles.toolbarLink}>
               Categories
             </Link>
+            <Link href="/duplicates" className={styles.toolbarLink}>
+              Find duplicates
+            </Link>
             <Link href="/trash" className={styles.toolbarLink}>
               Trash
             </Link>

@@ -669,6 +669,25 @@ export const savedSearch = sqliteTable(
 );
 
 /**
+ * Pairs of recipes a person said are not duplicates (phase C14; shared/duplicates.ts), so the
+ * duplicate finder doesn't offer them again. Their own, kept with the account like saved
+ * searches. The pair is stored with the smaller id first. No link to the recipes: a pair about a
+ * recipe that has since gone is simply never offered.
+ */
+export const duplicateDismissal = sqliteTable(
+  "duplicate_dismissal",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    recipeA: text("recipe_a").notNull(),
+    recipeB: text("recipe_b").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.recipeA, table.recipeB] })],
+);
+
+/**
  * Every call to the AI (phase E7; CLAUDE.md, "AI import"), metered per household: which model,
  * the tokens it used and what that cost, estimated from the provider's prices (worker/ai/). A
  * row is written before the call, so the monthly limits are checked in the same statement that

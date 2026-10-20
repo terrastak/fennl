@@ -22,7 +22,13 @@ import type {
   TrashItem,
 } from "./dbProtocol";
 import { MIGRATIONS } from "./schema";
-import { findDuplicates, type DuplicateMatch, type DuplicateQuery } from "../../shared/duplicates";
+import {
+  findDuplicatePairs,
+  findDuplicates,
+  type DuplicateMatch,
+  type DuplicatePair,
+  type DuplicateQuery,
+} from "../../shared/duplicates";
 import {
   indexRecipe,
   ingredientMatches,
@@ -425,6 +431,21 @@ function duplicatesOf(query: DuplicateQuery): DuplicateMatch[] {
   );
 }
 
+/** Pairs of recipes in the library (not in Trash) that may be the same recipe (phase C14). */
+function duplicatePairs(): DuplicatePair[] {
+  return findDuplicatePairs(
+    values<Recipe>("recipe")
+      .filter((recipe) => !recipe.deletedAt)
+      .map((recipe) => ({
+        id: recipe.id,
+        ownerId: recipe.ownerUserId,
+        title: recipe.title,
+        urls: [recipe.source.url, recipe.import?.externalId ?? null],
+        ingredients: recipe.ingredients,
+      })),
+  );
+}
+
 /** Categories and what's filed under them, for the category tree (phase C7). */
 function getCategories(): CategoryData {
   const recipeOwners: Record<string, string> = {};
@@ -509,6 +530,9 @@ scope.onmessage = (event) => {
           break;
         case "findDuplicates":
           value = duplicatesOf(request.query);
+          break;
+        case "findDuplicatePairs":
+          value = duplicatePairs();
           break;
         case "photoHashes":
           value = [...new Set(livePhotos().map((p) => p.imageHash))];
