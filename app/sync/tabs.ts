@@ -17,6 +17,7 @@ interface Calls {
   saveMany: { args: [SyncChange[]]; result: undefined };
   getCategories: { args: []; result: CategoryData };
   search: { args: [string]; result: SearchResults };
+  ingredientMatches: { args: [string[]]; result: Record<string, string[]> };
   listTrash: { args: []; result: TrashItem[] };
   photoHashes: { args: []; result: string[] };
   findDuplicates: { args: [DuplicateQuery]; result: DuplicateMatch[] };
@@ -124,6 +125,10 @@ export class SyncClient {
     return this.call("search", [query]);
   }
 
+  ingredientMatches(words: string[]) {
+    return this.call("ingredientMatches", [words]);
+  }
+
   listTrash() {
     return this.call("listTrash", []);
   }
@@ -205,6 +210,8 @@ export class SyncClient {
         return engine.getCategories();
       case "search":
         return engine.search(args[0] as string);
+      case "ingredientMatches":
+        return engine.ingredientMatches(args[0] as string[]);
       case "listTrash":
         return engine.listTrash();
       case "photoHashes":

@@ -2,7 +2,13 @@ import sqlite3InitModule, { type Database } from "@sqlite.org/sqlite-wasm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { emptyRecipeContent, type Recipe, type RecipeOpinion } from "../../shared/recipe";
 import { MIGRATIONS } from "./schema";
-import { indexRecipe, searchRecipes, searchTerms, unindexRecords } from "./search";
+import {
+  indexRecipe,
+  ingredientMatches,
+  searchRecipes,
+  searchTerms,
+  unindexRecords,
+} from "./search";
 
 // Search over the browser's copy (phase C8), on the same SQLite build the browser uses (here
 // in memory), with the same tables.
@@ -210,4 +216,60 @@ describe("speed at 10,000 recipes", () => {
     for (const ms of Object.values(times)) expect(ms).toBeLessThan(300);
     db.close();
   }, 120_000);
+});
+
+describe("ingredient matches (phase C13a)", () => {
+  function box() {
+    const db = freshDb();
+    const stew = recipe({
+      title: "Mushroom stew",
+      ingredients: lines("2 cups sliced mushrooms", "1 green onion", "3 cloves garlic"),
+    });
+    const toast = recipe({
+      title: "Garlic toast",
+      ingredients: lines("4 slices bread", "2 cloves garlic, minced"),
+      description: "Better with mushrooms on the side",
+    });
+    const salad = recipe({ title: "Green salad", ingredients: lines("Jalapeño", "lettuce") });
+    for (const r of [stew, toast, salad]) put(db, r);
+    return { db, stew, toast, salad };
+  }
+
+  it("finds recipes by a word in their ingredients, as the start of a word", () => {
+    const { db, stew } = box();
+    expect(ingredientMatches(db, ["mushroom"])).toEqual({ mushroom: [stew.id] });
+  });
+
+  it("looks only at the ingredients, not the title, notes or description", () => {
+    const { db, toast } = box();
+    // 'Garlic toast' has garlic in its title and ingredients; 'mushrooms' is only in its description.
+    expect(ingredientMatches(db, ["toast", "mushrooms"])).toEqual({
+      toast: [],
+      mushrooms: expect.not.arrayContaining([toast.id]),
+    });
+  });
+
+  it("needs every word of a longer phrase", () => {
+    const { db, stew } = box();
+    expect(ingredientMatches(db, ["green onion"])).toEqual({ "green onion": [stew.id] });
+    expect(ingredientMatches(db, ["green lettuce"])["green lettuce"]).toHaveLength(0);
+  });
+
+  it("ignores case and accents", () => {
+    const { db, salad } = box();
+    expect(ingredientMatches(db, ["JALAPENO"])).toEqual({ JALAPENO: [salad.id] });
+  });
+
+  it("answers each word separately, and nothing for a word with no letters", () => {
+    const { db, stew, toast } = box();
+    const found = ingredientMatches(db, ["garlic", "??"]);
+    expect([...(found.garlic ?? [])].sort()).toEqual([stew.id, toast.id].sort());
+    expect(found["??"]).toEqual([]);
+  });
+
+  it("doesn't return a recipe that went to Trash", () => {
+    const { db, stew } = box();
+    put(db, { ...stew, deletedAt: "2026-10-09T00:00:00Z" });
+    expect(ingredientMatches(db, ["mushroom"])).toEqual({ mushroom: [] });
+  });
 });

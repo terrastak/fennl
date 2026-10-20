@@ -1186,9 +1186,19 @@ These follow the beta and are approved one at a time, like every phase. The desi
   4. Times and servings are free text today in places; use what the recipe model already stores as numbers, and say plainly when a recipe has none ("Time not set") instead of guessing.
   4a. Easy combinations (Paprika and Mela users ask for these): two or more categories at once ("Soup" and "Vegan"), "none of these" (leave out a category or an ingredient), search reachable from any screen, and a "Surprise me" / "Something I haven't made in a while" button using last-made data (on the device, no AI).
   5. Category suggestions in the editor: offer the person's own existing categories that recipes with similar ingredients already use (computed on the device from their library, no AI, no cost). Suggest only; never create a category or file a recipe without a tap.
-- **Decisions**: None expected. Dependent on whether times and servings are stored as numbers in the recipe model (check in `shared/recipe.ts` when approved).
+- **Decisions (2026-10-20, owner)**: (1) **Saved searches are a simple per-account list**, not a new synced record kind: a small server table with plain create, rename and delete, loaded when the app opens and cached on the device, like the colour-scheme setting. Saving needs a connection (even on Premium); using a saved search works offline. This leaves the sync engine untouched (adding photos as a synced kind touched about 60 files and forced every device to upgrade). (2) **Built in three slices**, each its own change with its own preview: **C13a** the filters, **C13b** saved searches, **C13c** category suggestions in the editor, "Surprise me", and search from any screen. Times and servings are already stored as numbers (`times.*.minutes`, `servings.count`), so no model change.
+- **Adjustment (C13a)**: no arbitrary AND/OR groups. Every filter narrows (all must be true); the one choice is for categories: a recipe must be in **all** or **any** of the chosen categories, and a separate "not in" list. This covers "soup and vegan", "dinner or lunch" and "no desserts" without a query builder.
 - **You check**: Build "under 30 minutes, 4 stars and up, in Dinners", save it, open it on your phone; add a recipe that matches and see it appear.
-- **Done when**: Filter logic is tested for every filter and for AND/OR; the search-speed test still passes at 10,000 recipes with filters on; saved searches sync and survive a restore from Trash; offline works on Premium.
+- **Done when**: Filter logic is tested for every filter and for all/any/none; the search-speed test still passes at 10,000 recipes with filters on; saved searches sync and survive a restore from Trash; offline works on Premium.
+
+- **Built, C13a (2026-10-20)** (`app/recipes/filters.ts`, `app/recipes/FilterPanel.tsx`, the recipe list):
+  - **More filters** button on the list (with a count) opens a panel; what is narrowing the list also shows as chips with an × under the toolbar, so nothing is forgotten when the panel is closed.
+  - **Filters**: time (up to 15 minutes to 2 hours, from the total time, else prep plus cook when both are written), serves (2 or more to 12 or more), last made (never; in the last 30 days; not in the last 90 days or never), has a photo, has nutrition, source (part of the name), **also in** more categories (all of / any of), **not in** categories, and ingredients **with** and **without** (words matched as the start of an ingredient word, on the device by the full-text index, so "mushroom" finds "mushrooms"). The category and rating boxes in the toolbar are unchanged and still work in old addresses.
+  - **Kept in the address** like search and the category: `?time=30&serves=4&also=…&notin=…&any=1&made=old&photo=1&nutrition=1&source=…&with=…&without=…`; a reload or a shared link keeps them, and the panel opens by itself when any are set. "Show all recipes" clears everything.
+  - **Never guesses**: a recipe with no time (or no number served) is left out of a filter on that, and the list says so ("Not shown: 3 with no time written down.").
+  - **On the device, no server**: the list's summary gained prep, cook, servings, source, nutrition and last-made; a new local call (`ingredientMatches`) answers the ingredient filters. Nothing on the server or in sync changed, so no migration or app upgrade is needed.
+  - **Tests**: 41 unit tests for the filter logic (every filter, all/any/none, unknown values, address round-trips, chips) and 6 for the ingredient lookup against the real SQLite build; browser tests on a computer and a phone for each filter, the address, search together with filters, the "no time written down" note, and accessibility with the panel open.
+  - Small change to the category chooser: the list can close after a choice (`closeOnChoose`), used in the panel so it doesn't cover the controls below on a phone. The filing screens keep their open list.
 
 ### C14. Duplicate finder
 - **Goal**: Find recipes saved twice and tidy them up safely.
@@ -1319,4 +1329,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C10 | Done 2026-10-08 (merged; live) |
 | C11 | Done 2026-10-08 (merged; live; the owner checked the limit of 5 on the preview) |
 | C12 | Approved 2026-10-08; built, waiting for review |
+| C13a | Built 2026-10-20, waiting for review (C13b saved searches and C13c suggestions follow) |
 | All others | Not started |

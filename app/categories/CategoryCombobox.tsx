@@ -20,6 +20,7 @@ export function CategoryCombobox({
   exclude = [],
   allowNew = true,
   disabled = false,
+  closeOnChoose = false,
   onChoose,
 }: {
   tree: CategoryTree;
@@ -28,6 +29,8 @@ export function CategoryCombobox({
   exclude?: string[];
   allowNew?: boolean;
   disabled?: boolean;
+  /** Close the list after a choice, rather than keeping it open to pick another (phase C13a). */
+  closeOnChoose?: boolean;
   /** The chosen category's path, which may not exist yet. */
   onChoose: (names: string[]) => void;
 }) {
@@ -61,6 +64,7 @@ export function CategoryCombobox({
     onChoose(option.names);
     setQuery("");
     setActive(0);
+    if (closeOnChoose) setOpen(false);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
