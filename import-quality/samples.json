@@ -257,5 +257,47 @@
     "inputs": ["test_pages/tastesbetter-german-chocolate-cake.html"],
     "url": "https://tastesbetterfromscratch.com/german-chocolate-cake/",
     "notes": "Tastes Better From Scratch: sections in both lists; long notes."
+  },
+  {
+    "id": "banana-bread-laid-out",
+    "kind": "text",
+    "by": "rules",
+    "inputs": ["import-quality/test_text/banana-bread-laid-out.txt"],
+    "notes": "Clearly laid out: a title, serving and time lines, a headnote, numbered steps, a Notes section."
+  },
+  {
+    "id": "tomato-soup-markdown",
+    "kind": "text",
+    "by": "rules",
+    "inputs": ["import-quality/test_text/tomato-soup-markdown.txt"],
+    "notes": "Markdown headings in capitals, directions before ingredients, bold section headings inside the ingredients."
+  },
+  {
+    "id": "pancakes-bulleted-email",
+    "kind": "text",
+    "by": "rules",
+    "inputs": ["import-quality/test_text/pancakes-bulleted-email.txt"],
+    "notes": "Pasted from an email: round bullets, 'Yield' and 'Total time' lines, a 'METHOD' heading."
+  },
+  {
+    "id": "cookies-friendly-email",
+    "kind": "text",
+    "by": "ai",
+    "inputs": ["import-quality/test_text/cookies-friendly-email.txt"],
+    "notes": "A friendly email with the recipe in a paragraph: no headings, quantities in words, a sender's name."
+  },
+  {
+    "id": "two-recipes-message",
+    "kind": "text",
+    "by": "ai",
+    "inputs": ["import-quality/test_text/two-recipes-message.txt"],
+    "notes": "Two recipes in one message, ingredients written as a sentence, chat around them."
+  },
+  {
+    "id": "no-recipe-note",
+    "kind": "text",
+    "by": "ai",
+    "inputs": ["import-quality/test_text/no-recipe-note.txt"],
+    "notes": "A note with no recipe at all: nothing should be found."
   }
 ]

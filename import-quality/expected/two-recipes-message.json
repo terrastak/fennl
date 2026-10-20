@@ -1,0 +1,27 @@
+[
+  {
+    "title": "Quick Vinaigrette",
+    "ingredients": [
+      "3 tbsp olive oil",
+      "1 tbsp red wine vinegar",
+      "1 tsp Dijon mustard",
+      "pinch of salt"
+    ],
+    "directions": ["Shake it all in a jar."]
+  },
+  {
+    "title": "Lemon Rice",
+    "ingredients": [
+      "1 cup of rice",
+      "2 cups of water",
+      "a pinch of salt",
+      "the zest and juice of 1 lemon",
+      "2 tbsp butter"
+    ],
+    "directions": [
+      "Rinse the rice.",
+      "Cook with the water and salt for 15 minutes.",
+      "Fluff, then stir in the lemon zest and juice and the butter."
+    ]
+  }
+]

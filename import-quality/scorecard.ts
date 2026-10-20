@@ -16,7 +16,15 @@ import {
 // field by field. Run with `npm run import:quality`; CI runs it with the unit tests and adds the
 // report to the run's summary.
 
-export const SAMPLE_KINDS = ["web", "card", "cookbook", "screenshot", "pdf", "paprika"] as const;
+export const SAMPLE_KINDS = [
+  "web",
+  "card",
+  "cookbook",
+  "screenshot",
+  "pdf",
+  "paprika",
+  "text",
+] as const;
 export type SampleKind = (typeof SAMPLE_KINDS)[number];
 
 export interface Sample {
@@ -26,6 +34,12 @@ export interface Sample {
   inputs: string[];
   /** For a web page: its address. */
   url?: string;
+  /**
+   * For pasted text (phase E15): what is meant to read it. "rules" (the default) is Fennl's own
+   * reading of clearly laid out text; "ai" is text that needs the AI, measured by the model
+   * comparison (aiCompare.ts) rather than on every pull request.
+   */
+  by?: "rules" | "ai";
   /** What makes it a useful test ("angled photo", "two recipes on one page"). */
   notes?: string;
 }
@@ -174,7 +188,13 @@ export function scoreDrafts(
     const recipe = p.found === null ? undefined : found[p.found];
     return recipe ? scoreRecipe(expected[p.expected] as ExpectedRecipe, recipe) : null;
   });
-  const overall = scores.reduce((s, r) => s + (r?.overall ?? 0), 0) / Math.max(1, scores.length);
+  // A text with no recipe in it is read right when nothing is found.
+  const overall =
+    expected.length === 0
+      ? extra === 0
+        ? 1
+        : 0
+      : scores.reduce((s, r) => s + (r?.overall ?? 0), 0) / scores.length;
   return { scores, overall, extra, problems };
 }
 

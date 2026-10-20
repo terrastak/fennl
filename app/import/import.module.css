@@ -175,6 +175,41 @@
   border-radius: var(--radius-md);
 }
 
+/* The text a recipe was read from (phase E15). */
+.pasted {
+  margin: 0;
+  padding: var(--space-3);
+  max-height: 32rem;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  font: inherit;
+  font-size: 0.95rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The paste box on the Import page (phase E15). */
+.pasteBox {
+  width: 100%;
+  min-height: 9rem;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  resize: vertical;
+}
+
+.pasteRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
 /* On a phone the page folds away under its button. */
 @media (max-width: 899px) {
   .source[data-open="false"] .sourceBody {
@@ -195,6 +230,10 @@
 
   .frame {
     height: calc(100vh - 10rem);
+  }
+
+  .pasted {
+    max-height: calc(100vh - 12rem);
   }
 
   .pagePhotos {

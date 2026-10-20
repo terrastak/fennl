@@ -16,11 +16,12 @@ on:
         required: false
         default: ""
       sets:
-        description: "What to read: photos (cards, pages, screenshots, PDFs), web (pages without their recipe data), or all"
+        description: "What to read: photos (cards, pages, screenshots, PDFs), web (pages without their recipe data), text (pasted text), or all"
         type: choice
         options:
           - photos
           - web
+          - text
           - all
         default: photos
 
