@@ -6,7 +6,7 @@ import { UsageNote } from "../limits/Usage";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
-import { navigate, queryParam } from "../navigation";
+import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
 import { FilterPanel } from "../recipes/FilterPanel";
 import { SavedSearches } from "../recipes/SavedSearches";
 import {
@@ -17,6 +17,7 @@ import {
   filtersToParams,
   ingredientWords,
   NO_FILTERS,
+  pickSurprise,
   UNFILED,
   type RatingFilter,
   type RecipeFilters,
@@ -274,6 +275,7 @@ export function RecipesPage() {
   const search = useSearch(query);
   const ingredientAnswer = useIngredientMatches(ingredientWords(filters));
   const [addingSamples, setAddingSamples] = useState(false);
+  const [surprise, setSurprise] = useState<string | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
   // A recipe just moved to Trash from its page can be put back from here (phase C9).
@@ -288,6 +290,23 @@ export function RecipesPage() {
       // Not kept; the choice lasts while the page is open.
     }
   };
+
+  // A search sent from another screen (phase C13c), or the back button, changes the address
+  // under this page: show what it says. This page's own changes don't announce themselves.
+  useEffect(() => {
+    const fromAddress = () => {
+      setQuery(queryParam("q") ?? "");
+      setFilters(filtersFromParams(new URLSearchParams(window.location.search)));
+      setSurprise(null);
+      setLimit(PAGE);
+    };
+    window.addEventListener(NAVIGATE_EVENT, fromAddress);
+    window.addEventListener("popstate", fromAddress);
+    return () => {
+      window.removeEventListener(NAVIGATE_EVENT, fromAddress);
+      window.removeEventListener("popstate", fromAddress);
+    };
+  }, []);
 
   /** Search and filters go in the address too, so they survive a reload and can be shared. */
   const remember = (nextQuery: string, next: RecipeFilters) => {
@@ -355,6 +374,8 @@ export function RecipesPage() {
   }
   const filtering = activeFilterCount(filters);
   const narrowing = searching || filtering > 0;
+  // "Surprise me" (phase C13c): a recipe from what the list shows; gone if the list moves on.
+  const surpriseRecipe = shown.find((recipe) => recipe.id === surprise) ?? null;
   const chosen = shown.filter((recipe) => selected.has(recipe.id)).map((recipe) => recipe.id);
   const select = (id: string, on: boolean) =>
     setSelected((before) => {
@@ -428,6 +449,14 @@ export function RecipesPage() {
               onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
             >
               {selecting ? "Done selecting" : "Select"}
+            </button>
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={shown.length === 0}
+              onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
+            >
+              Surprise me
             </button>
           </div>
           <div className={styles.toolbarEnd}>
@@ -504,6 +533,50 @@ export function RecipesPage() {
           </div>
         </div>
       ) : null}
+
+      {/* Right under the toolbar, where the button is, so it is seen on a phone too. */}
+      <div aria-live="polite">
+        {surpriseRecipe ? (
+          <section className={styles.surprise} aria-label="A suggestion">
+            {surpriseRecipe.cover ? (
+              <PhotoImage
+                hash={surpriseRecipe.cover.hash}
+                size="thumb"
+                width={surpriseRecipe.cover.width}
+                height={surpriseRecipe.cover.height}
+                alt=""
+                className={styles.coverPhoto}
+              />
+            ) : (
+              <span className={styles.cover} aria-hidden="true">
+                {surpriseRecipe.title.trim().charAt(0).toUpperCase()}
+              </span>
+            )}
+            <div className={styles.surpriseBody}>
+              <p className={styles.hint}>How about…</p>
+              <p className={styles.surpriseTitle}>{surpriseRecipe.title}</p>
+              {surpriseRecipe.totalMinutes !== null ? (
+                <p className={styles.hint}>{minutesText(surpriseRecipe.totalMinutes)}</p>
+              ) : null}
+            </div>
+            <div className={styles.surpriseActions}>
+              <Link href={`/recipes/${surpriseRecipe.id}`} className={styles.primary}>
+                Open
+              </Link>
+              <button
+                type="button"
+                className={styles.secondary}
+                onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
+              >
+                Another one
+              </button>
+              <button type="button" className={styles.textButton} onClick={() => setSurprise(null)}>
+                Not now
+              </button>
+            </div>
+          </section>
+        ) : null}
+      </div>
 
       {list.length > 0 && showMore ? (
         <div id="more-filters">

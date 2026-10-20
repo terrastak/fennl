@@ -23,7 +23,14 @@ import type {
 } from "./dbProtocol";
 import { MIGRATIONS } from "./schema";
 import { findDuplicates, type DuplicateMatch, type DuplicateQuery } from "../../shared/duplicates";
-import { indexRecipe, ingredientMatches, searchRecipes, unindexRecords } from "./search";
+import {
+  indexRecipe,
+  ingredientMatches,
+  searchRecipes,
+  similarByIngredients,
+  unindexRecords,
+} from "./search";
+import { ingredientKeywords, suggestCategories } from "../categories/suggest";
 import {
   keyOf,
   ownerOfRecord,
@@ -354,6 +361,23 @@ function listRecipes(): RecipeSummary[] {
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 }
 
+/** Categories to suggest for a recipe, from the recipes most like it (phase C13c). */
+function categorySuggestions(recipeId: string): string[] {
+  const d = database();
+  const data = d.selectValue(
+    "select data from record where kind = 'recipe' and key = ? and data is not null",
+    [recipeId],
+  ) as string | undefined;
+  if (!data) return [];
+  const recipe = JSON.parse(data) as Recipe;
+  const like = similarByIngredients(d, recipeId, ingredientKeywords(recipe.ingredients), 15);
+  const categories = recipeCategories();
+  return suggestCategories(
+    like.map((id) => categories.get(id) ?? []),
+    categories.get(recipeId) ?? [],
+  );
+}
+
 function members(): Member[] {
   const rows = database().selectArrays("select user_id, name from member order by position") as [
     string,
@@ -491,6 +515,9 @@ scope.onmessage = (event) => {
           break;
         case "search":
           value = searchRecipes(database(), request.query, recipeCategories());
+          break;
+        case "suggestCategories":
+          value = categorySuggestions(request.recipeId);
           break;
         case "ingredientMatches":
           value = ingredientMatches(database(), request.words);

@@ -9,6 +9,7 @@ import {
   filtersToParams,
   NO_FILTERS,
   parseSearch,
+  pickSurprise,
   searchKey,
   recipeMinutes,
   UNFILED,
@@ -387,5 +388,36 @@ describe("telling whether the list is showing a saved search", () => {
     const filters = withFilters({ category: "dinners", maxMinutes: 30, without: ["Kale"] });
     const written = filtersToParams("soup", filters, (k) => k).toString();
     expect(key(written)).toBe(searchKey("soup", filters));
+  });
+});
+
+describe("surprise me", () => {
+  const list = [recipe("a"), recipe("b"), recipe("c")];
+
+  it("picks from the recipes given, by the random number", () => {
+    expect(pickSurprise(list, null, () => 0)?.id).toBe("a");
+    expect(pickSurprise(list, null, () => 0.5)?.id).toBe("b");
+    expect(pickSurprise(list, null, () => 0.999)?.id).toBe("c");
+  });
+
+  it("never gives the last one again when there is another", () => {
+    for (const r of [0, 0.34, 0.67, 0.999]) {
+      expect(pickSurprise(list, "b", () => r)?.id).not.toBe("b");
+    }
+  });
+
+  it("gives the only recipe even if it was the last", () => {
+    expect(pickSurprise([recipe("only")], "only")?.id).toBe("only");
+  });
+
+  it("gives nothing when there are none, and survives a random number of exactly 1", () => {
+    expect(pickSurprise([], null)).toBeNull();
+    expect(pickSurprise(list, null, () => 1)?.id).toBe("c");
+  });
+
+  it("reaches every recipe with real randomness", () => {
+    const seen = new Set<string>();
+    for (let i = 0; i < 200; i++) seen.add(pickSurprise(list, null)!.id);
+    expect(seen).toEqual(new Set(["a", "b", "c"]));
   });
 });

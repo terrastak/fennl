@@ -348,6 +348,11 @@ export class SyncEngine {
     return this.db.call({ op: "ingredientMatches", words });
   }
 
+  /** Categories worth suggesting for a recipe (phase C13c). */
+  suggestCategories(recipeId: string): Promise<string[]> {
+    return this.db.call({ op: "suggestCategories", recipeId });
+  }
+
   listTrash(): Promise<TrashItem[]> {
     return this.db.call({ op: "listTrash" });
   }

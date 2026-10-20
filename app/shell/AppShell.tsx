@@ -1,11 +1,19 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { ActingBanner } from "../acting/ActingBanner";
 import { Link } from "../router";
 import { SyncNotices } from "../sync/SyncNotices";
 import { SyncStatusLine } from "../sync/SyncStatusLine";
 import styles from "./AppShell.module.css";
-import { AccountIcon, FeedbackIcon, ImportIcon, RecipesIcon, SettingsIcon } from "./icons";
+import {
+  AccountIcon,
+  FeedbackIcon,
+  ImportIcon,
+  RecipesIcon,
+  SearchIcon,
+  SettingsIcon,
+} from "./icons";
 import { Logo } from "./Logo";
+import { ShellSearch } from "./ShellSearch";
 
 interface NavItem {
   href: string;
@@ -45,6 +53,29 @@ interface AppShellProps {
 export function AppShell({ path, title, children }: AppShellProps) {
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
+  // The phone's search field, opened from the top bar.
+  const [searchOpen, setSearchOpen] = useState(false);
+
+  // "/" jumps to search from anywhere that isn't a place you type (phase C13c).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "/" || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.defaultPrevented) return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      const side = document.querySelector<HTMLInputElement>('[data-shell-search="side"]');
+      if (side && side.getClientRects().length > 0) side.focus();
+      else setSearchOpen(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   useEffect(() => {
     document.title = `${title} · Fennl`;
@@ -69,6 +100,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
           <Logo />
         </Link>
         <SyncStatusLine className={styles.sideStatus} />
+        <ShellSearch variant="side" />
         <nav aria-label="Main" className={styles.sideNav}>
           <ul className={styles.navList}>
             {PRIMARY_NAV.map((item) => (
@@ -98,6 +130,16 @@ export function AppShell({ path, title, children }: AppShellProps) {
           <Logo />
         </Link>
         <SyncStatusLine className={styles.topStatus} />
+        <button
+          type="button"
+          className={styles.topSearchButton}
+          aria-expanded={searchOpen}
+          onClick={() => setSearchOpen(!searchOpen)}
+        >
+          <SearchIcon />
+          <span className="visually-hidden">Search</span>
+        </button>
+        {searchOpen ? <ShellSearch variant="top" onDone={() => setSearchOpen(false)} /> : null}
         <Link
           href={feedbackHref(path)}
           className={styles.topBarLink}

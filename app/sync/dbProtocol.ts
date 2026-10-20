@@ -98,6 +98,7 @@ export type DbRequest =
   | { op: "getCategories" }
   | { op: "search"; query: string }
   | { op: "ingredientMatches"; words: string[] }
+  | { op: "suggestCategories"; recipeId: string }
   | { op: "listTrash" }
   | { op: "photoHashes" }
   | { op: "findDuplicates"; query: DuplicateQuery }
@@ -115,6 +116,8 @@ export interface DbResults {
   getCategories: CategoryData;
   search: SearchResults;
   ingredientMatches: Record<string, string[]>;
+  /** Category paths worth suggesting for a recipe (phase C13c). */
+  suggestCategories: string[];
   listTrash: TrashItem[];
   /** Every image a photo here shows (phase D2), so each device can keep their small copies. */
   photoHashes: string[];
