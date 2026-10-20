@@ -945,3 +945,43 @@ label.card {
   min-height: 1.5em;
   margin: 0;
 }
+
+/* --- Surprise me (phase C13c) ------------------------------------------------------------- */
+
+.surprise {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.surpriseBody {
+  display: grid;
+  flex: 1;
+  gap: var(--space-1);
+  min-width: min(100%, 12rem);
+}
+
+.surpriseBody p {
+  margin: 0;
+}
+
+.surpriseTitle {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-xl);
+  line-height: var(--leading-snug);
+  overflow-wrap: anywhere;
+}
+
+.surpriseActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}

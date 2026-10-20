@@ -26,6 +26,8 @@ test("the sidebar can be used with the keyboard alone", async ({ page }) => {
   await open(page, "/");
   await page.keyboard.press("Tab"); // skip link
   await page.keyboard.press("Tab"); // logo
+  await page.keyboard.press("Tab"); // Find a recipe (search from any screen, C13c)
+  await expect(page.getByRole("searchbox", { name: "Find a recipe" })).toBeFocused();
   await page.keyboard.press("Tab"); // Recipes
   await page.keyboard.press("Tab"); // Import
   await expect(page.getByRole("link", { name: "Import" })).toBeFocused();

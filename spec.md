@@ -1207,6 +1207,12 @@ These follow the beta and are approved one at a time, like every phase. The desi
   - **What is kept** is the recipe list's address query, only keys the list understands, so the format is the same as the address (a saved search is the same text you could bookmark).
   - **Tests**: 9 for the rules (names, queries), 12 on the server (access, validation, duplicates, the cap, rename, update, remove, one person never seeing another's, going with the account), 6 for matching a saved search to what the list shows, and browser tests on a computer and a phone for saving, using, updating, renaming, removing, a taken name, another device, the offline view and another person's account, with an accessibility check.
 
+
+- **Built, C13c (2026-10-20)** (`app/categories/suggest.ts`, `app/recipes/filters.ts` `pickSurprise`, `app/shell/ShellSearch.tsx`):
+  - **Category suggestions in the editor**: under a saved recipe's categories, "Suggested, from recipes with similar ingredients" offers up to three of the person's own categories as buttons ("+ Mexican"); nothing is filed until they tap one (then it can be undone like any filing), and one already on the recipe, or a wider one that holds it, isn't offered. How: the ingredient names are read with E2's reader (the name, not the amount or note; very common words like salt and oil left out; plurals reduced), the 15 recipes most like it are found with the full-text index (rarer ingredients count for more, `bm25`), and a category is suggested when at least 2 of them, and 30% of them, are in it. It needs at least 3 like recipes to learn from, so a new library gets none. All on the device from the person's own library: no AI, no cost, no server.
+  - **Surprise me** on the recipe list: suggests one recipe at random from **what the list is showing** (so it follows search and every filter: "Dinners, under 30 minutes, not made in 90 days, then Surprise me"), with **Open**, **Another one** (never the same twice in a row) and **Not now**. It sits right under the toolbar so it is seen on a phone, and goes if the list moves on from it. Off when nothing is showing.
+  - **Search from any screen** (the owner's choice, 2026-10-20): a **Find a recipe** field in the sidebar on a computer, and a search icon in the top bar on a phone that opens the same field below it; Enter takes you to the recipe list with those words searched. Pressing **/** anywhere that isn't a place to type jumps to it (and never while typing). The recipe list follows an address that changes under it (a search sent from another screen, or the back button).
+  - **Tests**: 11 for the suggestion rules, 5 for the like-recipe lookup against the real SQLite build, 5 for the random pick, and browser tests on a computer and a phone for each of the three, with accessibility checks. Found and fixed with a phone screenshot: the suggestion card was far below its button when the filters panel was open, and a labelled Search button squeezed "Saved to cloud" in the top bar.
 ### C14. Duplicate finder
 - **Goal**: Find recipes saved twice and tidy them up safely.
 - **Builds on**: `shared/duplicates.ts` (E4: same page, or a title that reads the same with mostly the same ingredients), Trash (C9) for undo.
@@ -1337,5 +1343,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C11 | Done 2026-10-08 (merged; live; the owner checked the limit of 5 on the preview) |
 | C12 | Approved 2026-10-08; built, waiting for review |
 | C13a | Done 2026-10-20 (merged) |
-| C13b | Built 2026-10-20, waiting for review (C13c suggestions, Surprise me and search from any screen follow) |
+| C13b | Done 2026-10-20 (merged) |
+| C13c | Built 2026-10-20, waiting for review |
 | All others | Not started |

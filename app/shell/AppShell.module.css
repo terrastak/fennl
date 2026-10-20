@@ -191,3 +191,87 @@
 .topStatus {
   margin: 0 0 0 var(--space-3);
 }
+
+/* --- Search from any screen (phase C13c) -------------------------------------------------- */
+
+.sideSearch,
+.topSearch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.sideSearch {
+  padding: 0 var(--space-2);
+}
+
+/* In the sidebar the field has room to itself; Enter searches. */
+.sideSearch .searchGo {
+  display: none;
+}
+
+.topSearch {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.searchField {
+  min-width: 0;
+  flex: 1;
+  min-height: var(--tap-target);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.searchGo {
+  display: grid;
+  place-items: center;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.searchGo:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.topSearchButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  margin-left: auto;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.topSearchButton:hover,
+.topSearchButton[aria-expanded="true"] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.topSearchButton + .topBarLink {
+  margin-left: 0;
+}
