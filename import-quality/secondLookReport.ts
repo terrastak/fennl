@@ -18,7 +18,7 @@ export type Way = "alone" | "first" | "second_look";
  * again (aiReplay.ts).
  */
 export interface SavedAnswer {
-  /** "photos" or "web". */
+  /** "photos", "web" or "text". */
   set: string;
   sample: string;
   way: Way;

@@ -4,6 +4,8 @@ import type {
   ImportJobSummary,
   ImportPhotosError,
   ImportPhotosResponse,
+  ImportTextError,
+  ImportTextResponse,
   ImportWebError,
   ImportWebResponse,
 } from "../../shared/importJobs";
@@ -77,6 +79,56 @@ export function photoProblemText(problem: ImportPhotosError | "offline" | "faile
     case "invalid_request":
     case "failed":
       return "The photos couldn't be read. Please try again.";
+  }
+}
+
+/** Recipe text pasted into the Import page, to be read into drafts (phase E15). */
+export async function importPastedText(
+  text: string,
+): Promise<{ jobs: ImportJobSummary[] } | { problem: ImportTextError | "offline" | "failed" }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/import/text", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+  } catch {
+    return { problem: "offline" };
+  }
+  if (res.ok) return (await res.json()) as ImportTextResponse;
+  const error = ((await res.json().catch(() => ({}))) as { error?: ImportTextError }).error;
+  return { problem: error ?? "failed" };
+}
+
+/** What to tell people when reading pasted text didn't work. */
+export function pastedProblemText(problem: ImportTextError | "offline" | "failed"): string {
+  switch (problem) {
+    case "no_recipe":
+      return "Fennl couldn't find a recipe in that text.";
+    case "web_address":
+      return "That's a web address. Fennl can't import from a link yet. Open the page and use the Fennl extension, or save the page and import the file.";
+    case "text_too_large":
+      return "That's too much text for one import. Paste just the recipe, or a few recipes at a time.";
+    case "ai_import_not_included":
+      return "Fennl can read recipes it can follow clearly: a title, then “Ingredients” and “Directions” headings. This text isn't laid out that way, so it would need reading with AI, which is part of Premium.";
+    case "import_not_included":
+      return "Importing isn't part of your plan.";
+    case "daily_limit":
+      return "That's as many imports as your plan allows today. Try again tomorrow.";
+    case "monthly_limit":
+      return "That text needs reading with AI, and this month's AI imports are used up. They start again on the 1st.";
+    case "paused":
+      return "That text needs reading with AI, which is paused for now. Please try again later.";
+    case "ai_unavailable":
+      return "Fennl couldn't read that text just now. Please try again in a few minutes.";
+    case "rate_limited":
+      return "That's a lot at once. Wait a minute, then try again.";
+    case "offline":
+      return "Importing needs a connection. Try again when you're back online.";
+    case "invalid_request":
+    case "failed":
+      return "That text couldn't be imported. Please try again.";
   }
 }
 

@@ -12,10 +12,13 @@ import {
   type ImportJobSummary,
   type ImportPhotoSource,
   type ImportPhotosResponse,
+  type ImportTextResponse,
+  type PastedProvenance,
   type ImportWebError,
   type ImportWebResponse,
   type WebProvenance,
 } from "../../shared/importJobs";
+import { PASTED_TEXT_CHARS } from "../../shared/pastedText";
 import { ABSOLUTE_MAX_IMAGE_BYTES, detectImageType } from "../../shared/images";
 import { recipeCardHtml } from "../../shared/pageSnapshot";
 import { readWebRecipes } from "../../shared/webRecipe";
@@ -31,6 +34,7 @@ import { aiConfig } from "../ai/config";
 import { canReadAgain, readAgain } from "../ai/read";
 import { fillFromPage, importPageWithAi } from "./aiWeb";
 import { markImportsSaved, recordDiscarded, removeJobPhotos } from "./jobs";
+import { importPastedText } from "./pastedImport";
 import { importPhotos } from "./photoImport";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
@@ -77,6 +81,8 @@ const DAY = 24 * 60 * MINUTE;
 const PAGES_PER_MINUTE = 30;
 /** Recipes read from photos per person per minute (phase E9): the same kind of guard. */
 const PHOTO_IMPORTS_PER_MINUTE = 10;
+/** Recipes read from pasted text per person per minute (phase E15): the same kind of guard. */
+const TEXT_IMPORTS_PER_MINUTE = 10;
 /** Redirects followed when fetching a draft's photo. */
 const MAX_REDIRECTS = 3;
 /** How long a photo's site gets to answer. */
@@ -275,6 +281,59 @@ importRoutes.post("/api/import/photos", async (c) => {
   return c.json(response, 201);
 });
 
+// POST /api/import/text {text}: recipe text pasted into the Import page (phase E15;
+// worker/import/pastedImport.ts). Text that is clearly laid out is read without the AI; anything
+// else by the AI on a plan that includes it.
+importRoutes.post("/api/import/text", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  if (!plan.import_structured_enabled && !plan.import_ai_enabled) {
+    return c.json({ error: "import_not_included" }, 403);
+  }
+  if (
+    !(await withinRateLimit(db, `import-text:${userId}`, {
+      max: TEXT_IMPORTS_PER_MINUTE,
+      windowMs: MINUTE,
+    }))
+  ) {
+    return c.json({ error: "rate_limited" }, 429);
+  }
+  // Characters can take up to four bytes each, and JSON escaping adds more.
+  const maxBody = PASTED_TEXT_CHARS * 8 + 1024;
+  const declared = Number(c.req.header("content-length"));
+  if (Number.isFinite(declared) && declared > maxBody) {
+    return c.json({ error: "text_too_large" }, 413);
+  }
+  const raw = await readCapped(c.req.raw, maxBody);
+  if (!raw) return c.json({ error: "text_too_large" }, 413);
+  let body: { text?: unknown } | null;
+  try {
+    body = JSON.parse(new TextDecoder().decode(raw)) as { text?: unknown } | null;
+  } catch {
+    return c.json({ error: "invalid_request" }, 400);
+  }
+  const result = await importPastedText(
+    { env: c.env, db, householdId: household.householdId, userId, plan },
+    body?.text,
+  );
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  const rows = await db
+    .select({
+      id: importJob.id,
+      draft: importJob.draft,
+      provenance: importJob.provenance,
+      createdAt: importJob.createdAt,
+    })
+    .from(importJob)
+    .where(inArray(importJob.id, result.jobIds))
+    .all();
+  const order = new Map(result.jobIds.map((id, i) => [id, i]));
+  const response: ImportTextResponse = {
+    jobs: rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(summary),
+  };
+  return c.json(response, 201);
+});
+
 /** The caller's own job, in their current household. */
 async function ownJob(c: Context<ImportEnv>) {
   const { db, userId, household } = c.var.signedIn;
@@ -330,7 +389,9 @@ async function aiDetail(
 }
 
 async function jobDetail(c: Context<ImportEnv>, job: typeof importJob.$inferSelect) {
-  const provenance = JSON.parse(job.provenance) as Partial<WebProvenance & AiProvenance>;
+  const provenance = JSON.parse(job.provenance) as Partial<
+    WebProvenance & AiProvenance & PastedProvenance
+  >;
   const detail: ImportJobDetail = {
     ...summary(job),
     status: job.status as ImportJobDetail["status"],
@@ -338,6 +399,7 @@ async function jobDetail(c: Context<ImportEnv>, job: typeof importJob.$inferSele
     page: provenance.page ?? { url: null, title: null },
     snapshot: provenance.snapshot ?? null,
     recipeId: job.recipeId,
+    pastedText: provenance.pasted?.text ?? null,
     ai: await aiDetail(c, provenance),
   };
   return detail;

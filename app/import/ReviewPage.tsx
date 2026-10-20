@@ -497,9 +497,14 @@ function Review({
                 Not quite right?
               </h2>
               <p className={styles.note}>
-                Fennl can read {job.draft.source === "website" ? "the page" : "the photos"} again,
-                more carefully, once. Anything you&rsquo;ve already changed here is kept. It counts
-                as one of this month&rsquo;s AI imports.
+                Fennl can read{" "}
+                {job.draft.source === "website"
+                  ? "the page"
+                  : job.draft.source === "text"
+                    ? "the text"
+                    : "the photos"}{" "}
+                again, more carefully, once. Anything you&rsquo;ve already changed here is kept. It
+                counts as one of this month&rsquo;s AI imports.
               </p>
               <div>
                 <button

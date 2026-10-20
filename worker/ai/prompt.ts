@@ -33,6 +33,7 @@ const WHAT: Record<ImportSource, string> = {
   pdf: "This is a PDF that holds one or more recipes.",
   website:
     'This is the text of a web page that may hold a recipe ("## " starts a heading, "- " a list item). Give only the recipes the page itself gives, with their ingredients or method, not ones it only links to. When the page lists the ingredients or steps twice (in the post and again in a recipe card), give them once, as the card has them. The description is at most a few sentences introducing the recipe, not the whole story before it. Ignore comments, adverts and the site around it.',
+  text: "This is text a person pasted from an email, note, document or message. It may hold a recipe, several recipes, or a recipe among other writing. Give only the recipes it actually contains, with their ingredients or method, as written. Ignore greetings, sign-offs, quoted replies and anything else around the recipe. If it holds no recipe, give an empty list.",
   paprika: "This is a recipe exported from another app.",
 };
 
