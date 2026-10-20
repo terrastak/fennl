@@ -1200,6 +1200,13 @@ These follow the beta and are approved one at a time, like every phase. The desi
   - **Tests**: 41 unit tests for the filter logic (every filter, all/any/none, unknown values, address round-trips, chips) and 6 for the ingredient lookup against the real SQLite build; browser tests on a computer and a phone for each filter, the address, search together with filters, the "no time written down" note, and accessibility with the panel open.
   - Small change to the category chooser: the list can close after a choice (`closeOnChoose`), used in the panel so it doesn't cover the controls below on a phone. The filing screens keep their open list.
 
+- **Built, C13b (2026-10-20)** (`worker/savedSearches/`, `shared/savedSearch.ts`, `app/recipes/SavedSearches.tsx`, migration `0030`):
+  - **Saved searches** sit above the recipe list's toolbar: a **Saved searches** box (choose one to bring back its words and filters), **Save this search** (shown when the list is narrowed and isn't already a saved search; asks for a name), and for the one the list is showing: **Rename**, **Remove** (asks first; "Your recipes aren't touched") and, if you changed the filters after choosing it, **Update "name"**. A saved search is a rule, so the list it shows follows the recipes.
+  - **Stored as the owner decided**: a plain list with the account (`saved_search` table), not synced records. Nothing in sync, the local database or the app-upgrade prompt changed. The app reads the list when the recipe list opens and keeps a copy on the device (not while an admin is acting as someone), so saved searches still show and work with no connection; saving, renaming, updating and removing need a connection and say so ("Saved searches can only be changed with a connection").
+  - **Their own**: never shown to a partner in the household; another person's id is simply "not found". Names can't repeat (ignoring case and spacing), up to 60 letters; 100 per account (a sanity cap, not a plan limit); 60 changes a minute. They go with the account.
+  - **What is kept** is the recipe list's address query, only keys the list understands, so the format is the same as the address (a saved search is the same text you could bookmark).
+  - **Tests**: 9 for the rules (names, queries), 12 on the server (access, validation, duplicates, the cap, rename, update, remove, one person never seeing another's, going with the account), 6 for matching a saved search to what the list shows, and browser tests on a computer and a phone for saving, using, updating, renaming, removing, a taken name, another device, the offline view and another person's account, with an accessibility check.
+
 ### C14. Duplicate finder
 - **Goal**: Find recipes saved twice and tidy them up safely.
 - **Builds on**: `shared/duplicates.ts` (E4: same page, or a title that reads the same with mostly the same ingredients), Trash (C9) for undo.
@@ -1329,5 +1336,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C10 | Done 2026-10-08 (merged; live) |
 | C11 | Done 2026-10-08 (merged; live; the owner checked the limit of 5 on the preview) |
 | C12 | Approved 2026-10-08; built, waiting for review |
-| C13a | Built 2026-10-20, waiting for review (C13b saved searches and C13c suggestions follow) |
+| C13a | Done 2026-10-20 (merged) |
+| C13b | Built 2026-10-20, waiting for review (C13c suggestions, Surprise me and search from any screen follow) |
 | All others | Not started |
