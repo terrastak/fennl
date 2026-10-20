@@ -8,10 +8,11 @@
 export const SHARPNESS_EDGE = 1200;
 
 /**
- * Below this, a photo is offered a retake. A starting value, to be checked with real near and
- * far shots on phones (the photo test, /photo-trial, shows each picture's score).
+ * Below this, a photo is offered a retake. Set from the owner's photo test on an iPhone 18 Pro
+ * (2026-10-20, /photo-trial): a card in focus scored 1384, the same card too close to focus 71.
+ * Checked again as more phones are tried.
  */
-export const BLURRY_BELOW = 60;
+export const BLURRY_BELOW = 150;
 
 /** The share of each side left out around the edges (the table, the fingers holding the card). */
 const MARGIN = 0.1;
