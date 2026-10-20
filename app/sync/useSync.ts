@@ -164,6 +164,40 @@ export function useSearch(query: string): SearchResults | null {
   return results?.value ?? null;
 }
 
+/**
+ * Which recipes have each word in their ingredients (phase C13a), read again whenever the local
+ * copy changes. Null with no words, or until the first answer.
+ */
+export function useIngredientMatches(words: string[]): Record<string, string[]> | null {
+  const client = activeSyncClient();
+  const key = words.join("\n");
+  const [results, setResults] = useState<{ key: string; value: Record<string, string[]> } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!client || !key) return;
+    let latest = 0;
+    const wanted = key.split("\n");
+    const load = () => {
+      const call = ++latest;
+      client
+        .ingredientMatches(wanted)
+        .then((value) => {
+          if (call === latest) setResults({ key, value });
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client, key]);
+  if (!key) return null;
+  return results?.key === key ? results.value : null;
+}
+
 /** What's in Trash (phase C9), read again whenever the local copy changes. Null while loading. */
 export function useTrash(): TrashItem[] | null {
   const client = activeSyncClient();
