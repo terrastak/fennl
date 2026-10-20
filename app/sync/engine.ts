@@ -1,4 +1,4 @@
-import type { DuplicateMatch, DuplicateQuery } from "../../shared/duplicates";
+import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type { Entitlements } from "../../shared/entitlements";
 import { addBlockedBy, type Usage } from "../../shared/limits";
 import { RECIPE_SCHEMA_VERSION } from "../../shared/recipe";
@@ -359,6 +359,11 @@ export class SyncEngine {
 
   findDuplicates(query: DuplicateQuery): Promise<DuplicateMatch[]> {
     return this.db.call({ op: "findDuplicates", query });
+  }
+
+  /** Pairs of recipes that may be the same recipe, looking through the whole library (C14). */
+  findDuplicatePairs(): Promise<DuplicatePair[]> {
+    return this.db.call({ op: "findDuplicatePairs" });
   }
 
   photoHashes(): Promise<string[]> {

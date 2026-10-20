@@ -38,6 +38,7 @@ import { expungeOldTrash, trashRoutes } from "./sync/trash";
 import { testSetupRoutes } from "./dev/testSetup";
 import { exportRoutes } from "./export/export";
 import { extensionLinkRoutes, extensionRoutes } from "./extension/routes";
+import { duplicateRoutes } from "./duplicates/routes";
 import { savedSearchRoutes } from "./savedSearches/routes";
 import { removeImportPhotos, removeOldImportJobs } from "./import/jobs";
 import { removeOldOutcomes } from "./ai/outcomes";
@@ -192,6 +193,9 @@ app.route("/", extensionRoutes);
 
 // A person's saved searches for the recipe list (phase C13b).
 app.route("/", savedSearchRoutes);
+
+// "Not a duplicate" answers for the duplicate finder (phase C14).
+app.route("/", duplicateRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {

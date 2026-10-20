@@ -1110,6 +1110,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### G1b. Equal-partner editing
 - **Steps**: Either member can edit any recipe (per-field last-write-wins). Deleting a partner's recipe sends it to Trash, where either can restore it.
+- **Also here (from C14)**: the duplicate finder pairs only a person's own recipes today. Extend it to pairs owned by the two partners once photos and "made it" days can move between owners (or decide that such a merge keeps the other copy's photos and days with it in Trash and says so).
 - **You check**: Edit the same recipe from both accounts. Delete your partner's recipe and restore it from the other account.
 
 ### G1c. Leaving and splitting
@@ -1222,9 +1223,16 @@ These follow the beta and are approved one at a time, like every phase. The desi
   3. The kept recipe takes the chosen fields; photos, categories and "made it" days from both are kept; the other goes to Trash (restorable for 30 days). Nothing is deleted outright, and nothing merges without a confirmation showing exactly what changes.
   4. "Not a duplicate" is remembered per pair so it isn't offered again.
   5. Runs only when asked (no background scanning, no cost to Free or Premium).
-- **Decisions**: What to do with a pair owned by two household members (suggest: merge into the first person's recipe only with the other's recipe going to Trash, where either can restore it).
+- **Decisions (2026-10-20, owner)**: **"Not a duplicate" follows the account** (a small per-account list on the server, like saved searches), not just this device. **Only a person's own recipes are paired** for now: joining a household (G1) isn't built, so today every recipe a person sees is their own; merging a pair owned by two people needs photos and "made it" days to move between owners, so it is left to **G1b** (extend the finder then; a recipe pair across owners is skipped).
 - **You check**: Import a recipe you already have; find it as a duplicate; merge, then restore the removed one from Trash.
 - **Done when**: Tests cover similar and different recipes (including the near-misses already in `duplicates.test.ts`), field-by-field merge, the Trash undo, "not a duplicate", and a household pair.
+
+- **Built, C14 (2026-10-20)** (`shared/duplicates.ts` `findDuplicatePairs`, `app/recipes/merge.ts`, `app/recipes/DuplicatesPage.tsx`, `MergePanel.tsx`, `worker/duplicates/`, migration `0031`):
+  - **Find duplicates** (a link on the recipe list, page `/duplicates`): nothing runs until **Find duplicates** is pressed, and then only on this device. It lists pairs: the same page (address, ignoring "www", tracking and "#" parts), or a title that reads the same with mostly the same ingredients (the same rule as an import's duplicate check). To stay quick on a big library it compares only recipes sharing a page address or a title word that isn't in too many recipes; 5,000 recipes are compared in well under a second. Only one person's own recipes are paired.
+  - **Compare and merge**: the fuller (then the older) copy is kept to begin with and can be switched. Only the parts that differ are shown, side by side, each with a choice of which to use; the copy kept has its own wording unless it says nothing and the other does. Before anything happens a **What will happen** list says it all, and a **What can't be carried across** list says what stays with the other copy and why. **Merge** then saves it; **Undo** puts everything back (the other copy back first).
+  - **What a merge carries**: the chosen parts of the recipe; the other copy's categories (the kept recipe joins them too); its photos (shown on the kept recipe as they are, skipping any it already shows, up to the plan's limit per recipe; none on a plan without photos, which is said); the person's own "made it" days the kept recipe doesn't have; and the person's own rating, favorite and note where the kept recipe has none. **Nothing is deleted:** the other copy goes to Trash (30 days, like any recipe), and it is the last change made, so if anything fails along the way both recipes are still there. A merge that would make the recipe too long for the plan's per-recipe limit can't be started.
+  - **Not a duplicate** is remembered with the account (`duplicate_dismissal`; add, take back straight away, or **Show dismissed pairs again**); needs a connection to change and says so.
+  - **Tests**: 11 for finding pairs (page, title, owners, ordering, many recipes, speed), 21 for the merge plan (each part carried, the undo of each, the order, the other copy untouched), 10 on the server for the answers (access, validation, the cap, isolation, going with the account), and browser tests on a computer and a phone for finding, merging with the day and notes carried, undoing, "not a duplicate" kept across a reload, and accessibility.
 
 ### E15. Paste text to import
 - **Goal**: Paste a recipe from an email, note, document or message and get a reviewed draft.
@@ -1345,4 +1353,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C13a | Done 2026-10-20 (merged) |
 | C13b | Done 2026-10-20 (merged) |
 | C13c | Done 2026-10-20 (merged). C13 is complete |
+| C14 | Built 2026-10-20, waiting for review |
 | All others | Not started |
