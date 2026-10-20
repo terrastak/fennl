@@ -8,6 +8,7 @@ import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { navigate, queryParam } from "../navigation";
 import { FilterPanel } from "../recipes/FilterPanel";
+import { SavedSearches } from "../recipes/SavedSearches";
 import {
   activeFilterCount,
   applyFilters,
@@ -301,6 +302,14 @@ export function RecipesPage() {
     remember(query, next);
   };
 
+  /** Shows a saved search: its words and its filters. */
+  const applySearch = (q: string, next: RecipeFilters) => {
+    setQuery(q);
+    setFilters(next);
+    remember(q, next);
+    if (filterChips(next, (key) => key).length > 0) setShowMore(true);
+  };
+
   const typeQuery = (value: string) => {
     setQuery(value);
     remember(value, filters);
@@ -385,6 +394,19 @@ export function RecipesPage() {
             onChange={(e) => typeQuery(e.target.value)}
           />
         </form>
+      ) : null}
+      {list.length > 0 ? (
+        <SavedSearches
+          query={query}
+          filters={filters}
+          narrowing={narrowing}
+          currentText={filtersToParams(
+            query,
+            filters,
+            (key) => tree?.byKey.get(key)?.path,
+          ).toString()}
+          onApply={applySearch}
+        />
       ) : null}
       {list.length > 0 ? (
         <div className={styles.toolbar}>

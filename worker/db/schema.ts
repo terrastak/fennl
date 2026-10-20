@@ -648,6 +648,27 @@ export const extensionLink = sqliteTable(
 );
 
 /**
+ * A person's saved searches (phase C13b; shared/savedSearch.ts): a name and the recipe list's
+ * address query. Their own, not shared with the household, and kept as a plain list, not as
+ * synced records: they are small and rarely changed, and saving one needs a connection.
+ */
+export const savedSearch = sqliteTable(
+  "saved_search",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** The search as an address query ("q=soup&time=30"), without the "?". */
+    query: text("query").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("saved_search_user_idx").on(table.userId)],
+);
+
+/**
  * Every call to the AI (phase E7; CLAUDE.md, "AI import"), metered per household: which model,
  * the tokens it used and what that cost, estimated from the provider's prices (worker/ai/). A
  * row is written before the call, so the monthly limits are checked in the same statement that
