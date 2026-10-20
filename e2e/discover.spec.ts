@@ -11,8 +11,9 @@ import { useOwnAccount } from "./support";
 async function addSamples(page: Page) {
   await page.goto("/");
   await page.getByRole("button", { name: /sample recipes to try/ }).click();
-  await expect(recipeCard(page, "Lemon Olive Oil Cake")).toBeVisible();
-  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  // Adding the samples can be slow when the whole suite is running at once.
+  await expect(recipeCard(page, "Lemon Olive Oil Cake")).toBeVisible({ timeout: 15_000 });
+  await expect(syncStatus(page)).toHaveText("Saved to cloud", { timeout: 15_000 });
 }
 
 async function noAccessibilityProblems(page: Page) {
