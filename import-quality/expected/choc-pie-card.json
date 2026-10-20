@@ -1,0 +1,24 @@
+{
+  "title": "Choc Pie",
+  "ingredients": [
+    "2 Sq Bakers Choc",
+    "2 Tbs butter",
+    "1/3 Cups flour",
+    "1 Cup sugar",
+    "1/4 teasp. salt",
+    "2 1/2 Cups milk",
+    "3 egg yolk",
+    "1 teasp. vanilla"
+  ],
+  "directions": [
+    "Melt choc + butter (double boiler)",
+    "Mix flour, sugar, salt together + stir into choc",
+    "Add scalded milk, stir constantly til mixture thickens (about 15 minutes)",
+    "Beat egg yolks well; stir in a little choc mix, then pour into rest of hot mixture",
+    "Cook 3 minutes more stirring constantly",
+    "Remove from heat, cool + add vanilla",
+    "Pour into baked pie shell + chill",
+    "Serve with whipped cream"
+  ],
+  "source": { "name": "Alice", "author": null, "page": null, "url": null }
+}
