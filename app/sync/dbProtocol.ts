@@ -1,4 +1,4 @@
-import type { DuplicateMatch, DuplicateQuery } from "../../shared/duplicates";
+import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type { Recipe, RecipeMade, RecipeOpinion, RecipePhoto } from "../../shared/recipe";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
@@ -102,6 +102,7 @@ export type DbRequest =
   | { op: "listTrash" }
   | { op: "photoHashes" }
   | { op: "findDuplicates"; query: DuplicateQuery }
+  | { op: "findDuplicatePairs" }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -123,6 +124,8 @@ export interface DbResults {
   photoHashes: string[];
   /** Recipes an import may duplicate (phase E4). */
   findDuplicates: DuplicateMatch[];
+  /** Pairs of recipes in the library that may be the same recipe (phase C14). */
+  findDuplicatePairs: DuplicatePair[];
   wipe: null;
 }
 

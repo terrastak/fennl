@@ -985,3 +985,136 @@ label.card {
   align-items: center;
   gap: var(--space-2) var(--space-3);
 }
+
+/* --- Find duplicates (phase C14) ---------------------------------------------------------- */
+
+.duplicateTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.duplicateCount {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.duplicateList {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.duplicatePair {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.duplicateHead p,
+.duplicateTitles {
+  margin: 0;
+}
+
+.duplicateTitles {
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-lg);
+  overflow-wrap: anywhere;
+}
+
+.duplicateButtons,
+.mergeButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.merge {
+  display: grid;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.merge fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.merge legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-weight: var(--weight-semibold);
+}
+
+.mergeKeep {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.mergeRow {
+  display: grid;
+}
+
+.mergeSides {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.mergeSide {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.mergeSide > span {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.mergeSideOn {
+  border-color: var(--color-accent);
+  background: var(--color-surface-sunken);
+}
+
+.mergeLines {
+  display: grid;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.mergeSummary {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-sunken);
+}
+
+.mergeSummary h3 {
+  margin: 0;
+  font-size: var(--text-base);
+}
+
+.mergeSummary ul {
+  margin: 0;
+  padding-left: var(--space-5);
+}
