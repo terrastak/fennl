@@ -14,11 +14,17 @@
     "Melt choc + butter (double boiler)",
     "Mix flour, sugar, salt together + stir into choc",
     "Add scalded milk, stir constantly til mixture thickens (about 15 minutes)",
-    "Beat egg yolks well; stir in a little choc mix, then pour into rest of hot mixture",
+    "Beat egg yolks well; stir in a little choc mix then pour into rest of hot mixture",
     "Cook 3 minutes more stirring constantly",
-    "Remove from heat, cool + add vanilla",
+    "Remove from heat",
+    "Cool + add vanilla",
     "Pour into baked pie shell + chill",
     "Serve with whipped cream"
   ],
-  "source": { "name": "Alice", "author": null, "page": null, "url": null }
+  "source": {
+    "name": "Alice",
+    "author": null,
+    "page": null,
+    "url": null
+  }
 }

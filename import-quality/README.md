@@ -52,10 +52,11 @@ correct answer is the text a careful person would type in, not a tidied version.
 
 - One line per ingredient, one step per numbered step or paragraph. A section heading starts
   with `## `.
-- A method written as one run-on paragraph (common on handwritten cards) is split into steps
-  where the writer moves to a new action: at full stops, dashes and semicolons between actions,
+- A handwritten method has one step per sentence: split at full stops (or where a new sentence
+  starts with a capital) and at dashes between instructions, never at commas or semicolons,
   keeping the words as written (each step starting with a capital, without the leftover dash).
-  The owner's choice, 2026-10-20 (`choc-pie-card`).
+  Printed paragraphs and numbered steps stay as they are. The owner's choice, 2026-10-20 and
+  2026-10-21 (`choc-pie-card`).
 - Leave a field out when it doesn't matter what's found (no time on the card, say). Use `null` or
   `""` when the right answer is "nothing".
 - Small differences are forgiven when scoring: letter case, spacing, curly quotes, `½` against
