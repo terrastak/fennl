@@ -32,6 +32,7 @@ import {
   fieldUpdates,
   fieldsToCheck,
   lineMarks,
+  lineWords,
   mergeReadAgain,
   moveLineTo,
   pathNames,
@@ -82,6 +83,7 @@ function Review({
   );
   const state = useSyncExternalStore(session.subscribe, session.getSnapshot);
   const marks = useMemo(() => lineMarks(job.draft, initial), [job, initial]);
+  const words = useMemo(() => lineWords(job.draft), [job]);
   const toCheck = useMemo(() => fieldsToCheck(job.draft), [job]);
   const status = useSyncStatus();
   const editable = canEdit(status);
@@ -535,7 +537,7 @@ function Review({
             </section>
           ) : null}
 
-          {toCheck.length > 0 || job.draft.warnings.length > 0 ? (
+          {toCheck.length > 0 || words.size > 0 || job.draft.warnings.length > 0 ? (
             <section className={styles.check} aria-labelledby="check-title">
               <h2 id="check-title" className={styles.smallTitle}>
                 Worth checking
@@ -548,6 +550,12 @@ function Review({
                 ))}
                 {marks.size > 0 ? (
                   <li>Lines marked &ldquo;Worth a look&rdquo; in the ingredients or method</li>
+                ) : null}
+                {words.size > 0 ? (
+                  <li>
+                    Highlighted words in &ldquo;How Fennl reads it&rdquo;: Fennl couldn&rsquo;t read
+                    them for certain
+                  </li>
                 ) : null}
                 {job.draft.warnings.map((w) => (
                   <li key={w}>{w}</li>
@@ -593,6 +601,7 @@ function Review({
               hint="One per line. Enter splits a line; Backspace at the start of a line joins it to the one before."
               tools={lineTools("ingredients")}
               marks={marks}
+              words={words}
             />
             <LinesBox
               session={session}
@@ -602,6 +611,7 @@ function Review({
               hint="One step per line. Enter splits a step; Backspace at the start of a step joins it to the one before."
               tools={lineTools("directions")}
               marks={marks}
+              words={words}
             />
 
             <PhotoChoices

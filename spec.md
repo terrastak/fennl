@@ -982,6 +982,18 @@ Import quality is the core of the product, so this stage starts by building a wa
   5. Measure on the card and cookbook test sets.
 - **You check**: Import three of your hardest handwritten cards.
 - **Done when**: Card and cookbook scores meet an agreed level.
+- **Built (2026-10-21)**; the owner's choices of 2026-10-20 after importing the Choc Pie card:
+  1. Step 1, instructions for cards and pages (`worker/ai/prompt.ts`, used by every model):
+     - **A method written as one run** (no numbers, no paragraph breaks, common on handwritten cards) is split into one step per action, where the writer moves on (a full stop, a dash, a semicolon between actions), keeping the words as written, each step starting with a capital and without the dash. A method in paragraphs or numbered steps stays as it is.
+     - **The source from a sign-off**: a card signed by its writer ("All my Love, Alice", "Love, Mom", "From the kitchen of Alice") has that person as its source; the sign-off isn't a step or a note.
+     - **Line breaks and the story**: the description and notes keep the writer's line breaks, and a story or note about the recipe is the description even when written among the steps.
+     - **Cookbook pages**: only the recipes whose title is on the pages, not the end of the one before; the book's title and page, when shown, as the source.
+     - These change Fennl's instruction version (`setupVersion`), so the admin console's "How AI reads turned out" shows results before and after apart.
+  2. Step 2, uncertain words: for each ingredient and step the AI lists the words or numbers it couldn't read for certain (`unsure`, `shared/aiAnswer.ts`), copied as written; the draft keeps those really in the line, by line ID (`unsureWords`, at most 10 a line). Older answers and other importers have none.
+  3. Step 3, review: "How Fennl reads it" beside the ingredients and method highlights those words (`app/recipes/highlight.ts`; read out as "not sure"), for as long as they're still in the line as the person edits, and "Worth checking" says so. The photos are beside the draft since E9.
+  4. Step 4: the original photos stay with the saved recipe (built in E9).
+  5. Step 5, measuring: the card test set gained the owner's Choc Pie card (`choc-pie-card`, public with the owner's OK), whose correct answer splits the run-on method into 8 steps and names Alice as the source. The model comparison on the photos (`AI_COMPARE_SETS=photos`, about a dollar) is run with the owner's go-ahead.
+  6. Tests: `shared/aiAnswer.test.ts` (unsure words kept only as written in the line, older answers, the shape check), `app/recipes/highlight.test.ts`, and the review screen's highlight in `e2e/aiImport.spec.ts`.
 
 ### E11. Screenshots
 - **Goal**: Import from screenshots of social posts, texts, and emails.

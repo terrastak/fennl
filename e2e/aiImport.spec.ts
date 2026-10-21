@@ -42,6 +42,13 @@ test("Read again: once, keeping the person's changes, then Fennl says it has don
   const offer = page.getByRole("region", { name: "Not quite right?" });
   await expect(offer).toContainText("It counts as one of this month’s AI imports.");
   await expect(page.getByText("The amount of flour is smudged")).toBeVisible();
+  // The amount it couldn't read for certain is highlighted where Fennl shows how it reads the list
+  // (phase E10).
+  const read = page.getByRole("group", { name: "Ingredients, as Fennl reads them" });
+  await expect(read.locator("mark")).toHaveText("2 1/4 (not sure)");
+  await expect(page.getByRole("region", { name: "Worth checking" })).toContainText(
+    "couldn’t read them for certain",
+  );
   await expectAccessible(page);
 
   // The person fixes the title first; reading again keeps it.

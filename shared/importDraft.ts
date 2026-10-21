@@ -93,6 +93,11 @@ export interface RecipeDraft {
   fields: DraftFields;
   /** How sure the importer is of each ingredient and direction line, in the same order. */
   lineConfidence: { ingredients: Confidence[] | null; directions: Confidence[] | null };
+  /**
+   * Words the AI couldn't read for certain, by line ID, each as written in the line (phase E10),
+   * for the review screen to highlight. Missing on drafts from before E10 and on other importers.
+   */
+  unsureWords?: Record<string, string[]>;
   /** Category paths ("Desserts › Cakes"), from Paprika or the page's own labels. */
   categories: DraftValue<string[]> | null;
   photos: DraftPhoto[];
@@ -210,6 +215,16 @@ export function draftIssues(input: unknown, maxRecipeBytes: number | null = null
         (Array.isArray(list) && list.every((c) => (CONFIDENCES as readonly unknown[]).includes(c)));
       if (!ok) issues.push({ path: `lineConfidence.${key}`, problem: "invalid" });
     }
+  }
+
+  if (d.unsureWords !== undefined) {
+    const words = d.unsureWords;
+    const ok =
+      isObject(words) &&
+      Object.values(words).every(
+        (list) => Array.isArray(list) && list.every((w) => typeof w === "string"),
+      );
+    if (!ok) issues.push({ path: "unsureWords", problem: "invalid" });
   }
 
   if (d.categories !== null) {

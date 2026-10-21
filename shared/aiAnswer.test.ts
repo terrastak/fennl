@@ -8,6 +8,7 @@ import {
   withoutBadParts,
   type AiLine,
   type AiRecipe,
+  wordsIn,
 } from "./aiAnswer";
 import { draftIssues } from "./importDraft";
 
@@ -88,6 +89,28 @@ describe("an AI answer as drafts", () => {
     expect(draft!.photos).toEqual([{ input: 0, role: "import_original" }]);
   });
 
+  it("keeps the words the AI wasn't sure of, by line, when they're really in the line", () => {
+    const [draft] = drafts(
+      recipe({
+        ingredients: [
+          { ...line("1/3 Cups flowr", "low"), unsure: ["1/3", "flowr", "flour", "1/3"] },
+          { ...line("1 Cup sugar", "high"), unsure: [] },
+        ],
+      }),
+    );
+    expect(draftIssues(draft!)).toEqual([]);
+    const [flour, sugar] = draft!.fields.ingredients!.value;
+    // Only words as written in the line, once each.
+    expect(draft!.unsureWords).toEqual({ [flour!.id]: ["1/3", "flowr"] });
+    expect(draft!.unsureWords?.[sugar!.id]).toBeUndefined();
+    // Answers saved before E10 have none.
+    expect(drafts(recipe())[0]!.unsureWords).toBeUndefined();
+    expect(wordsIn("2 Tbs butter", [" Tbs ", "x".repeat(61)])).toEqual(["Tbs"]);
+    expect(
+      draftIssues({ ...draft!, unsureWords: { a: [1] } as unknown as Record<string, string[]> }),
+    ).toEqual([{ path: "unsureWords", problem: "invalid" }]);
+  });
+
   it("makes one draft per recipe, and none for an empty one", () => {
     const found = drafts(
       recipe(),
@@ -100,6 +123,11 @@ describe("an AI answer as drafts", () => {
   it("only takes answers of the right shape", () => {
     expect(isAiAnswer({ recipes: [recipe()] })).toBe(true);
     expect(isAiAnswer({ recipes: [] })).toBe(true);
+    const unsureLine = { text: "x", heading: false, confidence: "low", unsure: ["x"] };
+    expect(isAiAnswer({ recipes: [{ ...recipe(), ingredients: [unsureLine] }] })).toBe(true);
+    expect(
+      isAiAnswer({ recipes: [{ ...recipe(), ingredients: [{ ...unsureLine, unsure: "x" }] }] }),
+    ).toBe(false);
     expect(isAiAnswer(null)).toBe(false);
     expect(isAiAnswer({ recipes: [{ ...recipe(), title: "Cake" }] })).toBe(false);
     expect(

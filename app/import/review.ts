@@ -71,6 +71,11 @@ export function lineMarks(draft: RecipeDraft, content: RecipeContent): Map<strin
   return marks;
 }
 
+/** Words the AI couldn't read for certain, by line ID, to highlight (phase E10). */
+export function lineWords(draft: RecipeDraft): Map<string, string[]> {
+  return new Map(Object.entries(draft.unsureWords ?? {}));
+}
+
 /** The draft's lists with fractions and temperatures tidied (shared/tidy.ts), as box text. */
 export function tidiedBoxes(content: RecipeContent): { ingredients: string; directions: string } {
   const tidy = (lines: (IngredientLine | DirectionStep)[]) =>

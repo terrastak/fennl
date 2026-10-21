@@ -10,6 +10,7 @@ import { described, problemsFor } from "./fieldProblems";
 import editor from "./editor.module.css";
 import type { EditorSession, EditorState } from "./editorSession";
 import styles from "./recipes.module.css";
+import { highlightWords } from "./highlight";
 
 // The recipe editor's fields (phase C6), shared with the import review screen (phase E4), which
 // edits a draft with the same boxes before it becomes a recipe.
@@ -66,6 +67,7 @@ export function LinesBox({
   hint,
   tools,
   marks,
+  words,
 }: {
   session: EditorSession;
   state: EditorState;
@@ -79,6 +81,8 @@ export function LinesBox({
   tools?: { label: string; run: (line: number) => number | null }[];
   /** Lines to point out, by line ID: why ("Check this line"). */
   marks?: ReadonlyMap<string, string>;
+  /** Words to highlight in lines, by line ID (the ones an AI import wasn't sure of, E10). */
+  words?: ReadonlyMap<string, readonly string[]>;
 }) {
   const id = `edit-${list}`;
   const box = useRef<HTMLTextAreaElement>(null);
@@ -220,7 +224,16 @@ export function LinesBox({
                     ) : list === "directions" ? (
                       <span className={editor.stepNumber}>{numbers[i]}.</span>
                     ) : null}
-                    {line.text}
+                    {highlightWords(line.text, words?.get(line.id) ?? []).map((piece, k) =>
+                      piece.marked ? (
+                        <mark key={k} className={editor.unsure}>
+                          {piece.text}
+                          <span className="visually-hidden"> (not sure)</span>
+                        </mark>
+                      ) : (
+                        piece.text
+                      ),
+                    )}
                     {marks?.has(line.id) ? (
                       <span className={editor.mark}> {marks.get(line.id)}</span>
                     ) : null}
