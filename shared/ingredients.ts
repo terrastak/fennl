@@ -33,7 +33,7 @@ export const UNITS: readonly Unit[] = [
     name: "teaspoon",
     kind: "volume",
     base: 4.92892,
-    words: ["teaspoons", "teaspoon", "teasp", "tspns", "tspn", "tsps", "tsp"],
+    words: ["teaspoons", "teaspoon", "teasp", "teas", "tspns", "tspn", "tsps", "tsp"],
     exact: ["t", "ts"],
   },
   {
@@ -663,4 +663,91 @@ export function readIngredient(text: string): ParsedIngredient & { amounts: Ingr
     note: notes.length ? notes.join("; ") : null,
     amounts,
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Standard abbreviations
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * How Fennl writes a unit that was abbreviated (owner's choice 2026-10-21: "teas" and "teasp"
+ * are an older way of writing tsp). Units written out in full ("teaspoon", "cups") stay as
+ * written; so do the ones not listed here.
+ */
+const STANDARD: Record<string, { one: string; many: string; full: string[] }> = {
+  teaspoon: { one: "tsp", many: "tsp", full: ["teaspoon", "teaspoons"] },
+  tablespoon: { one: "Tbsp", many: "Tbsp", full: ["tablespoon", "tablespoons"] },
+  cup: { one: "cup", many: "cups", full: ["cup", "cups"] },
+  ounce: { one: "oz", many: "oz", full: ["ounce", "ounces"] },
+  pound: { one: "lb", many: "lb", full: ["pound", "pounds"] },
+};
+
+/**
+ * Writes the abbreviated units after amounts the standard way: "1/2 teas salt" becomes
+ * "1/2 tsp salt", "1T butter" "1 Tbsp butter", "2 C milk" "2 cups milk", "1/2 t soda" "1/2 tsp
+ * soda". Only a unit right after a number changes, so words that only look like one ("Add a
+ * c") stay. The abbreviation's full stop goes ("1 tsp. salt"), except in a step where it also
+ * ends the sentence ("Add 2 C. Stir").
+ */
+export function standardUnits(text: string, kind: "ingredient" | "step"): string {
+  let out = "";
+  let from = 0;
+  let i = 0;
+  while (i < text.length) {
+    const startsNumber =
+      /[\d¼-¾⅐-⅞]/u.test(text[i] ?? "") && !(i > 0 && /[\p{L}\p{N}/⁄.]/u.test(text[i - 1] ?? ""));
+    const q = startsNumber ? readQuantity(text, i) : null;
+    if (!q || q.word) {
+      i++;
+      continue;
+    }
+    const gap = /^(?:\s*[-‐‑]\s*|\s*)/u.exec(text.slice(q.end))?.[0] ?? "";
+    const at = q.end + gap.length;
+    const u = gap.length || /^[\p{L}#]/u.test(text.slice(q.end)) ? readUnit(text, at) : null;
+    const standard = u ? STANDARD[u.unit.name] : undefined;
+    if (!u || !standard) {
+      i = q.end;
+      continue;
+    }
+    const dot = text[u.end - 1] === ".";
+    const written = text.slice(at, dot ? u.end - 1 : u.end);
+    if (standard.full.includes(written.toLowerCase())) {
+      i = u.end;
+      continue;
+    }
+    const many = (q.high ?? q.low) > 1;
+    const endsSentence = kind === "step" && /^(?:\s+\p{Lu}|\s*$)/u.test(text.slice(u.end));
+    out +=
+      text.slice(from, q.end) +
+      (gap || " ") +
+      (many ? standard.many : standard.one) +
+      (dot && endsSentence ? "." : "");
+    from = u.end;
+    i = u.end;
+  }
+  return out + text.slice(from);
+}
+
+/** Units baking soda is measured in, so "1 can soda" stays a drink. */
+const SODA_UNITS = new Set(["teaspoon", "tablespoon", "pinch", "dash"]);
+
+/**
+ * An ingredient line written the standard way: units as standardUnits writes them, and "soda"
+ * measured by the spoon as "baking soda" (owner's choice 2026-10-21: on a recipe card "soda"
+ * almost always means baking soda). "Club soda", "soda water" and "1 can soda" stay.
+ */
+export function standardIngredient(text: string): string {
+  const line = standardUnits(text, "ingredient");
+  const read = readIngredient(line);
+  if (!read.item || !/^soda$/i.test(read.item) || !SODA_UNITS.has(read.unit ?? "")) return line;
+  const main = read.amounts.find((a) => a.role === "main");
+  const from = main?.end ?? 0;
+  return (
+    line.slice(0, from) +
+    line
+      .slice(from)
+      .replace(/(?<![\p{L}\p{N}])(s)oda(?![\p{L}\p{N}])/iu, (_, s: string) =>
+        s === "S" ? "Baking soda" : "baking soda",
+      )
+  );
 }

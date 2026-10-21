@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { UNITS, readIngredient } from "./ingredients";
+import { UNITS, readIngredient, standardIngredient, standardUnits } from "./ingredients";
 
 // Phase E2: the ingredient reader against real-world lines. Each case is written as
 // "quantity | unit | item | note", with "·" for nothing and the other amounts after "+".
@@ -312,5 +312,44 @@ describe("units", () => {
         seen.set(w.toLowerCase(), u.name);
       }
     }
+  });
+});
+
+describe("standard abbreviations (owner's choice 2026-10-21)", () => {
+  it.each([
+    ["1/2 teas salt", "1/2 tsp salt"],
+    ["4 teasp. grated cheese", "4 tsp grated cheese"],
+    ["1T butter", "1 Tbsp butter"],
+    ["1 Tbs. butter", "1 Tbsp butter"],
+    ["2C rich milk", "2 cups rich milk"],
+    ["1 c nuts", "1 cup nuts"],
+    ["1/4 C walnuts", "1/4 cup walnuts"],
+    ["1½c peanut butter", "1½ cups peanut butter"],
+    ["1 1/2 lbs beef", "1 1/2 lb beef"],
+    ["8-oz can tomatoes", "8-oz can tomatoes"],
+    // Written out in full, or not one of these units: as written.
+    ["2 cups sugar", "2 cups sugar"],
+    ["1 teaspoon salt", "1 teaspoon salt"],
+    ["1/2 pound mushrooms", "1/2 pound mushrooms"],
+    ["4 tins tomatoes", "4 tins tomatoes"],
+    ["few drops onion juice", "few drops onion juice"],
+    // "Soda" by the spoon is baking soda; a drink stays one.
+    ["1/2 t soda", "1/2 tsp baking soda"],
+    ["1 tsp. Soda, sifted", "1 tsp Baking soda, sifted"],
+    ["pinch of soda", "pinch of baking soda"],
+    ["1 can soda", "1 can soda"],
+    ["1 c club soda", "1 cup club soda"],
+    ["1 tsp baking soda", "1 tsp baking soda"],
+  ])("%s", (written, standard) => {
+    expect(standardIngredient(written)).toBe(standard);
+  });
+
+  it("keeps a full stop that ends a sentence in a step", () => {
+    expect(standardUnits("Add 2 C. Stir well.", "step")).toBe("Add 2 cups. Stir well.");
+    expect(standardUnits("Add 1/2 tsp. salt and mix", "step")).toBe("Add 1/2 tsp salt and mix");
+    expect(standardUnits("Bake at 350 for 1 hr.", "step")).toBe("Bake at 350 for 1 hr.");
+    expect(standardUnits("Drop by teaspoon on waxed paper.", "step")).toBe(
+      "Drop by teaspoon on waxed paper.",
+    );
   });
 });
