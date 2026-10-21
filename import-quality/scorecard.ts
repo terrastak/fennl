@@ -24,6 +24,7 @@ export const SAMPLE_KINDS = [
   "pdf",
   "paprika",
   "text",
+  "document",
 ] as const;
 export type SampleKind = (typeof SAMPLE_KINDS)[number];
 

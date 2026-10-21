@@ -359,5 +359,23 @@
     "by": "ai",
     "inputs": ["import-quality/test_text/no-recipe-note.txt"],
     "notes": "A note with no recipe at all: nothing should be found."
+  },
+  {
+    "id": "beer-cheese-sauce-rtf",
+    "kind": "document",
+    "inputs": ["test-docs/Beercheese sauce.rtf"],
+    "notes": "From the owner (2026-10-21): a Rich Text file saved by a Mac's TextEdit, a bulleted list of ingredients under a title with a colon, and no method at all."
+  },
+  {
+    "id": "cranberry-oatmeal-cookies-docx",
+    "kind": "document",
+    "inputs": ["test-docs/Cranberry Oatmeal Chocolate Christmas Cookies.docx"],
+    "notes": "From the owner (2026-10-21): a Word document. A headnote with the yield; amounts lined up with spaces and tabs; T., t. and c.; numbered steps; the method still says \"raisins\" after the headnote swaps them for cranberries (copied as written). It also holds a photo of the original recipe on a Quaker Oats lid, which isn't the recipe being read."
+  },
+  {
+    "id": "spicy-rib-eye-roast-docx",
+    "kind": "document",
+    "inputs": ["test-docs/Prime Rib - SPICY RIB EYE BEEF ROAST.docx"],
+    "notes": "From the owner (2026-10-21): a Word document with a title in capitals, a different name in the file name (\"Prime Rib\"), C., T. and tsp., a range of amounts (\"1/3 - 1/2 C.\"), one step per line, and a family note at the end."
   }
 ]
