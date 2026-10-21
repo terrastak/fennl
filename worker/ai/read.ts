@@ -219,7 +219,12 @@ export async function readWithAi(
   const reasons = first.drafts
     ? secondLookReasons(first.drafts, config.rules)
     : ["no_answer" as const];
-  if (reasons.length === 0 || options.secondLook === false || level + 1 >= config.models.length) {
+  if (
+    reasons.length === 0 ||
+    options.secondLook === false ||
+    !config.secondLook ||
+    level + 1 >= config.models.length
+  ) {
     return done(first.drafts, level, reasons);
   }
 

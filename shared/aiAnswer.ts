@@ -38,6 +38,11 @@ export interface AiText {
 export interface AiLine extends AiText {
   /** A section heading ("For the frosting") rather than an ingredient or a step. */
   heading: boolean;
+  /**
+   * Words or numbers in the text the AI couldn't read for certain, as written there (phase E10).
+   * Missing from answers saved before E10.
+   */
+  unsure?: string[];
 }
 
 export interface AiTimes {
@@ -91,8 +96,13 @@ const text = {
 } as const;
 const line = {
   type: "object",
-  properties: { text: { type: "string" }, heading: { type: "boolean" }, confidence },
-  required: ["text", "heading", "confidence"],
+  properties: {
+    text: { type: "string" },
+    heading: { type: "boolean" },
+    confidence,
+    unsure: { type: "array", items: { type: "string" } },
+  },
+  required: ["text", "heading", "confidence", "unsure"],
   additionalProperties: false,
 } as const;
 const nullable = (type: "string" | "integer" | "number") => ({
@@ -180,7 +190,12 @@ export function isAiAnswer(value: unknown): value is AiAnswer {
   const isConfidence = (c: unknown) => c === "high" || c === "medium" || c === "low";
   const isText = (t: unknown) =>
     isObject(t) && typeof t.text === "string" && isConfidence(t.confidence);
-  const isLine = (l: unknown) => isText(l) && isObject(l) && typeof l.heading === "boolean";
+  const isLine = (l: unknown) =>
+    isText(l) &&
+    isObject(l) &&
+    typeof l.heading === "boolean" &&
+    (l.unsure === undefined ||
+      (Array.isArray(l.unsure) && l.unsure.every((w: unknown) => typeof w === "string")));
   const isTime = (t: unknown) =>
     isObject(t) &&
     (t.minutes === null || Number.isInteger(t.minutes)) &&
@@ -284,6 +299,22 @@ export function withoutBadParts(
   return draftIssues(repaired, maxRecipeBytes).length === 0 ? repaired : null;
 }
 
+/** Unsure words kept for a line: at most this many, each this long at most. */
+const UNSURE_WORDS = { perLine: 10, length: 60 };
+
+/**
+ * The words the AI wasn't sure of that really are in the line (it's asked to copy them exactly,
+ * so one it reworded can't be highlighted and is left out), once each.
+ */
+export function wordsIn(text: string, words: string[]): string[] {
+  const found = new Set<string>();
+  for (const word of words) {
+    const w = word.trim();
+    if (w && w.length <= UNSURE_WORDS.length && text.includes(w)) found.add(w);
+  }
+  return [...found].slice(0, UNSURE_WORDS.perLine);
+}
+
 /** An AI answer as recipe drafts, one per recipe it found. Empty: nothing was a recipe. */
 export function answerToDrafts(answer: AiAnswer, context: AnswerContext): RecipeDraft[] {
   const newId = context.newId ?? (() => crypto.randomUUID());
@@ -299,15 +330,19 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
       if (clean(r.description.text)) {
         put("description", clean(r.description.text), r.description.confidence);
       }
+      const unsureWords: Record<string, string[]> = {};
+      /** A line for the draft, noting the words in it the AI wasn't sure of. */
+      const draftLine = (l: AiLine): IngredientLine & DirectionStep => {
+        const line = { id: newId(), text: clean(l.text), heading: l.heading };
+        const words = wordsIn(line.text, l.unsure ?? []);
+        if (words.length) unsureWords[line.id] = words;
+        return line;
+      };
       const ingredientLines = r.ingredients.filter((l) => clean(l.text));
       if (ingredientLines.length) {
         put(
           "ingredients",
-          ingredientLines.map((l): IngredientLine => ({
-            id: newId(),
-            text: clean(l.text),
-            heading: l.heading,
-          })),
+          ingredientLines.map(draftLine),
           lowest(ingredientLines.map((l) => l.confidence)),
         );
       }
@@ -315,11 +350,7 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
       if (directionLines.length) {
         put(
           "directions",
-          directionLines.map((l): DirectionStep => ({
-            id: newId(),
-            text: clean(l.text),
-            heading: l.heading,
-          })),
+          directionLines.map(draftLine),
           lowest(directionLines.map((l) => l.confidence)),
         );
       }
@@ -356,6 +387,7 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
           ingredients: ingredientLines.length ? ingredientLines.map((l) => l.confidence) : null,
           directions: directionLines.length ? directionLines.map((l) => l.confidence) : null,
         },
+        ...(Object.keys(unsureWords).length ? { unsureWords } : {}),
         categories: null,
         photos: context.photos,
         warnings: r.unclear.map(clean).filter(Boolean),
@@ -524,6 +556,7 @@ export function missingLists(draft: RecipeDraft): boolean {
 export function fillMissingLists(published: RecipeDraft, read: RecipeDraft): RecipeDraft {
   const fields = { ...published.fields };
   const lineConfidence = { ...published.lineConfidence };
+  const unsureWords = { ...published.unsureWords };
   const warnings = [...published.warnings];
   let filled = false;
   for (const [field, name] of LISTS) {
@@ -531,6 +564,10 @@ export function fillMissingLists(published: RecipeDraft, read: RecipeDraft): Rec
     if (published.fields[field]?.value.length || !theirs?.value.length) continue;
     (fields as Record<string, unknown>)[field] = theirs;
     lineConfidence[field] = read.lineConfidence[field];
+    for (const line of theirs.value) {
+      const words = read.unsureWords?.[line.id];
+      if (words) unsureWords[line.id] = words;
+    }
     const said = warnings.indexOf(`The page's recipe data has no ${field}.`);
     if (said >= 0) warnings.splice(said, 1);
     warnings.push(`The page's recipe data has no ${name}, so Fennl read it from the page itself.`);
@@ -541,6 +578,7 @@ export function fillMissingLists(published: RecipeDraft, read: RecipeDraft): Rec
     ...published,
     fields,
     lineConfidence,
+    ...(Object.keys(unsureWords).length ? { unsureWords } : {}),
     warnings,
     producer: { ...published.producer, model: read.producer.model },
   };

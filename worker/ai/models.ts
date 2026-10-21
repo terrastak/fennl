@@ -4,11 +4,12 @@ import type { Effort } from "./provider";
 // admin console's settings, so the model comparison (import-quality/aiCompare.ts) can use it.
 
 /**
- * The models to read with, cheapest first (decided 2026-10-12): every import is read by the
- * first; a read that looks wrong gets a second look by the next; "Read again" uses the one after
- * the last that read it.
+ * The models to read with, cheapest first: every import is read by the first; "Read again" uses
+ * the next one after the model whose answer the person sees (and a second look, when turned on,
+ * the next one up). Haiku, then Opus (decided 2026-10-21, after the model comparisons: Opus read
+ * the handwritten cards better than Sonnet, and is paid for only when someone asks).
  */
-export const DEFAULT_MODELS = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"];
+export const DEFAULT_MODELS = ["claude-haiku-5-5", "claude-opus-5-5"];
 
 /** The cheapest model works at medium; a second look or a re-read is for hard cases. */
 export const effortFor = (level: number): Effort => (level === 0 ? "medium" : "high");

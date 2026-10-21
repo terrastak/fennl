@@ -104,7 +104,10 @@ adminAiRoutes.get("/ai", async (c) => {
   return c.json(overview);
 });
 
-const SETTING_KEYS: Record<Exclude<keyof AdminAiSettings, "models">, TextSettingKey> = {
+const SETTING_KEYS: Record<
+  Exclude<keyof AdminAiSettings, "models" | "secondLook">,
+  TextSettingKey
+> = {
   alertCents: "ai_alert_cents_per_month",
   pauseCents: "ai_pause_cents_per_month",
   missingAmounts: "ai_second_look_missing_amounts",
@@ -130,6 +133,19 @@ adminAiRoutes.put("/ai/settings", async (c) => {
       return c.json({ error: "invalid_value", field }, 400);
     }
     if (value !== before[field]) changes.push([key, String(value), before[field], value]);
+  }
+  if (body.secondLook !== undefined) {
+    if (typeof body.secondLook !== "boolean") {
+      return c.json({ error: "invalid_value", field: "secondLook" }, 400);
+    }
+    if (body.secondLook !== before.secondLook) {
+      changes.push([
+        "ai_second_look",
+        body.secondLook ? "on" : "off",
+        before.secondLook,
+        body.secondLook,
+      ]);
+    }
   }
   if (body.models !== undefined) {
     const models = typeof body.models === "string" ? parseModels(body.models, knows(c.env)) : null;

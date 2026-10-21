@@ -11,7 +11,7 @@ import { writeText } from "../settings/settings";
 import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
 import { aiConfig, DEFAULT_MODELS } from "./config";
 import { FAKE_TOKENS, fakeAi, fakeAnswer, fakeRecipe } from "./fake";
-import { createAiImport, readWithAi, type AiCaller, type AiReadInput } from "./read";
+import { createAiImport, readAgain, readWithAi, type AiCaller, type AiReadInput } from "./read";
 import { householdMonth } from "./usage";
 
 // Phase E7: reading with the AI, with a fake provider (AI_PROVIDER=fake in vitest.config.ts): the
@@ -19,11 +19,13 @@ import { householdMonth } from "./usage";
 // limits and Fennl-wide alert and pause, and "Read again", once.
 
 const db = () => database(env.DB);
-const [FIRST, SECOND, THIRD] = DEFAULT_MODELS as [string, string, string];
+const [FIRST, SECOND] = DEFAULT_MODELS as [string, string];
 const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1]);
 
 beforeAll(async () => {
   await setUpDatabase();
+  // These tests cover the automatic second look, off unless turned on (decided 2026-10-21).
+  await writeText(database(env.DB), "ai_second_look", "on", null);
 });
 
 afterEach(() => {
@@ -111,6 +113,23 @@ describe("reading a recipe", () => {
       imports: 1,
       costMicroUsd: 1600,
     });
+  });
+
+  it("gets no second look while it's turned off; Read again still uses the stronger model", async () => {
+    await writeText(db(), "ai_second_look", "off", null);
+    try {
+      const { caller } = await person();
+      fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
+      const read = await readWithAi(caller, card());
+      expect(read).toMatchObject({ ok: true, level: 0, models: [FIRST], secondLook: ["unsure"] });
+      expect(fakeAi.requests.map((r) => r.model)).toEqual([FIRST]);
+      const created = await createAiImport(caller, card());
+      const again = await readAgain(caller, created.ok ? created.jobIds[0]! : "");
+      expect(again.ok).toBe(true);
+      expect(fakeAi.requests.map((r) => r.model)).toEqual([FIRST, FIRST, SECOND]);
+    } finally {
+      await writeText(db(), "ai_second_look", "on", null);
+    }
   });
 
   it("gets a second look from the stronger model when the first is unsure", async () => {
@@ -296,28 +315,30 @@ describe("Read again", () => {
     expect((await householdMonth(db(), caller.householdId)).imports).toBe(2);
   });
 
-  it("after a second look, reads with the strongest model, and none after that", async () => {
+  it("after a second look, reads with the next model up, and none after the last", async () => {
     const { v, caller } = await person();
-    fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
-    const id = await imported(caller);
-    fakeAi.reset();
-    const again = await v.request(`/api/import/jobs/${id}/read-again`, { method: "POST" });
-    expect(again.status).toBe(200);
-    expect(fakeAi.requests.map((r) => r.model)).toEqual([THIRD]);
-
-    // With only two models set up, a draft from the second has none stronger to go to.
-    await writeText(db(), "ai_models", `${FIRST},${SECOND}`, null);
+    // Three models set up: a second look by the second, then Read again by the third.
+    const three = ["claude-haiku-5-5", "claude-sonnet-5-5", "claude-opus-5-5"];
+    await writeText(db(), "ai_models", three.join(","), null);
     try {
-      fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
-      const other = await imported(caller);
-      const job = (await (await v.request(`/api/import/jobs/${other}`)).json()) as ImportJobDetail;
-      expect(job.ai).toEqual({ canReadAgain: false, readAgain: false });
-      const none = await v.request(`/api/import/jobs/${other}/read-again`, { method: "POST" });
-      expect(none.status).toBe(409);
-      expect(await none.json()).toEqual({ error: "none_stronger" });
+      fakeAi.byModel({ [three[0]!]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
+      const id = await imported(caller);
+      fakeAi.reset();
+      const again = await v.request(`/api/import/jobs/${id}/read-again`, { method: "POST" });
+      expect(again.status).toBe(200);
+      expect(fakeAi.requests.map((r) => r.model)).toEqual([three[2]]);
     } finally {
       await writeText(db(), "ai_models", DEFAULT_MODELS.join(","), null);
     }
+
+    // With the default two, a draft from the second has none stronger to go to.
+    fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
+    const other = await imported(caller);
+    const job = (await (await v.request(`/api/import/jobs/${other}`)).json()) as ImportJobDetail;
+    expect(job.ai).toEqual({ canReadAgain: false, readAgain: false });
+    const none = await v.request(`/api/import/jobs/${other}/read-again`, { method: "POST" });
+    expect(none.status).toBe(409);
+    expect(await none.json()).toEqual({ error: "none_stronger" });
   });
 
   it("gives the one try back when the read can't happen", async () => {
