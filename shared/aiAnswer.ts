@@ -8,7 +8,7 @@ import {
   type Evidence,
   type RecipeDraft,
 } from "./importDraft";
-import { readIngredient, unitNamed } from "./ingredients";
+import { readIngredient, standardIngredient, standardUnits, unitNamed } from "./ingredients";
 import {
   SOURCE_KINDS,
   type DirectionStep,
@@ -315,9 +315,17 @@ export function wordsIn(text: string, words: string[]): string[] {
   return [...found].slice(0, UNSURE_WORDS.perLine);
 }
 
+/**
+ * Whether lines read from this kind of input get standard units ("1/2 teas" as "1/2 tsp") and
+ * "baking soda" for "soda" (owner's choice 2026-10-21): what people wrote or typed themselves.
+ * A web page keeps the wording its site published.
+ */
+const standardizes = (source: ImportSource) => source !== "website" && source !== "paprika";
+
 /** An AI answer as recipe drafts, one per recipe it found. Empty: nothing was a recipe. */
 export function answerToDrafts(answer: AiAnswer, context: AnswerContext): RecipeDraft[] {
   const newId = context.newId ?? (() => crypto.randomUUID());
+  const standard = standardizes(context.source);
   return answer.recipes
     .filter((r) => r.title.text.trim() || r.ingredients.length || r.directions.length)
     .map((r): RecipeDraft => {
@@ -332,17 +340,27 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
       }
       const unsureWords: Record<string, string[]> = {};
       /** A line for the draft, noting the words in it the AI wasn't sure of. */
-      const draftLine = (l: AiLine): IngredientLine & DirectionStep => {
-        const line = { id: newId(), text: clean(l.text), heading: l.heading };
-        const words = wordsIn(line.text, l.unsure ?? []);
-        if (words.length) unsureWords[line.id] = words;
-        return line;
-      };
+      const draftLine =
+        (kind: "ingredient" | "step") =>
+        (l: AiLine): IngredientLine & DirectionStep => {
+          const tidy = (t: string) =>
+            !standard || l.heading
+              ? t
+              : kind === "ingredient"
+                ? standardIngredient(t)
+                : standardUnits(t, "step");
+          const line = { id: newId(), text: tidy(clean(l.text)), heading: l.heading };
+          // An unsure "1/2 teas" is highlighted as the "1/2 tsp" it became.
+          const unsure = l.unsure ?? [];
+          const words = wordsIn(line.text, [...unsure, ...unsure.map(tidy)]);
+          if (words.length) unsureWords[line.id] = words;
+          return line;
+        };
       const ingredientLines = r.ingredients.filter((l) => clean(l.text));
       if (ingredientLines.length) {
         put(
           "ingredients",
-          ingredientLines.map(draftLine),
+          ingredientLines.map(draftLine("ingredient")),
           lowest(ingredientLines.map((l) => l.confidence)),
         );
       }
@@ -350,7 +368,7 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
       if (directionLines.length) {
         put(
           "directions",
-          directionLines.map(draftLine),
+          directionLines.map(draftLine("step")),
           lowest(directionLines.map((l) => l.confidence)),
         );
       }

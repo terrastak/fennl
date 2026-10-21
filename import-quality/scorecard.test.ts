@@ -42,7 +42,7 @@ describe("import quality scorecard", () => {
       fields: {
         title: { value: title, confidence: "high", from: [] },
         ingredients: {
-          value: ingredientsFromText("1 cup butter\n1 tsp. vanilla"),
+          value: ingredientsFromText("1 cup butter\n1 tsp vanilla"),
           confidence: "medium",
           from: [],
         },

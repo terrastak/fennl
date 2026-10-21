@@ -52,11 +52,17 @@ correct answer is the text a careful person would type in, not a tidied version.
 
 - One line per ingredient, one step per numbered step or paragraph. A section heading starts
   with `## `.
-- A handwritten method has one step per sentence: split at full stops (or where a new sentence
-  starts with a capital) and at dashes between instructions, never at commas or semicolons,
-  keeping the words as written (each step starting with a capital, without the leftover dash).
-  Printed paragraphs and numbered steps stay as they are. The owner's choice, 2026-10-20 and
-  2026-10-21 (`choc-pie-card`).
+- A handwritten method has one step per sentence: split at full stops and at dashes between
+  instructions, and where a new instruction starts with a capital ("Boil", "Pour") even without a
+  full stop or after a comma; otherwise never at commas or semicolons. Keep the words as written
+  (each step starting with a capital, without the leftover dash or comma). Printed paragraphs and
+  numbered steps stay as they are. The owner's choice, 2026-10-20 and 2026-10-21
+  (`choc-pie-card`).
+- Except on web pages, write abbreviated units after an amount as Fennl does after reading
+  (`standardIngredient` and `standardUnits`, `shared/ingredients.ts`): `tsp`, `Tbsp`, `cup` or
+  `cups`, `oz`, `lb` ("1/2 teas" is "1/2 tsp", "1T" is "1 Tbsp", "2 C" is "2 cups"), and "soda"
+  measured by the spoon is "baking soda". Units written out in full stay as written. A slip of
+  the pen ("boil for 2 seconds") stays as written. The owner's choice, 2026-10-21.
 - Leave a field out when it doesn't matter what's found (no time on the card, say). Use `null` or
   `""` when the right answer is "nothing".
 - Small differences are forgiven when scoring: letter case, spacing, curly quotes, `½` against

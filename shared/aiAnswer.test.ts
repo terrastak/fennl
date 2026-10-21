@@ -74,7 +74,7 @@ describe("an AI answer as drafts", () => {
     });
     expect(draft!.fields.ingredients?.value.map((l) => [l.text, l.heading])).toEqual([
       ["For the cake", true],
-      ["1 C walnuts", false],
+      ["1 cup walnuts", false],
     ]);
     // A list is as sure as its least sure line.
     expect(draft!.fields.ingredients?.confidence).toBe("medium");
@@ -109,6 +109,38 @@ describe("an AI answer as drafts", () => {
     expect(
       draftIssues({ ...draft!, unsureWords: { a: [1] } as unknown as Record<string, string[]> }),
     ).toEqual([{ path: "unsureWords", problem: "invalid" }]);
+  });
+
+  it("writes units and soda the standard way, except on a web page", () => {
+    const card = recipe({
+      ingredients: [
+        line("1T butter"),
+        { ...line("1/2 teas salt", "low"), unsure: ["1/2 teas"] },
+        line("1/2 t soda"),
+        line("For the Cake:", "high", true),
+      ],
+      directions: [line("Add 2 C. Stir in 1 1/2 c peanut butter.")],
+    });
+    const [draft] = drafts(card);
+    const ingredients = draft!.fields.ingredients!.value;
+    expect(ingredients.map((l) => l.text)).toEqual([
+      "1 Tbsp butter",
+      "1/2 tsp salt",
+      "1/2 tsp baking soda",
+      "For the Cake:",
+    ]);
+    // An unsure "1/2 teas" is still highlighted, as the "1/2 tsp" it became.
+    expect(draft!.unsureWords).toEqual({ [ingredients[1]!.id]: ["1/2 tsp"] });
+    expect(draft!.fields.directions!.value[0]!.text).toBe(
+      "Add 2 cups. Stir in 1 1/2 cups peanut butter.",
+    );
+    const [page] = answerToDrafts({ recipes: [card] }, { ...context, source: "website" });
+    expect(page!.fields.ingredients!.value.map((l) => l.text)).toEqual([
+      "1T butter",
+      "1/2 teas salt",
+      "1/2 t soda",
+      "For the Cake:",
+    ]);
   });
 
   it("makes one draft per recipe, and none for an empty one", () => {
