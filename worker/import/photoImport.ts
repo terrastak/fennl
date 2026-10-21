@@ -12,6 +12,8 @@ import { imageKey } from "../images/images";
 // the person's photos first (POST /api/images/upload), so every check and the quota apply to
 // it like any photo, and it's stored once: the draft reads it from there, "Read again" too, and
 // saving the recipe keeps it as an import original (CLAUDE.md: original photos are always kept).
+// E11: screenshots come the same way; the app says when every page is one (a PNG it was given,
+// not a photo it took), so the AI reads them as screenshots (worker/ai/prompt.ts).
 
 const AI_ERRORS: Record<
   AiReadProblem,
@@ -32,8 +34,15 @@ export type PhotoImportResult =
   | { ok: true; jobIds: string[] }
   | { ok: false; error: ImportPhotosError; status: 400 | 403 | 404 | 413 | 422 | 429 | 503 };
 
-/** Reads the pages (photo hashes, in order) into drafts waiting for review. */
-export async function importPhotos(caller: AiCaller, pages: unknown): Promise<PhotoImportResult> {
+/**
+ * Reads the pages (photo hashes, in order) into drafts waiting for review. `screenshots`: every
+ * page is a screenshot (phase E11).
+ */
+export async function importPhotos(
+  caller: AiCaller,
+  pages: unknown,
+  screenshots: unknown = false,
+): Promise<PhotoImportResult> {
   if (!Array.isArray(pages) || pages.length === 0 || !pages.every(isImageHash)) {
     return { ok: false, error: "invalid_request", status: 400 };
   }
@@ -62,13 +71,15 @@ export async function importPhotos(caller: AiCaller, pages: unknown): Promise<Ph
   const total = found.reduce((sum, row) => sum + (row?.bytes ?? 0), 0);
   if (total > IMPORT_RULES.photoBytes) return { ok: false, error: "pages_too_large", status: 413 };
 
+  const what = screenshots === true ? "Screenshot" : "Photo";
   const parts: AiPart[] = [];
   const storedAt: string[] = [];
   for (const [n, hash] of pages.entries()) {
     const key = imageKey(caller.userId, hash);
     const object = await caller.env.IMAGES.get(key);
     if (!object) return { ok: false, error: "page_missing", status: 404 };
-    const label = pages.length === 1 ? "The photo" : `Photo ${n + 1} of ${pages.length}`;
+    const label =
+      pages.length === 1 ? `The ${what.toLowerCase()}` : `${what} ${n + 1} of ${pages.length}`;
     parts.push({
       kind: "image",
       mediaType: byHash.get(hash)?.contentType as Readable,
@@ -79,12 +90,12 @@ export async function importPhotos(caller: AiCaller, pages: unknown): Promise<Ph
   }
   const inputs: DraftInput[] = pages.map((hash, n) => ({
     kind: "image",
-    name: pages.length === 1 ? "Photo" : `Photo ${n + 1}`,
+    name: pages.length === 1 ? what : `${what} ${n + 1}`,
     url: null,
     imageHash: hash,
   }));
   const created = await createAiImport(caller, {
-    source: "photo",
+    source: screenshots === true ? "screenshot" : "photo",
     parts,
     inputs,
     // Every page is kept with the recipe, out of its gallery.

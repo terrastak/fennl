@@ -37,13 +37,15 @@ export async function importWebPage(
 /** Photos of one recipe's pages, already uploaded, to be read into drafts (phase E9). */
 export async function importPhotoPages(
   hashes: string[],
+  /** Every page is a screenshot (phase E11). */
+  screenshots = false,
 ): Promise<{ jobs: ImportJobSummary[] } | { problem: ImportPhotosError | "offline" | "failed" }> {
   let res: Response;
   try {
     res = await fetch("/api/import/photos", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ pages: hashes }),
+      body: JSON.stringify({ pages: hashes, screenshots }),
     });
   } catch {
     return { problem: "offline" };

@@ -11,7 +11,14 @@ import { activeSyncClient, useSyncStatus } from "../sync/useSync";
 import { cameraAvailable } from "./camera";
 import { CameraView } from "./CameraView";
 import { CropDialog } from "./CropDialog";
-import { cropOnOriginal, moved, turned, type ScanPage } from "./pages";
+import {
+  allScreenshots,
+  cropOnOriginal,
+  isScreenshot,
+  moved,
+  turned,
+  type ScanPage,
+} from "./pages";
 import { editedPreview, smallCopy } from "./preview";
 import { looksBlurry } from "./sharpness";
 import styles from "./scan.module.css";
@@ -22,6 +29,8 @@ import styles from "./scan.module.css";
 // 3000 px, WebP about 90: spec.md D2), uploads it to the person's photos (counted like any photo)
 // and the AI reads them into a draft for review. On phones and tablets (judged by touch) there's
 // the live camera and the phone's own camera as well as choosing photos; computers choose photos.
+// E11: screenshots are chosen the same way; when every page is one, the AI reads them as
+// screenshots of a post, message or email (isScreenshot, app/scan/pages.ts).
 
 const PICKABLE = "image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif";
 
@@ -121,8 +130,11 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
   const room = IMPORT_RULES.photoPages - pages.length;
   const canAdd = !unavailable && working === null && room > 0;
 
-  /** Adds pictures as pages (as many as there's room for). Returns the pages added. */
-  const addPictures = async (files: Blob[]): Promise<ScanPage[]> => {
+  /**
+   * Adds pictures as pages (as many as there's room for). `taken`: by the camera, just now.
+   * Returns the pages added.
+   */
+  const addPictures = async (files: Blob[], taken: boolean): Promise<ScanPage[]> => {
     setProblem(null);
     const wanted = files.slice(0, Math.max(0, room));
     const added: ScanPage[] = [];
@@ -130,7 +142,15 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
     for (const file of wanted) {
       try {
         const { small, sharpness } = await smallCopy(file);
-        added.push({ id: crypto.randomUUID(), file, small, sharpness, turns: 0, crop: null });
+        added.push({
+          id: crypto.randomUUID(),
+          file,
+          small,
+          sharpness,
+          screenshot: isScreenshot(file, taken),
+          turns: 0,
+          crop: null,
+        });
       } catch {
         unusable += 1;
       }
@@ -150,10 +170,10 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
     return added;
   };
 
-  const choose = (input: HTMLInputElement) => {
+  const choose = (input: HTMLInputElement, taken: boolean) => {
     const files = input.files ? [...input.files] : [];
     input.value = "";
-    void addPictures(files).then((added) => {
+    void addPictures(files, taken).then((added) => {
       if (added.length > 0) {
         setAnnounce(added.length === 1 ? "Photo added." : `${added.length} photos added.`);
       }
@@ -205,7 +225,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
       return;
     }
     setWorking("Reading the recipe… This can take up to a minute.");
-    const result = await importPhotoPages(hashes);
+    const result = await importPhotoPages(hashes, allScreenshots(pages));
     setWorking(null);
     if ("problem" in result) {
       setProblem(photoProblemText(result.problem));
@@ -219,11 +239,11 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
 
   return (
     <section className={styles.section} aria-labelledby="import-photos-title">
-      <h2 id="import-photos-title">From photos</h2>
+      <h2 id="import-photos-title">From photos or screenshots</h2>
       <p>
-        A handwritten card, a cookbook page or a printout. Take a photo of each side or page, put
-        them in order, and Fennl reads them into a recipe for you to check. The photos are kept with
-        the recipe.
+        A handwritten card, a cookbook page or a printout: take a photo of each side or page. Or a
+        recipe in a post, message or email: choose its screenshots. Put them in order, and Fennl
+        reads them into a recipe for you to check. They&rsquo;re kept with the recipe.
       </p>
 
       {unavailable ? (
@@ -253,7 +273,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
                 accept="image/*"
                 capture="environment"
                 disabled={!canAdd}
-                onChange={(event) => choose(event.currentTarget)}
+                onChange={(event) => choose(event.currentTarget, true)}
               />
               Take photo
             </label>
@@ -267,7 +287,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
               accept={PICKABLE}
               multiple
               disabled={!canAdd}
-              onChange={(event) => choose(event.currentTarget)}
+              onChange={(event) => choose(event.currentTarget, false)}
             />
             Choose photos
           </label>
@@ -400,7 +420,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
           count={pages.length}
           max={IMPORT_RULES.photoPages}
           onTaken={async (picture) => {
-            const [page] = await addPictures([picture]);
+            const [page] = await addPictures([picture], true);
             return page ? { id: page.id, sharpness: page.sharpness } : null;
           }}
           onRetake={(id) => setPages((current) => current.filter((p) => p.id !== id))}

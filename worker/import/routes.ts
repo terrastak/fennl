@@ -258,10 +258,14 @@ importRoutes.post("/api/import/photos", async (c) => {
   ) {
     return c.json({ error: "rate_limited" }, 429);
   }
-  const body = (await c.req.json().catch(() => null)) as { pages?: unknown } | null;
+  const body = (await c.req.json().catch(() => null)) as {
+    pages?: unknown;
+    screenshots?: unknown;
+  } | null;
   const result = await importPhotos(
     { env: c.env, db, householdId: household.householdId, userId, plan },
     body?.pages,
+    body?.screenshots,
   );
   if (!result.ok) return c.json({ error: result.error }, result.status);
   const rows = await db

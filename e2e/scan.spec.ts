@@ -6,7 +6,7 @@ import { useOwnAccount } from "./support";
 // Phase E9: a recipe imported from photos of its pages. The pages are chosen (or photographed
 // with the live camera, page after page), put in order, turned and cropped, then prepared on the
 // device, uploaded and read by the AI (the local test server's stand-in) into a draft, reviewed
-// beside the photos, and kept with the saved recipe.
+// beside the photos, and kept with the saved recipe. E11: screenshots (PNG files) the same way.
 
 async function expectAccessible(page: Page) {
   const results = await new AxeBuilder({ page })
@@ -28,7 +28,7 @@ test("Premium: choose photos, arrange them, read them, and keep them with the re
   await premium(context, baseURL!);
   await page.goto("/import");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
-  const section = page.getByRole("region", { name: "From photos" });
+  const section = page.getByRole("region", { name: "From photos or screenshots" });
   await section
     .locator('input[type="file"][multiple]')
     .setInputFiles(["test_images/handwriten1.jpg", "test_images/IMG_0019.jpeg"]);
@@ -86,10 +86,35 @@ test("Premium: choose photos, arrange them, read them, and keep them with the re
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
+test("Premium: screenshots of a post are read as screenshots (phase E11)", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  test.setTimeout(120_000);
+  await useOwnAccount(context, baseURL!);
+  await premium(context, baseURL!);
+  await page.goto("/import");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  const section = page.getByRole("region", { name: "From photos or screenshots" });
+  await section
+    .locator('input[type="file"][multiple]')
+    .setInputFiles(["test_images/FN1.png", "test_images/FN2.png"]);
+  await expect(pages(page).getByRole("listitem")).toHaveCount(2);
+  await section.getByRole("button", { name: "Read the recipe" }).click();
+  await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/, { timeout: 60_000 });
+
+  const source = page.getByRole("region", { name: "The screenshots" });
+  const show = source.getByRole("button", { name: "Show the screenshots" });
+  if (await show.isVisible()) await show.click();
+  await expect(source.getByRole("img", { name: "Screenshot 2" })).toBeVisible();
+  await expectAccessible(page);
+});
+
 test("Free: reading recipes from photos is part of Premium", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/import");
-  const section = page.getByRole("region", { name: "From photos" });
+  const section = page.getByRole("region", { name: "From photos or screenshots" });
   await expect(section).toContainText("Reading recipes from photos is part of Premium.");
   await expect(section.locator('input[type="file"]')).toHaveCount(0);
 });

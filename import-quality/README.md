@@ -63,6 +63,11 @@ correct answer is the text a careful person would type in, not a tidied version.
   `cups`, `oz`, `lb` ("1/2 teas" is "1/2 tsp", "1T" is "1 Tbsp", "2 C" is "2 cups"), and "soda"
   measured by the spoon is "baking soda". Units written out in full stay as written. A slip of
   the pen ("boil for 2 seconds") stays as written. The owner's choice, 2026-10-21.
+- Screenshots (E11): only the recipe, never the app around it (usernames, likes, comments,
+  hashtags, "link in bio", an email's headers and quoted reply); emoji used as bullets or step
+  numbers left out; text repeated where screenshots overlap given once; the source is who posted
+  or sent it ("june.cooks", "Mom", or as the email is signed). A typed list or numbered steps stay
+  as they are.
 - Leave a field out when it doesn't matter what's found (no time on the card, say). Use `null` or
   `""` when the right answer is "nothing".
 - Small differences are forgiven when scoring: letter case, spacing, curly quotes, `½` against
@@ -71,8 +76,8 @@ correct answer is the text a careful person would type in, not a tidied version.
 ## Collecting samples (checklist)
 
 The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
-PDFs and a Paprika export. Already in: 31 web pages, 6 cards, 2 cookbook pages, 1 screenshot
-recipe (3 images) and 2 PDFs.
+PDFs and a Paprika export. Already in: 31 web pages, 6 cards, 2 cookbook pages, 4 screenshot
+recipes (7 images) and 2 PDFs.
 
 - [x] **Web pages (about 30):** 31 pages from your Paprika library (E3), chosen for variety: big
       sites, paywalled ones, blogs on each common recipe card, sections, metric amounts,
@@ -84,8 +89,11 @@ recipe (3 images) and 2 PDFs.
       couple taken badly (angled, shadowed, blurry).
 - [ ] **Cookbook pages (about 8 more):** a recipe across two pages, two recipes on one page,
       columns, a photo behind the text, metric and imperial, and a recipe that points to another.
-- [ ] **Screenshots (about 9 more):** phone and computer, Instagram or Facebook captions, a
-      recipe in a text message, a page cut across several screenshots.
+- [ ] **Screenshots (about 6 more):** a web page cut across three screenshots; and, made by Fennl
+      for the test set (E11, a generic app, no real account), a social media caption in two
+      overlapping screenshots, a text-message conversation and an email. Still worth adding: real
+      ones from your phone (Instagram or Facebook captions, messages, emails, notes), and from a
+      computer.
 - [ ] **PDFs (a few more):** a printed-to-PDF web page, a scanned family cookbook, a PDF of
       several recipes.
 - [x] **Paprika export:** the owner's whole library (827 recipes) is in
