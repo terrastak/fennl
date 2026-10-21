@@ -28,7 +28,19 @@ export interface ScanPage extends PageEdit {
   small: Blob;
   /** How sharp it looks (app/scan/sharpness.ts); null when it couldn't be measured. */
   sharpness: number | null;
+  /** A screenshot rather than a photo (phase E11; isScreenshot). */
+  screenshot: boolean;
 }
+
+/**
+ * Whether a picture is a screenshot (phase E11): phones and computers save screenshots as PNG,
+ * and cameras save photos as JPEG or HEIC. A picture the camera just took is a photo.
+ */
+export const isScreenshot = (file: Blob, taken: boolean) => !taken && file.type === "image/png";
+
+/** Pages read as screenshots: when every one is (a photo among them makes them photos). */
+export const allScreenshots = (pages: Pick<ScanPage, "screenshot">[]) =>
+  pages.length > 0 && pages.every((page) => page.screenshot);
 
 /** The smallest crop, as a share of each side: enough to keep a few words. */
 export const MIN_CROP = 0.1;

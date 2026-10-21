@@ -78,8 +78,8 @@ async function upload(p: Person, bytes = page()): Promise<string> {
   return ((await res.json()) as { hash: string }).hash;
 }
 
-const importPages = (p: Person, pages: unknown) =>
-  p.v.request("/api/import/photos", { body: { pages } });
+const importPages = (p: Person, pages: unknown, screenshots?: boolean) =>
+  p.v.request("/api/import/photos", { body: { pages, screenshots } });
 
 async function jobRow(id: string) {
   return (await db().select().from(importJob).where(eq(importJob.id, id)).get())!;
@@ -118,6 +118,37 @@ describe("importing photos of a recipe", () => {
     // "Read again" reads them from there too.
     const again = await p.v.request(`/api/import/jobs/${job.id}/read-again`, { body: {} });
     expect(again.status).toBe(200);
+  });
+
+  it("reads screenshots as screenshots, when the app says every page is one (phase E11)", async () => {
+    const p = await person();
+    const first = await upload(p);
+    const second = await upload(p);
+    const { jobs } = (await (
+      await importPages(p, [first, second], true)
+    ).json()) as ImportPhotosResponse;
+    const job = await jobRow(jobs[0]!.id);
+    expect(job.source).toBe("screenshot");
+    const draft = JSON.parse(job.draft!) as RecipeDraft;
+    expect(draft.source).toBe("screenshot");
+    expect(draft.inputs.map((i) => i.name)).toEqual(["Screenshot 1", "Screenshot 2"]);
+    const { ai } = JSON.parse(job.provenance) as AiProvenance;
+    expect(ai.parts.map((part) => part.label)).toEqual(["Screenshot 1 of 2", "Screenshot 2 of 2"]);
+    // Told what screenshots hold, and to leave out the app around the recipe.
+    const asked = fakeAi.requests[0]!;
+    expect(asked.instruction).toContain("These are screenshots of a recipe");
+    expect(asked.instruction).toContain("likes, views, comments");
+    expect(asked.instruction).toContain("give it once");
+    // Kept as originals, as photos are.
+    expect(draft.photos).toEqual([
+      { input: 0, role: "import_original" },
+      { input: 1, role: "import_original" },
+    ]);
+    // Anything but true reads them as photos.
+    const { jobs: photoJobs } = (await (
+      await importPages(p, [first], "yes" as unknown as boolean)
+    ).json()) as ImportPhotosResponse;
+    expect((await jobRow(photoJobs[0]!.id)).source).toBe("photo");
   });
 
   it("is part of Premium", async () => {
