@@ -1,4 +1,6 @@
-import { draftIssues } from "../../shared/importDraft";
+import { eq } from "drizzle-orm";
+import { DOCUMENT_RULES } from "../../shared/documentText";
+import { draftIssues, type RecipeDraft } from "../../shared/importDraft";
 import { IMPORT_RULES, type ImportTextError, type PastedProvenance } from "../../shared/importJobs";
 import {
   MIN_PASTED_CHARS,
@@ -16,6 +18,10 @@ import { withinRateLimit } from "../rateLimit";
 // first, a second look when needed, metered and limited (worker/ai/read.ts). Nothing is fetched:
 // a web address on its own is turned away, and the text is kept with the draft only until it is
 // saved or removed.
+//
+// A document (phase E18) comes the same way: its text, taken out on the person's device
+// (shared/documentText.ts), with its file name, and on Premium the number of pictures in it,
+// which each draft offers as photos to keep, like a web page's (owner's choices 2026-10-21).
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -29,13 +35,20 @@ const AI_ERRORS: Record<AiReadProblem, { error: ImportTextError; status: 403 | 4
   };
 
 export type PastedImportResult =
-  | { ok: true; jobIds: string[] }
+  | { ok: true; jobIds: string[]; pictures: { job: string; inputs: number[] }[] }
   | { ok: false; error: ImportTextError; status: 400 | 403 | 413 | 422 | 429 | 503 };
 
-/** Reads pasted text into drafts waiting for review. */
+/** The document the text came from (phase E18), and how many pictures it offers. */
+export interface FromDocument {
+  fileName: string;
+  pictures: number;
+}
+
+/** Reads pasted text, or a document's text, into drafts waiting for review. */
 export async function importPastedText(
   caller: AiCaller,
   raw: unknown,
+  document?: FromDocument,
 ): Promise<PastedImportResult> {
   if (typeof raw !== "string") return { ok: false, error: "invalid_request", status: 400 };
   if (raw.length > PASTED_TEXT_CHARS) return { ok: false, error: "text_too_large", status: 413 };
@@ -46,10 +59,21 @@ export async function importPastedText(
   const read = readPastedText(text);
   if (read.kind === "web_address") return { ok: false, error: "web_address", status: 422 };
 
-  const provenance: PastedProvenance = { pasted: { text } };
+  const provenance: PastedProvenance = {
+    pasted: document ? { text, fileName: document.fileName } : { text },
+  };
+  const sourceName = document?.fileName ?? PASTED_SOURCE_NAME;
+  const done = async (jobIds: string[]): Promise<PastedImportResult> => ({
+    ok: true,
+    jobIds,
+    pictures: await offerPictures(caller, jobIds, document),
+  });
 
   if (read.kind === "recipe" && caller.plan.import_structured_enabled) {
-    const draft = read.draft;
+    const draft: RecipeDraft = {
+      ...read.draft,
+      inputs: read.draft.inputs.map((input) => ({ ...input, name: sourceName })),
+    };
     if (draftIssues(draft).length === 0) {
       // The plan's daily number (structured_imports_per_day; none by default), counted only once
       // there is a recipe, like a web page's.
@@ -79,7 +103,7 @@ export async function importPastedText(
         createdAt: now,
         updatedAt: now,
       });
-      return { ok: true, jobIds: [id] };
+      return done([id]);
     }
   }
 
@@ -97,8 +121,14 @@ export async function importPastedText(
     caller,
     {
       source: "text",
-      parts: [{ kind: "text", label: "The pasted text", text }],
-      inputs: [{ kind: "text", name: PASTED_SOURCE_NAME, url: null, imageHash: null }],
+      parts: [
+        {
+          kind: "text",
+          label: document ? `The text of a document, ${document.fileName}` : "The pasted text",
+          text,
+        },
+      ],
+      inputs: [{ kind: "text", name: sourceName, url: null, imageHash: null }],
       photos: [],
     },
     {
@@ -107,5 +137,46 @@ export async function importPastedText(
     },
   );
   if (!created.ok) return { ok: false, ...AI_ERRORS[created.problem] };
-  return { ok: true, jobIds: created.jobIds };
+  return done(created.jobIds);
+}
+
+/**
+ * A document's pictures, offered on each draft as photos to keep (Premium): photo inputs added
+ * after the draft's own, filled in when the app hands each picture over
+ * (POST /api/import/jobs/:id/inputs/:n, kept until the draft is saved or removed).
+ */
+async function offerPictures(
+  caller: AiCaller,
+  jobIds: string[],
+  document: FromDocument | undefined,
+): Promise<{ job: string; inputs: number[] }[]> {
+  const count = Math.min(document?.pictures ?? 0, DOCUMENT_RULES.pictures);
+  if (!document || count <= 0 || !caller.plan.images_enabled) return [];
+  const offered: { job: string; inputs: number[] }[] = [];
+  for (const id of jobIds) {
+    const row = await caller.db
+      .select({ draft: importJob.draft })
+      .from(importJob)
+      .where(eq(importJob.id, id))
+      .get();
+    if (!row?.draft) continue;
+    const draft = JSON.parse(row.draft) as RecipeDraft;
+    const first = draft.inputs.length;
+    const inputs = Array.from({ length: count }, (_, n) => first + n);
+    draft.inputs.push(
+      ...inputs.map((_, n) => ({
+        kind: "image" as const,
+        name: `${document.fileName}, picture ${n + 1}`,
+        url: null,
+        imageHash: null,
+      })),
+    );
+    draft.photos.push(...inputs.map((input) => ({ input, role: "photo" as const })));
+    await caller.db
+      .update(importJob)
+      .set({ draft: JSON.stringify(draft), updatedAt: new Date() })
+      .where(eq(importJob.id, id));
+    offered.push({ job: id, inputs });
+  }
+  return offered;
 }

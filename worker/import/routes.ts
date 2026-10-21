@@ -18,6 +18,7 @@ import {
   type ImportWebResponse,
   type WebProvenance,
 } from "../../shared/importJobs";
+import { DOCUMENT_RULES } from "../../shared/documentText";
 import { PASTED_TEXT_CHARS } from "../../shared/pastedText";
 import { ABSOLUTE_MAX_IMAGE_BYTES, detectImageType } from "../../shared/images";
 import { recipeCardHtml } from "../../shared/pageSnapshot";
@@ -34,7 +35,7 @@ import { aiConfig } from "../ai/config";
 import { canReadAgain, readAgain } from "../ai/read";
 import { fillFromPage, importPageWithAi } from "./aiWeb";
 import { markImportsSaved, recordDiscarded, removeJobPhotos } from "./jobs";
-import { importPastedText } from "./pastedImport";
+import { importPastedText, type FromDocument } from "./pastedImport";
 import { importPhotos } from "./photoImport";
 import { FIND_BODY_BYTES, findParts, pdfPages } from "./pdfImport";
 import { findPdfRecipes } from "../ai/find";
@@ -407,15 +408,32 @@ importRoutes.post("/api/import/text", async (c) => {
   }
   const raw = await readCapped(c.req.raw, maxBody);
   if (!raw) return c.json({ error: "text_too_large" }, 413);
-  let body: { text?: unknown } | null;
+  let body: { text?: unknown; fileName?: unknown; pictures?: unknown } | null;
   try {
-    body = JSON.parse(new TextDecoder().decode(raw)) as { text?: unknown } | null;
+    body = JSON.parse(new TextDecoder().decode(raw)) as typeof body;
   } catch {
     return c.json({ error: "invalid_request" }, 400);
+  }
+  // A document's text (phase E18): its file name, and how many pictures it offers.
+  let document: FromDocument | undefined;
+  if (body?.fileName !== undefined) {
+    const fileName = typeof body.fileName === "string" ? body.fileName.trim() : "";
+    const pictures = body.pictures ?? 0;
+    if (
+      !fileName ||
+      fileName.length > 200 ||
+      !Number.isInteger(pictures) ||
+      (pictures as number) < 0 ||
+      (pictures as number) > DOCUMENT_RULES.pictures
+    ) {
+      return c.json({ error: "invalid_request" }, 400);
+    }
+    document = { fileName, pictures: pictures as number };
   }
   const result = await importPastedText(
     { env: c.env, db, householdId: household.householdId, userId, plan },
     body?.text,
+    document,
   );
   if (!result.ok) return c.json({ error: result.error }, result.status);
   const rows = await db
@@ -431,6 +449,7 @@ importRoutes.post("/api/import/text", async (c) => {
   const order = new Map(result.jobIds.map((id, i) => [id, i]));
   const response: ImportTextResponse = {
     jobs: rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(summary),
+    ...(result.pictures.length ? { pictures: result.pictures } : {}),
   };
   return c.json(response, 201);
 });
@@ -501,6 +520,7 @@ async function jobDetail(c: Context<ImportEnv>, job: typeof importJob.$inferSele
     snapshot: provenance.snapshot ?? null,
     recipeId: job.recipeId,
     pastedText: provenance.pasted?.text ?? null,
+    pastedFrom: provenance.pasted?.fileName ?? null,
     ai: await aiDetail(c, provenance),
   };
   return detail;

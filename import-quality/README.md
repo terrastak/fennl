@@ -112,7 +112,7 @@ recipes (8 images) and 3 PDFs public; and 28 private samples (27 PDFs and a cook
       on to the next page (`family-cookbook-pdf`). Still worth adding: a printed-to-PDF web page,
       a scanned family cookbook of several recipes, and a real PDF of several recipes. A PDF is
       read as the app reads it: its recipes found first, then each read from its pages.
-- [ ] **Documents (E18, not built yet):** three from you in `test-docs/`: a Rich Text ingredient
+- [ ] **Documents (E18):** three from you in `test-docs/`: a Rich Text ingredient
       list with no method, and two Word documents (cookies with a photo of the original recipe
       inside, and a rib eye roast with a family note). The `.txt` example you mentioned isn't in
       the folder yet. Still worth adding: a document with several recipes, and a Markdown one.

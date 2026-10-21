@@ -9,6 +9,7 @@ import pages from "../pages/pages.module.css";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
 import { PdfImport } from "../pdf/PdfImport";
+import { DocumentImport } from "./DocumentImport";
 import { currentPhotoCache } from "../photos/usePhoto";
 import { PhotoImport } from "../scan/PhotoImport";
 import { activeSyncClient, useCategoryTree, useSyncStatus } from "../sync/useSync";
@@ -23,7 +24,8 @@ import styles from "./import.module.css";
 import { saveMany, type LeftReason, type SaveManyResult } from "./saveMany";
 
 // The Import page (phase E4): a saved web page read into drafts, photos of a recipe's pages read
-// by the AI (E9, app/scan/), a PDF's recipes (E12, app/pdf/), and the drafts waiting for review,
+// by the AI (E9, app/scan/), a PDF's recipes (E12, app/pdf/), a document's (E18), and the drafts
+// waiting for review,
 // opened one by one or several saved at once (E12). The Chrome extension (E6) sends pages to the
 // same place.
 
@@ -137,14 +139,18 @@ export function ImportPage() {
     load();
   };
 
-  const imported = (found: ImportJobSummary[], from = "those photos") => {
+  /** `stay`: something else needs saying here, so a single draft isn't opened straight away. */
+  const imported = (found: ImportJobSummary[], from = "those photos", stay = false) => {
     const [only] = found;
-    if (found.length === 1 && only) {
+    if (found.length === 1 && only && !stay) {
       navigate(`/import/${only.id}`);
       return;
     }
     setMessage({
-      text: `Found ${found.length} recipes in ${from}. Review each one below.`,
+      text:
+        found.length === 1
+          ? `Found a recipe in ${from}. Review it below.`
+          : `Found ${found.length} recipes in ${from}. Review each one below.`,
       problem: false,
     });
     load();
@@ -279,6 +285,8 @@ export function ImportPage() {
       <PhotoImport onImported={imported} />
 
       <PdfImport onImported={(found) => imported(found, "that PDF")} />
+
+      <DocumentImport onImported={imported} />
 
       {jobs && jobs.length > 0 ? (
         <section className={styles.section} aria-labelledby="import-waiting-title">

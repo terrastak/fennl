@@ -8,6 +8,7 @@ import {
   secondLookFindings,
   withoutBadParts,
 } from "../shared/aiAnswer";
+import { documentKind, documentText } from "../shared/documentText";
 import type { DraftInput, RecipeDraft } from "../shared/importDraft";
 import { pageForAi } from "../shared/pageText";
 import {
@@ -73,8 +74,8 @@ import {
 //
 // AI_COMPARE_SETS picks what it reads: "photos" (the default: the photos, cookbook pages,
 // screenshots and PDFs), "web" (the web pages with their recipe data left out, read from the
-// page's text as Fennl does for a page without data, phase E8), "text" (pasted text, phase E15),
-// or "all".
+// page's text as Fennl does for a page without data, phase E8), "text" (pasted text, phase E15,
+// and documents, E18), or "all".
 //
 // It calls the real API, so it costs money: about $6 for the photos (cards, pages, screenshots
 // and PDFs, private samples included; estimated 2026-10-21) with all three ways, about $1.50 with
@@ -88,7 +89,7 @@ type Ways = "all" | "fennl";
 const SETS = {
   photos: { label: "photos", kinds: ["card", "cookbook", "screenshot", "pdf"] },
   web: { label: "web pages without recipe data", kinds: ["web"] },
-  text: { label: "pasted text", kinds: ["text"] },
+  text: { label: "pasted text and documents", kinds: ["text", "document"] },
 } as const satisfies Record<string, { label: string; kinds: readonly SampleKind[] }>;
 
 type SetName = keyof typeof SETS;
@@ -100,6 +101,7 @@ const SOURCE: Partial<Record<SampleKind, ImportSource>> = {
   pdf: "pdf",
   web: "website",
   text: "text",
+  document: "text",
 };
 
 /** A page without its recipe data, as Fennl gives it to the AI (worker/import/aiWeb.ts). */
@@ -132,6 +134,23 @@ function toParts(files: InputFile[], sample: Sample): { parts: AiPart[]; inputs:
         { kind: "text", label: "The pasted text", text: new TextDecoder().decode(first.bytes) },
       ],
       inputs: [{ kind: "text", name: "Pasted text", url: null, imageHash: null }],
+    };
+  }
+  // A document (phase E18): its text, taken out as the app does, read as pasted text is.
+  if (sample.kind === "document" && first) {
+    const kind = documentKind(first.name);
+    if (!kind || kind === "doc" || kind === "pages" || kind === "odt") {
+      throw new Error(`${first.name}: not a document Fennl reads`);
+    }
+    return {
+      parts: [
+        {
+          kind: "text",
+          label: `The text of a document, ${first.name}`,
+          text: documentText(kind, first.bytes).text,
+        },
+      ],
+      inputs: [{ kind: "text", name: first.name, url: null, imageHash: null }],
     };
   }
   const parts = files.map((file, i): AiPart => {
