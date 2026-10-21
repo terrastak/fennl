@@ -86,7 +86,8 @@ correct answer is the text a careful person would type in, not a tidied version.
 
 The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
 PDFs and a Paprika export. Already in: 31 web pages, 7 cards, 2 cookbook pages, 5 screenshot
-recipes (8 images) and 3 PDFs.
+recipes (8 images) and 3 PDFs public; and 27 private samples (26 PDFs and a cookbook page,
+2026-10-21) the model comparison reads.
 
 - [x] **Web pages (about 30):** 31 pages from your Paprika library (E3), chosen for variety: big
       sites, paywalled ones, blogs on each common recipe card, sections, metric amounts,
@@ -104,6 +105,8 @@ recipes (8 images) and 3 PDFs.
       magazine app on your iPad (`french-onion-soup-screenshot`). Still worth adding: real ones
       from your phone (Instagram or Facebook captions, messages, emails, notes), and from a
       computer.
+- [x] **Your PDF collection (private):** 26 printed recipes from many sites and a cookbook page, one
+      changed by hand (Stuffed Mushrooms), with correct answers drafted for you to check.
 - [ ] **PDFs (a few more):** two scanned book chapters, and, made by Fennl for the test set
       (E12, invented recipes), a family cookbook of three recipes made on a computer, one running
       on to the next page (`family-cookbook-pdf`). Still worth adding: a printed-to-PDF web page,

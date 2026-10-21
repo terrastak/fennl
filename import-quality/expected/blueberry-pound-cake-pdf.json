@@ -1,0 +1,31 @@
+{
+  "title": "Alton’s Blueberry Pound Cake",
+  "description": "This cake is a summer tradition in my house. Coating the pan with butter and sugar gives the cake a thick, crunchy crust.",
+  "ingredients": [
+    "8 ounces unsalted butter, softened, plus 1 tablespoon for the pan",
+    "15 ounces (2 cups) sugar, plus 3 tablespoons for the pan",
+    "15 ounces (3 cups) all-purpose flour, divided",
+    "1 teaspoon baking powder",
+    "1/2 teaspoon kosher salt",
+    "4 large eggs",
+    "1 teaspoon vanilla extract",
+    "1 dry pint (10 ounces or about 2 cups) fresh blueberries",
+    "strawberries, optional for serving",
+    "whipped cream, optional for serving"
+  ],
+  "directions": [
+    "Heat oven to 325 degrees F. Heavily coat a tube bundt pan 1 tablespoon butter and 3 tablespoons sugar",
+    "Whisk together 10 ounces (2 cups) all-purpose flour, baking powder, and salt. Set aside.",
+    "Cream the remaining butter and sugar together in a stand mixer fitted with the paddle attachment on medium speed for 5 minutes. Add the eggs, one at a time, until fully incorporated. After all 4 eggs are in, add the vanilla extract and beat for 3 minutes until fluffy. Add the flour mixture to butter mixture and combine on low speed. Do not overbeat.",
+    "Combine the blueberries with the remaining 5 ounces (1 cup) all-purpose flour in ziptop bag and shake. Fold berry mixture into batter. Pour into prepared pan.",
+    "Bake for 1 hour and 15 minutes or until probe thermometer comes out clean and registers 210 degrees F. Cool in the pan on a cooling rack for 15 minutes before depanning and cooling completely. Serve with strawberries and whipped cream."
+  ],
+  "servings": {
+    "count": 12,
+    "yield": "12 servings"
+  },
+  "source": {
+    "author": "Alton Brown",
+    "url": null
+  }
+}

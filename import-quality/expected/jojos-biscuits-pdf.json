@@ -1,0 +1,148 @@
+[
+  {
+    "title": "Jojo’s Biscuits",
+    "description": "from the Magnolia Table Cookbook & on the menu at Magnolia Table in Waco, Texas",
+    "ingredients": [
+      "4 cups self-rising flour, plus more for the work surface",
+      "2 tablespoons baking powder",
+      "1 teaspoon baking soda",
+      "¾ pound (3 sticks) salted butter, cold, cut into ½-inch pieces or grated",
+      "2 large eggs, beaten, plus 1 large egg for brushing",
+      "1½ cups buttermilk, or as needed, plus 1 tablespoon for brushing",
+      "strawberry Jam or Bobo’s Classic Gravy, for serving (optional, see recipe below)"
+    ],
+    "directions": [
+      "In a large bowl, whisk together the flour, baking powder, and baking soda. Add the butter and use a pastry blender to cut the butter into the flour until the pieces are even and about the size of peas.",
+      "Stir in the beaten eggs with a wooden spoon until combined. Stir in 1½ cups buttermilk until the dough comes together into a sticky mass. If it is too dry, add more buttermilk 1 tablespoon at a time, mixing after each addition, until it reaches the correct consistency. Cover the bowl and refrigerate for at least 30 minutes and up to overnight.",
+      "Position a rack in the middle of the oven and preheat the oven to 400°F. Line a baking sheet with parchment paper.",
+      "Scrape the dough onto a floured work surface. Use your floured hands to press it into a round roughly 14 inches across and about ½-inch thick.",
+      "Use a floured 2¾-inch round cutter to cut out about 20 biscuits. If necessary, collect and pat out the scraps to cut more biscuits.",
+      "Transfer the biscuits to the prepared baking sheet, arranging them so that they all are touching.",
+      "In a small dish, beat together the remaining egg and 1 tablespoon buttermilk. Brush the mixture on the top of the biscuits.",
+      "Bake until golden brown, 15 to 20 minutes. Let cool slightly in the pan on a rack.",
+      "Biscuits are best the day they are made (and ideally fresh out of the oven!). Serve with strawberry jam or gravy, if desired. Store leftovers in an airtight container at room temperature for up to 2 days."
+    ],
+    "times": { "prep": 20 },
+    "servings": { "count": 20, "yield": "Makes about 20 biscuits" },
+    "notes": "For longer storage, arrange the unbaked biscuits about ½-inch apart on two parchment-paper-lined baking sheets and freeze until solid. Transfer them to a zip-top plastic bag and freeze for up to 2 weeks. There is no need to thaw them before baking.",
+    "source": { "name": "Magnolia Table", "author": "Joanna Gaines", "url": null }
+  },
+  {
+    "title": "Butter Flight",
+    "description": "strawberry, lemon & pumpkin\n\nfrom the Magnolia Table Cookbook & on the menu at Magnolia Table in Waco, Texas",
+    "ingredients": [
+      "## strawberry butter",
+      "1 cup (2 sticks) unsalted butter, at room temperature",
+      "¼ cup strawberry preserves",
+      "⅛ teaspoon sea salt",
+      "## lemon butter",
+      "1 cup (2 sticks) unsalted butter, at room temperature",
+      "zest of 2 lemons",
+      "## pumpkin butter",
+      "1 cup (2 sticks) unsalted butter, at room temperature",
+      "½ can pumpkin puree",
+      "½ teaspoon pumpkin spice extract",
+      "½ teaspoon cinnamon",
+      "1 tablespoon honey"
+    ],
+    "directions": [
+      "In a stand mixer fitted with the whisk, beat the butter on high speed until light and fluffy, 4 to 5 minutes. Turn the speed to low and add the ingredients one at a time until well incorporated. Sprinkle in the salt and beat on high until light and fluffy, 1 to 2 minutes.",
+      "Transfer to an airtight container. Store in the refrigerator for up to 5 days or in the freezer for up to 1 month. Serve at room temperature."
+    ],
+    "times": { "prep": 10 },
+    "servings": {
+      "count": 16,
+      "yield": "Makes 1 cup (sixteen 1-tablespoon servings) of each servings"
+    },
+    "source": { "name": "Magnolia Table", "author": "Joanna Gaines", "url": null }
+  },
+  {
+    "title": "Classic Sausage Gravy",
+    "ingredients": [
+      "1½ to 2 pounds pork sausage",
+      "6 tablespoons butter",
+      "6 tablespoons flour",
+      "2 cups whole milk",
+      "kosher salt and freshly ground black pepper"
+    ],
+    "directions": [
+      "In a large skillet, cook the sausage over medium heat until cooked through and nicely browned, about 15 to 20 minutes. Transfer the sausage to a platter and set aside.",
+      "Add butter into the rendered grease in the skillet, scraping the pan to incorporate any browned bits. Once the butter is melted, whisk in the flour until smooth. Then, whisk in the milk 1 cup at a time, making sure to get any lumps out until the mixture is smooth. Bring to a simmer over medium heat and cook until slightly thickened, about 5 minutes.",
+      "Stir the sausage into the gravy. Season generously with salt and pepper. Serve warm.",
+      "Store leftovers in a covered container in the refrigerator for up to 4 days. Reheat gently over low heat."
+    ],
+    "times": { "prep": 5, "cook": 25 },
+    "servings": { "count": 10, "yield": "Makes about 6 cups; 10 servings" },
+    "source": { "name": "Magnolia Table", "author": "Joanna Gaines", "url": null }
+  },
+  {
+    "title": "Strawberry Shortcake",
+    "description": "from the Magnolia Table Cookbook",
+    "ingredients": [
+      "2 pounds strawberries, hulled and quartered",
+      "½ cup sugar",
+      "6 Jojo’s Biscuits",
+      "homemade Whipped Cream (recipe follows) or good-quality store-bought whipped cream",
+      "6 small mint sprigs, for garnish"
+    ],
+    "directions": [
+      "In a medium bowl, toss the strawberries with the sugar. Set aside at room temperature for up to 1 hour.",
+      "Split the biscuits in half. Arrange the bottom halves on each of 6 plates.",
+      "Layer whipped cream and strawberries on each biscuit. Place the remaining biscuit halves on top. Garnish with mint. Serve."
+    ],
+    "times": { "prep": 15 },
+    "servings": { "count": 6, "yield": "Makes 6 servings" },
+    "source": { "name": "Magnolia Table", "author": "Joanna Gaines", "url": null }
+  },
+  {
+    "title": "Homemade Whipped Cream",
+    "description": "from the Magnolia Table Cookbook",
+    "ingredients": [
+      "1 pint heavy cream",
+      "¼ cup sugar",
+      "1 teaspoon pure vanilla extract",
+      "pinch of sea salt"
+    ],
+    "directions": [
+      "In a large bowl, combine the cream, sugar, vanilla, and salt. Beat with an electric mixer on high speed until fluffy and the cream holds a soft peak when you pull the beater out of the bowl.",
+      "Use at once or store in a covered container in the refrigerator for up to 30 minutes."
+    ],
+    "servings": { "count": null, "yield": "Makes about 4 cups" },
+    "source": { "name": "Magnolia Table", "author": "Joanna Gaines", "url": null }
+  },
+  {
+    "title": "Farm Eggs Benedict",
+    "description": "On the menu at Magnolia Table in Waco, Texas",
+    "ingredients": [
+      "2 Jojo’s biscuits",
+      "4 slices of thick, peppered bacon",
+      "2 eggs",
+      "4 cups water",
+      "1 tablespoon white vinegar",
+      "microgreens, minced fresh chives, green onion or parsley for garnish (optional)",
+      "## hollandaise sauce",
+      "2 eggs yolks",
+      "½ Tbsp fresh lemon juice",
+      "½ stick unsalted butter, melted",
+      "pinch of sea salt"
+    ],
+    "directions": [
+      "## poached eggs",
+      "Bring a pot of water (approximately 4 cups) with 1 tablespoon white vinegar and pinch of salt, to a simmer on the stove. Meanwhile, crack eggs into a small bowl individually.",
+      "Gently swirl the water around in a circle creating a whirlpool. Gently slide the egg into the boiling water straight into the whirlpool, using a spoon to continue to gently swirl. This will help keep the egg from feathering.",
+      "Turn off the stove, cover the pot and allow it to cook untouched for 5 minutes. Remove with a slotted spoon onto a paper towel lined plate or bowl. Repeat for second egg.",
+      "## hollandaise sauce",
+      "Whisk the egg yolks and lemon juice together in a stainless steel bowl until the mixture is thickened and doubled in volume.",
+      "Place the bowl over a saucepan containing 1 cup of simmering water (or use a double boiler.)",
+      "Whisk the mixture constantly. (If you let eggs get too hot they will cook and curdle.)",
+      "While continuing to whisk, slowly drizzle in the melted butter and continue to whisk until the mixture emulsifies and doubles in size.",
+      "Remove from heat and stir in the salt. Set aside and cover with a towel to keep warm until ready to assemble.",
+      "## build by stacking",
+      "Place two biscuits on a plate and layer each biscuit with 2 slices of bacon, a poached egg and about 4 tablespoons of hollandaise sauce.",
+      "Sprinkle with microgreens or other herbs of choice for garnish."
+    ],
+    "times": { "prep": 15, "cook": 30 },
+    "servings": { "count": 2, "yield": "Makes 2 servings" },
+    "source": { "name": "Magnolia Table", "author": "Joanna Gaines", "url": null }
+  }
+]
