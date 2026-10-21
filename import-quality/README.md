@@ -76,8 +76,8 @@ correct answer is the text a careful person would type in, not a tidied version.
 ## Collecting samples (checklist)
 
 The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
-PDFs and a Paprika export. Already in: 31 web pages, 7 cards, 2 cookbook pages, 4 screenshot
-recipes (7 images) and 3 PDFs.
+PDFs and a Paprika export. Already in: 31 web pages, 7 cards, 2 cookbook pages, 5 screenshot
+recipes (8 images) and 3 PDFs.
 
 - [x] **Web pages (about 30):** 31 pages from your Paprika library (E3), chosen for variety: big
       sites, paywalled ones, blogs on each common recipe card, sections, metric amounts,
@@ -91,8 +91,9 @@ recipes (7 images) and 3 PDFs.
       columns, a photo behind the text, metric and imperial, and a recipe that points to another.
 - [ ] **Screenshots (about 6 more):** a web page cut across three screenshots; and, made by Fennl
       for the test set (E11, a generic app, no real account), a social media caption in two
-      overlapping screenshots, a text-message conversation and an email. Still worth adding: real
-      ones from your phone (Instagram or Facebook captions, messages, emails, notes), and from a
+      overlapping screenshots, a text-message conversation and an email. One real one is in: a
+      magazine app on your iPad (`french-onion-soup-screenshot`). Still worth adding: real ones
+      from your phone (Instagram or Facebook captions, messages, emails, notes), and from a
       computer.
 - [ ] **PDFs (a few more):** two scanned book chapters, and, made by Fennl for the test set
       (E12, invented recipes), a family cookbook of three recipes made on a computer, one running

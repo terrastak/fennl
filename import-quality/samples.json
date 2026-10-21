@@ -78,6 +78,12 @@
     "notes": "Made by Fennl for the test set (2026-10-21): an email in a phone's mail app, with its subject, sender, greeting, sign-off \"Dave\", \"Sent from my phone\" and a quoted reply around the recipe."
   },
   {
+    "id": "french-onion-soup-screenshot",
+    "kind": "screenshot",
+    "inputs": ["test_images/french-onion-soup-screenshot.webp"],
+    "notes": "A real screenshot from the owner's iPad (2026-10-21): a magazine app in dark mode, white text on black; the app's bar and buttons at the top and bottom; the headnote cut off at the top edge; credits (text, recipe and photographs by three people); numbered steps with their own headings; bold ingredient names in the steps; a pull quote cut off at the bottom."
+  },
+  {
     "id": "hamburger-buns-pdf",
     "kind": "pdf",
     "inputs": ["test_images/Hamburger Buns.pdf"],
