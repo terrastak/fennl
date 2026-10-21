@@ -18,6 +18,24 @@
     "notes": "Phone photo of a photocopied card on a sheet of paper, with a shadow across the lower half; cursive with short forms (Choc, Tbs, teasp.); the method is one run-on paragraph split by dashes; signed \"All my Love, Alice\". Copy as received through the chat, 1500×2000 WebP (the original is 3024×4032)."
   },
   {
+    "id": "milky-way-cake-card",
+    "kind": "card",
+    "inputs": ["test_images/milky-way-cake-card.webp"],
+    "notes": "Pencil on a lined card, photographed at an angle on a table; short forms (t, c, soda); the buttermilk added later in red ink beside the soda line; the method runs on without full stops (\"Add flour\" at the end). From the web, added with the owner's OK (2026-10-21)."
+  },
+  {
+    "id": "mushrooms-eggs-card",
+    "kind": "card",
+    "inputs": ["test_images/mushrooms-eggs-card.jpg"],
+    "notes": "Ink on a green lined card; ingredients in two columns (left, then right); T, teas, teasp. and C; new instructions start with a capital after a comma (\"parsley, Boil\") or on a new line (\"Pour\"); the method runs off the card at \"break\". From the web, added with the owner's OK (2026-10-21)."
+  },
+  {
+    "id": "peanut-butter-candy-card",
+    "kind": "card",
+    "inputs": ["test_images/peanut-butter-candy-card.webp"],
+    "notes": "Cursive on a lined notebook page; signed \"Patsy\" under the title; brand names (Karo, Special K); \"boil for 2 seconds\", copied as written and asked about, never corrected. From the web, added with the owner's OK (2026-10-21)."
+  },
+  {
     "id": "thai-iced-tea-cookbook",
     "kind": "cookbook",
     "inputs": ["test_images/IMG_0019.jpeg"],

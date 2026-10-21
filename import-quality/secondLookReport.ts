@@ -61,12 +61,13 @@ export function cookingScore(result: Pick<SampleResult, "scores">): number {
   return parts.length ? parts.reduce((a, b) => a + b, 0) / parts.length : 0;
 }
 
-/** A rule as the report names it: the reason, and for "unsure" what was unsure. */
+/** A rule as the report names it: the reason, and for an unsure amount where it was. */
 function ruleOf(finding: SecondLookFinding): string {
-  if (finding.reason !== "unsure") return finding.reason;
-  if (finding.detail.startsWith("said unclear")) return "unsure (a note about something unclear)";
-  if (finding.detail.includes("line unsure")) return "unsure (an ingredient or method line)";
-  return `unsure (${finding.detail.replace(" marked unsure", "")})`;
+  if (finding.reason !== "unsure_amount") return finding.reason;
+  if (finding.detail.endsWith(" marked unsure")) {
+    return `unsure amount (${finding.detail.replace(" marked unsure", "")})`;
+  }
+  return "unsure amount (an ingredient or method line)";
 }
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;

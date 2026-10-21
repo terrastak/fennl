@@ -8,7 +8,13 @@ import {
   type Evidence,
   type RecipeDraft,
 } from "./importDraft";
-import { readIngredient, standardIngredient, standardUnits, unitNamed } from "./ingredients";
+import {
+  amountsWithin,
+  readIngredient,
+  standardIngredient,
+  standardUnits,
+  unitNamed,
+} from "./ingredients";
 import {
   SOURCE_KINDS,
   type DirectionStep,
@@ -350,9 +356,13 @@ export function answerToDrafts(answer: AiAnswer, context: AnswerContext): Recipe
                 ? standardIngredient(t)
                 : standardUnits(t, "step");
           const line = { id: newId(), text: tidy(clean(l.text)), heading: l.heading };
-          // An unsure "1/2 teas" is highlighted as the "1/2 tsp" it became.
+          // An unsure "1/2 teas" is highlighted as the "1/2 tsp" it became, and "lbs" as "lb".
           const unsure = l.unsure ?? [];
-          const words = wordsIn(line.text, [...unsure, ...unsure.map(tidy)]);
+          const unit = (w: string) => {
+            const one = tidy(`1 ${w}`);
+            return one.startsWith("1 ") ? one.slice(2) : w;
+          };
+          const words = wordsIn(line.text, [...unsure, ...unsure.map(tidy), ...unsure.map(unit)]);
           if (words.length) unsureWords[line.id] = words;
           return line;
         };
@@ -427,8 +437,16 @@ export type SecondLookReason =
   | "no_answer"
   /** No title, no ingredients, or no directions. */
   | "missing_part"
-  /** The model marked an important part, or a line, as unsure, or said something was unclear. */
-  | "unsure"
+  /**
+   * The model wasn't sure of an amount: a number or unit in a line ("1/3", "Tbs"), the times or
+   * the servings. A word it wasn't sure of is only highlighted for the person (2026-10-21).
+   */
+  | "unsure_amount"
+  /**
+   * The amounts of an ingredient the method names don't add up to the list's ("1 C walnuts",
+   * then "1/4 C walnuts" and "1/4 C walnuts"): one of them is likely misread.
+   */
+  | "amounts_differ"
   /** Several ingredient lines with no amount ("flour", where "2 cups flour" was likely). */
   | "missing_amounts"
   /** An amount no recipe uses ("35 cups"), usually a misread number. */
@@ -470,8 +488,72 @@ const HAND_MEASURES = new Set([
   "liter",
 ]);
 
-/** The fields a second look is about: what decides how the dish turns out, and its name. */
-const KEY_FIELDS = ["title", "ingredients", "directions", "times", "servings"] as const;
+/** Amounts outside the lists, as a part: when the AI wasn't sure of them, a second look. */
+const AMOUNT_FIELDS = ["times", "servings"] as const;
+
+/** An unsure word that is an amount: it has a number ("1/3", "1lb"), or is a unit ("Tbs"). */
+function isAmount(word: string): boolean {
+  return /[\d¼-¾⅐-⅞]/u.test(word) || readIngredient(`1 ${word.trim()} x`).unit !== null;
+}
+
+/** Kinds of input the AI reads from a picture, where a number can be misread. */
+const READ_FROM_PICTURES = new Set<string>(["photo", "screenshot", "pdf"]);
+
+/** Words too common to tell ingredients apart ("2 cups of the flour"). */
+const COMMON_WORDS = new Set(["the", "and", "for", "with", "into", "some", "more", "rest"]);
+
+/** The words naming an ingredient, without plural endings: "walnut", "special", "cereal". */
+const nameWords = (text: string) =>
+  text
+    .toLowerCase()
+    .split(/[^\p{L}]+/u)
+    .filter((w) => w.length >= 3 && !COMMON_WORDS.has(w))
+    .map((w) => w.replace(/(?:es|s)$/, ""));
+
+/**
+ * Ingredients whose amounts in the method don't add up to the list's: more than the list
+ * gives, or two or more amounts that add up to something else ("1 C walnuts": "1/4 C walnuts"
+ * and "1/4 C walnuts", where the card says 1/4 and 3/4). One amount less than the list is
+ * usual ("reserve the rest"), so it doesn't count.
+ */
+function amountsThatDiffer(
+  ingredients: readonly IngredientLine[],
+  directions: readonly DirectionStep[],
+): string[] {
+  const found: string[] = [];
+  const reads = ingredients.map((line) => ({ line, read: readIngredient(line.text) }));
+  // Words naming more than one ingredient ("sugar" in "1 cup sugar" and "2 Tbsp sugar",
+  // "powder" in garlic and onion powder) can't tell which one the method means.
+  const seen = new Map<string, number>();
+  for (const { read } of reads) {
+    for (const w of new Set(nameWords(read.item ?? ""))) seen.set(w, (seen.get(w) ?? 0) + 1);
+  }
+  for (const { line, read } of reads) {
+    const unit = read.unit ? unitNamed(read.unit) : undefined;
+    if (!read.quantity || !read.item || !unit?.base) continue;
+    const names = new Set(nameWords(read.item).filter((w) => seen.get(w) === 1));
+    if (names.size === 0) continue;
+    const listed = read.quantity.high ?? read.quantity.low;
+    let total = 0;
+    let uses = 0;
+    for (const step of directions) {
+      for (const a of amountsWithin(step.text)) {
+        const used = a.unit ? unitNamed(a.unit) : undefined;
+        if (!used?.base || used.kind !== unit.kind) continue;
+        // The words naming what's measured: up to the next comma or full stop ("1 cup (112 g)
+        // cornstarch, 2½ tsp. garlic powder" is cornstarch), past a weight in brackets.
+        const after = step.text.slice(a.end).replace(/^[\s)\]]*(?:\([^)]*\)\s*)?(?:of\s+)?/iu, "");
+        const next = nameWords(after.split(/[,.;:()]|\s(?:and|or)\s/u)[0] ?? "").slice(0, 3);
+        if (!next.some((w) => names.has(w))) continue;
+        total += ((a.high ?? a.low) * used.base) / unit.base;
+        uses += 1;
+      }
+    }
+    const off = Math.abs(total - listed) > listed * 0.05;
+    if (uses > 0 && (total > listed * 1.05 || (uses >= 2 && off))) found.push(line.text);
+  }
+  return found;
+}
 
 /** One thing that set off a second look, with what it was ("ingredient line: Salt"). */
 export interface SecondLookFinding {
@@ -497,18 +579,30 @@ export function secondLookFindings(
     if (!f.title?.value.trim()) add("missing_part", "no title");
     if (ingredients.length === 0) add("missing_part", "no ingredients");
     if (directions.length === 0) add("missing_part", "no method");
-    for (const key of KEY_FIELDS) {
-      if (f[key]?.confidence === "low") add("unsure", `${key} marked unsure`);
+    // Only amounts the AI wasn't sure of call for a second look: a wrong amount ruins a dish, and
+    // an unsure word is highlighted for the person anyway. Marking whole lines unsure set off
+    // second looks mostly on answers already right (comparison runs, 2026-10-21). Nor do the
+    // AI's own notes ("the page gives no prep time"): in the model comparison (2026-10-19) they
+    // set off 32 of 37 second looks, 24 on answers already right.
+    for (const key of AMOUNT_FIELDS) {
+      if (f[key]?.confidence === "low") add("unsure_amount", `${key} marked unsure`);
     }
+    // Only a guess ("low"): an amount the AI was fairly sure of ("medium") was nearly always
+    // right in the comparison runs (2026-10-21), but a guessed one was often wrong ("2 lbs
+    // butter" for "2 Tbs", "1lb 0z" for "1lb 5oz").
     for (const list of ["ingredients", "directions"] as const) {
-      const lines = f[list]?.value ?? [];
-      draft.lineConfidence[list]?.forEach((c, i) => {
-        if (c === "low") add("unsure", `${list} line unsure: ${lines[i]?.text ?? "?"}`);
+      (f[list]?.value ?? []).forEach((line, i) => {
+        if (line.heading || draft.lineConfidence[list]?.[i] !== "low") return;
+        const words = (draft.unsureWords?.[line.id] ?? []).filter(isAmount);
+        if (words.length) add("unsure_amount", `${line.text} (${words.join(", ")})`);
       });
     }
-    // The AI's own notes ("the page gives no prep time") are shown for review but don't call for
-    // a second look: in the model comparison (2026-10-19) they set off 32 of 37 second looks,
-    // 24 on answers already right, and the stronger model never did better (owner's go-ahead).
+    // Only where the AI reads a picture of the writing: text (a web page, pasted text) can't be
+    // misread, and printed recipes often name amounts the list doesn't ("3/4 cup water" to
+    // deglaze). Comparison runs, 2026-10-21.
+    if (READ_FROM_PICTURES.has(draft.source)) {
+      for (const text of amountsThatDiffer(ingredients, directions)) add("amounts_differ", text);
+    }
 
     const noAmount: string[] = [];
     for (const line of ingredients) {

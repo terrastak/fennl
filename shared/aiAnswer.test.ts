@@ -188,11 +188,24 @@ describe("a second look", () => {
     ]);
   });
 
-  it("is needed when the AI was unsure of something that matters, not for its notes", () => {
-    const lowLine = recipe({ ingredients: [line("2 1/4 cup flour", "low")] });
-    expect(secondLookReasons(drafts(lowLine))).toEqual(["unsure"]);
+  it("is needed when the AI guessed an amount, not a word, and not for its notes", () => {
+    const guessed = (text: string, unsure: string[], confidence: AiLine["confidence"] = "low") =>
+      recipe({ ingredients: [{ ...line(text, confidence), unsure }] });
+    expect(secondLookReasons(drafts(guessed("2 1/4 cup flour", ["2 1/4"])))).toEqual([
+      "unsure_amount",
+    ]);
+    // A unit is an amount too, even once it's written the standard way ("lbs" becomes "lb").
+    expect(secondLookReasons(drafts(guessed("2 lbs butter", ["lbs"])))).toEqual(["unsure_amount"]);
+    // A word it couldn't read is only highlighted for the person.
+    expect(secondLookReasons(drafts(guessed("1 C walnuts, chopped fine", ["fine"])))).toEqual([]);
+    // An amount it was fairly sure of was nearly always right in the comparison runs.
+    expect(secondLookReasons(drafts(guessed("2 1/4 cup flour", ["2 1/4"], "medium")))).toEqual([]);
+    // A line marked a guess with nothing listed as unsure isn't enough on its own.
+    expect(
+      secondLookReasons(drafts(recipe({ ingredients: [line("2 cups flour", "low")] }))),
+    ).toEqual([]);
     const lowTimes = recipe({ times: { ...recipe().times, confidence: "low" } });
-    expect(secondLookReasons(drafts(lowTimes))).toEqual(["unsure"]);
+    expect(secondLookReasons(drafts(lowTimes))).toEqual(["unsure_amount"]);
     // A note is for the person reviewing it ("the page gives no prep time"), not a doubt to settle.
     expect(secondLookReasons(drafts(recipe({ unclear: ["the page gives no prep time"] })))).toEqual(
       [],
@@ -203,6 +216,48 @@ describe("a second look", () => {
       description: { text: "Grandma's", confidence: "low" },
     });
     expect(secondLookReasons(drafts(fine))).toEqual([]);
+  });
+
+  it("is needed when the method's amounts of an ingredient don't add up to the list's", () => {
+    // The walnut card, as the cheaper model read it in every comparison run: "3/4" read as "1/4".
+    const walnuts = (second: string) =>
+      recipe({
+        ingredients: [line("1 C walnuts"), line("1 2 layer pkg white cake mix")],
+        directions: [
+          line("Coarsley Chop 1/4 C walnuts."),
+          line("Set aside."),
+          line(`Prepare cake mix as directed, adding vanilla & ${second} C walnuts.`),
+        ],
+      });
+    expect(secondLookReasons(drafts(walnuts("1/4")))).toEqual(["amounts_differ"]);
+    expect(secondLookReasons(drafts(walnuts("3/4")))).toEqual([]);
+    // Using part of it once is usual ("reserve the rest"); more than the list isn't.
+    const part = recipe({
+      ingredients: [line("1 cup sugar"), line("2 eggs")],
+      directions: [line("Beat 1/2 cup sugar with the eggs.")],
+    });
+    expect(secondLookReasons(drafts(part))).toEqual([]);
+    const more = recipe({
+      ingredients: [line("1 cup sugar"), line("2 eggs")],
+      directions: [line("Beat 2 cups sugar with the eggs.")],
+    });
+    expect(secondLookReasons(drafts(more))).toEqual(["amounts_differ"]);
+    // Only the words just after the amount name what's measured, and a word two ingredients
+    // share ("powder") doesn't tell which.
+    const listed = recipe({
+      ingredients: [
+        line("1 cup cornstarch"),
+        line("2 tsp garlic powder"),
+        line("2 tsp onion powder"),
+      ],
+      directions: [
+        line("Whisk 1 cup (112 g) cornstarch, 2 tsp garlic powder, 2 tsp onion powder."),
+      ],
+    });
+    expect(secondLookReasons(drafts(listed))).toEqual([]);
+    // Text read as text (a web page) can't be misread, so its amounts aren't checked.
+    const [web] = answerToDrafts({ recipes: [more] }, { ...context, source: "website" });
+    expect(secondLookReasons([web!])).toEqual([]);
   });
 
   it("is needed when amounts look missing or misread", () => {
