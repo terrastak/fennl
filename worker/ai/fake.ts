@@ -1,5 +1,6 @@
 import type { AiAnswer, AiRecipe } from "../../shared/aiAnswer";
 import { anthropicCost, knownAnthropicModel } from "./anthropic";
+import { PDF_FIND_SCHEMA, type PdfRecipe } from "../../shared/pdfImport";
 import type { AiProvider, AiRequest, AiResult, AiTokens } from "./provider";
 
 // A stand-in AI for tests and local development (AI_PROVIDER=fake; phase E7): no vendor, no key,
@@ -47,7 +48,34 @@ type Reply = (request: AiRequest) => AiResult | Promise<AiResult>;
 /** Given to the fake as text (the browser tests do), it answers unsure, however often it's asked. */
 export const FAKE_UNSURE = "fake:unsure";
 
+/**
+ * Finding a PDF's recipes (phase E12): each page given as text whose first line is a title starts
+ * a recipe of that name; the pages after it (to the next) are its own.
+ */
+function fakeFind(request: AiRequest): AiResult {
+  const recipes: PdfRecipe[] = [];
+  for (const part of request.parts) {
+    const page = Number(/^Page (\d+)/.exec(part.label)?.[1]);
+    if (!page) continue;
+    const title = part.kind === "text" ? part.text.trim().split("\n")[0]?.trim() : "";
+    const last = recipes[recipes.length - 1];
+    if (title) recipes.push({ title, firstPage: page, lastPage: page });
+    else if (last) last.lastPage = page;
+  }
+  return { ok: true, output: { recipes }, tokens: FAKE_TOKENS };
+}
+
 const defaultReply: Reply = (request) => {
+  if (request.schema === (PDF_FIND_SCHEMA as unknown)) return fakeFind(request);
+  // One recipe of a PDF (phase E12): it reads the one asked for, by its title.
+  const focus = /only the recipe titled "([^"]+)"/.exec(request.instruction)?.[1];
+  if (focus) {
+    return {
+      ok: true,
+      output: fakeAnswer(fakeRecipe({ title: { text: focus, confidence: "high" } })),
+      tokens: FAKE_TOKENS,
+    };
+  }
   const unsure = request.parts.some((p) => p.kind === "text" && p.text.includes(FAKE_UNSURE));
   const recipe = unsure
     ? fakeRecipe({

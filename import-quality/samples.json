@@ -84,6 +84,12 @@
     "notes": "Five scanned pages, one of them only a photo; a two-day recipe; long shaping instructions; equipment lists."
   },
   {
+    "id": "family-cookbook-pdf",
+    "kind": "pdf",
+    "inputs": ["test_images/family-cookbook.pdf"],
+    "notes": "Made by Fennl for the test set (2026-10-21, invented recipes): a PDF made on a computer, with real text. A contents page, then three recipes on three pages; the soup starts under the shortbread and runs on to the last page. Headnotes, a tip, and the lemon bars' ingredients in two parts."
+  },
+  {
     "id": "nyt-7up-sheet-cake",
     "kind": "web",
     "inputs": ["test_pages/nyt-7up-sheet-cake.html"],

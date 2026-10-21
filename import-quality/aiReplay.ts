@@ -12,6 +12,7 @@ import type { RecipeDraft } from "../shared/importDraft";
 import { loadExpected, scoreDrafts } from "./scorecard";
 import {
   cookingScore,
+  expectedFor,
   secondLookSection,
   type LookRecord,
   type SavedAnswer,
@@ -57,15 +58,17 @@ async function main() {
   };
   const looks: LookRecord[] = [];
   for (const first of saved.answers.filter((a) => a.way === "first")) {
-    const same = (a: SavedAnswer) => a.set === first.set && a.sample === first.sample;
+    // A PDF's recipes are each read on its own (phase E12).
+    const same = (a: SavedAnswer) =>
+      a.set === first.set && a.sample === first.sample && a.recipe === first.recipe;
     const second =
       saved.answers.find((a) => same(a) && a.way === "second_look") ??
       saved.answers.find((a) => same(a) && a.way === "alone" && a.model === saved.strong);
-    const expected = (await loadExpected(first.sample)) ?? [];
+    const expected = expectedFor((await loadExpected(first.sample)) ?? [], first.recipe);
     const firstDrafts = drafts(first);
     looks.push({
       set: first.set,
-      sample: first.sample,
+      sample: first.recipe ? `${first.sample} › ${first.recipe}` : first.sample,
       findings: firstDrafts
         ? secondLookFindings(firstDrafts, rules)
         : [{ reason: "no_answer", detail: "no usable answer" }],
