@@ -36,8 +36,19 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_MODELS: ${{ inputs.models }}
       AI_COMPARE_SETS: ${{ inputs.sets }}
+      # The private samples (whole printed web pages, kept out of this public repository; owner's
+      # choice 2026-10-21): read from a private repository when this token is set
+      # (docs/setup/private-test-samples.md). Without it, they're left out.
+      TEST_SAMPLES_TOKEN: ${{ secrets.TEST_SAMPLES_TOKEN }}
     steps:
       - uses: actions/checkout@v7
+      - name: Private samples
+        if: env.TEST_SAMPLES_TOKEN != ''
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ vars.TEST_SAMPLES_REPO || 'terrastak/fennl-test-samples' }}
+          token: ${{ secrets.TEST_SAMPLES_TOKEN }}
+          path: test-pdfs
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
@@ -50,6 +61,11 @@ jobs:
             exit 1
           fi
           if [ -z "$AI_MODELS" ]; then unset AI_MODELS; fi
+          if [ -d test-pdfs ]; then
+            export PRIVATE_SAMPLES=1
+          else
+            echo "::notice::The private samples aren't read: the TEST_SAMPLES_TOKEN secret isn't set (docs/setup/private-test-samples.md)."
+          fi
           npm run ai:compare
       - name: Report
         if: always()
