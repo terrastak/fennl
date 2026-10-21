@@ -254,7 +254,7 @@ function AiSettingsForm({
           When on, a read whose amounts look doubtful is read again by the next model at once, not
           counted as another import: an amount the first model only guessed, or amounts in the
           method that don&rsquo;t add up to the ingredient list (on photos, screenshots and PDFs). A
-          word it couldn&rsquo;t read is only highlighted for the person. Off unless turned on.
+          word it couldn&rsquo;t read is only highlighted for the person. On unless turned off.
         </p>
         <div className={styles.field}>
           <label htmlFor={`${id}-missing`}>

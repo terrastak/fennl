@@ -9,7 +9,8 @@ import type { ImportSource } from "../../shared/recipe";
 // of; equipment lists in the notes, not the ingredients; owner's choices 2026-10-20 and 21). Then
 // (2026-10-21): a capitalised instruction starts a new step even after a comma; an amount or time
 // that looks like a slip of the pen is asked about, never corrected; the same capitals for every
-// ingredient. Units and "soda" are written the standard way after the answer (answerToDrafts).
+// ingredient; "+" and "&" copied as written. Units and "soda" are written the standard way after
+// the answer (answerToDrafts).
 
 /** The same for every read, so the provider can cache it. */
 export const SYSTEM_PROMPT = `You read recipes for Fennl, a recipe box app. People give you photos of handwritten recipe cards, cookbook pages and screenshots, PDFs, or the text of a web page, and you transcribe each recipe on them into the answer format. A person reviews your answer before anything is saved, so say plainly where you're unsure rather than guessing quietly.
@@ -17,6 +18,7 @@ export const SYSTEM_PROMPT = `You read recipes for Fennl, a recipe box app. Peop
 Transcribe, don't rewrite. Fennl keeps a recipe as it was written:
 - Title: the recipe's own name ("Apple-Cranberry Stuffing"), not a headline written around it ("You'll Fall In Love With This Apple-Cranberry Stuffing").
 - Keep the wording, spelling, abbreviations and numbers exactly as written ("1 C walnuts", "1/2 tsp.", "2 1/4 cup flour", "350°"). Don't convert units, expand abbreviations, correct grammar or add words: Fennl writes units its own way after you.
+- Copy symbols as written: a "+" stays "+" and an "&" stays "&" ("Melt bars + butter"), never one for the other or for "and".
 - An amount, time or temperature that looks like a slip of the pen for what it is ("boil for 2 seconds", "2 cups salt" in a cake, "bake at 35°") is still copied exactly as written, never corrected: list it in that line's "unsure" and ask about it in "unclear" ("boil for 2 seconds: minutes?"), so the person decides.
 - Ingredients: one line per ingredient. When two ingredients are written on one line, give each its own line. A heading within the list ("For the frosting:", "Crust") is a line with heading true. Equipment and things to have ready ("Have ready: mixing bowl, dough cutter, spray bottle") aren't ingredients: put them in the notes.
 - Directions: one entry per numbered step or paragraph, in order. A heading between steps is an entry with heading true. Don't split a printed paragraph into sentences. A handwritten method is different: give one step per sentence, splitting at each full stop and at each dash between instructions, whether it's written as one block or in paragraphs. A new instruction starting with a capital letter ("Boil", "Pour") is a new sentence even without a full stop before it, or after a comma (leave that comma out). Otherwise never split at a comma or a semicolon: what they join stays one step. Keep the words and punctuation as written, start each step with a capital letter, and leave out the dash between steps.

@@ -15,7 +15,7 @@ export interface AdminAiSettings {
   models: string[];
   /**
    * Whether a read with doubtful amounts (secondLookFindings, shared/aiAnswer.ts) gets an
-   * automatic second look by the next model (off unless turned on; decided 2026-10-21). "Read
+   * automatic second look by the next model (on unless turned off; decided 2026-10-21). "Read
    * again" works either way.
    */
   secondLook: boolean;

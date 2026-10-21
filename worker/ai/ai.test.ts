@@ -24,7 +24,7 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1
 
 beforeAll(async () => {
   await setUpDatabase();
-  // These tests cover the automatic second look, off unless turned on (decided 2026-10-21).
+  // These tests cover the automatic second look (on unless turned off, decided 2026-10-21).
   await writeText(database(env.DB), "ai_second_look", "on", null);
 });
 

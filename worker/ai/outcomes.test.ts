@@ -26,7 +26,7 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1
 
 beforeAll(async () => {
   await setUpDatabase();
-  // Answers from a second look are kept too: it's off unless turned on (decided 2026-10-21).
+  // Answers from a second look are kept too (on unless turned off, decided 2026-10-21).
   await writeText(db(), "ai_second_look", "on", null);
 });
 
