@@ -5,8 +5,9 @@ samples, and the scorecard compares what it found with the correct answer, field
 description, each ingredient, each step, times, servings, notes and source.
 
 - `samples.json`: the samples. Each has an `id`, a `kind` (`web`, `card`, `cookbook`,
-  `screenshot`, `pdf` or `paprika`), its input files (paths from the repository's root, in reading
-  order), a web page's address, and a note on what makes it a useful test.
+  `screenshot`, `pdf`, `paprika`, `text` or `document`), its input files (paths from the
+  repository's root, in reading order), a web page's address, and a note on what makes it a
+  useful test.
 - `expected/<id>.json`: the correct answer. A file of several recipes (a PDF, a Paprika library)
   has a list of them.
 - `importers.ts`: the importers the scorecard runs. Each import phase (E3 to E13) adds its own.
@@ -100,6 +101,10 @@ recipes (8 images) and 3 PDFs.
       on to the next page (`family-cookbook-pdf`). Still worth adding: a printed-to-PDF web page,
       a scanned family cookbook of several recipes, and a real PDF of several recipes. A PDF is
       read as the app reads it: its recipes found first, then each read from its pages.
+- [ ] **Documents (E18, not built yet):** three from you in `test-docs/`: a Rich Text ingredient
+      list with no method, and two Word documents (cookies with a photo of the original recipe
+      inside, and a rib eye roast with a family note). The `.txt` example you mentioned isn't in
+      the folder yet. Still worth adding: a document with several recipes, and a LibreOffice one.
 - [x] **Paprika export:** the owner's whole library (827 recipes) is in
       `test_recipes/all-recipes.paprikarecipes`. E2 reads every ingredient line in it
       (`ingredients.test.ts`); E13 will import it.
