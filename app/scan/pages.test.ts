@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
+  allScreenshots,
   cropOnOriginal,
   dragCorner,
   fitBox,
+  isScreenshot,
   moved,
   turnBox,
   turned,
@@ -67,5 +69,23 @@ describe("cropping", () => {
       width: 0.1,
       height: 1,
     });
+  });
+});
+
+describe("screenshots (phase E11)", () => {
+  const png = new Blob(["x"], { type: "image/png" });
+  const jpeg = new Blob(["x"], { type: "image/jpeg" });
+
+  it("are the PNG pictures chosen, never one the camera just took", () => {
+    expect(isScreenshot(png, false)).toBe(true);
+    expect(isScreenshot(jpeg, false)).toBe(false);
+    expect(isScreenshot(new Blob(["x"], { type: "image/heic" }), false)).toBe(false);
+    expect(isScreenshot(png, true)).toBe(false);
+  });
+
+  it("are read as screenshots only when every page is one", () => {
+    expect(allScreenshots([{ screenshot: true }, { screenshot: true }])).toBe(true);
+    expect(allScreenshots([{ screenshot: true }, { screenshot: false }])).toBe(false);
+    expect(allScreenshots([])).toBe(false);
   });
 });

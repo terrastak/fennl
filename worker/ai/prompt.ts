@@ -10,7 +10,7 @@ import type { ImportSource } from "../../shared/recipe";
 // (2026-10-21): a capitalised instruction starts a new step even after a comma; an amount or time
 // that looks like a slip of the pen is asked about, never corrected; the same capitals for every
 // ingredient; "+" and "&" copied as written. Units and "soda" are written the standard way after
-// the answer (answerToDrafts).
+// the answer (answerToDrafts). E11: screenshots of posts, messages and emails (SCREENSHOTS).
 
 /** The same for every read, so the provider can cache it. */
 export const SYSTEM_PROMPT = `You read recipes for Fennl, a recipe box app. People give you photos of handwritten recipe cards, cookbook pages and screenshots, PDFs, or the text of a web page, and you transcribe each recipe on them into the answer format. A person reviews your answer before anything is saved, so say plainly where you're unsure rather than guessing quietly.
@@ -44,9 +44,20 @@ Use "unclear" for anything a person should check, in a few words each ("the oven
 const CAPITALS =
   'Start each ingredient\'s name with a small letter ("1 C sugar", not "1 C Sugar"), however the writer capitalised it, except a name such as a brand or a place ("Karo", "Special K", "Dijon"), so a recipe\'s ingredients look alike. Change only those first letters.';
 
+/**
+ * Screenshots (phase E11): the recipe without the app around it. Also on photos, as a photo of a
+ * screen, or screenshots the app took for photos, read the same way.
+ */
+const SCREENSHOTS = [
+  'Read only the recipe: leave out the app around it (the status bar, buttons and menus, profile pictures, usernames and handles, the time it was posted, likes, views, comments, shares and replies, hashtags, "link in bio", "save this for later", adverts, other people\'s comments, and the headers, signatures and quoted replies of an email or message).',
+  "Screenshots taken while scrolling overlap: text at the bottom of one that's repeated at the top of the next is the same text, so give it once.",
+  'Leave out emoji used as bullets or decoration ("🧈 1 cup butter" is "1 cup butter"); keep the words.',
+  'The source is who shared the recipe, when the screenshot shows it: the account that posted it (kind "person", name as shown, such as "@june.cooks" or "June Lee", and its web address when shown), or the person who sent the message or email (kind "person", name as signed or as the sender is shown). A page of a website: the site (kind "website", its name, the recipe\'s author, and the address when shown). Not the app, and not the person who took the screenshots.',
+].join(" ");
+
 const WHAT: Record<ImportSource, string> = {
-  photo: `These are photos of a recipe: a handwritten or printed card (front and back), or the pages of a cookbook. On a cookbook page, give only the recipes whose title is on the pages, not the end of the one before; the book's title and the page number, when the page shows them, are the source. ${CAPITALS}`,
-  screenshot: `These are screenshots that together show a recipe. Ignore the app around it. ${CAPITALS}`,
+  photo: `These are photos of a recipe: a handwritten or printed card (front and back), or the pages of a cookbook. On a cookbook page, give only the recipes whose title is on the pages, not the end of the one before; the book's title and the page number, when the page shows them, are the source. If they're screenshots, or photos of a screen: ${SCREENSHOTS} ${CAPITALS}`,
+  screenshot: `These are screenshots of a recipe: a social media post or its caption, a text message, an email, a note or a page on a phone or computer, in order. ${SCREENSHOTS} ${CAPITALS}`,
   pdf: `This is a PDF that holds one or more recipes. ${CAPITALS}`,
   website:
     'This is the text of a web page that may hold a recipe ("## " starts a heading, "- " a list item). Give only the recipes the page itself gives, with their ingredients or method, not ones it only links to. When the page lists the ingredients or steps twice (in the post and again in a recipe card), give them once, as the card has them. The description is at most a few sentences introducing the recipe, not the whole story before it. Ignore comments, adverts and the site around it.',

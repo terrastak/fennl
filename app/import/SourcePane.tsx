@@ -32,32 +32,37 @@ function siteName(url: string | null): string | null {
   }
 }
 
-function PagePhoto({ hash, n }: { hash: string; n: number }) {
+function PagePhoto({ hash, n, noun }: { hash: string; n: number; noun: "Photo" | "Screenshot" }) {
   const url = usePhotoUrl(hash, "full");
   if (url === "failed") {
-    return <p className={recipes.hint}>Photo {n} couldn&rsquo;t be shown just now.</p>;
+    return (
+      <p className={recipes.hint}>
+        {noun} {n} couldn&rsquo;t be shown just now.
+      </p>
+    );
   }
   return url ? (
     <a href={url} target="_blank" rel="noopener noreferrer" className={styles.pagePhoto}>
-      <img src={url} alt={`Photo ${n}`} />
+      <img src={url} alt={`${noun} ${n}`} />
       <span className="visually-hidden"> (opens full size in a new tab)</span>
     </a>
   ) : (
     <p role="status" className={recipes.hint}>
-      Loading photo {n}…
+      Loading {noun.toLowerCase()} {n}…
     </p>
   );
 }
 
-/** The photos a recipe was read from, beside the draft. */
-function PhotosPane({ hashes }: { hashes: string[] }) {
+/** The photos (or screenshots, phase E11) a recipe was read from, beside the draft. */
+function PhotosPane({ hashes, screenshots }: { hashes: string[]; screenshots: boolean }) {
   const [open, setOpen] = useState(false);
   const one = hashes.length === 1;
+  const noun = `${screenshots ? "screenshot" : "photo"}${one ? "" : "s"}`;
   return (
     <section className={styles.source} data-open={open} aria-labelledby="source-title">
       <div className={styles.sourceHead}>
         <h2 id="source-title" className={styles.sectionTitle}>
-          {one ? "The photo" : "The photos"}
+          The {noun}
         </h2>
         <button
           type="button"
@@ -66,14 +71,14 @@ function PhotosPane({ hashes }: { hashes: string[] }) {
           aria-controls="source-body"
           onClick={() => setOpen(!open)}
         >
-          {open ? `Hide the ${one ? "photo" : "photos"}` : `Show the ${one ? "photo" : "photos"}`}
+          {open ? `Hide the ${noun}` : `Show the ${noun}`}
         </button>
       </div>
       <div id="source-body" className={styles.sourceBody}>
         <ol className={styles.pagePhotos}>
           {hashes.map((hash, i) => (
             <li key={`${hash}-${i}`}>
-              <PagePhoto hash={hash} n={i + 1} />
+              <PagePhoto hash={hash} n={i + 1} noun={screenshots ? "Screenshot" : "Photo"} />
             </li>
           ))}
         </ol>
@@ -85,7 +90,11 @@ function PhotosPane({ hashes }: { hashes: string[] }) {
 export function SourcePane({ job }: { job: ImportJobDetail }) {
   const hashes = originalHashes(job.draft);
   if (job.pastedText !== null) return <TextPane text={job.pastedText} />;
-  return hashes.length > 0 ? <PhotosPane hashes={hashes} /> : <PageSource job={job} />;
+  return hashes.length > 0 ? (
+    <PhotosPane hashes={hashes} screenshots={job.draft.source === "screenshot"} />
+  ) : (
+    <PageSource job={job} />
+  );
 }
 
 /** The text a recipe was read from (phase E15), kept only until the draft is saved or removed. */

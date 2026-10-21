@@ -54,6 +54,24 @@
     "notes": "Three overlapping screenshots of one web page, with browser tabs, ads and related recipes around it."
   },
   {
+    "id": "lemon-spaghetti-post-screenshots",
+    "kind": "screenshot",
+    "inputs": ["test_images/screenshot-post-1.png", "test_images/screenshot-post-2.png"],
+    "notes": "Made by Fennl for the test set (2026-10-21, a generic app, no real account): a social media post whose caption is the recipe, in two overlapping phone screenshots; emoji as bullets and step numbers, hashtags, \"save this for later\", \"link in bio\", a like count, and comments (one says \"2 cups of parmesan\", which isn't the recipe)."
+  },
+  {
+    "id": "cornbread-text-messages",
+    "kind": "screenshot",
+    "inputs": ["test_images/screenshot-messages.png"],
+    "notes": "Made by Fennl for the test set (2026-10-21): a text-message conversation with Mom, the recipe in three bubbles among chat; \"1/4 c\" and \"1 T\" written short."
+  },
+  {
+    "id": "chili-email-screenshot",
+    "kind": "screenshot",
+    "inputs": ["test_images/screenshot-email.png"],
+    "notes": "Made by Fennl for the test set (2026-10-21): an email in a phone's mail app, with its subject, sender, greeting, sign-off \"Dave\", \"Sent from my phone\" and a quoted reply around the recipe."
+  },
+  {
     "id": "hamburger-buns-pdf",
     "kind": "pdf",
     "inputs": ["test_images/Hamburger Buns.pdf"],
