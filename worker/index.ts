@@ -43,6 +43,7 @@ import { savedSearchRoutes } from "./savedSearches/routes";
 import { removeImportPhotos, removeOldImportJobs } from "./import/jobs";
 import { removeOldOutcomes } from "./ai/outcomes";
 import { importRoutes } from "./import/routes";
+import { versionRoutes } from "./versions/routes";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
@@ -196,6 +197,7 @@ app.route("/", savedSearchRoutes);
 
 // "Not a duplicate" answers for the duplicate finder (phase C14).
 app.route("/", duplicateRoutes);
+app.route("/", versionRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {

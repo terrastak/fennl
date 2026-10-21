@@ -27,6 +27,32 @@ describe("checking a change", () => {
     });
   });
 
+  it("takes the source's newer version on an imported recipe, alone or with fields", () => {
+    const newer = {
+      source: "paprika",
+      importJobId: null,
+      externalId: "PAPRIKA-1",
+      externalHash: "h2",
+      importedAt: new Date().toISOString(),
+      photos: ["A1", "B2"],
+    };
+    const alone = { kind: "recipe", id: id(), import: newer, fields: {}, changedAt: now };
+    expect(checkChange(alone)).toEqual({ ok: true, value: alone });
+    expect(checkChange({ ...alone, import: { ...newer, photos: [""] } })).toMatchObject({
+      ok: false,
+      issues: [{ path: "import", problem: "invalid" }],
+    });
+    expect(checkChange({ ...alone, import: null })).toMatchObject({ ok: false });
+    const fields = { ...emptyRecipeContent(), title: "Salsa" };
+    expect(
+      checkChange({
+        ...alone,
+        create: { createdAt: new Date().toISOString(), import: newer },
+        fields,
+      }),
+    ).toMatchObject({ ok: false, issues: [{ path: "import", problem: "invalid" }] });
+  });
+
   it("reports unknown fields, bad times and empty changes", () => {
     expect(
       checkChange({ kind: "recipe", id: id(), fields: { owner: "me" }, changedAt: -1 }),

@@ -153,6 +153,11 @@ export interface RecipeImport {
   /** Paprika's hash, which changes when the recipe is edited there. */
   externalHash: string | null;
   importedAt: string;
+  /**
+   * The source's own ids of the photos brought in (Paprika's photo hashes, phase E13), so
+   * importing again adds only photos not brought in before: one the person removed stays removed.
+   */
+  photos?: string[];
 }
 
 // ---------------------------------------------------------------------------------------------

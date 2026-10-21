@@ -108,9 +108,14 @@ export function applyChange(
           ...unsynced(ctx.now),
         };
       }
+      const sameSource =
+        change.import &&
+        base.import?.source === change.import.source &&
+        base.import.externalId === change.import.externalId;
       return {
         ...base,
         ...change.fields,
+        ...(sameSource ? { import: change.import ?? null } : {}),
         updatedByUserId: ctx.userId,
         updatedAt: ctx.now,
         deletedAt: deletedAt(change.deleted, base.deletedAt),

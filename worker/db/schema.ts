@@ -688,6 +688,33 @@ export const duplicateDismissal = sqliteTable(
 );
 
 /**
+ * Earlier versions of recipes (phase E13, the first piece of G2's version history): the recipe as
+ * it was before importing again from Paprika changed it, kept on every plan as import safety
+ * (owner's choice 2026-10-21) until someone in the household chooses which version to keep. Not
+ * synced records: the recipe page asks for them. `snapshot` is JSON: the RECIPE_FIELDS as they
+ * were, and the importing person's rating and note (VersionSnapshot, shared/versions.ts).
+ * Removed with the recipe when it's deleted for good, and with its owner's account.
+ */
+export const recipeVersion = sqliteTable(
+  "recipe_version",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id").notNull(),
+    /** The recipe's owner, so access is checked like the recipe's. */
+    ownerUserId: text("owner_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    snapshot: text("snapshot").notNull(),
+    /** Why it was kept: "paprika_update". */
+    reason: text("reason").notNull(),
+    /** Who made the change that replaced it (the person importing). */
+    authorUserId: text("author_user_id").references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("recipe_version_recipe_idx").on(table.recipeId)],
+);
+
+/**
  * Every call to the AI (phase E7; CLAUDE.md, "AI import"), metered per household: which model,
  * the tokens it used and what that cost, estimated from the provider's prices (worker/ai/). A
  * row is written before the call, so the monthly limits are checked in the same statement that

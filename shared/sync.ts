@@ -76,6 +76,11 @@ export interface RecipeChange extends ChangeBase {
   id: string;
   /** Present for a new recipe, which must then set every field. */
   create?: { createdAt: string; import: RecipeImport | null };
+  /**
+   * Importing again (phase E13): the source's newer version, recorded on an existing recipe. Kept
+   * only when the recipe came from the same source and id.
+   */
+  import?: RecipeImport;
   fields: Partial<RecipeContent>;
   /** True: move to Trash. False: restore from Trash. */
   deleted?: boolean;
@@ -280,6 +285,9 @@ function fieldKeys(fields: unknown, allowed: readonly string[], issues: RecipeIs
   return keys.filter((key) => allowed.includes(key));
 }
 
+/** The most photos an import record lists: far more than any recipe has. */
+const IMPORT_PHOTOS = 100;
+
 function isImport(value: unknown): value is RecipeImport | null {
   if (value === null) return true;
   if (!isObject(value)) return false;
@@ -291,7 +299,11 @@ function isImport(value: unknown): value is RecipeImport | null {
     optionalText(value.importJobId) &&
     optionalText(value.externalId) &&
     optionalText(value.externalHash) &&
-    isIsoDate(value.importedAt)
+    isIsoDate(value.importedAt) &&
+    (value.photos === undefined ||
+      (Array.isArray(value.photos) &&
+        value.photos.length <= IMPORT_PHOTOS &&
+        value.photos.every((id) => typeof id === "string" && id.length > 0 && id.length <= 200)))
   );
 }
 
@@ -320,14 +332,23 @@ function checkRecipe(change: Fields, issues: RecipeIssue[]): RecipeChange | null
         if (!keys.includes(key)) issues.push({ path: `fields.${key}`, problem: "missing" });
       }
     }
-  } else if (keys.length === 0 && change.deleted === undefined) {
+  } else if (keys.length === 0 && change.deleted === undefined && change.import === undefined) {
     issues.push({ path: "fields", problem: "missing" });
+  }
+  let reimport: RecipeImport | undefined;
+  if (change.import !== undefined) {
+    if (change.create !== undefined || change.import === null || !isImport(change.import)) {
+      issues.push({ path: "import", problem: "invalid" });
+    } else {
+      reimport = change.import;
+    }
   }
   if (issues.length > 0) return null;
   return {
     kind: "recipe",
     id: change.id as string,
     ...(create ? { create } : {}),
+    ...(reimport ? { import: reimport } : {}),
     fields,
     ...(change.deleted !== undefined ? { deleted: change.deleted as boolean } : {}),
     changedAt: change.changedAt as number,
