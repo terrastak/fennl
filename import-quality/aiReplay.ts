@@ -1,18 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  SECOND_LOOK_DEFAULTS,
-  answerToDrafts,
-  isAiAnswer,
-  secondLookFindings,
-  withoutBadParts,
-  type SecondLookRules,
-} from "../shared/aiAnswer";
-import type { RecipeDraft } from "../shared/importDraft";
+import { SECOND_LOOK_DEFAULTS, secondLookFindings, type SecondLookRules } from "../shared/aiAnswer";
 import { loadExpected, scoreDrafts } from "./scorecard";
 import {
   cookingScore,
   expectedFor,
+  savedDrafts,
   secondLookSection,
   type LookRecord,
   type SavedAnswer,
@@ -26,19 +19,6 @@ import {
 //
 // AI_MISSING_AMOUNTS and AI_ODD_AMOUNT try other thresholds (as the admin console would set them).
 // Where the switch didn't ask the stronger model, its answer from reading alone stands in.
-
-function drafts(answer: SavedAnswer | undefined): RecipeDraft[] | null {
-  if (!answer?.ok || !isAiAnswer(answer.output)) return null;
-  return answerToDrafts(answer.output, {
-    source: answer.source,
-    inputs: answer.inputs,
-    photos: [],
-    model: answer.model,
-  }).flatMap((d) => {
-    const kept = withoutBadParts(d, null);
-    return kept ? [kept] : [];
-  });
-}
 
 const threshold = (name: string, fallback: number) => {
   const n = Number(process.env[name]);
@@ -65,7 +45,7 @@ async function main() {
       saved.answers.find((a) => same(a) && a.way === "second_look") ??
       saved.answers.find((a) => same(a) && a.way === "alone" && a.model === saved.strong);
     const expected = expectedFor((await loadExpected(first.sample)) ?? [], first.recipe);
-    const firstDrafts = drafts(first);
+    const firstDrafts = savedDrafts(first);
     looks.push({
       set: first.set,
       sample: first.recipe ? `${first.sample} › ${first.recipe}` : first.sample,
@@ -73,7 +53,7 @@ async function main() {
         ? secondLookFindings(firstDrafts, rules)
         : [{ reason: "no_answer", detail: "no usable answer" }],
       first: cookingScore(scoreDrafts(expected, firstDrafts ?? [])),
-      second: second ? cookingScore(scoreDrafts(expected, drafts(second) ?? [])) : null,
+      second: second ? cookingScore(scoreDrafts(expected, savedDrafts(second) ?? [])) : null,
     });
   }
   console.log(

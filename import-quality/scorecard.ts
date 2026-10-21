@@ -75,6 +75,8 @@ export interface Importer {
    * otherwise.
    */
   exact?: boolean;
+  /** False when it doesn't read the sample's files (re-scoring saved answers, aiRescore.ts). */
+  needsFiles?: boolean;
   /** Whether it reads this sample at all (the AI's web reading skips a saved copy with no text). */
   accepts?(sample: Sample): Promise<boolean>;
   run(files: InputFile[], sample: Sample): Promise<RecipeDraft[]>;
@@ -157,7 +159,7 @@ async function runOne(importer: Importer, sample: Sample, expected: ExpectedReci
   let drafts: RecipeDraft[] = [];
   try {
     const files = await Promise.all(
-      sample.inputs.map(async (path) => ({
+      (importer.needsFiles === false ? [] : sample.inputs).map(async (path) => ({
         path,
         name: basename(path),
         bytes: new Uint8Array(await readFile(join(root, path))),

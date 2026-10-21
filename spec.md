@@ -1078,6 +1078,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   3. Re-run and record the before/after numbers here.
 - **You check**: Read the before/after report.
 - **Done when**: Agreed quality targets are met, or the gaps are written down as known issues.
+- **Paid runs, combined (owner's choice 2026-10-21, to avoid paying about $6 a run again and again)**: no comparison run until E13 and E18 are built. Then **one combined run** of everything (about $7–8, all three ways of reading) serves at once as E12's check ("PDF test set passes"), the first measure of the new samples (Barbara's card, the magazine screenshot, Stuffed Mushrooms' handwriting, the private PDFs, the documents) and E14's "before". E14's "after" runs use only Fennl's own way (`ways: fennl`, about $1.50–2 each). Correcting a correct answer never needs a new run: the saved answers (kept 90 days) are re-scored for free (`npm run ai:rescore`). Only a change to Fennl's instructions to the AI does. Stages F, G and H need no paid runs.
 
 ## Stage F: Cooking features
 
@@ -1312,7 +1313,7 @@ These follow the beta and are approved one at a time, like every phase. The desi
 - **Steps**: paste a list of addresses (or choose browser bookmarks exported as a file); each becomes a draft as in E3/E8, in a batch (`batch_id`) reviewed one by one or together; sites that fail are listed so the person can fix or skip them. Needs paste-a-link import (Stage I item 4) first. Respects `structured_imports_per_day` and the AI limits.
 - **Done when**: a 50-link batch reviews cleanly, with failures listed and no duplicates saved.
 
-### E18. Import from a document file (drafted 2026-10-21, not approved)
+### E18. Import from a document file (approved 2026-10-21)
 - **Goal**: Choose a recipe saved as a document (a Word file, a Rich Text file, a plain text file) on the Import page and get a reviewed draft, without copying and pasting it.
 - **Why**: Family recipes are often typed up in Word or TextEdit. Today the only way in is "Paste a recipe" (E15). Three examples from the owner are in the test set (`test-docs/`: a Rich Text ingredient list, and two Word documents, one with a photo of the original recipe inside).
 - **Builds on**: E15 (pasted text: Fennl's free reading of clearly laid out text, otherwise the AI), E12 (a file opened on the device, never uploaded whole), E4's review screen.

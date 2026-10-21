@@ -55,7 +55,7 @@ import {
 // three ways, and prints accuracy and cost side by side:
 //
 // - the cheaper model alone (Claude Haiku to start);
-// - the stronger model alone (Claude Sonnet);
+// - the stronger model alone (Claude Opus);
 // - the cheaper model with a second look by the stronger one when its answer looks wrong (what
 //   Fennl does, decided 2026-10-12), with the mistakes that setup let through.
 //
@@ -67,15 +67,23 @@ import {
 //   ANTHROPIC_API_KEY=... npm run ai:compare
 //   AI_COMPARE_FAKE=1 npm run ai:compare     (the stand-in AI: checks the script, costs nothing)
 //
+// AI_COMPARE_WAYS=fennl reads only Fennl's own way (about a fifth of the cost), for measuring
+// changes to Fennl's instructions; the default compares all three. Re-scoring a run's saved
+// answers after a correct answer changes is free: npm run ai:rescore -- ai-answers.json.
+//
 // AI_COMPARE_SETS picks what it reads: "photos" (the default: the photos, cookbook pages,
 // screenshots and PDFs), "web" (the web pages with their recipe data left out, read from the
 // page's text as Fennl does for a page without data, phase E8), "text" (pasted text, phase E15),
 // or "all".
 //
-// It calls the real API, so it costs money: about a dollar for the photos, and about another
-// dollar for the web pages. Run it from GitHub (Actions › AI model comparison › Run workflow;
+// It calls the real API, so it costs money: about $6 for the photos (cards, pages, screenshots
+// and PDFs, private samples included; estimated 2026-10-21) with all three ways, about $1.50 with
+// only Fennl's own, and about another dollar for the web pages. Run it from GitHub (Actions › AI model comparison › Run workflow;
 // .github/workflows/ai-compare.yml), where the key is a repository secret. Writes
 // import-quality/ai-report.md.
+
+/** Which ways of reading a run compares: all three, or only Fennl's own (AI_COMPARE_WAYS). */
+type Ways = "all" | "fennl";
 
 const SETS = {
   photos: { label: "photos", kinds: ["card", "cookbook", "screenshot", "pdf"] },
@@ -363,7 +371,7 @@ async function withPdf<T>(
   }
 }
 
-function importers(provider: AiProvider, cheap: string, strong: string, set: SetName) {
+function importers(provider: AiProvider, cheap: string, strong: string, set: SetName, ways: Ways) {
   const { kinds, label } = SETS[set];
   const spent = { cheap: tally(), strong: tally(), switching: tally() };
   // A saved copy that keeps no text of the page (only its data) can't be read this way.
@@ -472,9 +480,12 @@ function importers(provider: AiProvider, cheap: string, strong: string, set: Set
     });
   }
 
+  const cheapAlone = alone(cheap, 0, spent.cheap);
+  const strongAlone = alone(strong, 1, spent.strong);
   return {
     spent,
-    list: [alone(cheap, 0, spent.cheap), alone(strong, 1, spent.strong), switching],
+    names: { cheap: cheapAlone.name, strong: strongAlone.name, switching: switching.name },
+    list: ways === "fennl" ? [switching] : [cheapAlone, strongAlone, switching],
   };
 }
 
@@ -503,15 +514,18 @@ async function main() {
     console.error(`AI_COMPARE_SETS must be photos, web, text or all, not ${wanted}`);
     process.exit(2);
   }
-  const groups = sets.map((set) => importers(provider, cheap, strong, set));
+  // AI_COMPARE_WAYS=fennl reads only the way Fennl reads (the cheaper model, with the stronger
+  // one's second look when needed): a fraction of the cost, for measuring Fennl's own changes.
+  const ways: Ways = process.env.AI_COMPARE_WAYS === "fennl" ? "fennl" : "all";
+  const groups = sets.map((set) => importers(provider, cheap, strong, set, ways));
   const card = await runScorecard(groups.flatMap((g) => g.list));
   const by = (name: string) =>
     new Map(card.results.filter((r) => r.importer === name).map((r) => [r.sample.id, r]));
 
   const costRows: string[] = [];
   const missedLines: string[] = [];
-  for (const { spent, list } of groups) {
-    const [cheapName, strongName, switchName] = list.map((i) => i.name) as [string, string, string];
+  for (const { spent, names } of groups) {
+    const { cheap: cheapName, strong: strongName, switching: switchName } = names;
     // Where the switch kept the cheaper model's answer, but the stronger model did clearly
     // better: the mistakes the second look didn't catch.
     const strongResults = by(strongName);
@@ -529,11 +543,13 @@ async function main() {
           `- ${r.sample.id}: ${pct(r.overall)} against ${pct(strongResults.get(r.sample.id)?.overall ?? 0)}`,
       ),
     );
-    const rows = [
-      [cheapName, spent.cheap],
-      [strongName, spent.strong],
-      [switchName, spent.switching],
-    ] as const;
+    const rows = (
+      [
+        [cheapName, spent.cheap],
+        [strongName, spent.strong],
+        [switchName, spent.switching],
+      ] as const
+    ).filter(([, t]) => t.samples > 0);
     costRows.push(
       ...rows.map(
         ([name, t]) =>
@@ -566,12 +582,19 @@ async function main() {
     "| --- | --- | --- | --- | --- | --- |",
     ...costRows,
     "",
-    "## Missed by the switch",
-    "",
-    "Samples where the cheaper model's answer looked right, so no second look was asked for, but the stronger model scored at least 5 points higher.",
-    "",
-    ...(missedLines.length ? missedLines : ["None."]),
-    "",
+    ...(ways === "all"
+      ? [
+          "## Missed by the switch",
+          "",
+          "Samples where the cheaper model's answer looked right, so no second look was asked for, but the stronger model scored at least 5 points higher.",
+          "",
+          ...(missedLines.length ? missedLines : ["None."]),
+          "",
+        ]
+      : [
+          "Only Fennl's own way of reading was run (AI_COMPARE_WAYS=fennl): the cheaper model, with the stronger one's second look when needed.",
+          "",
+        ]),
     ...secondLookSection(looks),
     `Prices: Anthropic's (worker/ai/anthropic.ts). Run on ${new Date().toISOString().slice(0, 10)}. Every answer is saved in ai-answers.json, kept with the run.`,
   ].join("\n");
