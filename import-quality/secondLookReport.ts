@@ -1,6 +1,7 @@
 import type { SecondLookFinding } from "../shared/aiAnswer";
 import type { DraftInput } from "../shared/importDraft";
-import type { ImportSource } from "../shared/recipe";
+import { matchRecipes, type ExpectedRecipe } from "../shared/importScore";
+import { emptyRecipeContent, type ImportSource } from "../shared/recipe";
 import type { SampleResult } from "./scorecard";
 
 // How well each second-look rule (shared/aiAnswer.ts, secondLookFindings) earns its cost: how
@@ -10,7 +11,7 @@ import type { SampleResult } from "./scorecard";
 // on the last comparison's answers without calling the AI again.
 
 /** Which way of reading asked: a model alone, or the switch's first read or second look. */
-export type Way = "alone" | "first" | "second_look";
+export type Way = "alone" | "first" | "second_look" | "find";
 
 /**
  * Every answer the AI gave in a comparison, saved to import-quality/ai-answers.json (kept with
@@ -29,6 +30,8 @@ export interface SavedAnswer {
   problem: string | null;
   output: unknown;
   costMicroUsd: number;
+  /** A PDF's recipe this read was for (phase E12: each is read on its own). */
+  recipe?: string;
 }
 
 /** One second look decided on a sample: what set it off, and how good the answers were. */
@@ -40,6 +43,17 @@ export interface LookRecord {
   first: number;
   /** The stronger model's, when it read it. */
   second: number | null;
+}
+
+/**
+ * The expected recipes one read is scored against: all of them, or for one of a PDF's recipes
+ * (read on its own, phase E12) the one with that title.
+ */
+export function expectedFor(expected: ExpectedRecipe[], recipe?: string): ExpectedRecipe[] {
+  if (recipe === undefined) return expected;
+  const { pairs } = matchRecipes(expected, [{ ...emptyRecipeContent(), title: recipe }]);
+  const hit = pairs.find((p) => p.found === 0);
+  return hit ? [expected[hit.expected] as ExpectedRecipe] : [];
 }
 
 /** "Right": every expected recipe found, with ingredients and method at least this good. */

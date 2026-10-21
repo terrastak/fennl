@@ -1,0 +1,57 @@
+[
+  {
+    "title": "Lemon Bars",
+    "description": "Aunt Ruth brought these to every summer picnic.",
+    "ingredients": [
+      "## Crust",
+      "1 cup (2 sticks) butter, softened",
+      "1/2 cup powdered sugar",
+      "2 cups all-purpose flour",
+      "## Filling",
+      "4 large eggs",
+      "1 1/2 cups sugar",
+      "1/4 cup all-purpose flour",
+      "2/3 cup fresh lemon juice",
+      "1 tablespoon lemon zest"
+    ],
+    "directions": [
+      "Heat the oven to 350°F and line a 9x13-inch pan with parchment.",
+      "Beat the butter and powdered sugar until fluffy, then mix in the flour. Press into the pan and bake for 20 minutes.",
+      "Whisk the eggs, sugar, flour, lemon juice and zest until smooth. Pour over the hot crust.",
+      "Bake for 25 minutes more, until the filling is set. Cool completely before cutting."
+    ],
+    "times": { "prep": 20, "cook": 45, "total": null },
+    "servings": { "count": 16, "yield": "16 bars" },
+    "notes": "Tip: Dust with powdered sugar just before serving."
+  },
+  {
+    "title": "Brown Butter Shortbread",
+    "ingredients": ["1 cup butter", "2/3 cup brown sugar", "1/2 teaspoon salt", "2 cups flour"],
+    "directions": [
+      "Brown the butter in a saucepan, then chill until firm.",
+      "Beat the butter, brown sugar and salt, then stir in the flour.",
+      "Roll into a log, chill for 1 hour, slice and bake at 325°F for 15 minutes."
+    ],
+    "servings": { "count": 24, "yield": "24 cookies" }
+  },
+  {
+    "title": "Roasted Tomato Soup",
+    "description": "Grandpa Joe's favorite on a cold night.",
+    "ingredients": [
+      "3 pounds ripe tomatoes, halved",
+      "1 onion, quartered",
+      "4 cloves garlic",
+      "2 tablespoons olive oil",
+      "2 cups chicken broth",
+      "1/2 cup heavy cream",
+      "Salt and pepper"
+    ],
+    "directions": [
+      "Heat the oven to 425°F. Toss the tomatoes, onion and garlic with the olive oil on a sheet pan.",
+      "Roast for 40 minutes, until soft and browned at the edges.",
+      "Blend with the broth until smooth, then warm in a pot with the cream.",
+      "Season with salt and pepper."
+    ],
+    "servings": { "count": 4, "yield": null }
+  }
+]

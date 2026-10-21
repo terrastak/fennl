@@ -65,7 +65,21 @@ const WHAT: Record<ImportSource, string> = {
   paprika: "This is a recipe exported from another app.",
 };
 
-/** What to do with the parts, after them. */
-export function instructionFor(source: ImportSource): string {
+/**
+ * What to do with the parts, after them. `focus`: the one recipe to read, by its title, when the
+ * pages also hold others (a recipe in a PDF, phase E12).
+ */
+export function instructionFor(source: ImportSource, focus?: string): string {
+  if (focus) {
+    return `${WHAT[source]} Transcribe only the recipe titled "${focus}" into the answer format. The pages may also hold the end of the recipe before it or the start of the next one: leave those out. Where a page's own text is also given (after the pictures, labelled with its page number), it is the PDF's text for that page: exact for a PDF made on a computer, so prefer it for words and numbers, but it may be missing or wrong for a scanned page, so check it against the picture.`;
+  }
   return `${WHAT[source]} Transcribe every recipe on them into the answer format.`;
 }
+
+/** Finding the recipes in a PDF (phase E12): the same for every model. */
+export const FIND_SYSTEM = `You find the recipes in a PDF for Fennl, a recipe box app, so each can be read on its own afterwards. You get every page in order, labelled with its page number: as the page's text, or as a picture where the page is scanned.`;
+
+export const FIND_INSTRUCTION = `List every recipe in this PDF, in order: its title as printed (or, if it has none, a short name for it) and the first and last page it's on. A recipe may begin on the page where the one before it ends. Leave out what isn't a recipe: a contents page, an index, an introduction, photos or stories with no recipe. A recipe that points to another for part of it ("see page 120") is still one recipe. If there is no recipe, give an empty list.`;
+
+/** Room for the list of a 100-page PDF's recipes. */
+export const FIND_OUTPUT_TOKENS = 4_000;

@@ -2,6 +2,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DraftInput } from "../../shared/importDraft";
 import { IMPORT_RULES, type ImportPhotosError } from "../../shared/importJobs";
 import { isImageHash } from "../../shared/images";
+import { PDF_LABELS } from "../../shared/pdfImport";
 import { createAiImport, type AiCaller, type AiReadProblem } from "../ai/read";
 import type { AiPart } from "../ai/provider";
 import { image } from "../db/schema";
@@ -35,13 +36,27 @@ export type PhotoImportResult =
   | { ok: false; error: ImportPhotosError; status: 400 | 403 | 404 | 413 | 422 | 429 | 503 };
 
 /**
+ * One recipe's pages of a PDF (phase E12): which recipe, the pages' numbers in the PDF, and each
+ * page's own text where it was read from its text (null where it's a scanned page).
+ */
+export interface PdfPages {
+  title: string;
+  pageNumbers: number[];
+  texts: (string | null)[];
+  fileName: string;
+  batchId: string;
+}
+
+/**
  * Reads the pages (photo hashes, in order) into drafts waiting for review. `screenshots`: every
- * page is a screenshot (phase E11).
+ * page is a screenshot (phase E11). `pdf`: they're one recipe's pages of a PDF (phase E12),
+ * read for that recipe only, with the pages' own text, into one draft.
  */
 export async function importPhotos(
   caller: AiCaller,
   pages: unknown,
   screenshots: unknown = false,
+  pdf?: PdfPages,
 ): Promise<PhotoImportResult> {
   if (!Array.isArray(pages) || pages.length === 0 || !pages.every(isImageHash)) {
     return { ok: false, error: "invalid_request", status: 400 };
@@ -71,15 +86,20 @@ export async function importPhotos(
   const total = found.reduce((sum, row) => sum + (row?.bytes ?? 0), 0);
   if (total > IMPORT_RULES.photoBytes) return { ok: false, error: "pages_too_large", status: 413 };
 
-  const what = screenshots === true ? "Screenshot" : "Photo";
+  const what = pdf ? "Page" : screenshots === true ? "Screenshot" : "Photo";
+  const pageName = (n: number) =>
+    pdf ? `Page ${pdf.pageNumbers[n]}` : pages.length === 1 ? what : `${what} ${n + 1}`;
   const parts: AiPart[] = [];
   const storedAt: string[] = [];
   for (const [n, hash] of pages.entries()) {
     const key = imageKey(caller.userId, hash);
     const object = await caller.env.IMAGES.get(key);
     if (!object) return { ok: false, error: "page_missing", status: 404 };
-    const label =
-      pages.length === 1 ? `The ${what.toLowerCase()}` : `${what} ${n + 1} of ${pages.length}`;
+    const label = pdf
+      ? PDF_LABELS.readPicture(pdf.pageNumbers[n] ?? n + 1)
+      : pages.length === 1
+        ? `The ${what.toLowerCase()}`
+        : `${what} ${n + 1} of ${pages.length}`;
     parts.push({
       kind: "image",
       mediaType: byHash.get(hash)?.contentType as Readable,
@@ -88,20 +108,31 @@ export async function importPhotos(
     });
     storedAt.push(key);
   }
+  // A PDF page's own text follows the pictures (exact for a PDF made on a computer).
+  for (const [n, text] of (pdf?.texts ?? []).entries()) {
+    if (text) {
+      parts.push({ kind: "text", text, label: PDF_LABELS.readText(pdf?.pageNumbers[n] ?? n + 1) });
+    }
+  }
   const inputs: DraftInput[] = pages.map((hash, n) => ({
     kind: "image",
-    name: pages.length === 1 ? what : `${what} ${n + 1}`,
+    name: pdf ? `${pdf.fileName}, ${pageName(n).toLowerCase()}` : pageName(n),
     url: null,
     imageHash: hash,
   }));
-  const created = await createAiImport(caller, {
-    source: screenshots === true ? "screenshot" : "photo",
-    parts,
-    inputs,
-    // Every page is kept with the recipe, out of its gallery.
-    photos: pages.map((_, n) => ({ input: n, role: "import_original" })),
-    storedAt,
-  });
+  const created = await createAiImport(
+    caller,
+    {
+      source: pdf ? "pdf" : screenshots === true ? "screenshot" : "photo",
+      parts,
+      inputs,
+      // Every page is kept with the recipe, out of its gallery.
+      photos: pages.map((_, n) => ({ input: n, role: "import_original" })),
+      storedAt,
+      ...(pdf ? { focus: pdf.title } : {}),
+    },
+    pdf ? { batchId: pdf.batchId, limit: 1 } : {},
+  );
   if (!created.ok) return { ok: false, ...AI_ERRORS[created.problem] };
   return { ok: true, jobIds: created.jobIds };
 }

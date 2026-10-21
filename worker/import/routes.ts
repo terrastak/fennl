@@ -36,6 +36,9 @@ import { fillFromPage, importPageWithAi } from "./aiWeb";
 import { markImportsSaved, recordDiscarded, removeJobPhotos } from "./jobs";
 import { importPastedText } from "./pastedImport";
 import { importPhotos } from "./photoImport";
+import { FIND_BODY_BYTES, findParts, pdfPages } from "./pdfImport";
+import { findPdfRecipes } from "../ai/find";
+import type { PdfFindError, PdfFindResponse } from "../../shared/pdfImport";
 
 // Importing recipes (phase E4; CLAUDE.md, "Import sources"). The server reads what's sent into
 // drafts and keeps them in the account until the person reviews them: nothing becomes a recipe
@@ -81,6 +84,12 @@ const DAY = 24 * 60 * MINUTE;
 const PAGES_PER_MINUTE = 30;
 /** Recipes read from photos per person per minute (phase E9): the same kind of guard. */
 const PHOTO_IMPORTS_PER_MINUTE = 10;
+/**
+ * Recipes found in PDFs, and recipes read from them, per person per minute (phase E12). Reading a
+ * PDF's recipes goes one at a time, each taking several seconds, so this only stops abuse.
+ */
+const PDF_FINDS_PER_MINUTE = 10;
+const PDF_READS_PER_MINUTE = 30;
 /** Recipes read from pasted text per person per minute (phase E15): the same kind of guard. */
 const TEXT_IMPORTS_PER_MINUTE = 10;
 /** Redirects followed when fetching a draft's photo. */
@@ -282,6 +291,94 @@ importRoutes.post("/api/import/photos", async (c) => {
   const response: ImportPhotosResponse = {
     jobs: rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(summary),
   };
+  return c.json(response, 201);
+});
+
+/** The jobs as the app lists them, in the order they were made. */
+async function jobSummaries(db: SignedIn["db"], ids: string[]) {
+  const rows = await db
+    .select({
+      id: importJob.id,
+      draft: importJob.draft,
+      provenance: importJob.provenance,
+      createdAt: importJob.createdAt,
+    })
+    .from(importJob)
+    .where(inArray(importJob.id, ids))
+    .all();
+  const order = new Map(ids.map((id, i) => [id, i]));
+  return rows.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0)).map(summary);
+}
+
+// POST /api/import/pdf/find {pageCount, pages: [{page, text} | {page, image, mediaType}]}: a PDF's
+// pages, as their own text or (scanned) a small picture, read once by the cheapest model to list
+// its recipes and their pages (phase E12; worker/ai/find.ts). Free: not an import.
+importRoutes.post("/api/import/pdf/find", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  const fail = (error: PdfFindError, status: 400 | 403 | 413 | 429 | 503) =>
+    c.json({ error }, status);
+  if (!plan.import_ai_enabled) return fail("ai_import_not_included", 403);
+  if (
+    !(await withinRateLimit(db, `import-pdf-find:${userId}`, {
+      max: PDF_FINDS_PER_MINUTE,
+      windowMs: MINUTE,
+    }))
+  ) {
+    return fail("rate_limited", 429);
+  }
+  const raw = await readCapped(c.req.raw, FIND_BODY_BYTES);
+  if (!raw) return fail("pages_too_large", 413);
+  let body: { pages?: unknown; pageCount?: unknown } | null = null;
+  try {
+    body = JSON.parse(new TextDecoder().decode(raw)) as typeof body;
+  } catch {
+    return fail("invalid_request", 400);
+  }
+  const checked = findParts(body);
+  if (!checked.ok) return fail(checked.error, checked.error === "invalid_request" ? 400 : 413);
+  const found = await findPdfRecipes(
+    { env: c.env, db, householdId: household.householdId, userId, plan },
+    checked.parts,
+    checked.pageCount,
+  );
+  if (!found.ok) {
+    if (found.problem === "import_not_included") return fail("ai_import_not_included", 403);
+    if (found.problem === "monthly_limit") return fail("monthly_limit", 429);
+    if (found.problem === "paused") return fail("paused", 503);
+    return fail("ai_unavailable", 503);
+  }
+  const response: PdfFindResponse = { recipes: found.recipes };
+  return c.json(response);
+});
+
+// POST /api/import/pdf {title, pages, pageNumbers, texts, fileName, batchId}: one recipe of a PDF,
+// read from its pages (uploaded to the person's photos like any page photo) and their own text,
+// into one draft that keeps the pages (phase E12). Counts as one AI import.
+importRoutes.post("/api/import/pdf", async (c) => {
+  const { db, userId, household } = c.var.signedIn;
+  const plan = await householdEntitlements(db, household.householdId);
+  if (!plan.import_ai_enabled) return c.json({ error: "ai_import_not_included" }, 403);
+  if (
+    !(await withinRateLimit(db, `import-pdf:${userId}`, {
+      max: PDF_READS_PER_MINUTE,
+      windowMs: MINUTE,
+    }))
+  ) {
+    return c.json({ error: "rate_limited" }, 429);
+  }
+  const checked = pdfPages(
+    (await c.req.json().catch(() => null)) as Parameters<typeof pdfPages>[0],
+  );
+  if (!checked) return c.json({ error: "invalid_request" }, 400);
+  const result = await importPhotos(
+    { env: c.env, db, householdId: household.householdId, userId, plan },
+    checked.pages,
+    false,
+    checked.pdf,
+  );
+  if (!result.ok) return c.json({ error: result.error }, result.status);
+  const response: ImportPhotosResponse = { jobs: await jobSummaries(db, result.jobIds) };
   return c.json(response, 201);
 });
 

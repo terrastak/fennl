@@ -113,6 +113,8 @@ export interface AiProvenance {
     answers?: ReadAnswer[];
     /** The instructions' fingerprint when it was read (worker/ai/read.ts, setupVersion). */
     setup?: string;
+    /** The one recipe it was asked to read, by title (a recipe in a PDF, phase E12). */
+    focus?: string;
   };
 }
 
