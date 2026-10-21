@@ -982,7 +982,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   4. The original photo stays attached to the saved recipe.
   5. Measure on the card and cookbook test sets.
 - **You check**: Import three of your hardest handwritten cards.
-- **Done when**: Card and cookbook scores meet an agreed level.
+- **Done when**: Card and cookbook scores meet an agreed level. **Postponed (owner, 2026-10-21):** the level is agreed once the test set has more handwritten cards (it has 3); until then E10 is built and measured but not signed off. To pick up: add cards to `import-quality/` (see its README checklist), run the model comparison on the photos, then agree the level.
 - **Built (2026-10-21)**; the owner's choices of 2026-10-20 after importing the Choc Pie card:
   1. Step 1, instructions for cards and pages (`worker/ai/prompt.ts`, used by every model):
      - **A handwritten method, one step per sentence** (owner's choice 2026-10-21, after the first run below split cards inconsistently): split at full stops (or where a new sentence starts with a capital) and at dashes between instructions, never at commas or semicolons ("what a semicolon joins is usually one step"), keeping the words as written, each step starting with a capital and without the dash. Printed paragraphs and numbered steps stay as they are.
