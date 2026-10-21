@@ -76,7 +76,7 @@ const card = (): AiReadInput => ({
   photos: [{ input: 0, role: "import_original" }],
 });
 
-/** Haiku unsure of the flour (and missing the sugar), so Sonnet takes a second look. */
+/** Haiku unsure of the flour's amount (and missing the sugar), so the next model looks again. */
 function unsureThenRight() {
   fakeAi.byModel({
     [FIRST]: {
@@ -85,7 +85,7 @@ function unsureThenRight() {
         fakeRecipe({
           ingredients: [
             { text: "1 cup butter", heading: false, confidence: "high" },
-            { text: "2 cups flowr", heading: false, confidence: "low" },
+            { text: "2 cups flowr", heading: false, confidence: "low", unsure: ["2"] },
           ],
         }),
       ),

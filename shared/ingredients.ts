@@ -468,6 +468,9 @@ function amountsIn(text: string, from: number, to: number): IngredientAmount[] {
   return found;
 }
 
+/** Every amount with a unit written in `text` ("Chop 1/4 C walnuts"), in order. */
+export const amountsWithin = (text: string): IngredientAmount[] => amountsIn(text, 0, text.length);
+
 const toAmount = (a: Amount, role: AmountRole): IngredientAmount => ({
   low: a.low,
   high: a.high,

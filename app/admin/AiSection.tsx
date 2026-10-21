@@ -251,9 +251,10 @@ function AiSettingsForm({
           Automatic second look
         </label>
         <p id={`${id}-second-hint`} className={styles.hint}>
-          When on, a read the first model seems unsure of is read again by the next model at once,
-          not counted as another import. Off since 2026-10-21: in the model comparisons it rarely
-          did better and cost several times more.
+          When on, a read whose amounts look doubtful is read again by the next model at once, not
+          counted as another import: an amount the first model only guessed, or amounts in the
+          method that don&rsquo;t add up to the ingredient list (on photos, screenshots and PDFs). A
+          word it couldn&rsquo;t read is only highlighted for the person. Off unless turned on.
         </p>
         <div className={styles.field}>
           <label htmlFor={`${id}-missing`}>
@@ -279,7 +280,7 @@ function AiSettingsForm({
             aria-describedby={`${id}-off-hint`}
           />
           <p id={`${id}-off-hint`} className={styles.hint}>
-            0 turns the check off. A read the AI marks unsure, or missing a title, ingredients or
+            0 turns the check off. A read with a doubtful amount, or missing a title, ingredients or
             method, always gets a second look.
           </p>
         </div>

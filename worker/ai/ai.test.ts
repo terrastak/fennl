@@ -77,7 +77,7 @@ const unsure = fakeAnswer(
   fakeRecipe({
     ingredients: [
       { text: "1 cup butter", heading: false, confidence: "high" },
-      { text: "2 1/4 cup flour", heading: false, confidence: "low" },
+      { text: "2 1/4 cup flour", heading: false, confidence: "low", unsure: ["2 1/4"] },
     ],
   }),
 );
@@ -121,7 +121,12 @@ describe("reading a recipe", () => {
       const { caller } = await person();
       fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
       const read = await readWithAi(caller, card());
-      expect(read).toMatchObject({ ok: true, level: 0, models: [FIRST], secondLook: ["unsure"] });
+      expect(read).toMatchObject({
+        ok: true,
+        level: 0,
+        models: [FIRST],
+        secondLook: ["unsure_amount"],
+      });
       expect(fakeAi.requests.map((r) => r.model)).toEqual([FIRST]);
       const created = await createAiImport(caller, card());
       const again = await readAgain(caller, created.ok ? created.jobIds[0]! : "");
@@ -137,7 +142,7 @@ describe("reading a recipe", () => {
     fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
     const read = await readWithAi(caller, card());
     expect(read).toMatchObject({ ok: true, level: 1, models: [FIRST, SECOND] });
-    expect(read.ok && read.secondLook).toEqual(["unsure"]);
+    expect(read.ok && read.secondLook).toEqual(["unsure_amount"]);
     expect(fakeAi.requests.map((r) => [r.model, r.effort])).toEqual([
       [FIRST, "medium"],
       [SECOND, "high"],
