@@ -43,6 +43,11 @@ export const TEXT_SETTINGS = [
   "ai_pause_cents_per_month",
   /** The models to read with, cheapest first, comma-separated (worker/ai/config.ts). */
   "ai_models",
+  /**
+   * The automatic second look by the next stronger model, "on" or "off" (off unless set: the
+   * owner's choice 2026-10-21, after the comparison runs showed it rarely helped).
+   */
+  "ai_second_look",
   /** A second look: ingredient lines without an amount that make a read look wrong (0: off). */
   "ai_second_look_missing_amounts",
   /** A second look: cups, tablespoons and the like above this look misread (0: off). */

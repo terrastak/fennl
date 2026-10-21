@@ -53,7 +53,7 @@ const defaultReply: Reply = (request) => {
     ? fakeRecipe({
         ingredients: [
           { text: "1 cup butter", heading: false, confidence: "high" },
-          { text: "2 1/4 cup flour", heading: false, confidence: "low" },
+          { text: "2 1/4 cup flour", heading: false, confidence: "low", unsure: ["2 1/4"] },
         ],
         unclear: ["The amount of flour is smudged"],
       })

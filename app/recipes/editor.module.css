@@ -243,6 +243,16 @@
 }
 
 /* A line the import review screen points out (phase E4): words, not only color. */
+/* A word an AI import wasn't sure of (phase E10). */
+.unsure {
+  padding: 0 0.1em;
+  border-radius: var(--radius-sm);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+  text-decoration: underline wavy var(--color-warm);
+  text-underline-offset: 0.2em;
+}
+
 .mark {
   margin-left: var(--space-2);
   padding: 0 var(--space-2);

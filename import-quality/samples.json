@@ -12,6 +12,12 @@
     "notes": "Cursive on a lined card; oven temperature and yield written beside the title; two ingredients share a line."
   },
   {
+    "id": "choc-pie-card",
+    "kind": "card",
+    "inputs": ["test_images/choc-pie-card.webp"],
+    "notes": "Phone photo of a photocopied card on a sheet of paper, with a shadow across the lower half; cursive with short forms (Choc, Tbs, teasp.); the method is one run-on paragraph split by dashes; signed \"All my Love, Alice\". Copy as received through the chat, 1500×2000 WebP (the original is 3024×4032)."
+  },
+  {
     "id": "thai-iced-tea-cookbook",
     "kind": "cookbook",
     "inputs": ["test_images/IMG_0019.jpeg"],

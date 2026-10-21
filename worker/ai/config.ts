@@ -21,6 +21,8 @@ export const DEFAULT_PAUSE_CENTS = 15_000;
 export interface AiConfig {
   provider: AiProvider;
   models: string[];
+  /** The automatic second look is on (decided 2026-10-21: off unless turned on). */
+  secondLook: boolean;
   rules: SecondLookRules;
   /** Email the owner when this month's estimated cost reaches this (millionths of a dollar). */
   alertMicroUsd: number;
@@ -62,6 +64,7 @@ export async function aiSettings(
     alertCents: await number(db, "ai_alert_cents_per_month", DEFAULT_ALERT_CENTS),
     pauseCents: await number(db, "ai_pause_cents_per_month", DEFAULT_PAUSE_CENTS),
     models: (stored && parseModels(stored, knows)) || DEFAULT_MODELS,
+    secondLook: (await readText(db, "ai_second_look")) === "on",
     missingAmounts: await number(
       db,
       "ai_second_look_missing_amounts",
@@ -79,6 +82,7 @@ export async function aiConfig(env: Env, db: Database): Promise<AiConfig | null>
   return {
     provider,
     models: settings.models,
+    secondLook: settings.secondLook,
     rules: { missingAmounts: settings.missingAmounts, oddAmount: settings.oddAmount },
     alertMicroUsd: settings.alertCents * 10_000,
     pauseMicroUsd: settings.pauseCents * 10_000,
