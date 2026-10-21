@@ -155,7 +155,7 @@ const NUTRITION_NAMES: [string, Nutrient][] = [
 ];
 
 /** "14.9 grams", "98mg sodium", "521.857", "1,200 kcal": the amount in the nutrient's own unit. */
-function nutrientAmount(value: unknown, nutrient: Nutrient): number | null {
+export function nutrientAmount(value: unknown, nutrient: Nutrient): number | null {
   const text = cleanText(value, true)
     .toLowerCase()
     .replace(/(\d),(\d{3})\b/g, "$1$2");
