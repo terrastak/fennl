@@ -104,7 +104,7 @@ recipes (8 images) and 3 PDFs.
 - [ ] **Documents (E18, not built yet):** three from you in `test-docs/`: a Rich Text ingredient
       list with no method, and two Word documents (cookies with a photo of the original recipe
       inside, and a rib eye roast with a family note). The `.txt` example you mentioned isn't in
-      the folder yet. Still worth adding: a document with several recipes, and a LibreOffice one.
+      the folder yet. Still worth adding: a document with several recipes, and a Markdown one.
 - [x] **Paprika export:** the owner's whole library (827 recipes) is in
       `test_recipes/all-recipes.paprikarecipes`. E2 reads every ingredient line in it
       (`ingredients.test.ts`); E13 will import it.

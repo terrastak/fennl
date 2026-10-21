@@ -1316,14 +1316,14 @@ These follow the beta and are approved one at a time, like every phase. The desi
 - **Why**: Family recipes are often typed up in Word or TextEdit. Today the only way in is "Paste a recipe" (E15). Three examples from the owner are in the test set (`test-docs/`: a Rich Text ingredient list, and two Word documents, one with a photo of the original recipe inside).
 - **Builds on**: E15 (pasted text: Fennl's free reading of clearly laid out text, otherwise the AI), E12 (a file opened on the device, never uploaded whole), E4's review screen.
 - **Steps**:
-  1. **From a file** on the Import page (or the file is accepted by the same box): `.docx` (Word), `.rtf` (Rich Text), `.txt`, and possibly `.odt` (LibreOffice) and `.md`. Old Word files (`.doc`) and Apple Pages files (`.pages`) are turned away with how to save them as `.docx`.
-  2. **The text is taken out on the device**, keeping paragraphs, line breaks, tabs, bullets and numbered lists, bold lines as headings: Word and LibreOffice files are zips of XML (read with `fflate`, already a dependency); Rich Text is plain text with formatting codes, read by a small reader of Fennl's own; a text file in any common encoding. No new dependency.
+  1. **From a file** on the Import page (or the file is accepted by the same box): `.docx` (Word), `.rtf` (Rich Text), `.txt` and `.md`. Old Word files (`.doc`) and Apple Pages files (`.pages`) are turned away with how to save them as `.docx`.
+  2. **The text is taken out on the device**, keeping paragraphs, line breaks, tabs, bullets and numbered lists, bold lines as headings: Word files are zips of XML (read with `fflate`, already a dependency); Rich Text is plain text with formatting codes, read by a small reader of Fennl's own; a text file in any common encoding. No new dependency.
   3. **Then exactly as pasted text** (E15): clearly laid out text is read by Fennl's own rules (`import_structured_enabled`, free); anything else by the AI (`import_ai_enabled`, the monthly limits, one AI import). The same 60,000-character cap. Several recipes in one document become several drafts in one batch. The draft's source is the file's name, and the review screen shows the document's text beside it.
   4. **Several files at once**, each read into its own draft, in one batch, saved together where nothing needs checking ("Save selected", E12).
-- **Decisions for the owner**:
-  1. Which formats (suggested: `.docx`, `.rtf`, `.txt`; `.odt` and `.md` if cheap).
-  2. **Pictures inside a document** (the cookie document holds a photo of the recipe on the Quaker Oats lid): offer them on the review screen as photos to keep, like a web page's photos (Premium); keep them as import originals; or leave them out. Suggested: offer them as photos to keep.
-  3. Whether a clearly laid out document is free, like pasted text (suggested: yes, the same rule).
+- **Decisions (owner, 2026-10-21)**:
+  1. **Formats**: `.docx`, `.rtf`, `.txt` and `.md`. Not `.odt` unless and until people ask for it.
+  2. **Pictures inside a document**: the relevant ones are offered on the review screen as photos to keep, like a web page's photos (Premium, `images_enabled`). Tiny pictures (bullets, logos, icons) aren't offered.
+  3. **Free when no AI is used**: a clearly laid out document is read by Fennl's own rules at no AI cost, so it's free (`import_structured_enabled`), like pasted text; one that needs the AI is Premium and counts as one AI import.
 - **You check**: Import the three documents in `test-docs/`, then one of your own.
 - **Done when**: the `document` samples in `import-quality/` read as their correct answers (Fennl's rules exactly where they apply; the AI measured by the model comparison), and a damaged or unsupported file gets a clear message.
 
