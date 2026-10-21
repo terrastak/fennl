@@ -76,7 +76,7 @@ correct answer is the text a careful person would type in, not a tidied version.
 ## Collecting samples (checklist)
 
 The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
-PDFs and a Paprika export. Already in: 31 web pages, 6 cards, 2 cookbook pages, 4 screenshot
+PDFs and a Paprika export. Already in: 31 web pages, 7 cards, 2 cookbook pages, 4 screenshot
 recipes (7 images) and 3 PDFs.
 
 - [x] **Web pages (about 30):** 31 pages from your Paprika library (E3), chosen for variety: big
@@ -84,7 +84,7 @@ recipes (7 images) and 3 PDFs.
       microdata. Still worth adding by hand: pages from Food Network (most of your library),
       Allrecipes and Serious Eats, which refuse automated downloads; a page with two recipes; and
       a few with no recipe data at all, for the AI reader (E8).
-- [ ] **Card photos (about 14 more):** printed and handwritten, faded, stained, cursive, both
+- [ ] **Card photos (about 13 more):** printed and handwritten, faded, stained, cursive, both
       sides of a card (front and back as two files of one sample), two recipes on one card, and a
       couple taken badly (angled, shadowed, blurry).
 - [ ] **Cookbook pages (about 8 more):** a recipe across two pages, two recipes on one page,

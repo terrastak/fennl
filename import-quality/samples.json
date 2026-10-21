@@ -36,6 +36,12 @@
     "notes": "Cursive on a lined notebook page; signed \"Patsy\" under the title; brand names (Karo, Special K); \"boil for 2 seconds\", copied as written and asked about, never corrected. From the web, added with the owner's OK (2026-10-21)."
   },
   {
+    "id": "brownies-barbara-card",
+    "kind": "card",
+    "inputs": ["test_images/brownies-barbara-card.jpg"],
+    "notes": "Ink on a printed card with a picture behind the writing; no written method: the steps are notes in the margin, with brackets and arrows pointing at the ingredients (\"melt together\", \"whisk into\", \"add flour + salt\", \"↓ chips\"); the baking line among the ingredients, with a second temperature under the first and a ditto mark; the source after the title (\"Brownies – Barbara's\"); oz., T., c. and t. From the owner, 2026-10-21. Its method is spelled out from the notes (owner's choice 2026-10-21)."
+  },
+  {
     "id": "thai-iced-tea-cookbook",
     "kind": "cookbook",
     "inputs": ["test_images/IMG_0019.jpeg"],
