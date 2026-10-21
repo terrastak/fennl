@@ -1,0 +1,125 @@
+/* Importing recipes from a PDF (phase E12): the list of recipes found, to check. Tokens only
+   (docs/design/design-direction.md). */
+
+.section {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  max-width: 44rem;
+  margin-bottom: var(--space-8);
+}
+
+.section h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+}
+
+.section p {
+  margin: 0;
+}
+
+.off {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.problem {
+  color: var(--color-danger);
+}
+
+.found {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.foundTitle {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-lg);
+}
+
+.recipes {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.recipe {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.preview {
+  display: grid;
+  place-items: center;
+  width: 6rem;
+  min-height: 6rem;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+}
+
+.preview img {
+  max-width: 100%;
+}
+
+.fields {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.include {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  font-weight: var(--weight-semibold);
+}
+
+.include input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.field input {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.pageFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 8rem));
+  gap: var(--space-2);
+}
+
+.kindNote {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

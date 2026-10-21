@@ -701,7 +701,10 @@ export const aiUsage = sqliteTable(
     householdId: text("household_id").notNull(),
     userId: text("user_id").notNull(),
     importJobId: text("import_job_id"),
-    /** "read" (a new import), "second_look" (the stronger model, automatically), "reread". */
+    /**
+     * "read" (a new import), "second_look" (the stronger model, automatically), "reread", "find"
+     * (the recipes in a PDF, E12).
+     */
     purpose: text("purpose").notNull(),
     /** 1 when it counts as one of the household's AI imports this month (ai_imports_per_month). */
     countsAsImport: integer("counts_as_import").notNull(),

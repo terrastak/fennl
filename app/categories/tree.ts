@@ -319,10 +319,11 @@ export function fileRecipeUnder(
   recipeId: string,
   paths: string[][],
   ctx: PlanContext,
+  /** Categories already planned for other recipes saved with this one, so each is made once. */
+  made = new Map<string, string>(),
 ): Plan {
   const changes: SyncChange[] = [];
   const undo: SyncChange[] = [];
-  const made = new Map<string, string>();
   const seen = new Set<string>();
   for (const names of paths) {
     const key = pathKey(names);

@@ -18,7 +18,12 @@ import type { AiProblem, AiTokens } from "./provider";
 //
 // Months are calendar months in UTC. A call that fails gives its import back.
 
-export type AiPurpose = "read" | "second_look" | "reread";
+/**
+ * "read" (a new import), "second_look" (the stronger model, automatically), "reread" ("Read
+ * again"), "find" (finding the recipes in a PDF, phase E12). Only "read" and "reread" count as
+ * imports.
+ */
+export type AiPurpose = "read" | "second_look" | "reread" | "find";
 
 export interface AiCall {
   householdId: string;
@@ -65,7 +70,7 @@ export async function reserveCall(
 ): Promise<{ ok: true; id: string } | { ok: false; refusal: AiRefusal }> {
   const id = crypto.randomUUID();
   const start = monthStart(now);
-  const counts = call.purpose === "second_look" ? 0 : 1;
+  const counts = call.purpose === "read" || call.purpose === "reread" ? 1 : 0;
   const row = await db.get<{ id: string }>(sql`
     insert into ai_usage (id, household_id, user_id, import_job_id, purpose, counts_as_import,
       provider, model, status, created_at)

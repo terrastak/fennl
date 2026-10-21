@@ -1037,7 +1037,16 @@ Import quality is the core of the product, so this stage starts by building a wa
   4. Limits on PDF size and page count.
 - **You check**: Import a multi-recipe PDF.
 - **Done when**: PDF test set passes.
-- **Decisions**: Maximum PDF size/pages for the beta.
+- **Decisions**: Maximum PDF size/pages for the beta. **Decided (owner, 2026-10-21):** at most **100 pages and 30 MB**; **each recipe read from a PDF counts as one AI import, and finding the recipes is free**.
+- **Built (2026-10-21)**, on the Import page under **From a PDF** (`app/pdf/`):
+  1. **Opened on the device, never uploaded whole.** Mozilla's pdf.js (`pdfjs-dist`, its "legacy" build, since the newer one needs JavaScript that Safari and Chrome don't have yet) is loaded only when a PDF is chosen. A password-protected or damaged file is turned away with a plain message, as is one over 100 pages or 30 MB (`PDF_RULES`, `shared/pdfImport.ts`).
+  2. **Text or picture, page by page** (`pageKind`): a page with real text is read from its own text (`pageText`, `shared/pdfText.ts`), exact for a PDF made on a computer; a page mostly covered by a picture (60% or more, measured from pdf.js's drawing operations, `shared/pdfPictures.ts`), or with almost no text, is a scanned page and is read as a picture. Scanners often add a text layer that reads badly ("HAMBURGER RUNS BUNS"), so the picture wins on scanned pages.
+  3. **Finding the recipes** (`POST /api/import/pdf/find`, `worker/ai/find.ts`): one quick read of every page (its text, or a 1200 px picture of a scanned page) by the first model, answering each recipe's title and first and last page, in order, without contents pages, indexes or introductions; a recipe may begin on the page where the one before ends. Metered as `find` in `ai_usage`, not counted as an import. The answer is checked and kept inside the PDF (`pdfRecipes`), and a recipe is at most 10 pages.
+  4. **Adjusting the split**: the list shows each recipe with a small picture of its first page, a box to leave it out, its title and its first and last page, and **Add a recipe** for one the AI missed.
+  5. **Reading each recipe** (`POST /api/import/pdf`): its pages are drawn at 2400 px, prepared like page photos (WebP about 90) and uploaded to the person's photos once even when two recipes share a page; the AI reads only the recipe with that title from the pictures, plus each text page's own text (`instructionFor(source, focus)`, `worker/ai/prompt.ts`), into one draft. One AI import each; the second look and **Read again** work as for photos, and Read again asks for the same recipe. Recipes are read one at a time with progress; when the month's AI imports run out, Fennl stops and says which recipes weren't read. Each PDF's drafts share a batch, and the review screen shows **The pages** beside each.
+  6. **Saving several at once** (step 3): the **Waiting for review** list has a box on each draft, **Select all** and **Save N selected** (`app/import/saveMany.ts`). Only drafts with nothing to look at are saved that way: everything read with confidence, no notes, nothing highlighted, no likely duplicate already in the recipes, and (on Premium) no photos to choose. The rest stay waiting, each named with the reason, to be opened and reviewed one by one. Categories two saved recipes share are made once; the pages are kept with each as import originals.
+  7. **Measuring**: a PDF in the model comparison (`npm run ai:compare`) is now read as the app reads it (`import-quality/pdfPages.ts`, the same pdf.js in Node): found, then each recipe read on its own with its own second look, each scored against its own correct answer. A third PDF is in the test set, made by Fennl (invented recipes, `family-cookbook-pdf`): a contents page and three recipes, one running on to the next page. The two scanned PDFs are one recipe each. The paid comparison run waits for the owner's go-ahead.
+  8. Tests: `shared/pdfImport.test.ts` (page kinds, the found list kept inside the PDF), `worker/import/pdfImport.test.ts` (finding is metered but free; one recipe read into one draft in the PDF's batch, counted, with Read again keeping the recipe; requests turned away), `app/import/saveMany.test.ts` (which drafts can be saved at once) and `e2e/pdf.spec.ts` (a PDF's recipes found, corrected and read, then saved together, on a computer and a phone; Free is told it's Premium).
 
 ### E13. Paprika 3 import
 - **Goal**: Move a whole Paprika library into Fennl, losing nothing.
@@ -1333,7 +1342,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 8 | Chrome Web Store unlisted vs. manual install | E5 |
 | 9 | AI cap per household and spending alarm | E7 |
 | 14 | Should free accounts get a few "teaser" AI imports? (Owner undecided; revisit later) | Before public launch (Stage I) |
-| 10 | PDF size and page limits | E12 |
+| 10 | ~~PDF size and page limits~~ Decided 2026-10-21: 100 pages, 30 MB; each recipe read counts as one AI import, finding them is free | E12 |
 | 11 | Paprika libraries larger than the photo quota | E13 |
 | 12 | ~~Joining a household with existing recipes; leaving one~~ Decided: merged view, owners kept, copies on split | G1 |
 | 13 | Version history retention | G2 |

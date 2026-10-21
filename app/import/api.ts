@@ -9,6 +9,13 @@ import type {
   ImportWebError,
   ImportWebResponse,
 } from "../../shared/importJobs";
+import type {
+  PdfFindError,
+  PdfFindPage,
+  PdfFindResponse,
+  PdfReadRequest,
+} from "../../shared/pdfImport";
+import { AI_PAUSED_TEXT } from "../limits/limitText";
 
 // The import routes (worker/import/routes.ts), for the Import page and the review screen.
 
@@ -85,6 +92,67 @@ export function photoProblemText(problem: ImportPhotosError | "offline" | "faile
 }
 
 /** Recipe text pasted into the Import page, to be read into drafts (phase E15). */
+/** Finds the recipes in a PDF's pages (phase E12): free, not an import. */
+export async function findPdfRecipes(
+  pageCount: number,
+  pages: PdfFindPage[],
+): Promise<PdfFindResponse | { problem: PdfFindError | "offline" | "failed" }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/import/pdf/find", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ pageCount, pages }),
+    });
+  } catch {
+    return { problem: "offline" };
+  }
+  if (res.ok) return (await res.json()) as PdfFindResponse;
+  const error = ((await res.json().catch(() => ({}))) as { error?: PdfFindError }).error;
+  return { problem: error ?? "failed" };
+}
+
+/** Reads one recipe of a PDF from its pages, already uploaded (phase E12): one AI import. */
+export async function importPdfRecipe(
+  request: PdfReadRequest,
+): Promise<{ jobs: ImportJobSummary[] } | { problem: ImportPhotosError | "offline" | "failed" }> {
+  let res: Response;
+  try {
+    res = await fetch("/api/import/pdf", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(request),
+    });
+  } catch {
+    return { problem: "offline" };
+  }
+  if (res.ok) return (await res.json()) as ImportPhotosResponse;
+  const error = ((await res.json().catch(() => ({}))) as { error?: ImportPhotosError }).error;
+  return { problem: error ?? "failed" };
+}
+
+/** What to tell people when finding a PDF's recipes didn't work. */
+export function pdfFindProblemText(problem: PdfFindError | "offline" | "failed"): string {
+  switch (problem) {
+    case "ai_import_not_included":
+      return "Reading recipes from PDFs is part of Premium.";
+    case "too_many_pages":
+      return "This PDF has more than 100 pages. Save the pages with the recipes you want as a smaller PDF and try that.";
+    case "pages_too_large":
+      return "This PDF's scanned pages are too large to send. Try a smaller PDF.";
+    case "rate_limited":
+      return "That's a lot of PDFs in a short time. Try again in a minute.";
+    case "paused":
+      return AI_PAUSED_TEXT;
+    case "monthly_limit":
+      return "You've used this month's AI imports. They start again next month.";
+    case "offline":
+      return "Finding the recipes needs a connection. Try again when you're back online.";
+    default:
+      return "Fennl couldn't look through this PDF just now. Please try again.";
+  }
+}
+
 export async function importPastedText(
   text: string,
 ): Promise<{ jobs: ImportJobSummary[] } | { problem: ImportTextError | "offline" | "failed" }> {

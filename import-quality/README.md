@@ -77,7 +77,7 @@ correct answer is the text a careful person would type in, not a tidied version.
 
 The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
 PDFs and a Paprika export. Already in: 31 web pages, 6 cards, 2 cookbook pages, 4 screenshot
-recipes (7 images) and 2 PDFs.
+recipes (7 images) and 3 PDFs.
 
 - [x] **Web pages (about 30):** 31 pages from your Paprika library (E3), chosen for variety: big
       sites, paywalled ones, blogs on each common recipe card, sections, metric amounts,
@@ -94,8 +94,11 @@ recipes (7 images) and 2 PDFs.
       overlapping screenshots, a text-message conversation and an email. Still worth adding: real
       ones from your phone (Instagram or Facebook captions, messages, emails, notes), and from a
       computer.
-- [ ] **PDFs (a few more):** a printed-to-PDF web page, a scanned family cookbook, a PDF of
-      several recipes.
+- [ ] **PDFs (a few more):** two scanned book chapters, and, made by Fennl for the test set
+      (E12, invented recipes), a family cookbook of three recipes made on a computer, one running
+      on to the next page (`family-cookbook-pdf`). Still worth adding: a printed-to-PDF web page,
+      a scanned family cookbook of several recipes, and a real PDF of several recipes. A PDF is
+      read as the app reads it: its recipes found first, then each read from its pages.
 - [x] **Paprika export:** the owner's whole library (827 recipes) is in
       `test_recipes/all-recipes.paprikarecipes`. E2 reads every ingredient line in it
       (`ingredients.test.ts`); E13 will import it.

@@ -32,7 +32,15 @@ function siteName(url: string | null): string | null {
   }
 }
 
-function PagePhoto({ hash, n, noun }: { hash: string; n: number; noun: "Photo" | "Screenshot" }) {
+function PagePhoto({
+  hash,
+  n,
+  noun,
+}: {
+  hash: string;
+  n: number;
+  noun: "Photo" | "Screenshot" | "Page";
+}) {
   const url = usePhotoUrl(hash, "full");
   if (url === "failed") {
     return (
@@ -53,11 +61,14 @@ function PagePhoto({ hash, n, noun }: { hash: string; n: number; noun: "Photo" |
   );
 }
 
-/** The photos (or screenshots, phase E11) a recipe was read from, beside the draft. */
-function PhotosPane({ hashes, screenshots }: { hashes: string[]; screenshots: boolean }) {
+/**
+ * The photos (or screenshots, E11, or a PDF's pages, E12) a recipe was read from, beside the
+ * draft.
+ */
+function PhotosPane({ hashes, kind }: { hashes: string[]; kind: "Photo" | "Screenshot" | "Page" }) {
   const [open, setOpen] = useState(false);
   const one = hashes.length === 1;
-  const noun = `${screenshots ? "screenshot" : "photo"}${one ? "" : "s"}`;
+  const noun = `${kind.toLowerCase()}${one ? "" : "s"}`;
   return (
     <section className={styles.source} data-open={open} aria-labelledby="source-title">
       <div className={styles.sourceHead}>
@@ -78,7 +89,7 @@ function PhotosPane({ hashes, screenshots }: { hashes: string[]; screenshots: bo
         <ol className={styles.pagePhotos}>
           {hashes.map((hash, i) => (
             <li key={`${hash}-${i}`}>
-              <PagePhoto hash={hash} n={i + 1} noun={screenshots ? "Screenshot" : "Photo"} />
+              <PagePhoto hash={hash} n={i + 1} noun={kind} />
             </li>
           ))}
         </ol>
@@ -91,7 +102,16 @@ export function SourcePane({ job }: { job: ImportJobDetail }) {
   const hashes = originalHashes(job.draft);
   if (job.pastedText !== null) return <TextPane text={job.pastedText} />;
   return hashes.length > 0 ? (
-    <PhotosPane hashes={hashes} screenshots={job.draft.source === "screenshot"} />
+    <PhotosPane
+      hashes={hashes}
+      kind={
+        job.draft.source === "screenshot"
+          ? "Screenshot"
+          : job.draft.source === "pdf"
+            ? "Page"
+            : "Photo"
+      }
+    />
   ) : (
     <PageSource job={job} />
   );

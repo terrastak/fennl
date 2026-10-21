@@ -58,7 +58,12 @@ export interface AiReadInput {
    * photos, phase E9): read from there by "Read again" instead of being copied.
    */
   storedAt?: (string | null)[];
+  /** The one recipe to read, by its title, when the parts also hold others (a PDF, E12). */
+  focus?: string;
 }
+
+/** The calls that read a recipe (not "find", which lists a PDF's recipes). */
+type ReadPurpose = Exclude<AiPurpose, "find">;
 
 export type AiReadProblem =
   | "import_not_included"
@@ -79,7 +84,7 @@ export type AiReadResult =
       models: string[];
       secondLook: SecondLookReason[];
       /** Every usable answer, in order; `shown` is the one the drafts are from. */
-      answers: { purpose: AiPurpose; model: string; drafts: RecipeDraft[] }[];
+      answers: { purpose: ReadPurpose; model: string; drafts: RecipeDraft[] }[];
       shown: number;
       /** A short fingerprint of the instructions and rules it was read with (setupVersion). */
       setup: string;
@@ -91,8 +96,13 @@ export type AiReadResult =
  * kind of import and the second-look thresholds. Kept with each outcome (shared/aiOutcome.ts), so
  * a change of ours can be told apart from a change of model in the admin console.
  */
-export async function setupVersion(config: AiConfig, source: ImportSource): Promise<string> {
-  const text = JSON.stringify([SYSTEM_PROMPT, instructionFor(source), config.rules]);
+export async function setupVersion(
+  config: AiConfig,
+  source: ImportSource,
+  focused = false,
+): Promise<string> {
+  const instruction = instructionFor(source, focused ? "…" : undefined);
+  const text = JSON.stringify([SYSTEM_PROMPT, instruction, config.rules]);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
   return [...new Uint8Array(digest).slice(0, 4)]
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -110,7 +120,7 @@ async function attempt(
   config: AiConfig,
   input: AiReadInput,
   level: number,
-  purpose: AiPurpose,
+  purpose: ReadPurpose,
   importJobId: string | null,
 ): Promise<Attempt> {
   const { db, plan } = caller;
@@ -141,7 +151,7 @@ async function attempt(
       model,
       system: SYSTEM_PROMPT,
       parts: input.parts,
-      instruction: instructionFor(input.source),
+      instruction: instructionFor(input.source, input.focus),
       schema: AI_ANSWER_SCHEMA as unknown as Record<string, unknown>,
       effort: effortFor(level),
       maxOutputTokens: MAX_OUTPUT_TOKENS,
@@ -192,7 +202,7 @@ export async function readWithAi(
   input: AiReadInput,
   options: {
     level?: number;
-    purpose?: Exclude<AiPurpose, "second_look">;
+    purpose?: Exclude<ReadPurpose, "second_look">;
     secondLook?: boolean;
     importJobId?: string | null;
     config?: AiConfig | null;
@@ -205,7 +215,7 @@ export async function readWithAi(
   const jobId = options.importJobId ?? null;
 
   const purpose = options.purpose ?? "read";
-  const setup = await setupVersion(config, input.source);
+  const setup = await setupVersion(config, input.source, Boolean(input.focus));
   const first = await attempt(caller, config, input, level, purpose, jobId);
   if (first.refusal) return { ok: false, problem: first.refusal };
   const used = [config.models[level] as string];
@@ -303,6 +313,8 @@ export async function createAiImport(
     finish?: (draft: RecipeDraft) => RecipeDraft;
     /** At most this many drafts (a web page's, like its recipe data's). */
     limit?: number;
+    /** The batch the drafts join (the recipes of one PDF, phase E12); else a new one if several. */
+    batchId?: string;
     now?: Date;
   } = {},
 ): Promise<
@@ -339,7 +351,7 @@ export async function createAiImport(
       }),
     );
   const partsById = await Promise.all(ids.map(partsFor));
-  const batchId = ids.length > 1 ? crypto.randomUUID() : null;
+  const batchId = options.batchId ?? (ids.length > 1 ? crypto.randomUUID() : null);
   await caller.db.insert(importJob).values(
     drafts.map((draft, index) => {
       const parts = partsById[index] as AiPartRecord[];
@@ -352,6 +364,7 @@ export async function createAiImport(
           rereadAt: null,
           index,
           parts,
+          ...(input.focus ? { focus: input.focus } : {}),
           // Each model's answer, until the draft is decided (worker/ai/outcomes.ts).
           answers: answersFor(read, index, draft),
           setup: read.setup,
@@ -462,6 +475,7 @@ export async function readAgain(
       parts,
       inputs: before?.inputs ?? [],
       photos: before?.photos ?? [],
+      ...(ai.focus ? { focus: ai.focus } : {}),
     },
     { level, purpose: "reread", secondLook: false, importJobId: job.id, config },
   );
