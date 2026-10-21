@@ -41,7 +41,7 @@ correct answer is the text a careful person would type in, not a tidied version.
 {
   "title": "Sugar Butter Balls",
   "ingredients": ["## For the dough:", "1 cup butter", "1/2 cup sifted powdered sugar"],
-  "directions": ["Mix butter, sugar and vanilla, sift flour and salt, add nuts."],
+  "directions": ["Mix butter, sugar and vanilla, sift, flour and salt add nuts."],
   "times": { "prep": 15, "cook": null, "total": null },
   "servings": { "count": 48, "yield": "4 doz." },
   "description": "The headnote, if there is one.",
