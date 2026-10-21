@@ -377,5 +377,207 @@
     "kind": "document",
     "inputs": ["test-docs/Prime Rib - SPICY RIB EYE BEEF ROAST.docx"],
     "notes": "From the owner (2026-10-21): a Word document with a title in capitals, a different name in the file name (\"Prime Rib\"), C., T. and tsp., a range of amounts (\"1/3 - 1/2 C.\"), one step per line, and a family note at the end."
+  },
+  {
+    "id": "kfc-fried-chicken-txt",
+    "kind": "document",
+    "inputs": ["test-docs/KFC Fried Chicken Recipe.txt"],
+    "notes": "From the owner (2026-10-21): a plain text file. Title and source address at the top, prep, soak and cook times and the yield as labelled lines, ingredients with no heading, steps numbered without a full stop (\"1 Mix the flour\"), and a note at the end."
+  },
+  {
+    "id": "stuffed-mushrooms-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Stuffed Mushrooms.pdf"],
+    "notes": "From the owner (2026-10-21), private: a scanned printout of a Martha Stewart recipe changed by hand. Words crossed out with others written above or beside them (bread, cheese, red-pepper, mushrooms), an amount written over (1 garlic clove to 2), a step's end crossed out and \"drizzle w/ olive oil\" written in the margin. Read as changed (owner's choice 2026-10-21); the title stays as printed."
+  },
+  {
+    "id": "chocolate-bottomed-peanut-butter-pie-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Chocolate Bottomed Peanut Butter Pie.pdf"],
+    "notes": "One printed recipe-card page from a blog: sections in the ingredient list, Unicode fractions, the recipe's address in its own credit line beside the print address."
+  },
+  {
+    "id": "whole-wheat-honey-bread-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Honey Whole Wheat Bread - Red Star.pdf"],
+    "notes": "Two printed pages from a yeast maker's site: ingredients in a table with three loaf sizes (Small, Medium, Large), method paragraphs under several headings, a footnote and nutrition."
+  },
+  {
+    "id": "oreo-cheesecake-bars-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Oreo Cheesecake Bars | Brown Eyed Baker.pdf"],
+    "notes": "One printed recipe page from a blog: title in capitals, yield and three times on one line, two ingredient sections, inline step labels, an adaptation credit."
+  },
+  {
+    "id": "decadent-peanut-butter-pie-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/PB Pie - Jif.pdf"],
+    "notes": "Four printed pages of a brand's site: the recipe on page one with brand names and (8 oz.) package sizes, then three pages of readers' reviews to leave out."
+  },
+  {
+    "id": "salted-malted-cookie-dough-ice-cream-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Salted Malted Cookie Dough Ice Cream By Salt & Straw.pdf"],
+    "notes": "Three printed pages from Tasty: three ingredient sections, the list running onto a second page where the text layer puts the nutrition box before its last line, 19 numbered steps."
+  },
+  {
+    "id": "slow-cooker-minestrone-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Slow-Cooker Minestrone Recipe - Cook's Country.pdf"],
+    "notes": "Two printed pages from Cook's Country whose text layer is out of order (ingredients before the title), amounts in a separate column, inline step labels, a make-ahead note and an editorial sidebar to leave out."
+  },
+  {
+    "id": "blueberry-pound-cake-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Blueberry Pound Cake - Alton.pdf"],
+    "notes": "Two printed pages of a blog post: share buttons and a large photo on page 1, the yield on page 1 and the ingredients (under an odd \"SOFTWARE\" heading) and steps on page 2."
+  },
+  {
+    "id": "focaccia-bread-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Focaccia Bread Recipe | Brown Eyed Baker.pdf"],
+    "notes": "A two-page print view: two ingredient sections, a step running over the page break, a split prep time (active and inactive) and typos in the steps."
+  },
+  {
+    "id": "old-fashioned-chicken-noodle-soup-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Old Fashioned Chicken Noodle Soup ATK.pdf"],
+    "notes": "A photographed cookbook page in a PDF with a garbled text layer: amounts in a separate column, ½ and ¼ fractions, hyphenated line breaks and a serving range."
+  },
+  {
+    "id": "pb-cheesecake-brownie-bars-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/PB Cheesecake Brownie Bars _ The Recipe Critic.pdf"],
+    "notes": "Five printed pages of a blog: story, sidebar, a recipe card cut off at the right edge, readers' comments and a misspelt ingredient (\"bream cheese\")."
+  },
+  {
+    "id": "reeses-cheesecake-brownies-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Reese's Cheesecake Brownies _ The Recipe Critic.pdf"],
+    "notes": "Five printed pages of a blog whose recipe card starts at the bottom of page 2 and continues on page 3, cut off at the right edge, with three ingredient sections and sidebar text mixed into the text layer."
+  },
+  {
+    "id": "strawberry-rhubarb-pie-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Strawberry Rhubarb Pie.pdf"],
+    "notes": "One page printed from pasted HTML with no web address: unnumbered paragraph steps, a \"Do ahead\" note, and a text layer that drops the hyphens the page shows."
+  },
+  {
+    "id": "short-rib-vegetable-soup-page",
+    "kind": "cookbook",
+    "private": true,
+    "inputs": ["test-pdfs/Short Rib Veg Soup - Mom.jpg"],
+    "notes": "A small, low-resolution scan of a cookbook page with a hand-drawn mark, a small-caps title on a coloured band, a reference to another recipe in the book, and the servings inside the last step."
+  },
+  {
+    "id": "brioche-buns-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Brioche Buns - King Arthur Flour.pdf"],
+    "notes": "One printed King Arthur Flour recipe page: two ingredient sections, steps numbered \"1)\", times given only as ranges, and a sidebar ad."
+  },
+  {
+    "id": "browneyedbaker-hamburger-buns-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Hamburger Buns | Brown Eyed Baker.pdf"],
+    "notes": "A clean one-page blog print view with yield and times on one line, ½-style fractions, a misspelling (\"3-oune\") and an adapted-from credit."
+  },
+  {
+    "id": "strawberry-shortcake-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Old-fashioned Strawberry Shortcake - The Kitchn.pdf"],
+    "notes": "A printed article with a different headline from the recipe's name, three ingredient sections, a link printed inside an ingredient, unnumbered paragraphs and the last sentence spilling onto a second page."
+  },
+  {
+    "id": "peanut-butter-cup-brownies-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/PB Cup Brownies.pdf"],
+    "notes": "Four printed blog pages: a story, a recipe with a different name from the post, directions split across a page break, then a sidebar of categories and ads and many readers' comments."
+  },
+  {
+    "id": "reeses-peanut-butter-cup-sundae-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Reese's PB Cup Sundae.pdf"],
+    "notes": "Three printed Serious Eats pages: a photo page with headnote and author bio, an \"About This Recipe\" table with active rather than prep time and a servings range, bulleted ingredients with bold section headings, and a step split across pages."
+  },
+  {
+    "id": "shrimp-po-boys-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Shrimp Po Boys ATK.pdf"],
+    "notes": "Three phone photos of a cookbook (one only a picture of the dish) in dim light, two-column layout with a long story, small-caps headings, ⅔ and ¼ fractions the text layer misreads, a sidebar note, and the recipe cut off after step 4."
+  },
+  {
+    "id": "ultimate-magic-bars-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Ultimate Magic Bars | Brown Eyed Baker.pdf"],
+    "notes": "A clean one-page blog print view with a one-line description, prep, cook and total times, two underlined ingredient sections and storage advice inside the last step."
+  },
+  {
+    "id": "country-loaf-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Country Loaf - KA Flour.pdf"],
+    "notes": "One printed King Arthur page: recipe summary box in a side column, a footnoted ingredient with its footnote inside the list, numbered '1)' steps with source typos, a stray yield line and a 'Tips from our bakers' box."
+  },
+  {
+    "id": "jojos-biscuits-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/JoJo Biscuits.pdf"],
+    "notes": "Three-page TV-show recipe index with six recipes in three columns, recipes split across columns, lowercase ingredient and step section headings, and a 'from the cookbook' line dropped in the middle of one ingredient list."
+  },
+  {
+    "id": "thick-cut-oven-fries-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Oven Fries ATK.pdf"],
+    "notes": "Four phone photos of an America's Test Kitchen book: three pages of article and a test-kitchen sidebar before the recipe, a full-page dish photo, and the recipe itself sharing its last page with the end of the article, read as pictures."
+  },
+  {
+    "id": "perfect-pie-crust-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Pie Crust - Ina Garten.pdf"],
+    "notes": "A short clean Food Network print page: two unnumbered direction paragraphs, a yield in crusts, and the address in the footer."
+  },
+  {
+    "id": "scalloped-potatoes-and-ham-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Scalloped Potatoes & Ham - Ree Drummond.pdf"],
+    "notes": "One printed Pioneer Woman page with Title Case ingredient names, '1-½ cup' amounts, unnumbered paragraphs ending in a '(Note: ...)' paragraph, and the web address wrapped across two lines in a side column."
+  },
+  {
+    "id": "spiced-cider-doughnuts-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Spiced Cider Doughnuts Recipe | Leite's Culinaria.pdf"],
+    "notes": "Three printed Leite's Culinaria pages: book credit, headnote with author sign-off, an editor's note and special equipment before the recipe, unlabeled Quick Glance times, the last step running onto the next page, and a tester's comment to leave out."
+  },
+  {
+    "id": "pecorino-romano-tasting-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Pecorino Romano Testing ATK.pdf"],
+    "notes": "From the owner (2026-10-21), private: a scanned America's Test Kitchen taste test of Pecorino Romano cheeses, with no recipe. Each cheese lists its own \"INGREDIENTS:\", so it tests that a page about food isn't taken for a recipe."
   }
 ]

@@ -1,0 +1,47 @@
+{
+  "title": "Peanut Butter Cheesecake Brownie Bars",
+  "description": "A delicious fudgy brownie bottom with creamy peanut butter cheesecake on top!",
+  "ingredients": [
+    "## Brownie layer:",
+    "¾ cup butter",
+    "6 oz dark chocolate, chopped",
+    "1½ cups sugar",
+    "½ cup brown sugar, packed",
+    "1½ tsp vanilla",
+    "3 large eggs",
+    "1 cup all-purpose flour",
+    "¾ cup semi-sweet chocolate chips",
+    "## For the peanut butter cheesecake layer:",
+    "8 oz block bream cheese, softened",
+    "¼ cup butter, softened",
+    "1 egg",
+    "½ cup sugar",
+    "½ tsp salt",
+    "½ tsp vanilla extract",
+    "1 cup creamy peanut butter"
+  ],
+  "directions": [
+    "Preheat your oven to 350 degrees. Line a 9x13 inch pan with aluminum foil for easy removal of the bars. Spray with cooking spray and set aside.",
+    "In a microwave safe bowl or using a double broiler, melt the ¾ cup of butter and chopped dark chocolate. Stirring ever 30 seconds being careful not to let the chocolate burn.",
+    "Whisk sugar and brown sugar to the melted chocolate mixture. Then add the vanilla and eggs until it it is fully incorporated. Lastly, stir the flour until incorporated.",
+    "Pour this mixture into your prepared 9x13 inch pan. Sprinkle with ¾ cups chocolate chips and set aside.",
+    "To make the cheesecake layer, in a stand mixer using the paddle attachment, cream together the cream cheese and softened butter about 2 minutes until fluffy. Mix in the egg, sugar, salt and vanilla on high for another 2 minutes. Mix in the peanut butter for 2 minutes.",
+    "Pour the cream cheese layer over the brownie layer and spread it out so that it is smooth on the top and completely covers the brownie layer. Bake for 35-40 minutes. The top and edges should be slightly golden and the center is set.",
+    "Let the bars completely cool and refrigerate for at least an hour or overnight before serving"
+  ],
+  "times": {
+    "prep": 20,
+    "cook": 35,
+    "total": 55
+  },
+  "servings": {
+    "count": 16,
+    "yield": null
+  },
+  "notes": "Recipe from Eats Well With Others",
+  "source": {
+    "name": "The Recipe Critic",
+    "author": "Alyssa",
+    "url": "http://therecipecritic.com/2014/02/peanut-butter-cheesecake-brownie-bars/"
+  }
+}

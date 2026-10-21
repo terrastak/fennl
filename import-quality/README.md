@@ -21,6 +21,14 @@ description, each ingredient, each step, times, servings, notes and source.
 **This folder, `test_images/` and `test_pages/` are public** (the repository is public; decided by
 the owner 2026-10-10). Only add pages and cards you're happy for anyone to see.
 
+**Private samples** (decided 2026-10-21): whole printed web pages, with the sites' stories,
+photos, comments or paywalled pages, are never committed here. Their files live in the private
+repository `terrastak/fennl-test-samples`; their correct answers stay here, marked
+`"private": true` in `samples.json` with inputs under `test-pdfs/` (ignored by git). Only the
+model comparison reads them (`docs/setup/private-test-samples.md`); every other check leaves them
+out and says how many. To add one: put the file in the private repository and in your own
+`test-pdfs/` folder, and add the sample here.
+
 ## Adding a web page
 
     npm run import:save-page -- <sample-id> <page address> [saved .html file]
@@ -78,7 +86,8 @@ correct answer is the text a careful person would type in, not a tidied version.
 
 The plan asks for about 30 web pages, 20 card photos, 10 cookbook pages, 10 screenshots, a few
 PDFs and a Paprika export. Already in: 31 web pages, 7 cards, 2 cookbook pages, 5 screenshot
-recipes (8 images) and 3 PDFs.
+recipes (8 images) and 3 PDFs public; and 28 private samples (27 PDFs and a cookbook page,
+2026-10-21) the model comparison reads.
 
 - [x] **Web pages (about 30):** 31 pages from your Paprika library (E3), chosen for variety: big
       sites, paywalled ones, blogs on each common recipe card, sections, metric amounts,
@@ -96,6 +105,8 @@ recipes (8 images) and 3 PDFs.
       magazine app on your iPad (`french-onion-soup-screenshot`). Still worth adding: real ones
       from your phone (Instagram or Facebook captions, messages, emails, notes), and from a
       computer.
+- [x] **Your PDF collection (private):** 26 printed recipes from many sites, a cookbook page, and
+      a cheese tasting with no recipe; one changed by hand (Stuffed Mushrooms), with correct answers drafted for you to check.
 - [ ] **PDFs (a few more):** two scanned book chapters, and, made by Fennl for the test set
       (E12, invented recipes), a family cookbook of three recipes made on a computer, one running
       on to the next page (`family-cookbook-pdf`). Still worth adding: a printed-to-PDF web page,

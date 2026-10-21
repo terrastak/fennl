@@ -43,7 +43,17 @@ export interface Sample {
   by?: "rules" | "ai";
   /** What makes it a useful test ("angled photo", "two recipes on one page"). */
   notes?: string;
+  /**
+   * Its files aren't public (whole printed web pages: sites' stories, photos and comments; owner's
+   * choice 2026-10-21). They live in a private repository, which the model comparison checks out
+   * into `test-pdfs/` and turns on with PRIVATE_SAMPLES=1; elsewhere the sample is left out. Its
+   * correct answer stays public.
+   */
+  private?: boolean;
 }
+
+/** Whether the private samples' files are here (the model comparison's workflow). */
+export const privateSamplesHere = () => process.env.PRIVATE_SAMPLES === "1";
 
 export interface InputFile {
   path: string;
@@ -92,7 +102,7 @@ export async function testSetIssues(samples: Sample[]): Promise<string[]> {
       issues.push(`${s.id}: unknown kind "${s.kind}"`);
     }
     if (!s.inputs.length && s.kind !== "web") issues.push(`${s.id}: no input files`);
-    for (const input of s.inputs) {
+    for (const input of s.private && !privateSamplesHere() ? [] : s.inputs) {
       await readFile(join(root, input)).catch(() => issues.push(`${s.id}: ${input} not found`));
     }
     const expected = await loadExpected(s.id).catch((e: unknown) => {
@@ -201,6 +211,8 @@ export function scoreDrafts(
 
 export interface Scorecard {
   samples: Sample[];
+  /** Private samples left out because their files aren't here. */
+  privateLeftOut: number;
   /** Samples with a correct answer written. */
   answered: number;
   results: SampleResult[];
@@ -231,7 +243,8 @@ export function exactMisses(card: Scorecard): string[] {
 }
 
 export async function runScorecard(importers: readonly Importer[]): Promise<Scorecard> {
-  const samples = await loadSamples();
+  const all = await loadSamples();
+  const samples = all.filter((s) => !s.private || privateSamplesHere());
   const results: SampleResult[] = [];
   let answered = 0;
   for (const sample of samples) {
@@ -246,7 +259,7 @@ export async function runScorecard(importers: readonly Importer[]): Promise<Scor
   const uncovered = SAMPLE_KINDS.filter((k) => !importers.some((i) => i.kinds.includes(k)))
     .map((kind) => ({ kind, samples: samples.filter((s) => s.kind === kind).length }))
     .filter((u) => u.samples > 0);
-  return { samples, answered, results, uncovered };
+  return { samples, privateLeftOut: all.length - samples.length, answered, results, uncovered };
 }
 
 const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
@@ -277,6 +290,12 @@ export function reportMarkdown(card: Scorecard): string {
   ).join(", ");
   out.push(
     `Test set: ${card.samples.length} samples (${byKind}); correct answers written for ${card.answered}.`,
+    ...(card.privateLeftOut
+      ? [
+          "",
+          `${card.privateLeftOut} private samples (kept out of the public repository) aren't read here; the model comparison reads them.`,
+        ]
+      : []),
     "",
   );
 

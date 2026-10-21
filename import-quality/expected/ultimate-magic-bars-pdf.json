@@ -1,0 +1,37 @@
+{
+  "title": "Ultimate Magic Bars",
+  "description": "A recreation of an awesome five-layer bar sold by a local bakery.",
+  "ingredients": [
+    "## For the Crust:",
+    "1 cup unsalted butter, at room temperature",
+    "½ cup light brown sugar",
+    "1 teaspoon vanilla extract",
+    "2¼ cups all-purpose flour",
+    "## For the Bars:",
+    "1 (14-ounce) can sweetened condensed milk",
+    "1½ cups coarsely chopped pecans",
+    "1½ cups shredded coconut",
+    "¼ cup caramel sauce, microwaved for 15 seconds",
+    "1 cup semisweet chocolate chips"
+  ],
+  "directions": [
+    "Preheat oven to 350 degrees F. Line a 9x9-inch square baking pan with parchment paper, allowing it to hang over all sides.",
+    "Using an electric mixer, beat the butter and brown sugar on medium speed until light and fluffy, about 3 minutes. Add the vanilla extract and mix to combine. Reduce the mixer speed to low, add the flour and mix until crumbly. Dump the mixture into the prepared pan and press into an even layer. Bake until the edges are light golden brown, about 15 minutes.",
+    "Remove from the oven, then sprinkle the chopped pecans over the crust, and top with the shredded coconut. Pour the sweetened condensed milk evenly over top, then drizzle with the melted caramel sauce. Sprinkle with chocolate chips and return to the oven until the edges are light brown, 20 to 25 minutes.",
+    "Place pan on a wire rack to cool completely, then refrigerate for at least 30 minutes before cutting into squares. The bars can be kept at room temperature, in an airtight container, for up to 5 days."
+  ],
+  "times": {
+    "prep": 15,
+    "cook": 25,
+    "total": 40
+  },
+  "servings": {
+    "count": 18,
+    "yield": "18 bars"
+  },
+  "source": {
+    "name": "Brown Eyed Baker",
+    "author": null,
+    "url": "http://www.browneyedbaker.com/magic-bars-recipe/"
+  }
+}
