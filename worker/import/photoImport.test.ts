@@ -152,10 +152,12 @@ describe("importing photos of a recipe", () => {
     const res = await importPages(p, [hash]);
     expect(res.status).toBe(422);
     expect(await res.json()).toEqual({ error: "no_recipe" });
-    // Read once, with the photo itself: the automatic second look is off unless turned on
-    // (decided 2026-10-21).
-    expect(fakeAi.requests).toHaveLength(1);
-    expect(fakeAi.requests[0]?.parts[0]).toMatchObject({ kind: "image", mediaType: "image/webp" });
+    // Read with the photo itself, then once more by the stronger model, as no recipe found is a
+    // reason for the automatic second look (on unless turned off, decided 2026-10-21).
+    expect(fakeAi.requests).toHaveLength(2);
+    for (const request of fakeAi.requests) {
+      expect(request.parts[0]).toMatchObject({ kind: "image", mediaType: "image/webp" });
+    }
   });
 });
 

@@ -65,6 +65,9 @@ describe("import quality scorecard", () => {
     const results = card.results.filter((r) => r.importer === "stand-in");
     expect(results.map((r) => r.sample.id).sort()).toEqual([
       "choc-pie-card",
+      "milky-way-cake-card",
+      "mushrooms-eggs-card",
+      "peanut-butter-candy-card",
       "sugar-butter-balls-card",
       "walnut-cherry-cake-card",
     ]);
@@ -77,7 +80,7 @@ describe("import quality scorecard", () => {
     expect(cake.overall).toBe(0);
 
     const report = reportMarkdown(card);
-    expect(report).toContain("| stand-in | 3 |");
+    expect(report).toContain("| stand-in | 6 |");
     expect(report).toContain("a recipe wasn't found");
     expect(report).not.toContain("- card:");
     // The stand-in isn't marked exact, so the rule for published data doesn't apply to it.
@@ -91,6 +94,9 @@ describe("import quality scorecard", () => {
       "sugar-butter-balls-card (exact stand-in): directions 0%",
       "sugar-butter-balls-card (exact stand-in): servings count",
       "choc-pie-card (exact stand-in): not found",
+      "milky-way-cake-card (exact stand-in): not found",
+      "mushrooms-eggs-card (exact stand-in): not found",
+      "peanut-butter-candy-card (exact stand-in): not found",
     ]);
     expect(reportMarkdown(exact)).toContain("## Must be exact");
   });

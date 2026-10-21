@@ -60,8 +60,8 @@ describe("the AI imports section", () => {
       alertCents: 5000,
       pauseCents: 15000,
       models: DEFAULT_MODELS,
-      // Off unless turned on (decided 2026-10-21).
-      secondLook: false,
+      // On unless turned off (decided 2026-10-21, with the rules narrowed to amounts).
+      secondLook: true,
       missingAmounts: 2,
       oddAmount: 24,
     });
@@ -119,7 +119,7 @@ describe("the AI imports section", () => {
       body: {
         alertCents: 2500,
         models: "claude-haiku-5-5, claude-sonnet-5-5",
-        secondLook: true,
+        secondLook: false,
       },
     });
     expect(changed.status).toBe(200);
@@ -127,7 +127,7 @@ describe("the AI imports section", () => {
       alertCents: 2500,
       pauseCents: 15000,
       models: ["claude-haiku-5-5", "claude-sonnet-5-5"],
-      secondLook: true,
+      secondLook: false,
     } satisfies Partial<AdminAiSettings>);
     const audit = await db()
       .select()
@@ -140,11 +140,11 @@ describe("the AI imports section", () => {
       ["setting.changed", "ai_models"],
       ["setting.changed", "ai_second_look"],
     ]);
-    const off = await call("/api/admin/ai/settings", {
+    const on = await call("/api/admin/ai/settings", {
       method: "PUT",
-      body: { secondLook: false },
+      body: { secondLook: true },
     });
-    expect((off.body as AdminAiSettings).secondLook).toBe(false);
+    expect((on.body as AdminAiSettings).secondLook).toBe(true);
     const bad = await call("/api/admin/ai/settings", { method: "PUT", body: { secondLook: "on" } });
     expect(bad.status).toBe(400);
 
