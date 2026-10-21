@@ -1,0 +1,40 @@
+{
+  "title": "Oreo Cheesecake Bars",
+  "description": "A bar version of the fabulous Oreo Cheesecake, complete with an Oreo crumb crust and a creamy cheesecake loaded with chopped Oreo cookies!",
+  "ingredients": [
+    "## For the Crust:",
+    "23 Oreo cookies (store-bought or homemade)",
+    "2 tablespoons unsalted butter, melted",
+    "## For the Cheesecake:",
+    "12 ounces cream cheese, at room temperature",
+    "1 cup granulated sugar",
+    "3 eggs, at room temperature",
+    "6 tablespoons sour cream",
+    "1½ teaspoons vanilla extract",
+    "12 Oreo cookies (store-bought or homemade), coarsely chopped"
+  ],
+  "directions": [
+    "Preheat oven to 325 degrees F. Line an 8x8-inch square baking pan with foil or parchment paper, allowing it to hang over two of the sides.",
+    "Make the Crust: Process the Oreo cookies in a food processor until they are turned into fine crumbs. Drizzle the melted butter over top and pulse a handful of times until the butter is evenly distributed and all of the crumbs are moist. Dump the crumbs into the prepared baking dish and press into an even layer. Bake for 10 minutes (leave the oven on).",
+    "Make the Cheesecake: Beat the cream cheese on medium-high speed until smooth, about 2 minutes. Gradually add the sugar and beat until incorporated.",
+    "Slowly add the eggs, beating well after each addition, and mix until completely combined. Scrape down the sides of the bowl and add the sour cream and vanilla, beating until incorporated.",
+    "Gently fold in the chopped Oreos, then pour the batter over the prepared crust, smoothing it into an even layer. Bake until the edges are set but the middle still jiggles slightly, about 40 to 50 minutes.",
+    "Place the pan on a cooling rack and let cool to room temperature, about 2 hours, then cover the pan with plastic wrap and place in the refrigerator for at least 3 hours (or up to 24 hours) before serving.",
+    "To serve, lift the cheesecake out of the pan using the parchment or foil handles. Slice into bars and serve. Store leftovers in an airtight container in the refrigerator for up to 1 week."
+  ],
+  "times": {
+    "prep": 20,
+    "cook": 50,
+    "total": 360
+  },
+  "servings": {
+    "count": 16,
+    "yield": "16 bars"
+  },
+  "notes": "(Recipe adapted from Table for Two)",
+  "source": {
+    "name": "Brown Eyed Baker",
+    "author": null,
+    "url": "http://www.browneyedbaker.com/oreo-cheesecake-bars/"
+  }
+}
