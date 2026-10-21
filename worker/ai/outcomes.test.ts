@@ -10,6 +10,7 @@ import { database } from "../db/client";
 import { aiOutcome, importJob } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { removeOldImportJobs } from "../import/jobs";
+import { writeText } from "../settings/settings";
 import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
 import { DEFAULT_MODELS } from "./config";
 import { FAKE_TOKENS, fakeAi, fakeAnswer, fakeRecipe } from "./fake";
@@ -25,6 +26,8 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1
 
 beforeAll(async () => {
   await setUpDatabase();
+  // Answers from a second look are kept too: it's off unless turned on (decided 2026-10-21).
+  await writeText(db(), "ai_second_look", "on", null);
 });
 
 afterEach(() => {

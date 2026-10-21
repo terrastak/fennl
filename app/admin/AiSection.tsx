@@ -155,6 +155,7 @@ function AiSettingsForm({
   const [alert, setAlert] = useState(centsAsDollars(settings.alertCents));
   const [pause, setPause] = useState(centsAsDollars(settings.pauseCents));
   const [models, setModels] = useState(settings.models.join(", "));
+  const [secondLook, setSecondLook] = useState(settings.secondLook);
   const [missing, setMissing] = useState(String(settings.missingAmounts));
   const [odd, setOdd] = useState(String(settings.oddAmount));
   const [message, setMessage] = useState<string | null>(null);
@@ -180,7 +181,7 @@ function AiSettingsForm({
     setBusy(true);
     const result = await adminRequest<AdminAiSettings>("/api/admin/ai/settings", {
       method: "PUT",
-      body: { alertCents, pauseCents, models, missingAmounts, oddAmount },
+      body: { alertCents, pauseCents, models, secondLook, missingAmounts, oddAmount },
     });
     setBusy(false);
     if (result.ok) {
@@ -236,10 +237,24 @@ function AiSettingsForm({
             aria-describedby={`${id}-models-hint`}
           />
           <p id={`${id}-models-hint`} className={styles.hint}>
-            Every import is read by the first. A read that looks wrong gets a second look by the
-            next, and &ldquo;Read again&rdquo; uses the one after that.
+            Every import is read by the first. &ldquo;Read again&rdquo; uses the next one after the
+            model whose answer the person sees (the second, unless a second look happened).
           </p>
         </div>
+        <label className={styles.choice}>
+          <input
+            type="checkbox"
+            checked={secondLook}
+            onChange={(e) => setSecondLook(e.target.checked)}
+            aria-describedby={`${id}-second-hint`}
+          />
+          Automatic second look
+        </label>
+        <p id={`${id}-second-hint`} className={styles.hint}>
+          When on, a read the first model seems unsure of is read again by the next model at once,
+          not counted as another import. Off since 2026-10-21: in the model comparisons it rarely
+          did better and cost several times more.
+        </p>
         <div className={styles.field}>
           <label htmlFor={`${id}-missing`}>
             Second look when this many ingredients have no amount

@@ -60,6 +60,8 @@ describe("the AI imports section", () => {
       alertCents: 5000,
       pauseCents: 15000,
       models: DEFAULT_MODELS,
+      // Off unless turned on (decided 2026-10-21).
+      secondLook: false,
       missingAmounts: 2,
       oddAmount: 24,
     });
@@ -114,24 +116,37 @@ describe("the AI imports section", () => {
   it("changes the settings, with the passkey again, recorded first", async () => {
     const changed = await call("/api/admin/ai/settings", {
       method: "PUT",
-      body: { alertCents: 2500, models: "claude-haiku-5-5, claude-sonnet-5-5" },
+      body: {
+        alertCents: 2500,
+        models: "claude-haiku-5-5, claude-sonnet-5-5",
+        secondLook: true,
+      },
     });
     expect(changed.status).toBe(200);
     expect(changed.body).toMatchObject({
       alertCents: 2500,
       pauseCents: 15000,
       models: ["claude-haiku-5-5", "claude-sonnet-5-5"],
+      secondLook: true,
     } satisfies Partial<AdminAiSettings>);
     const audit = await db()
       .select()
       .from(adminAuditLog)
       .orderBy(desc(adminAuditLog.createdAt))
-      .limit(2)
+      .limit(3)
       .all();
     expect(audit.map((a) => [a.action, JSON.parse(a.details!).key]).sort()).toEqual([
       ["setting.changed", "ai_alert_cents_per_month"],
       ["setting.changed", "ai_models"],
+      ["setting.changed", "ai_second_look"],
     ]);
+    const off = await call("/api/admin/ai/settings", {
+      method: "PUT",
+      body: { secondLook: false },
+    });
+    expect((off.body as AdminAiSettings).secondLook).toBe(false);
+    const bad = await call("/api/admin/ai/settings", { method: "PUT", body: { secondLook: "on" } });
+    expect(bad.status).toBe(400);
 
     for (const body of [
       { models: "gpt-9" },

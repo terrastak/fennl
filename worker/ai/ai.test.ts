@@ -11,7 +11,7 @@ import { writeText } from "../settings/settings";
 import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
 import { aiConfig, DEFAULT_MODELS } from "./config";
 import { FAKE_TOKENS, fakeAi, fakeAnswer, fakeRecipe } from "./fake";
-import { createAiImport, readWithAi, type AiCaller, type AiReadInput } from "./read";
+import { createAiImport, readAgain, readWithAi, type AiCaller, type AiReadInput } from "./read";
 import { householdMonth } from "./usage";
 
 // Phase E7: reading with the AI, with a fake provider (AI_PROVIDER=fake in vitest.config.ts): the
@@ -24,6 +24,8 @@ const JPEG = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1
 
 beforeAll(async () => {
   await setUpDatabase();
+  // These tests cover the automatic second look, off unless turned on (decided 2026-10-21).
+  await writeText(database(env.DB), "ai_second_look", "on", null);
 });
 
 afterEach(() => {
@@ -111,6 +113,23 @@ describe("reading a recipe", () => {
       imports: 1,
       costMicroUsd: 1600,
     });
+  });
+
+  it("gets no second look while it's turned off; Read again still uses the stronger model", async () => {
+    await writeText(db(), "ai_second_look", "off", null);
+    try {
+      const { caller } = await person();
+      fakeAi.byModel({ [FIRST]: { ok: true, output: unsure, tokens: FAKE_TOKENS } });
+      const read = await readWithAi(caller, card());
+      expect(read).toMatchObject({ ok: true, level: 0, models: [FIRST], secondLook: ["unsure"] });
+      expect(fakeAi.requests.map((r) => r.model)).toEqual([FIRST]);
+      const created = await createAiImport(caller, card());
+      const again = await readAgain(caller, created.ok ? created.jobIds[0]! : "");
+      expect(again.ok).toBe(true);
+      expect(fakeAi.requests.map((r) => r.model)).toEqual([FIRST, FIRST, SECOND]);
+    } finally {
+      await writeText(db(), "ai_second_look", "on", null);
+    }
   });
 
   it("gets a second look from the stronger model when the first is unsure", async () => {

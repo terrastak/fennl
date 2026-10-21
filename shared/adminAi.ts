@@ -13,6 +13,11 @@ export interface AdminAiSettings {
   pauseCents: number;
   /** The models to read with, cheapest first. */
   models: string[];
+  /**
+   * Whether a read the cheaper model seems unsure of gets an automatic second look by the next
+   * model (off unless turned on; decided 2026-10-21). "Read again" works either way.
+   */
+  secondLook: boolean;
   /** A second look when this many ingredient lines have no amount (0: off). */
   missingAmounts: number;
   /** A second look when cups, tablespoons and the like go above this (0: off). */
