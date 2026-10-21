@@ -1,0 +1,22 @@
+{
+  "title": "Brownies",
+  "ingredients": [
+    "3 oz semi-sweet chocolate (not chips)",
+    "1 oz unsweetened chocolate",
+    "6 Tbsp butter",
+    "3/4 cup sugar",
+    "1 tsp vanilla",
+    "2 eggs",
+    "1/2 cup flour",
+    "1/4 tsp salt",
+    "1/2 cup choc chips"
+  ],
+  "directions": [
+    "Melt the semi-sweet chocolate, unsweetened chocolate and butter together.",
+    "Whisk the sugar, vanilla and eggs into the melted chocolate.",
+    "Add flour + salt.",
+    "Add chips.",
+    "Bake at 350° in an 8x8 pan (shiny metal) 20-30 min, or 325° (dark metal) 25 min."
+  ],
+  "source": { "name": "Barbara", "author": null, "page": null, "url": null }
+}

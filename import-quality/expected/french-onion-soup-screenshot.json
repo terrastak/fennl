@@ -1,0 +1,28 @@
+{
+  "title": "French Onion Soup",
+  "description": "French onion soup feeds the soul on a cold day, and now you can enjoy it at the best restaurant on the block: your place. Our classic recipe turns a lazy Sunday into a long-simmering affair. Serve it bubbling hot, and bring down the house.",
+  "ingredients": [
+    "1/4 cup extra-virgin olive oil",
+    "3 pounds sweet onions, such as Vidalia, halved and thinly sliced (9 cups)",
+    "2 tablespoons unsalted butter",
+    "1 clove garlic, minced (1 teaspoon)",
+    "3 thyme sprigs",
+    "1 bay leaf",
+    "kosher salt and freshly ground white pepper",
+    "1/2 cup dry vermouth or dry white wine",
+    "2 quarts beef stock, preferably homemade (see recipe, below)",
+    "1/3 cup sweet Marsala, Madeira, or port wine",
+    "6 slices French bread or other soft country loaf (each 1 inch thick), lightly toasted",
+    "8 ounces Gruyère, coarsely grated (2 cups)"
+  ],
+  "directions": [
+    "## Caramelize Onions",
+    "Heat oil in a large, heavy pot over medium. Add onions and cook, stirring occasionally, until soft and beginning to turn golden, 35 to 40 minutes (if onions develop color quickly, reduce heat). Add butter, garlic, thyme, bay leaf, 2 teaspoons salt, and 1/4 teaspoon pepper. Cook, stirring a few times, until golden brown, 15 to 20 minutes more.",
+    "## Deglaze & Simmer",
+    "Add vermouth (for acidity and subtle bitterness) and boil, scraping up browned bits from bottom of pot, until mostly evaporated, 1 to 2 minutes. Stir in stock and Marsala (this fortified wine imbues sweetness and subtle warmth and spice). Bring to a boil, then reduce heat to low and gently simmer 45 minutes. Season to taste.",
+    "## Broil & Serve",
+    "Preheat broiler. Ladle soup into broiler-safe crocks or bowls set on a rimmed baking sheet. Nestle a piece of toast into each, partially submerged, and top each with 1/3 cup Gruyère. Broil until cheese is melted, bubbly, and golden brown in places, 2 to 4 minutes. Soup without toast and cheese can be cooled and refrigerated in an airtight container up to 3 days, or frozen up to 6 months."
+  ],
+  "servings": { "count": 6, "yield": "6 servings" },
+  "source": { "name": "Martha Stewart Living", "author": "Greg Lofts", "page": null, "url": null }
+}
