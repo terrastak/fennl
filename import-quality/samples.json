@@ -572,5 +572,12 @@
     "private": true,
     "inputs": ["test-pdfs/Spiced Cider Doughnuts Recipe | Leite's Culinaria.pdf"],
     "notes": "Three printed Leite's Culinaria pages: book credit, headnote with author sign-off, an editor's note and special equipment before the recipe, unlabeled Quick Glance times, the last step running onto the next page, and a tester's comment to leave out."
+  },
+  {
+    "id": "pecorino-romano-tasting-pdf",
+    "kind": "pdf",
+    "private": true,
+    "inputs": ["test-pdfs/Pecorino Romano Testing ATK.pdf"],
+    "notes": "From the owner (2026-10-21), private: a scanned America's Test Kitchen taste test of Pecorino Romano cheeses, with no recipe. Each cheese lists its own \"INGREDIENTS:\", so it tests that a page about food isn't taken for a recipe."
   }
 ]
