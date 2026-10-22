@@ -1,5 +1,12 @@
 import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
-import type { Recipe, RecipeMade, RecipeOpinion, RecipePhoto } from "../../shared/recipe";
+import type {
+  ImportSource,
+  Recipe,
+  RecipeImport,
+  RecipeMade,
+  RecipeOpinion,
+  RecipePhoto,
+} from "../../shared/recipe";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type { SearchResults } from "./search";
@@ -58,6 +65,17 @@ export interface TrashItem {
   addedBy: string | null;
 }
 
+/** A recipe imported from somewhere (phase E13), to match when importing from there again. */
+export interface ImportedRecipe {
+  id: string;
+  ownerUserId: string;
+  title: string;
+  import: RecipeImport;
+  inTrash: boolean;
+  /** Gallery photos it has now. */
+  galleryPhotos: number;
+}
+
 /** A person in the household. */
 export interface Member {
   userId: string;
@@ -103,6 +121,7 @@ export type DbRequest =
   | { op: "photoHashes" }
   | { op: "findDuplicates"; query: DuplicateQuery }
   | { op: "findDuplicatePairs" }
+  | { op: "importedRecipes"; source: ImportSource }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -126,6 +145,8 @@ export interface DbResults {
   findDuplicates: DuplicateMatch[];
   /** Pairs of recipes in the library that may be the same recipe (phase C14). */
   findDuplicatePairs: DuplicatePair[];
+  /** Recipes in the household imported from a source, Trash included (phase E13). */
+  importedRecipes: ImportedRecipe[];
   wipe: null;
 }
 

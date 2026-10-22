@@ -17,6 +17,7 @@ import type { Member, RecipeDetail } from "../sync/dbProtocol";
 import { Gallery, Originals } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
+import { EarlierVersion } from "./EarlierVersion";
 import { noteTrashed } from "./trashNotice";
 import {
   dayText,
@@ -647,6 +648,8 @@ export function RecipePage({ id }: { id: string }) {
           <p className={styles.hint}>Changes here haven&rsquo;t synced yet.</p>
         ) : null}
       </header>
+
+      <EarlierVersion detail={detail} me={me} editable={editable} />
 
       <div className={styles.columns}>
         <Ingredients recipe={recipe} />

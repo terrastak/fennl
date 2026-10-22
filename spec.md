@@ -795,6 +795,25 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - **Decided (owner, 2026-10-09)**: unused photos go after 7 days; grace-period emails are a notice at the start and reminders at 30, 7 and 1 days left, with none after the deletion; photos are in the download by default ("Download without photos" leaves them out).
   - Tests: `worker/images/housekeeping.test.ts` (unused photos, the purge and re-adding, reconcile, grace period, usage, export) and the Settings check in `e2e/photos.spec.ts`.
 
+### D4. Photos arranged by Fennl (proposed 2026-10-22, waiting for approval)
+- **Goal**: A recipe's photos are in the right order without anyone arranging them: the finished dish (or another clearly main photo) as the cover, then the photos that help someone make the dish, in the order of the method. The owner's words: "What matters most is the finished dish or another identified main photo … what matters more are photos of the end result or specific steps where an image would help users make the dish."
+- **Decided (owner, 2026-10-22)**:
+  1. Arranging photos **doesn't count** as one of the household's monthly AI imports.
+  2. **No setting**: Fennl simply does it, and the privacy policy says so (H2).
+  3. **Ingredient photos and routine steps come last**, as do extra photos of the finished dish unless one clearly adds something the cover doesn't (the owner's change, the same day) ("a whisk aerating flour"). Fennl never encourages or reminds people to add step photos; it only puts helpful ones in the right place.
+- **Steps**:
+  1. **When**: a recipe's gallery has two or more photos, from adding photos, any import (web page, Paprika, documents) or a partner's change, and nobody has arranged them by hand. Once someone moves a photo, that recipe's order is theirs: Fennl never rearranges it again, and new photos go at the end, as today. Whether the order was set by hand is remembered with the recipe, so every device and both partners respect it.
+  2. **Reading the photos** (on the server, through the AI provider layer, `worker/ai/`): the cheapest model in the admin console's list looks at the photos' small copies (480 px, so it costs little) beside the recipe's title and method. It answers, for each photo: the finished dish, a step (which step of the method, and whether seeing it helps make the dish), ingredients, or something else; and which finished-dish photo makes the best cover.
+  3. **The order**: the chosen cover first, then helpful step photos in the method's order, then everything else. Other photos of the finished dish go with everything else: people don't need the same dish from three angles (owner's choice, 2026-10-22), unless one clearly adds something the cover doesn't (the inside of a cake cut open, how it's served or plated), when the AI says so and it follows the cover. **Everything else follows the making of the dish, step by step** (owner's choice, the same day): the ingredients and getting ready, then the routine steps in the method's order, then the other photos of the finished dish, then anything the AI can't place in the recipe. Where photos share a place, by when they were taken. Card and page photos from imports stay out of the gallery, as now.
+  4. **When it was taken**: read on the device from the photo's own data before it's prepared (preparing removes it), and kept with the photo (`recipe_photo`); a photo that doesn't say (a screenshot, a downloaded image) counts by when it was added.
+  5. **Without the AI**: when Fennl's AI is paused, the household has reached the hidden cost limit, or the call fails, photos are ordered by when they were taken, with no message. The AI isn't asked again for the same photos.
+  6. **Metering**: every call is in `ai_usage` (a new purpose, `arrange`, not counted as an import), under the household's hidden cost limit and Fennl's alert and pause amounts. About 0.05 cents for 10 photos at Claude Haiku 5.5's price (`CLAUDE.md` open question 10; re-checked when built).
+  7. **Showing it**: a quiet line under the gallery, "Arranged by Fennl. Drag to change the order." Nothing asks people to add more photos.
+  8. **Measuring**: a small photo-order test set (the owner's recipes with several photos, such as Mom's Cherry Krinkle Cookies with 5, the correct cover and order written by the owner), scored like the import test set and run with the model comparison.
+- **You check**: Add four photos of a dish in the wrong order (the finished dish last) and see them arranged; drag one, add another, and see your order kept.
+- **Done when**: The test set's covers are right, ordering never overrides a hand-made order, and a paused AI falls back quietly.
+- **Decisions**: None left; built after E13 and E18 are merged.
+
 ## Stage E: The import engine (headline feature, Premium)
 
 Import quality is the core of the product, so this stage starts by building a way to **measure** quality, then improves it with evidence.
@@ -1069,6 +1088,21 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **You check**: Import your real Paprika library and spot-check 20 recipes against Paprika. Also try a zip of images and a text file renamed `.paprikarecipes`: both are rejected with a clear message.
 - **Done when**: Your library imports completely and a second import creates no duplicates. Tests cover the rejected files (a zip of images, a zip with the right entry names but bad JSON, a zip bomb, a corrupt gzip entry).
 - **Decisions**: What to do if a library is bigger than the photo quota. The numbers for the zip limits (entries, unpacked size, compression ratio) and per-entry size, to set against your real 827-recipe, 39 MB library so it passes comfortably.
+- **Decided (owner, 2026-10-21)**:
+  1. **The file is opened on the device**, like PDFs (E12), not uploaded whole: a library with photos can be larger than one upload can carry. Step 6's checks run on the device, and the server never trusts the file: it only ever receives ordinary recipe changes and photo uploads, each checked exactly as anything typed or uploaded is (limits, sizes, file signatures, quotas), and refuses Paprika recipes on a plan without `import_structured_enabled`. An interrupted import picks up where it stopped when the file is chosen again.
+  2. **Free accounts import up to their recipe limit**; the rest are listed in the preview as needing Premium (open question 16). Text only on Free: photos need Premium.
+  3. **Photos past the quota**: every recipe comes in; photos are added until the household's photo allowance is reached, and the rest are listed so space can be freed and the file imported again (re-importing fills in missing photos).
+  4. **Matches**: a recipe imported from Paprika before (the same Paprika id) is updated when it changed in Paprika, never duplicated; the others come in as new (the duplicate finder, C14, tidies overlaps with recipes added another way). **The earlier version is kept** (on every plan, as import safety, not the Premium history of G2), and when the updated recipe is opened Fennl says it was updated from Paprika, with a way to compare the earlier version with the new one and to put the earlier one back. This is the first piece of version history (G2 builds the rest on the same table). Owner's choice the same day: the preview says how many recipes changed in Paprika and asks, on every plan, whether to update them or leave them as they are; the earlier version is kept until the person chooses which one to keep, and doesn't count toward the text cap.
+  5. **Zip limits**, set against the owner's library (827 recipes, 39 MB; its largest recipe 2.2 MB packed, 3 MB unpacked; entries stored, not compressed): at most 20,000 recipes in a file, each at most 50 MB packed and 60 MB unpacked, and an unpacked recipe at most 50 times its packed size.
+- **Built (2026-10-22)**, on the Import page under **From Paprika**:
+  1. **Reading the file** (`shared/paprikaFile.ts`): the zip's own signature and list of entries are checked before anything is unpacked; then each recipe is read straight from the file, one at a time (never the whole file in memory), and unpacking stops as soon as a recipe grows past the limits above, whatever the zip claims. Only `.paprikarecipe` entries are read; others are counted and left out (and macOS's own extras ignored). A file that isn't a zip (a text file renamed), a zip with no recipes (photos), too many recipes, or a broken entry list is turned away with what to do; a recipe that is too large, not gzip, cut short or not JSON is listed as a problem and the rest still come in.
+  2. **Each recipe** (`shared/paprika.ts`) becomes a draft with Paprika's id and hash: ingredients and directions as lines (headings such as "AVOCADO CREMA:" and "FOR THE FILLING:" kept as headings, "1." numbering and blank lines dropped), times as minutes with any other words kept ("0:45", "25 minutes to 35 minutes" as 25 minutes "to 35 minutes", "prep: 45 min. + chilling" as words), servings, source and link, difficulty, and nutrition read from the forms Paprika saves it in (labels first, "Calories: 467kcal | Fat: 18g", or amounts first, "446 calories, 26g fat"), always keeping the text. Paprika's notes and stars become the importing person's own signed note and rating; categories are filed by name; Paprika's "created" becomes the recipe's created date. Photos: the cover first (the full-size copy when Paprika has one, else its 280 px copy), then the others.
+  3. **Preview**: new recipes, recipes already in Fennl and unchanged, ones changed in Paprika since they were imported (**Update them**, the version in Fennl kept, or **Leave them as they are**, on every plan), ones in Trash (left there), photos and their size, the photo storage left, anything that couldn't be read, and on Free how many won't fit in the plan. Nothing is saved until **Import** is pressed.
+  4. **Importing** (`app/import/paprikaImport.ts`), 25 recipes at a time, with progress: recipes, stars, notes and categories as ordinary changes through sync; then photos, prepared on the device like any dish photo and uploaded for the recipe's owner (waiting and carrying on when the server says they're coming too fast). Before a changed recipe is updated, everything waiting is sent and the server keeps the recipe as it has it (`POST /api/recipes/versions`). Each recipe records Paprika's hash and the photos brought in (`import.photos`), so choosing the file again skips what's done, fills in photos still missing (not ones removed in Fennl) and carries on an interrupted import.
+  5. **The earlier version** (`recipe_version`, migration `0032`; `worker/versions/`): the recipe's page says **Updated from Paprika**, with **Compare** (each field that differs, now and before, and the person's own stars and note), **Keep this version** and **Put the earlier version back** (an ordinary change through sync). Choosing removes the kept version; so does the recipe being deleted for good. Kept on every plan; it doesn't count toward the text limit.
+  6. **The server never trusts the file**: it receives ordinary changes and uploads, checked as always (limits, sizes, file signatures, quotas), refuses a Paprika recipe (new or updated) on a plan without `import_structured_enabled`, and records a newer Paprika version only on a recipe imported from the same Paprika recipe.
+  7. **Measured**: eight recipes from the owner's library (`import-quality/test_paprika/`, entries unchanged) are exact samples in the scorecard; every one is read exactly right. The owner's whole library on a Premium test account (local test server, a computer): previewed in about 9 seconds, all 827 recipes and 800 photos imported in about 8½ minutes (photos are most of it), and the same file again found all 827 unchanged.
+  8. Tests: `shared/paprikaFile.test.ts` (the library sample; a renamed text file, a zip of photos, too many entries, bad JSON, not gzip, cut short, a zip bomb), `shared/paprika.test.ts`, `app/import/paprikaImport.test.ts` (matching, the Free limit, photos), `app/recipes/versions.test.ts`, `worker/versions/versions.test.ts` (newer versions recorded only for the same Paprika recipe; refused without structured import; versions kept, shared with a partner, hidden from others, removed when deleted for good) and `e2e/paprika.spec.ts` (Premium: preview, import with photos, the same file again, a changed recipe updated, compared and put back; Free: text only, a renamed file explained), on a computer and a phone.
 
 ### E14. Import quality round
 - **Goal**: Fix the worst problems found so far, by the numbers.
@@ -1078,6 +1112,7 @@ Import quality is the core of the product, so this stage starts by building a wa
   3. Re-run and record the before/after numbers here.
 - **You check**: Read the before/after report.
 - **Done when**: Agreed quality targets are met, or the gaps are written down as known issues.
+- **Paid runs, combined (owner's choice 2026-10-21, to avoid paying about $6 a run again and again)**: no comparison run until E13 and E18 are built. Then **one combined run** of everything (about $7–8, all three ways of reading) serves at once as E12's check ("PDF test set passes"), the first measure of the new samples (Barbara's card, the magazine screenshot, Stuffed Mushrooms' handwriting, the private PDFs, the documents) and E14's "before". E14's "after" runs use only Fennl's own way (`ways: fennl`, about $1.50–2 each). Correcting a correct answer never needs a new run: the saved answers (kept 90 days) are re-scored for free (`npm run ai:rescore`). Only a change to Fennl's instructions to the AI does. Stages F, G and H need no paid runs.
 
 ## Stage F: Cooking features
 
@@ -1177,6 +1212,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **You check**: Edit a recipe a few times and restore an older version.
 - **Done when**: History syncs and restore is tested.
 - **Decisions**: How long history is kept.
+- **Started early in E13 (2026-10-22)**: the `recipe_version` table and its routes (`worker/versions/`) keep a recipe's version from before a Paprika update, with Compare and Put back on the recipe page. G2 adds the other reasons a version is kept, on the same table.
 
 ## Stage H: Beta launch readiness
 
@@ -1187,6 +1223,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
 - **Acceptable use and illegal imagery (owner's request, 2026-10-08)**: the privacy policy and terms must include an acceptable-use section covering what may be uploaded (recipe-related photos only, no illegal content), that Fennl may remove content and suspend accounts that break the rules, how content is reported and removed, and what Fennl does about illegal imagery, including image scanning and legal reporting. The wording depends on the outcome of open question 21, so settle that first. Also state what photos are sent to third parties (the AI vendor, see the data-retention note above).
+- **Photos sent to the AI (owner's choice, 2026-10-22)**: the privacy policy says that recipe photos are sent to the AI company both when importing and, as small copies, to arrange a recipe's photos (D4), and what the AI company keeps and for how long (`docs/setup/e7-ai-import.md`).
 - Changing the account email was built early, in B7a.
 
 ### H3. Backups
@@ -1312,7 +1349,7 @@ These follow the beta and are approved one at a time, like every phase. The desi
 - **Steps**: paste a list of addresses (or choose browser bookmarks exported as a file); each becomes a draft as in E3/E8, in a batch (`batch_id`) reviewed one by one or together; sites that fail are listed so the person can fix or skip them. Needs paste-a-link import (Stage I item 4) first. Respects `structured_imports_per_day` and the AI limits.
 - **Done when**: a 50-link batch reviews cleanly, with failures listed and no duplicates saved.
 
-### E18. Import from a document file (drafted 2026-10-21, not approved)
+### E18. Import from a document file (approved 2026-10-21)
 - **Goal**: Choose a recipe saved as a document (a Word file, a Rich Text file, a plain text file) on the Import page and get a reviewed draft, without copying and pasting it.
 - **Why**: Family recipes are often typed up in Word or TextEdit. Today the only way in is "Paste a recipe" (E15). Three examples from the owner are in the test set (`test-docs/`: a Rich Text ingredient list, and two Word documents, one with a photo of the original recipe inside).
 - **Builds on**: E15 (pasted text: Fennl's free reading of clearly laid out text, otherwise the AI), E12 (a file opened on the device, never uploaded whole), E4's review screen.
@@ -1327,6 +1364,14 @@ These follow the beta and are approved one at a time, like every phase. The desi
   3. **Free when no AI is used**: a clearly laid out document is read by Fennl's own rules at no AI cost, so it's free (`import_structured_enabled`), like pasted text; one that needs the AI is Premium and counts as one AI import.
 - **You check**: Import the three documents in `test-docs/`, then one of your own.
 - **Done when**: the `document` samples in `import-quality/` read as their correct answers (Fennl's rules exactly where they apply; the AI measured by the model comparison), and a damaged or unsupported file gets a clear message.
+- **Built (2026-10-21)**, on the Import page under **From a file** (`app/import/DocumentImport.tsx`):
+  1. **Choose files**, one or up to 10 at once: Word (`.docx`), Rich Text (`.rtf`), text (`.txt`) and Markdown (`.md`), at most 20 MB each (`DOCUMENT_RULES`, `shared/documentText.ts`). An old Word file (`.doc`), an Apple Pages file or a LibreOffice file (`.odt`) is turned away with how to save it as `.docx`; anything else with what Fennl reads.
+  2. **The text is taken out on the device** (`shared/documentText.ts`, no new dependency): a Word file is read from its XML with `fflate` (paragraphs as lines, tabs and line breaks kept, headings as "## ", Word's own bulleted and numbered lists as "- "); Rich Text by a small reader of Fennl's own (fonts, colours, list markers and pictures left out; accents and other characters kept); text in UTF-8, UTF-16 or Windows' encoding. The owner's four examples read cleanly.
+  3. **Then exactly as pasted text** (`POST /api/import/text` with `fileName` and, on Premium, `pictures`; `worker/import/pastedImport.ts`): clearly laid out text is read by Fennl's own rules, free (`import_structured_enabled`); anything else by the AI (Premium, one AI import), told it's a document. The draft is named after the file, and the review screen shows **The document** with its text beside the draft (kept until it's saved or discarded, like pasted text). The import's source stays `text`, so nothing changes for the sync records.
+  4. **Pictures in a Word file** (Premium): those at least 200 px on each side are offered on the review screen as photos to keep, like a web page's (up to 10; tiny bullets, icons and logos left out); the app hands each to its draft (`POST /api/import/jobs/:id/inputs/:n`), kept only until the draft is saved or removed. The cookie document's Quaker Oats lid is offered this way.
+  5. When some files can't be read, the page stays and says why for each, under the drafts that were made.
+  6. Measuring: the four documents are read in the model comparison's `text` set as the app reads them; none is clearly laid out, so all four are AI reads (under a cent each).
+  7. Tests: `shared/documentText.test.ts` (the owner's four files, and Word headings, lists, tabs, damaged files, Rich Text accents and Unicode, text encodings), `worker/import/documentImport.test.ts` (named by the file, pictures offered on Premium only, free when laid out, bad requests) and `e2e/documents.spec.ts` (a Word file with its photo on Premium; a Markdown file read free and a `.doc` explained on Free; computer and phone).
 
 ### F4b. Automatic nutrition calculation
 - **Goal**: Estimate per-serving nutrition from the ingredients, and say plainly that it is an estimate.
@@ -1361,11 +1406,11 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 9 | AI cap per household and spending alarm | E7 |
 | 14 | Should free accounts get a few "teaser" AI imports? (Owner undecided; revisit later) | Before public launch (Stage I) |
 | 10 | ~~PDF size and page limits~~ Decided 2026-10-21: 100 pages, 30 MB; each recipe read counts as one AI import, finding them is free | E12 |
-| 11 | Paprika libraries larger than the photo quota | E13 |
+| 11 | ~~Paprika libraries larger than the photo quota~~ Decided 2026-10-21: every recipe comes in; photos until the allowance is full, the rest listed; importing again fills them in | E13 |
 | 12 | ~~Joining a household with existing recipes; leaving one~~ Decided: merged view, owners kept, copies on split | G1 |
 | 13 | Version history retention | G2 |
 | 15 | Beta grants and households: when two granted users join, whose grant covers the household? On a split, does each keep their own remaining grant? (Suggest: the household uses the longer grant; on a split each keeps their own original grant end date.) | G1 |
-| 16 | Free structured import vs. the 100-recipe limit: a free user importing a 1,240-recipe Paprika library. Import up to the remaining allowance, with a clear message? (Suggest: yes, show the rest in the preview as "needs Premium".) | E3, E13 |
+| 16 | ~~Free structured import vs. the 100-recipe limit~~ Decided 2026-10-21: import up to the plan's room; the preview says how many won't fit | E13 |
 | 17 | ~~Is the Cloudflare account on Workers Paid ($5/month)?~~ Yes: switched on 2026-10-03 (B2 setup, step 1) | H3 (before H5) |
 | 18 | ~~Should Cloudflare Access cover the whole preview Worker?~~ Decided 2026-10-03: yes, as part of B4a (not sooner) | B4a |
 | 19 | ~~Changing an account's email address~~ Decided 2026-10-06: verify the new address first, notify the old one, keep every change so support can restore an earlier address. Built in B7a | B7a |
@@ -1427,4 +1472,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C13c | Done 2026-10-20 (merged). C13 is complete |
 | C14 | Done 2026-10-20 (merged) |
 | E15 | Built 2026-10-20, waiting for review |
+| E18 | Built 2026-10-21, waiting for review |
+| E13 | Built 2026-10-22, waiting for review |
 | All others | Not started |

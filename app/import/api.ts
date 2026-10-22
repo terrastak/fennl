@@ -155,13 +155,15 @@ export function pdfFindProblemText(problem: PdfFindError | "offline" | "failed")
 
 export async function importPastedText(
   text: string,
-): Promise<{ jobs: ImportJobSummary[] } | { problem: ImportTextError | "offline" | "failed" }> {
+  /** A document's text (phase E18): its file name, and how many pictures it offers. */
+  document?: { fileName: string; pictures: number },
+): Promise<ImportTextResponse | { problem: ImportTextError | "offline" | "failed" }> {
   let res: Response;
   try {
     res = await fetch("/api/import/text", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text }),
+      body: JSON.stringify(document ? { text, ...document } : { text }),
     });
   } catch {
     return { problem: "offline" };
@@ -169,6 +171,19 @@ export async function importPastedText(
   if (res.ok) return (await res.json()) as ImportTextResponse;
   const error = ((await res.json().catch(() => ({}))) as { error?: ImportTextError }).error;
   return { problem: error ?? "failed" };
+}
+
+/** Hands a document's picture to its draft (phase E18), for the review screen to offer. */
+export async function giveDraftPicture(
+  jobId: string,
+  input: number,
+  picture: Blob,
+): Promise<boolean> {
+  const res = await fetch(`/api/import/jobs/${encodeURIComponent(jobId)}/inputs/${input}`, {
+    method: "POST",
+    body: picture,
+  }).catch(() => null);
+  return Boolean(res?.ok);
 }
 
 /** What to tell people when reading pasted text didn't work. */

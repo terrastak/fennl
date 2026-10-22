@@ -62,22 +62,30 @@ The next deploy hands it to the Worker. Previews get it too: they have their own
 
 ## Part D: Run the model comparison
 
-This reads the quality test set three ways (Haiku alone, Sonnet alone, and Haiku with Sonnet when needed) and reports accuracy and cost side by side. It calls the real API, so each run costs money. It runs only when you start it, never on its own or for a pull request.
+This reads the quality test set with the AI and reports accuracy and cost. It calls the real API, so each run costs money. It runs only when you start it, never on its own or for a pull request. Costs below were estimated on 2026-10-21, with the private samples (`docs/setup/private-test-samples.md`) included.
 
-The form has a box for what to read:
+The form has two choices.
 
-- `photos` (the default): the cards, cookbook pages, screenshots and PDFs. About a dollar.
+**What to read:**
+
+- `photos` (the default): the cards, cookbook pages, screenshots and PDFs.
 - `web`: the web pages with their recipe data left out, read from the page's text as Fennl reads a blog without recipe data (phase E8). About another dollar.
-- `all`: both, about two dollars.
+- `text`: pasted text (phase E15). A few cents.
+- `all`: everything.
+
+**Which ways of reading:**
+
+- `all` (the default): Haiku alone, Opus alone, and Fennl's way (Haiku, with Opus's second look when needed), side by side. About $6 for the photos. Use it when deciding whether the stronger model is worth its cost.
+- `fennl`: only Fennl's way. About $1.50 for the photos. Use it to measure a change to Fennl's own instructions.
 
 1. On GitHub, click the **Actions** tab.
 2. In the left sidebar, click **AI model comparison**.
-3. Click **Run workflow**, leave the branch as `main` and the models blank, pick what to read, and click **Run workflow**.
-4. When the run finishes (up to about 30 minutes for **all**), open it. The report is on its summary page, including a **Second looks** section: for each rule that makes Sonnet read a recipe again, how often it caught a real mistake and how often it fired for nothing.
+3. Click **Run workflow**, leave the branch as `main` and the models blank, pick what to read and which ways, and click **Run workflow**.
+4. When the run finishes (up to about an hour for **all**), open it. The report is on its summary page, including a **Second looks** section: for each rule that makes Opus read a recipe again, how often it caught a real mistake and how often it fired for nothing.
 
-The run also keeps every answer the AI gave (**ai-answers** at the bottom of the run's page, kept 30 days). With those, the second-look rules can be re-checked as often as needed at no cost (`npm run ai:replay`), so a change to the rules doesn't need another paid run.
+The run also keeps every answer the AI gave (**ai-answers** at the bottom of the run's page, kept 90 days). With those, two things cost nothing and need no new run: re-checking the second-look rules (`npm run ai:replay`), and re-scoring the run after a correct answer in the test set is corrected (`npm run ai:rescore`). Only a change to Fennl's own instructions to the AI needs a new paid run.
 
-The more handwritten cards the test set has, the more the comparison says. Today it has two (`import-quality/README.md` has the checklist for adding more).
+The more handwritten cards the test set has, the more the comparison says. Today it has seven (`import-quality/README.md` has the checklist for adding more).
 
 ## Part E: See the cost
 

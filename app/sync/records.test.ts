@@ -61,6 +61,31 @@ describe("applying a change here", () => {
     expect(back.deletedAt).toBeNull();
   });
 
+  it("records a source's newer version only on a recipe from that source", () => {
+    const first = {
+      source: "paprika" as const,
+      importJobId: null,
+      externalId: "PAPRIKA-1",
+      externalHash: "h1",
+      importedAt: "2026-10-01T00:00:00.000Z",
+    };
+    const imported = applyChange(
+      null,
+      { ...create, create: { createdAt: "2026-10-01T00:00:00.000Z", import: first } },
+      ctx,
+    ) as Recipe;
+    const newer = { ...first, externalHash: "h2" };
+    const again = (base: Recipe, value: typeof first) =>
+      applyChange(
+        base,
+        { kind: "recipe", id: recipeId, import: value, fields: {}, changedAt: 2 },
+        ctx,
+      ) as Recipe;
+    expect(again(imported, newer).import).toEqual(newer);
+    expect(again(imported, { ...newer, externalId: "PAPRIKA-2" }).import).toEqual(first);
+    expect(again(applyChange(null, create, ctx) as Recipe, newer).import).toBeNull();
+  });
+
   it("ignores an edit of a recipe that isn't here", () => {
     expect(
       applyChange(

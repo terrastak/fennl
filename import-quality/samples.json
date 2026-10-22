@@ -579,5 +579,11 @@
     "private": true,
     "inputs": ["test-pdfs/Pecorino Romano Testing ATK.pdf"],
     "notes": "From the owner (2026-10-21), private: a scanned America's Test Kitchen taste test of Pecorino Romano cheeses, with no recipe. Each cheese lists its own \"INGREDIENTS:\", so it tests that a page about food isn't taken for a recipe."
+  },
+  {
+    "id": "paprika-owner-library-sample",
+    "kind": "paprika",
+    "inputs": ["import-quality/test_paprika/owner-library-sample.paprikarecipes"],
+    "notes": "Eight recipes from the owner's own Paprika 3 export (test_recipes/), entries unchanged: headings written as \"AVOCADO CREMA:\" and \"FOR THE FILLING:\", \"1.\" numbering and blank lines between steps, times as \"0:45\", \"25 minutes to 35 minutes\" and \"prep: 45 min. bake: 50 min. + chilling\", servings in words, a rating, notes and categories."
   }
 ]

@@ -1,7 +1,7 @@
 import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type { Entitlements } from "../../shared/entitlements";
 import { addBlockedBy, type Usage } from "../../shared/limits";
-import { RECIPE_SCHEMA_VERSION } from "../../shared/recipe";
+import { RECIPE_SCHEMA_VERSION, type ImportSource } from "../../shared/recipe";
 import {
   SYNC_RULES,
   checkChange,
@@ -15,7 +15,13 @@ import type { CategoryData } from "../categories/tree";
 import { PhotoCache, photoAccount } from "../photos/cache";
 import { LocalDb, LocalDbError } from "./dbClient";
 import type { SearchResults } from "./search";
-import type { OutboxEntry, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
+import type {
+  ImportedRecipe,
+  OutboxEntry,
+  RecipeDetail,
+  RecipeSummary,
+  TrashItem,
+} from "./dbProtocol";
 import { batches, stampedAsSent } from "./records";
 import type { SyncPhase, SyncStatus } from "./status";
 import { canEdit, STARTING } from "./status";
@@ -355,6 +361,10 @@ export class SyncEngine {
 
   listTrash(): Promise<TrashItem[]> {
     return this.db.call({ op: "listTrash" });
+  }
+
+  importedRecipes(source: ImportSource): Promise<ImportedRecipe[]> {
+    return this.db.call({ op: "importedRecipes", source });
   }
 
   findDuplicates(query: DuplicateQuery): Promise<DuplicateMatch[]> {

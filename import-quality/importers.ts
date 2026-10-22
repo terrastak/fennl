@@ -1,4 +1,7 @@
+import { readPaprikaRecipe } from "../shared/paprika";
+import { bytesSource, paprikaEntries, readPaprikaEntry } from "../shared/paprikaFile";
 import { readPastedText } from "../shared/pastedText";
+import type { RecipeDraft } from "../shared/importDraft";
 import { readWebRecipes } from "../shared/webRecipe";
 import type { Importer } from "./scorecard";
 
@@ -30,10 +33,28 @@ const pastedText: Importer = {
   },
 };
 
+/** Paprika 3 export files (phase E13): read as the app reads them, one recipe at a time. */
+const paprikaFile: Importer = {
+  name: "Paprika file",
+  kinds: ["paprika"],
+  exact: true,
+  run: async (files) => {
+    const drafts: RecipeDraft[] = [];
+    for (const file of files) {
+      const source = bytesSource(file.bytes);
+      for (const entry of (await paprikaEntries(source)).recipes) {
+        const read = readPaprikaRecipe(await readPaprikaEntry(source, entry), entry.name);
+        if (!("problem" in read)) drafts.push(read.draft);
+      }
+    }
+    return drafts;
+  },
+};
+
 /**
  * Every importer the scorecard runs on each pull request. Each phase that builds one adds it
  * here: structured web data (E3), clearly laid out pasted text (E15) and Paprika files (E13). Importers that call the AI (pages
  * without recipe data, E8; cards, pages, screenshots and PDFs, E10 to E12) cost money each time,
  * so they're measured by the AI model comparison instead (aiCompare.ts), started by hand.
  */
-export const IMPORTERS: readonly Importer[] = [webStructured, pastedText];
+export const IMPORTERS: readonly Importer[] = [webStructured, pastedText, paprikaFile];

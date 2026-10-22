@@ -39,7 +39,8 @@ export interface ImportPage {
 
 /** What import_job.provenance holds for pasted text (phase E15): kept until saved or removed. */
 export interface PastedProvenance {
-  pasted: { text: string };
+  /** `fileName`: the text came from a document (phase E18), not the paste box. */
+  pasted: { text: string; fileName?: string };
 }
 
 /** What import_job.provenance holds for a web page. */
@@ -69,6 +70,8 @@ export interface ImportJobDetail extends ImportJobSummary {
   recipeId: string | null;
   /** The text a recipe was read from, for the review screen (phase E15); null for any other. */
   pastedText: string | null;
+  /** The document the text came from (phase E18); null when it was pasted. */
+  pastedFrom: string | null;
   /** Read by the AI (phase E7): whether "Read again" is still on offer, or has been used. */
   ai: { canReadAgain: boolean; readAgain: boolean } | null;
 }
@@ -220,6 +223,11 @@ export type ImportTextError =
 /** POST /api/import/text: one job for each recipe found. */
 export interface ImportTextResponse {
   jobs: ImportJobSummary[];
+  /**
+   * A document's pictures (phase E18): for each draft, its photo inputs, in the order the
+   * document's pictures were sent, for the app to hand over (POST /api/import/jobs/:id/inputs/:n).
+   */
+  pictures?: { job: string; inputs: number[] }[];
 }
 
 /**

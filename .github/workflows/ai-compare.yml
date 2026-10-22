@@ -2,10 +2,10 @@
 # photos, pages, screenshots and PDFs (and, if chosen, its web pages with their recipe data left
 # out, phase E8) with the cheaper model alone, the stronger model alone, and the cheaper model with
 # a second look by the stronger one when needed, then reports accuracy and cost side by side on
-# the run's summary page. It calls the real API, so it costs money (about a dollar for the photos,
-# about another for the web pages): it runs only when started by hand (Actions › AI model
-# comparison › Run workflow). Needs the repository secret ANTHROPIC_API_KEY
-# (docs/setup/e7-ai-import.md).
+# the run's summary page. It calls the real API, so it costs money (about $6 for the photos with
+# all three ways, about $1.50 with only Fennl's way; about another dollar for the web pages): it
+# runs only when started by hand (Actions › AI model comparison › Run workflow). Needs the
+# repository secret ANTHROPIC_API_KEY (docs/setup/e7-ai-import.md).
 name: AI model comparison
 
 on:
@@ -24,6 +24,13 @@ on:
           - text
           - all
         default: photos
+      ways:
+        description: "all: the cheaper model alone, the stronger alone, and Fennl's way (about $6 for the photos). fennl: only Fennl's way (about $1.50)"
+        type: choice
+        options:
+          - all
+          - fennl
+        default: all
 
 permissions:
   contents: read
@@ -36,6 +43,7 @@ jobs:
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_MODELS: ${{ inputs.models }}
       AI_COMPARE_SETS: ${{ inputs.sets }}
+      AI_COMPARE_WAYS: ${{ inputs.ways }}
       # The private samples (whole printed web pages, kept out of this public repository; owner's
       # choice 2026-10-21): read from a private repository when this token is set
       # (docs/setup/private-test-samples.md). Without it, they're left out.
@@ -73,8 +81,9 @@ jobs:
           if [ -f import-quality/ai-report.md ]; then
             cat import-quality/ai-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
-      # Every answer the AI gave, so the second-look rules can be re-checked on them for free
-      # (npm run ai:replay). Kept with the run for 30 days.
+      # Every answer the AI gave, so the second-look rules can be re-checked on them, and the run
+      # re-scored when a correct answer changes, for free (npm run ai:replay, npm run
+      # ai:rescore). Kept with the run for 90 days (owner's request 2026-10-21).
       - name: Keep the answers
         if: always()
         uses: actions/upload-artifact@v7
@@ -84,4 +93,4 @@ jobs:
             import-quality/ai-answers.json
             import-quality/ai-report.md
           if-no-files-found: ignore
-          retention-days: 30
+          retention-days: 90

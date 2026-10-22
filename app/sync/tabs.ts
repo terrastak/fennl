@@ -1,7 +1,8 @@
 import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type { SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
-import type { RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
+import type { ImportSource } from "../../shared/recipe";
+import type { ImportedRecipe, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
 import type { SearchResults } from "./search";
 import { SyncEngine } from "./engine";
 import { STARTING, type SyncStatus } from "./status";
@@ -23,6 +24,7 @@ interface Calls {
   photoHashes: { args: []; result: string[] };
   findDuplicates: { args: [DuplicateQuery]; result: DuplicateMatch[] };
   findDuplicatePairs: { args: []; result: DuplicatePair[] };
+  importedRecipes: { args: [ImportSource]; result: ImportedRecipe[] };
   emptyTrash: { args: [string[] | undefined]; result: number };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
@@ -153,6 +155,11 @@ export class SyncClient {
     return this.call("findDuplicatePairs", []);
   }
 
+  /** Recipes imported from a source, to match when importing from it again (phase E13). */
+  importedRecipes(source: ImportSource) {
+    return this.call("importedRecipes", [source]);
+  }
+
   emptyTrash(recipeIds?: string[]) {
     return this.call("emptyTrash", [recipeIds]);
   }
@@ -232,6 +239,8 @@ export class SyncClient {
         return engine.findDuplicates(args[0] as DuplicateQuery);
       case "findDuplicatePairs":
         return engine.findDuplicatePairs();
+      case "importedRecipes":
+        return engine.importedRecipes(args[0] as ImportSource);
       case "emptyTrash":
         return engine.emptyTrash(args[0] as string[] | undefined);
       case "getRecipe":

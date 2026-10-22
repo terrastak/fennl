@@ -1,5 +1,10 @@
-import type { SecondLookFinding } from "../shared/aiAnswer";
-import type { DraftInput } from "../shared/importDraft";
+import {
+  answerToDrafts,
+  isAiAnswer,
+  withoutBadParts,
+  type SecondLookFinding,
+} from "../shared/aiAnswer";
+import type { DraftInput, RecipeDraft } from "../shared/importDraft";
 import { matchRecipes, type ExpectedRecipe } from "../shared/importScore";
 import { emptyRecipeContent, type ImportSource } from "../shared/recipe";
 import type { SampleResult } from "./scorecard";
@@ -32,6 +37,24 @@ export interface SavedAnswer {
   costMicroUsd: number;
   /** A PDF's recipe this read was for (phase E12: each is read on its own). */
   recipe?: string;
+}
+
+/**
+ * A saved answer as Fennl keeps it (worker/ai/read.ts): drafts, with any part that breaks the
+ * rules left out; one draft for a PDF recipe read on its own. Null when there was no usable answer.
+ */
+export function savedDrafts(answer: SavedAnswer | undefined): RecipeDraft[] | null {
+  if (!answer?.ok || !isAiAnswer(answer.output)) return null;
+  const drafts = answerToDrafts(answer.output, {
+    source: answer.source,
+    inputs: answer.inputs,
+    photos: [],
+    model: answer.model,
+  }).flatMap((d) => {
+    const kept = withoutBadParts(d, null);
+    return kept ? [kept] : [];
+  });
+  return answer.recipe === undefined ? drafts : drafts.slice(0, 1);
 }
 
 /** One second look decided on a sample: what set it off, and how good the answers were. */

@@ -160,6 +160,29 @@ function recipeStatement(
       newer: lww.newer,
     };
   };
+  if (!change.create && change.import) {
+    // Importing again (phase E13): the source's newer version is recorded on the recipe, only
+    // when it came from the same source and id, along with whatever fields changed.
+    const lww = fields.length > 0 ? lastChangeWins(fields, t, "recipe") : null;
+    const same = `(json_extract(recipe.import, '$.source') = ${p.add(change.import.source)}
+      and json_extract(recipe.import, '$.externalId') = ${p.add(change.import.externalId)})`;
+    const json = p.add(JSON.stringify(change.import));
+    const set = [
+      ...(lww ? [...lww.set, lww.fieldTimes] : []),
+      `import = case when ${same} then ${json} else recipe.import end`,
+      `updated_by_user_id = ${who}`,
+      `updated_at = ${at}`,
+      `server_seq = ${seq(k)}`,
+    ];
+    const newer = [...(lww ? [lww.newer] : []), `(${same} and recipe.import is not ${json})`];
+    return {
+      sql: `update recipe set ${set.join(", ")}
+        where id = ${p.add(change.id)} and owner_user_id in ${members(p, caller)}
+          and expunged_at is null and (${newer.join(" or ")})
+        returning id`,
+      params: p.values,
+    };
+  }
   if (!change.create) {
     const u = update("recipe");
     return {
@@ -470,6 +493,8 @@ async function owners(
  */
 export type PushLimits = Pick<Usage, "maxRecipes" | "maxTextBytes" | "maxRecipeBytes"> & {
   maxPhotosPerRecipe: number | null;
+  /** import_structured_enabled: whether Paprika recipes may come in (phase E13). */
+  structuredImports: boolean;
 };
 
 export const NO_LIMITS: PushLimits = {
@@ -477,6 +502,7 @@ export const NO_LIMITS: PushLimits = {
   maxTextBytes: null,
   maxRecipeBytes: null,
   maxPhotosPerRecipe: null,
+  structuredImports: true,
 };
 
 interface StoredPhoto {
@@ -675,6 +701,15 @@ async function plan(
   const tooBig: Planned = {
     result: { status: "rejected", reason: "invalid", issues: [{ path: "", problem: "too_large" }] },
   };
+  // A Paprika file is read on the person's device (phase E13), so the plan's switch for imports
+  // that cost nothing is checked here, on what the import sends.
+  const notImported: Planned = {
+    result: {
+      status: "rejected",
+      reason: "invalid",
+      issues: [{ path: "import", problem: "invalid" }],
+    },
+  };
 
   return changes.map((change, i): Planned => {
     const time = times[i] as number;
@@ -682,6 +717,8 @@ async function plan(
       case "recipe": {
         const turnedAway = refused.get(change.id);
         if (turnedAway) return overLimit(turnedAway);
+        const imported = change.create?.import ?? change.import;
+        if (imported?.source === "paprika" && !limits.structuredImports) return notImported;
         if (change.create && !recipeOwner.has(change.id)) {
           // A new recipe.
           const content = change.fields as RecipeContent;

@@ -100,7 +100,7 @@ function PhotosPane({ hashes, kind }: { hashes: string[]; kind: "Photo" | "Scree
 
 export function SourcePane({ job }: { job: ImportJobDetail }) {
   const hashes = originalHashes(job.draft);
-  if (job.pastedText !== null) return <TextPane text={job.pastedText} />;
+  if (job.pastedText !== null) return <TextPane text={job.pastedText} from={job.pastedFrom} />;
   return hashes.length > 0 ? (
     <PhotosPane
       hashes={hashes}
@@ -117,14 +117,18 @@ export function SourcePane({ job }: { job: ImportJobDetail }) {
   );
 }
 
-/** The text a recipe was read from (phase E15), kept only until the draft is saved or removed. */
-function TextPane({ text }: { text: string }) {
+/**
+ * The text a recipe was read from (phase E15), or the document's (`from`, its file name; E18),
+ * kept only until the draft is saved or removed.
+ */
+function TextPane({ text, from }: { text: string; from: string | null }) {
   const [open, setOpen] = useState(false);
+  const what = from ? "the document" : "the pasted text";
   return (
     <section className={styles.source} data-open={open} aria-labelledby="source-title">
       <div className={styles.sourceHead}>
         <h2 id="source-title" className={styles.sectionTitle}>
-          The pasted text
+          {from ? "The document" : "The pasted text"}
         </h2>
         <button
           type="button"
@@ -133,14 +137,19 @@ function TextPane({ text }: { text: string }) {
           aria-controls="source-body"
           onClick={() => setOpen(!open)}
         >
-          {open ? "Hide the pasted text" : "Show the pasted text"}
+          {open ? `Hide ${what}` : `Show ${what}`}
         </button>
       </div>
       <div id="source-body" className={styles.sourceBody}>
         <p className={recipes.hint}>
-          Fennl keeps this text only until you save the recipe or discard it.
+          {from ? `The text of ${from}. ` : ""}Fennl keeps this text only until you save the recipe
+          or discard it.
         </p>
-        <pre className={styles.pasted} tabIndex={0} aria-label="The text you pasted">
+        <pre
+          className={styles.pasted}
+          tabIndex={0}
+          aria-label={from ? `The text of ${from}` : "The text you pasted"}
+        >
           {text}
         </pre>
       </div>

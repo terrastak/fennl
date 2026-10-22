@@ -3,6 +3,7 @@ import {
   CATEGORY_SEPARATOR,
   RECIPE_SCHEMA_VERSION,
   type Category,
+  type ImportSource,
   type Recipe,
   type RecipeCategory,
   type RecipeMade,
@@ -15,6 +16,7 @@ import type {
   DbRequest,
   DbResponse,
   DbResults,
+  ImportedRecipe,
   Member,
   OutboxEntry,
   RecipeDetail,
@@ -446,6 +448,28 @@ function duplicatePairs(): DuplicatePair[] {
   );
 }
 
+/** Recipes imported from a source, Trash included, to match when importing again (phase E13). */
+function importedRecipes(source: ImportSource): ImportedRecipe[] {
+  const gallery = new Map<string, number>();
+  for (const photo of livePhotos()) {
+    if (photo.role === "photo") gallery.set(photo.recipeId, (gallery.get(photo.recipeId) ?? 0) + 1);
+  }
+  return values<Recipe>("recipe").flatMap((recipe) =>
+    recipe.import?.source === source && !recipe.expungedAt
+      ? [
+          {
+            id: recipe.id,
+            ownerUserId: recipe.ownerUserId,
+            title: recipe.title,
+            import: recipe.import,
+            inTrash: Boolean(recipe.deletedAt),
+            galleryPhotos: gallery.get(recipe.id) ?? 0,
+          },
+        ]
+      : [],
+  );
+}
+
 /** Categories and what's filed under them, for the category tree (phase C7). */
 function getCategories(): CategoryData {
   const recipeOwners: Record<string, string> = {};
@@ -533,6 +557,9 @@ scope.onmessage = (event) => {
           break;
         case "findDuplicatePairs":
           value = duplicatePairs();
+          break;
+        case "importedRecipes":
+          value = importedRecipes(request.source);
           break;
         case "photoHashes":
           value = [...new Set(livePhotos().map((p) => p.imageHash))];
