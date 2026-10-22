@@ -45,7 +45,7 @@
     "id": "cranberry-apple-muffins-cookbook",
     "kind": "cookbook",
     "inputs": ["test_images/AJs Cranberry Apple Muffins.png"],
-    "notes": "A phone photo of a cookbook page, saved as a PNG, changed by hand in pencil: \"½\" written after the printed 1 of \"1 cup all-purpose flour\", and the \"½\" of \"½ cup whole-wheat flour, oat bran, or all-purpose flour\" crossed out, so the whole-wheat line is gone and its half cup has moved into the all-purpose flour (1½ cups in all, as printed). \"tart apple\" and \"1 to 2 days in a plastic bag\" are underlined, which changes nothing. Drop cap on the headnote; no book title or page number shown. From the owner, 2026-10-22."
+    "notes": "A phone photo of a cookbook page, saved as a PNG, changed by hand in pencil: \"½\" written after the printed 1 of \"1 cup all-purpose flour\", and the \"½\" of \"½ cup whole-wheat flour, oat bran, or all-purpose flour\" crossed out, so the whole-wheat line is gone and its half cup has moved into the all-purpose flour (1½ cups in all, as printed). \"tart apple\" and \"1 to 2 days in a plastic bag\" are underlined, which changes nothing. Drop cap on the headnote; no book title or page number shown. The source is AJ, whom the owner had it from (owner, 2026-10-22); the page doesn't say so, so the AI can't know it and is expected to miss it. From the owner, 2026-10-22."
   },
   {
     "id": "thai-iced-tea-cookbook",
