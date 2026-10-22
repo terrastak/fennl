@@ -13,6 +13,12 @@ export interface JpegInfo {
   height: number;
   /** The EXIF data includes GPS (where the photo was taken). */
   hasLocation: boolean;
+  /**
+   * When it was taken (phase D4), as the camera's clock showed it: the date and time read as if
+   * they were UTC, in milliseconds. Only for ordering photos of one recipe, which share a clock.
+   * Null when the photo doesn't say.
+   */
+  takenAt: number | null;
 }
 
 /** Orientations 5 to 8 turn the picture a quarter turn, so width and height swap. */
@@ -24,7 +30,13 @@ export function swapsSides(orientation: number): boolean {
 export function readJpegInfo(bytes: Uint8Array): JpegInfo | null {
   if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  const info: JpegInfo = { orientation: 1, width: 0, height: 0, hasLocation: false };
+  const info: JpegInfo = {
+    orientation: 1,
+    width: 0,
+    height: 0,
+    hasLocation: false,
+    takenAt: null,
+  };
   let at = 2;
   while (at + 4 <= bytes.length) {
     if (bytes[at] !== 0xff) return info.width ? info : null;
@@ -56,7 +68,19 @@ export function readJpegInfo(bytes: Uint8Array): JpegInfo | null {
   return info.width ? info : null;
 }
 
-/** The EXIF block of an APP1 segment: orientation and whether GPS is there. */
+/** "2026:10:21 18:04:59", as EXIF writes a date, in milliseconds read as UTC. */
+function exifTime(view: DataView, at: number, end: number): number | null {
+  if (at + 19 > end) return null;
+  let text = "";
+  for (let i = 0; i < 19; i++) text += String.fromCharCode(view.getUint8(at + i));
+  const m = /^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(text);
+  if (!m) return null;
+  const [year, month, day, hour, minute, second] = m.slice(1).map(Number) as number[];
+  if (!year || year < 1990 || !month || month > 12 || !day || day > 31) return null;
+  return Date.UTC(year, month - 1, day, hour, minute, second);
+}
+
+/** The EXIF block of an APP1 segment: orientation, whether GPS is there, and when it was taken. */
 function readExif(view: DataView, start: number, end: number, info: JpegInfo): void {
   // "Exif\0\0", then a TIFF header.
   if (end - start < 14 || view.getUint32(start) !== 0x45786966 || view.getUint16(start + 4) !== 0)
@@ -79,6 +103,21 @@ function readExif(view: DataView, start: number, end: number, info: JpegInfo): v
       if (value >= 1 && value <= 8) info.orientation = value;
     } else if (tag === 0x8825) {
       info.hasLocation = true;
+    } else if (tag === 0x0132 && info.takenAt === null) {
+      // DateTime: when the file was last changed; the original time below wins.
+      info.takenAt = exifTime(view, tiff + u32(entry + 8), end);
+    } else if (tag === 0x8769) {
+      // The Exif sub-directory, which holds DateTimeOriginal (when the photo was taken).
+      const sub = tiff + u32(entry + 8);
+      if (sub + 2 > end) continue;
+      for (let j = 0; j < u16(sub); j++) {
+        const inner = sub + 2 + j * 12;
+        if (inner + 12 > end) break;
+        if (u16(inner) === 0x9003) {
+          const taken = exifTime(view, tiff + u32(inner + 8), end);
+          if (taken !== null) info.takenAt = taken;
+        }
+      }
     }
   }
 }

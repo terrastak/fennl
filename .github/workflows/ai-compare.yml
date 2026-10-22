@@ -75,11 +75,21 @@ jobs:
             echo "::notice::The private samples aren't read: the TEST_SAMPLES_TOKEN secret isn't set (docs/setup/private-test-samples.md)."
           fi
           npm run ai:compare
+      # How Fennl arranges a recipe's photos (phase D4): the owner's recipes with several photos,
+      # from the private samples. A fraction of a cent.
+      - name: Photo order
+        if: env.TEST_SAMPLES_TOKEN != '' && (inputs.sets == 'photos' || inputs.sets == 'all')
+        run: |
+          if [ -z "$AI_MODELS" ]; then unset AI_MODELS; fi
+          npm run ai:photo-order
       - name: Report
         if: always()
         run: |
           if [ -f import-quality/ai-report.md ]; then
             cat import-quality/ai-report.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -f import-quality/photo-order-report.md ]; then
+            cat import-quality/photo-order-report.md >> "$GITHUB_STEP_SUMMARY"
           fi
       # Every answer the AI gave, so the second-look rules can be re-checked on them, and the run
       # re-scored when a correct answer changes, for free (npm run ai:replay, npm run
@@ -92,5 +102,6 @@ jobs:
           path: |
             import-quality/ai-answers.json
             import-quality/ai-report.md
+            import-quality/photo-order-report.md
           if-no-files-found: ignore
           retention-days: 90

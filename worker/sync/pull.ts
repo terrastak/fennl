@@ -7,6 +7,7 @@ import type {
   RecipeMade,
   RecipeOpinion,
   RecipePhoto,
+  PhotoArranger,
   PhotoRole,
 } from "../../shared/recipe";
 import { SYNC_RULES, type Cursors, type PullResponse } from "../../shared/sync";
@@ -107,6 +108,8 @@ function toPhoto(row: typeof recipePhoto.$inferSelect): RecipePhoto {
     height: row.height,
     sortOrder: row.sortOrder,
     addedByUserId: row.addedByUserId,
+    takenAt: row.takenAt,
+    arrangedBy: (row.arrangedBy as PhotoArranger | null) ?? null,
     ...sync(row),
   };
 }

@@ -88,3 +88,13 @@ export const FIND_INSTRUCTION = `List every recipe in this PDF, in order: its ti
 
 /** Room for the list of a 100-page PDF's recipes. */
 export const FIND_OUTPUT_TOKENS = 4_000;
+
+/** Putting a recipe's photos in order (phase D4; shared/photoOrder.ts). */
+export const ARRANGE_SYSTEM = `You help Fennl, a recipe box app, put the photos of a recipe in a sensible order. You get the recipe's title and numbered method, then its photos, each labelled with its number. Say what each photo shows, and which one makes the best cover.`;
+
+export const ARRANGE_INSTRUCTION = `For each photo, say what it shows: "finished" (the dish as made, ready to eat or serve), "step" (making it: give the method's step number it shows, or null if you can't tell), "ingredients" (the ingredients, or getting ready), or "other" (anything else).
+Say "helps" true only when it would really help someone make or serve the dish: for a step, a photo showing what's hard to describe in words (a dough's texture, a shape, how thick, a colour to cook to); not routine actions anyone can picture (whisking flour, pouring milk). For a finished dish other than the cover, true only when it clearly shows something the cover doesn't (the inside of a cake cut open, how it's plated or served); another angle of the same dish is false. For ingredients and other photos, false.
+Choose as the cover the photo of the finished dish that shows it best (in focus, the whole dish, appetising); if there's none, the photo that best stands for the recipe.`;
+
+/** Room for the labels of a recipe's photos. */
+export const ARRANGE_OUTPUT_TOKENS = 1_500;

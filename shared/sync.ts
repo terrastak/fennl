@@ -5,6 +5,7 @@ import {
   RECIPE_SCHEMA_VERSION,
   emptyRecipeContent,
   isCategoryName,
+  PHOTO_ARRANGERS,
   PHOTO_ROLES,
   isId,
   isRating,
@@ -130,8 +131,8 @@ export interface RecipeCategoryChange extends ChangeBase {
   deleted: boolean;
 }
 
-export type PhotoFields = Pick<RecipePhoto, "sortOrder">;
-export const PHOTO_FIELDS = ["sortOrder"] as const;
+export type PhotoFields = Pick<RecipePhoto, "sortOrder" | "arrangedBy">;
+export const PHOTO_FIELDS = ["sortOrder", "arrangedBy"] as const;
 
 /**
  * Adding a photo to a recipe (phase D2), moving it, or removing it. The image is uploaded first
@@ -141,7 +142,14 @@ export interface PhotoChange extends ChangeBase {
   kind: "photo";
   id: string;
   recipeId: string;
-  create?: { imageHash: string; role: PhotoRole; width: number; height: number };
+  create?: {
+    imageHash: string;
+    role: PhotoRole;
+    width: number;
+    height: number;
+    /** When it was taken, if the photo says (phase D4). */
+    takenAt?: number | null;
+  };
   fields: Partial<PhotoFields>;
   deleted?: boolean;
 }
@@ -481,6 +489,13 @@ function checkPhoto(change: Fields, issues: RecipeIssue[]): PhotoChange | null {
   if ("sortOrder" in fields && !isSortOrder(fields.sortOrder)) {
     issues.push({ path: "fields.sortOrder", problem: "invalid" });
   }
+  if (
+    "arrangedBy" in fields &&
+    fields.arrangedBy !== null &&
+    !(PHOTO_ARRANGERS as readonly unknown[]).includes(fields.arrangedBy)
+  ) {
+    issues.push({ path: "fields.arrangedBy", problem: "invalid" });
+  }
   if (change.deleted !== undefined && typeof change.deleted !== "boolean") {
     issues.push({ path: "deleted", problem: "invalid" });
   }
@@ -494,7 +509,12 @@ function checkPhoto(change: Fields, issues: RecipeIssue[]): PhotoChange | null {
       !isImageHash(c.imageHash) ||
       !(PHOTO_ROLES as readonly unknown[]).includes(c.role) ||
       !side(c.width) ||
-      !side(c.height)
+      !side(c.height) ||
+      !(
+        c.takenAt === undefined ||
+        c.takenAt === null ||
+        (Number.isSafeInteger(c.takenAt) && (c.takenAt as number) > 0)
+      )
     ) {
       issues.push({ path: "create", problem: "invalid" });
     } else {
@@ -503,6 +523,7 @@ function checkPhoto(change: Fields, issues: RecipeIssue[]): PhotoChange | null {
         role: c.role as PhotoRole,
         width: c.width as number,
         height: c.height as number,
+        ...(typeof c.takenAt === "number" ? { takenAt: c.takenAt } : {}),
       };
       if (!keys.includes("sortOrder"))
         issues.push({ path: "fields.sortOrder", problem: "missing" });

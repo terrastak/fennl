@@ -62,8 +62,8 @@ export interface AiReadInput {
   focus?: string;
 }
 
-/** The calls that read a recipe (not "find", which lists a PDF's recipes). */
-type ReadPurpose = Exclude<AiPurpose, "find">;
+/** The calls that read a recipe (not "find", which lists a PDF's recipes, or "arrange"). */
+type ReadPurpose = Exclude<AiPurpose, "find" | "arrange">;
 
 export type AiReadProblem =
   | "import_not_included"

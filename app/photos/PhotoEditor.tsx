@@ -1,5 +1,6 @@
 import { useEffect, useState, type DragEvent } from "react";
 import { photoLevel } from "../../shared/limits";
+import { arrangedByFennl } from "../../shared/photoOrder";
 import type { RecipePhoto } from "../../shared/recipe";
 import type { PhotoChange } from "../../shared/sync";
 import { photosNearText } from "../limits/limitText";
@@ -8,6 +9,7 @@ import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { saveChanges, useSyncStatus } from "../sync/useSync";
 import { addPhotos, problemText, type AddPhotoProblem } from "./addPhotos";
+import { arrangeRecipePhotos } from "./arrange";
 import { orderAt } from "./order";
 import { PhotoImage } from "./PhotoImage";
 import { currentPhotoCache } from "./usePhoto";
@@ -24,11 +26,12 @@ function touchDevice(): boolean {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 }
 
+/** A photo moved by the person: the recipe's order is theirs from now on (phase D4). */
 const move = (photo: RecipePhoto, sortOrder: number): PhotoChange => ({
   kind: "photo",
   id: photo.id,
   recipeId: photo.recipeId,
-  fields: { sortOrder },
+  fields: { sortOrder, arrangedBy: "person" },
   changedAt: Date.now(),
 });
 
@@ -104,6 +107,8 @@ export function PhotoEditor({
     });
     setAdding(null);
     setProblem(result.problem);
+    // Fennl puts them in order, unless they were arranged by hand (phase D4).
+    if (result.added > 0) void arrangeRecipePhotos(recipeId);
   };
 
   const others = (photo: RecipePhoto) =>
@@ -173,10 +178,15 @@ export function PhotoEditor({
         ) : null}
       </div>
 
+      {arrangedByFennl(gallery) ? (
+        <p className={styles.note}>
+          Arranged by Fennl. Moving a photo keeps your own order from then on.
+        </p>
+      ) : null}
       {gallery.length > 0 ? (
         <ol className={styles.photos} aria-label="Photos, the first is the cover">
           {gallery.map((photo, index) => (
-            <li key={photo.id} className={styles.photo}>
+            <li key={photo.id} className={styles.photo} data-hash={photo.imageHash}>
               <PhotoImage
                 hash={photo.imageHash}
                 size="thumb"

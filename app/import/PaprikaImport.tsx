@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Entitlements } from "../../shared/entitlements";
 import { PaprikaFileError, blobSource, type ByteSource } from "../../shared/paprikaFile";
 import { formatBytes } from "../pages/plan";
+import { arrangeRecipePhotos } from "../photos/arrange";
 import { currentPhotoCache } from "../photos/usePhoto";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
@@ -171,6 +172,7 @@ export function PaprikaImport() {
       save: saveChanges,
       settle,
       getRecipe: (id) => client.getRecipe(id),
+      arrange: arrangeRecipePhotos,
       now: () => Date.now(),
       wait,
       onProgress: setWorking,

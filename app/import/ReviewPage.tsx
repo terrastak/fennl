@@ -13,6 +13,7 @@ import { NOTHING_LOST, TOO_LARGE_TEXT, addBlockedText } from "../limits/limitTex
 import { useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
 import { addPhotos, problemText } from "../photos/addPhotos";
+import { arrangeRecipePhotos } from "../photos/arrange";
 import { currentPhotoCache } from "../photos/usePhoto";
 import { Link } from "../router";
 import { lineEnd } from "../recipes/editing";
@@ -226,11 +227,14 @@ function Review({
     }
     const gallery = (detail?.photos ?? []).filter((p) => p.role === "photo");
     const max = status.photos?.maxPerRecipe ?? null;
+    // A cover the person picked is their order; otherwise Fennl arranges them (phase D4).
+    const chosen = cover !== null && cover !== photoInputs[0];
     const result = await addPhotos({
       files,
       recipeId: id,
       ownerUserId: owner,
       kind: "dish",
+      ...(chosen ? { arrangedBy: "person" as const } : {}),
       existingOrders: gallery.map((p) => p.sortOrder),
       room: max === null ? null : Math.max(0, max - gallery.length),
       maxFileBytes: status.photos?.maxFileBytes ?? null,
@@ -238,6 +242,7 @@ function Review({
       onProgress: (done, total) =>
         setSaving(`Adding photos (${Math.min(done + 1, total)} of ${total})…`),
     });
+    if (!chosen && result.added > 0) void arrangeRecipePhotos(id);
     if (result.problem) return problemText(result.problem, max);
     if (missing > 0) {
       return `${missing === 1 ? "One photo" : `${missing} photos`} couldn't be fetched from the page's site.`;

@@ -536,6 +536,10 @@ export const recipePhoto = sqliteTable(
     height: integer("height").notNull(),
     sortOrder: real("sort_order").notNull(),
     addedByUserId: text("added_by_user_id").notNull(),
+    /** When it was taken, by the camera's clock read as UTC (phase D4); null when unknown. */
+    takenAt: integer("taken_at"),
+    /** "fennl" or "person": who put it where it is (phase D4); null when just added. */
+    arrangedBy: text("arranged_by"),
     fieldTimes: text("field_times").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
@@ -549,6 +553,21 @@ export const recipePhoto = sqliteTable(
     index("recipe_photo_image_idx").on(table.ownerUserId, table.imageHash, table.deletedAt),
   ],
 );
+
+/**
+ * What the AI made of a recipe's photos (phase D4; shared/photoOrder.ts), kept so the same photos
+ * are never sent to it twice: `photos_key` is the gallery's images, sorted; `labels` is the
+ * checked answer (PhotoLabels). One row per recipe, replaced when its photos change. Removed
+ * with the recipe.
+ */
+export const photoArrangement = sqliteTable("photo_arrangement", {
+  recipeId: text("recipe_id")
+    .primaryKey()
+    .references(() => recipe.id, { onDelete: "cascade" }),
+  photosKey: text("photos_key").notNull(),
+  labels: text("labels").notNull(),
+  createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+});
 
 /**
  * The 90-day photo grace period (phase D3; CLAUDE.md, "Lapsed subscriptions"): a person's photos

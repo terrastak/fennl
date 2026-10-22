@@ -1,0 +1,21 @@
+[
+  {
+    "id": "cranberry-apple-muffins-photos",
+    "recipe": "AJ's Cranberry Apple Muffins",
+    "notes": "Two photos: the cookbook page the recipe came from, and the muffins in their tin. The muffins are the cover; the page is something else.",
+    "cover": "B9A3201A202A6C118FF794A94671A9291E57F0E9FD3E280A21DC8001AEB09A14",
+    "other": ["BA4EAF602044F9E078F428A86F1A2B0C0BAFCB3F54A4417A8DB9D955A7FA63E2"]
+  },
+  {
+    "id": "cherry-krinkle-cookies-photos",
+    "recipe": "Mom’s Cherry Krinkle Cookies",
+    "notes": "Five photos: one cookie on a plate, and four that aren't about the recipe at all (attached by mistake: screenshots and documents). The cookie is the cover; the other four can't be placed and go last.",
+    "cover": "B8AC96DE889F2B3FB895722B4197F150C6B743E1004141CFF8D1E41D1E6A5258",
+    "other": [
+      "EC5F633DECBD07180C87D9CF500237D2CAA1751119550BDCEEB09B1A8604EA3D",
+      "2FE8D6A14B51DF5379D3E90F4781E568E97DD1D0783AF8FC42F0E91CAC2664DC",
+      "AC6E0BE583B165EF45B76491C00F5C6BC252EF277FB4BB4945366172A016B8BA",
+      "0D1F0D976B7FEB25C8D3FEA2B1BAF4F7743B46EED9198EF49C4145AF4378A86B"
+    ]
+  }
+]

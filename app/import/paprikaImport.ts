@@ -248,6 +248,8 @@ export interface ImportContext {
   /** Sends everything waiting and waits until the server has it; false when it can't. */
   settle(): Promise<boolean>;
   getRecipe(id: string): Promise<RecipeDetail | null>;
+  /** Puts a recipe's photos in Fennl's order (phase D4). */
+  arrange(recipeId: string): Promise<void>;
   now(): number;
   wait(ms: number): Promise<void>;
   onProgress(text: string): void;
@@ -327,7 +329,11 @@ async function addPhoto(
   owner: string,
   ctx: ImportContext,
 ): Promise<
-  { hash: string; width: number; height: number } | "unusable" | "offline" | "quota_full" | "failed"
+  | { hash: string; width: number; height: number; takenAt: number | null }
+  | "unusable"
+  | "offline"
+  | "quota_full"
+  | "failed"
 > {
   const cache = ctx.cache;
   if (!cache) return "failed";
@@ -342,7 +348,7 @@ async function addPhoto(
         throw new UploadProblem("not_a_photo");
       });
       const hash = await uploadPrepared(prepared, owner, cache);
-      return { hash, width: prepared.width, height: prepared.height };
+      return { hash, width: prepared.width, height: prepared.height, takenAt: prepared.takenAt };
     } catch (error) {
       const problem = error instanceof UploadProblem ? error.problem : "failed";
       if (problem === "rate_limited") {
@@ -389,6 +395,7 @@ export async function runPaprikaImport(
   ];
   const total = work.length;
   let done = 0;
+  const toArrange: string[] = [];
 
   for (let start = 0; start < work.length; start += BATCH) {
     const batch = work.slice(start, start + BATCH);
@@ -545,6 +552,7 @@ export async function runPaprikaImport(
             role: "photo",
             width: added.width,
             height: added.height,
+            takenAt: added.takenAt,
           },
           fields: { sortOrder },
           changedAt: ctx.now(),
@@ -563,10 +571,13 @@ export async function runPaprikaImport(
           result.stopped = "offline";
           return result;
         }
+        if (orders.length > 1) toArrange.push(job.recipeId);
       }
       if (result.stopped) return result;
     }
   }
   await ctx.settle();
+  // Recipes with several photos are put in order once they're all in (phase D4).
+  for (const recipeId of toArrange) await ctx.arrange(recipeId);
   return result;
 }
