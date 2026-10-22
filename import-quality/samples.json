@@ -42,6 +42,12 @@
     "notes": "Ink on a printed card with a picture behind the writing; no written method: the steps are notes in the margin, with brackets and arrows pointing at the ingredients (\"melt together\", \"whisk into\", \"add flour + salt\", \"↓ chips\"); the baking line among the ingredients, with a second temperature under the first and a ditto mark; the source after the title (\"Brownies – Barbara's\"); oz., T., c. and t. From the owner, 2026-10-21. Its method is spelled out from the notes (owner's choice 2026-10-21)."
   },
   {
+    "id": "cranberry-apple-muffins-cookbook",
+    "kind": "cookbook",
+    "inputs": ["test_images/AJs Cranberry Apple Muffins.png"],
+    "notes": "A phone photo of a cookbook page, saved as a PNG, changed by hand in pencil: \"½\" written after the printed 1 of \"1 cup all-purpose flour\", and the \"½\" of \"½ cup whole-wheat flour, oat bran, or all-purpose flour\" crossed out, so the whole-wheat line is gone and its half cup has moved into the all-purpose flour (1½ cups in all, as printed). \"tart apple\" and \"1 to 2 days in a plastic bag\" are underlined, which changes nothing. Drop cap on the headnote; no book title or page number shown. From the owner, 2026-10-22."
+  },
+  {
     "id": "thai-iced-tea-cookbook",
     "kind": "cookbook",
     "inputs": ["test_images/IMG_0019.jpeg"],

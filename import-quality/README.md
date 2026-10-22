@@ -97,8 +97,11 @@ recipes (8 images) and 3 PDFs public; and 28 private samples (27 PDFs and a cook
 - [ ] **Card photos (about 13 more):** printed and handwritten, faded, stained, cursive, both
       sides of a card (front and back as two files of one sample), two recipes on one card, and a
       couple taken badly (angled, shadowed, blurry).
-- [ ] **Cookbook pages (about 8 more):** a recipe across two pages, two recipes on one page,
+- [ ] **Cookbook pages (about 7 more):** a recipe across two pages, two recipes on one page,
       columns, a photo behind the text, metric and imperial, and a recipe that points to another.
+      One changed by hand is in: your cranberry apple muffins page
+      (`cranberry-apple-muffins-cookbook`), whole-wheat flour taken out and its half cup moved
+      into the all-purpose flour.
 - [ ] **Screenshots (about 6 more):** a web page cut across three screenshots; and, made by Fennl
       for the test set (E11, a generic app, no real account), a social media caption in two
       overlapping screenshots, a text-message conversation and an email. One real one is in: a
