@@ -8,6 +8,7 @@ import {
   withoutBadParts,
   type AiLine,
   type AiRecipe,
+  unescapedText,
   wordsIn,
 } from "./aiAnswer";
 import { draftIssues } from "./importDraft";
@@ -141,6 +142,22 @@ describe("an AI answer as drafts", () => {
       "1/2 t soda",
       "For the Cake:",
     ]);
+  });
+
+  it("turns characters the AI wrote as escapes back into the characters", () => {
+    // Seen from Claude Haiku on PDFs (2026-10-22): "R\\u00c9MOULADE", "burgers\\u2014I".
+    const [draft] = drafts(
+      recipe({
+        title: { text: "Shrimp Po\\u2019 Boys", ...sure },
+        ingredients: [line("FOR THE R\\u00c9MOULADE:", "high", true), line("1 cup mayonnaise")],
+        notes: { text: "It worked\\u2014sort of. \\ud83c\\udf64", ...sure },
+      }),
+    );
+    expect(draft!.fields.title?.value).toBe("Shrimp Po\u2019 Boys");
+    expect(draft!.fields.ingredients?.value[0]?.text).toBe("FOR THE R\u00c9MOULADE:");
+    expect(draft!.fields.notes?.value).toBe("It worked\u2014sort of. \u{1f364}");
+    // Anything else with a backslash is left as written.
+    expect(unescapedText("1\\2 cup, \\u00zz")).toBe("1\\2 cup, \\u00zz");
   });
 
   it("makes one draft per recipe, and none for an empty one", () => {

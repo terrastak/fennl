@@ -131,4 +131,23 @@ describe("files of several recipes", () => {
       extra: 1,
     });
   });
+
+  it("pairs one read under another name by its ingredients", () => {
+    const lines = (texts: string[]) => texts.map((text) => ({ id: text, text, heading: false }));
+    const cookies = ["1 cup butter", "1/2 cup powdered sugar", "2 cups flour"];
+    const found = [
+      recipe({ title: "Cookies", ingredients: lines(cookies) }),
+      recipe({ title: "Lemonade", ingredients: lines(["4 lemons", "1 cup sugar"]) }),
+    ];
+    expect(
+      matchRecipes(
+        [{ title: "Powdered Sugar Cookies", ingredients: ["## Dough", ...cookies] }],
+        found,
+      ),
+    ).toEqual({ pairs: [{ expected: 0, found: 0 }], extra: 1 });
+    // Ingredients that don't match leave it not found.
+    expect(
+      matchRecipes([{ title: "Shortbread", ingredients: ["3 eggs", "2 cups milk"] }], found).pairs,
+    ).toEqual([{ expected: 0, found: null }]);
+  });
 });
