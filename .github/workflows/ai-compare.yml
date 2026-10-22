@@ -38,8 +38,12 @@ permissions:
 jobs:
   compare:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # Everything, read all three ways, took longer than an hour on 2026-10-22 and was cut off with
+    # nothing kept. Now samples are read three at a time, no new one is started after 90 minutes
+    # (the report then says how many were read), and the answers are saved after every sample.
+    timeout-minutes: 120
     env:
+      AI_COMPARE_MINUTES: "90"
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       AI_MODELS: ${{ inputs.models }}
       AI_COMPARE_SETS: ${{ inputs.sets }}

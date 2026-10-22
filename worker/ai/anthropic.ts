@@ -70,9 +70,10 @@ export class AnthropicProvider implements AiProvider {
   readonly name = "anthropic";
   private readonly client: Anthropic;
 
-  constructor(apiKey: string) {
-    // A read takes seconds; two retries cover the vendor's brief overloads.
-    this.client = new Anthropic({ apiKey, maxRetries: 2, timeout: 120_000 });
+  constructor(apiKey: string, retries = 2) {
+    // A read takes seconds; two retries cover the vendor's brief overloads. The model comparison,
+    // reading several samples at once, asks for more, to wait out the account's rate limits.
+    this.client = new Anthropic({ apiKey, maxRetries: retries, timeout: 120_000 });
   }
 
   knows(model: string): boolean {
