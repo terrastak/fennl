@@ -294,9 +294,16 @@ export function scoreRecipe(expected: ExpectedRecipe, found: RecipeContent): Rec
   return { fields, overall: mean(scored) ?? 0, ingredients, directions, servingsCount };
 }
 
+/** A recipe's ingredient lines as one text, headings left out, for pairing by content. */
+const ingredientText = (lines: readonly string[]) =>
+  lines.filter((l) => !l.startsWith("## ")).join("\n");
+
 /**
  * Pairs the recipes found in a file of several (a PDF, a Paprika library) with the expected
- * ones, by title. Expected recipes nothing was found for score 0; extra recipes are counted.
+ * ones, by title. One left over on both sides is then paired by its ingredients, so a recipe read
+ * right under another name ("Cookies" for "Powdered Sugar Cookies") scores its title low rather
+ * than counting as not found (E14, 2026-10-22). Expected recipes nothing was found for score 0;
+ * extra recipes are counted.
  */
 export function matchRecipes(
   expected: readonly ExpectedRecipe[],
@@ -317,5 +324,24 @@ export function matchRecipes(
     if (best !== null) used.add(best);
     return { expected: i, found: best };
   });
+  for (const pair of pairs) {
+    if (pair.found !== null) continue;
+    const theirs = ingredientText(expected[pair.expected]?.ingredients ?? []);
+    if (!theirs) continue;
+    let best: number | null = null;
+    let bestScore = 0.5;
+    found.forEach((f, j) => {
+      if (used.has(j)) return;
+      const s = textScore(theirs, ingredientText(f.ingredients.map((l) => l.text)));
+      if (s > bestScore) {
+        best = j;
+        bestScore = s;
+      }
+    });
+    if (best !== null) {
+      used.add(best);
+      pair.found = best;
+    }
+  }
   return { pairs, extra: found.length - used.size };
 }

@@ -328,10 +328,36 @@ export function wordsIn(text: string, words: string[]): string[] {
  */
 const standardizes = (source: ImportSource) => source !== "website" && source !== "paprika";
 
+/**
+ * Characters the AI wrote as JSON escapes inside its text ("\\u2014" for "—", "R\\u00c9MOULADE"),
+ * as the characters they stand for (seen from Claude Haiku on PDFs, 2026-10-22). A run of them is
+ * decoded together, so an emoji written as two escapes comes back whole.
+ */
+export function unescapedText(text: string): string {
+  return text.replace(/(?:\\u[0-9a-fA-F]{4})+/g, (run) => {
+    try {
+      return JSON.parse(`"${run}"`) as string;
+    } catch {
+      return run;
+    }
+  });
+}
+
+/** Every string in an AI answer, with stray escapes decoded (unescapedText). */
+function unescapedAnswer<T>(value: T): T {
+  if (typeof value === "string") return unescapedText(value) as T;
+  if (Array.isArray(value)) return value.map(unescapedAnswer) as T;
+  if (isObject(value)) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, unescapedAnswer(v)])) as T;
+  }
+  return value;
+}
+
 /** An AI answer as recipe drafts, one per recipe it found. Empty: nothing was a recipe. */
-export function answerToDrafts(answer: AiAnswer, context: AnswerContext): RecipeDraft[] {
+export function answerToDrafts(given: AiAnswer, context: AnswerContext): RecipeDraft[] {
   const newId = context.newId ?? (() => crypto.randomUUID());
   const standard = standardizes(context.source);
+  const answer = unescapedAnswer(given);
   return answer.recipes
     .filter((r) => r.title.text.trim() || r.ingredients.length || r.directions.length)
     .map((r): RecipeDraft => {
