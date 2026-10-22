@@ -10,6 +10,7 @@ import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
 import { PdfImport } from "../pdf/PdfImport";
 import { DocumentImport } from "./DocumentImport";
+import { PaprikaImport } from "./PaprikaImport";
 import { currentPhotoCache } from "../photos/usePhoto";
 import { PhotoImport } from "../scan/PhotoImport";
 import { activeSyncClient, useCategoryTree, useSyncStatus } from "../sync/useSync";
@@ -287,6 +288,8 @@ export function ImportPage() {
       <PdfImport onImported={(found) => imported(found, "that PDF")} />
 
       <DocumentImport onImported={imported} />
+
+      <PaprikaImport />
 
       {jobs && jobs.length > 0 ? (
         <section className={styles.section} aria-labelledby="import-waiting-title">

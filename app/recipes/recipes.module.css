@@ -1118,3 +1118,49 @@ label.card {
   margin: 0;
   padding-left: var(--space-5);
 }
+
+/* "Updated from Paprika": the earlier version kept by an import (phase E13). */
+.versionNotice {
+  display: grid;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.versionNotice p {
+  margin: 0;
+}
+
+.versionTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.versionCompare {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+}
+
+.versionCompare dt {
+  font-weight: 600;
+}
+
+.versionCompare dd {
+  display: grid;
+  grid-template-columns: 4.5rem minmax(0, 1fr);
+  gap: var(--space-2);
+  margin: var(--space-1) 0 0;
+}
+
+.versionLabel {
+  color: var(--color-text-muted);
+}
+
+.versionText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
