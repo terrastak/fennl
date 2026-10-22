@@ -795,6 +795,25 @@ Legend for each phase: **Goal**, **Steps**, **You check** (the click-through lis
   - **Decided (owner, 2026-10-09)**: unused photos go after 7 days; grace-period emails are a notice at the start and reminders at 30, 7 and 1 days left, with none after the deletion; photos are in the download by default ("Download without photos" leaves them out).
   - Tests: `worker/images/housekeeping.test.ts` (unused photos, the purge and re-adding, reconcile, grace period, usage, export) and the Settings check in `e2e/photos.spec.ts`.
 
+### D4. Photos arranged by Fennl (proposed 2026-10-22, waiting for approval)
+- **Goal**: A recipe's photos are in the right order without anyone arranging them: the finished dish (or another clearly main photo) as the cover, then the photos that help someone make the dish, in the order of the method. The owner's words: "What matters most is the finished dish or another identified main photo … what matters more are photos of the end result or specific steps where an image would help users make the dish."
+- **Decided (owner, 2026-10-22)**:
+  1. Arranging photos **doesn't count** as one of the household's monthly AI imports.
+  2. **No setting**: Fennl simply does it, and the privacy policy says so (H2).
+  3. **Ingredient photos and routine steps come last** ("a whisk aerating flour"). Fennl never encourages or reminds people to add step photos; it only puts helpful ones in the right place.
+- **Steps**:
+  1. **When**: a recipe's gallery has two or more photos, from adding photos, any import (web page, Paprika, documents) or a partner's change, and nobody has arranged them by hand. Once someone moves a photo, that recipe's order is theirs: Fennl never rearranges it again, and new photos go at the end, as today. Whether the order was set by hand is remembered with the recipe, so every device and both partners respect it.
+  2. **Reading the photos** (on the server, through the AI provider layer, `worker/ai/`): the cheapest model in the admin console's list looks at the photos' small copies (480 px, so it costs little) beside the recipe's title and method. It answers, for each photo: the finished dish, a step (which step of the method, and whether seeing it helps make the dish), ingredients, or something else; and which finished-dish photo makes the best cover.
+  3. **The order**: the chosen cover first, then other finished-dish photos, then helpful step photos in the method's order, then everything else (ingredients, routine steps, the rest). Within each group, by when the photo was taken. Card and page photos from imports stay out of the gallery, as now.
+  4. **When it was taken**: read on the device from the photo's own data before it's prepared (preparing removes it), and kept with the photo (`recipe_photo`); a photo that doesn't say (a screenshot, a downloaded image) counts by when it was added.
+  5. **Without the AI**: when Fennl's AI is paused, the household has reached the hidden cost limit, or the call fails, photos are ordered by when they were taken, with no message. The AI isn't asked again for the same photos.
+  6. **Metering**: every call is in `ai_usage` (a new purpose, `arrange`, not counted as an import), under the household's hidden cost limit and Fennl's alert and pause amounts. About 0.05 cents for 10 photos at Claude Haiku 5.5's price (`CLAUDE.md` open question 10; re-checked when built).
+  7. **Showing it**: a quiet line under the gallery, "Arranged by Fennl. Drag to change the order." Nothing asks people to add more photos.
+  8. **Measuring**: a small photo-order test set (the owner's recipes with several photos, such as Mom's Cherry Krinkle Cookies with 5, the correct cover and order written by the owner), scored like the import test set and run with the model comparison.
+- **You check**: Add four photos of a dish in the wrong order (the finished dish last) and see them arranged; drag one, add another, and see your order kept.
+- **Done when**: The test set's covers are right, ordering never overrides a hand-made order, and a paused AI falls back quietly.
+- **Decisions**: None left; built after E13 and E18 are merged.
+
 ## Stage E: The import engine (headline feature, Premium)
 
 Import quality is the core of the product, so this stage starts by building a way to **measure** quality, then improves it with evidence.
@@ -1204,6 +1223,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### H2. Privacy, terms, and account deletion
 - Plain privacy policy and terms (you supply or approve the wording; I'm not a lawyer). They cover the 100-recipe free limit, the 90-day photo grace period, 30-day Trash, and a general statement that Fennl staff may access accounts for support and to investigate abuse (covering silent impersonation). Self-service account deletion that removes D1 rows, recipes, and R2 images.
 - **Acceptable use and illegal imagery (owner's request, 2026-10-08)**: the privacy policy and terms must include an acceptable-use section covering what may be uploaded (recipe-related photos only, no illegal content), that Fennl may remove content and suspend accounts that break the rules, how content is reported and removed, and what Fennl does about illegal imagery, including image scanning and legal reporting. The wording depends on the outcome of open question 21, so settle that first. Also state what photos are sent to third parties (the AI vendor, see the data-retention note above).
+- **Photos sent to the AI (owner's choice, 2026-10-22)**: the privacy policy says that recipe photos are sent to the AI company both when importing and, as small copies, to arrange a recipe's photos (D4), and what the AI company keeps and for how long (`docs/setup/e7-ai-import.md`).
 - Changing the account email was built early, in B7a.
 
 ### H3. Backups
