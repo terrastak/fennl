@@ -117,8 +117,11 @@ recipes (8 images) and 3 PDFs public; and 28 private samples (27 PDFs and a cook
       inside, and a rib eye roast with a family note). The `.txt` example you mentioned isn't in
       the folder yet. Still worth adding: a document with several recipes, and a Markdown one.
 - [x] **Paprika export:** the owner's whole library (827 recipes) is in
-      `test_recipes/all-recipes.paprikarecipes`. E2 reads every ingredient line in it
-      (`ingredients.test.ts`); E13 will import it.
+      `test_recipes/all-recipes.paprikarecipes`, text only: every photo was taken out on
+      2026-10-22, since a few were personal documents attached by mistake. The original, with its
+      photos, is in the private test-samples repository (`paprika/`). E2 reads every ingredient
+      line in it (`ingredients.test.ts`); E13 imports it, and eight of its recipes (with their
+      dish photos) are the exact Paprika samples (`test_paprika/`).
 
 For each new sample, add it to `samples.json` and the file to `test_images/`, and I'll write the
 first draft of its correct answer for you to check.

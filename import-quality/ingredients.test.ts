@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { readIngredient } from "../shared/ingredients";
 
 // Phase E2: the ingredient reader over the owner's whole Paprika library (test_recipes/, 827
-// recipes). A .paprikarecipes file is a zip of gzipped JSON recipes. When this was written,
+// recipes, text only). A .paprikarecipes file is a zip of gzipped JSON recipes. When this was written,
 // 6,914 of the 7,861 different lines had an amount; most of the rest have none ("Salt").
 
 function libraryLines(): string[] {

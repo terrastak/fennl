@@ -72,3 +72,9 @@ couldn't.
 If you named the repository something other than `terrastak/fennl-test-samples`, also add a
 repository **variable** (same page, **Variables** tab) named `TEST_SAMPLES_REPO` with the full
 name, such as `terrastak/my-samples`.
+
+## The Paprika library
+
+The repository also holds the owner's whole Paprika library with its photos, in `paprika/`
+(moved there on 2026-10-22: a few of its photos were personal documents attached to a recipe by
+mistake). This public repository keeps a copy with the text only, in `test_recipes/`.
