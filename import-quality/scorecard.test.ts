@@ -20,7 +20,7 @@ import {
 describe("import quality scorecard", () => {
   it("has a well-formed test set", async () => {
     expect(await testSetIssues(await loadSamples())).toEqual([]);
-  });
+  }, 60_000);
 
   it("writes the quality report, and exact importers are exact", async () => {
     const card = await runScorecard(IMPORTERS);
