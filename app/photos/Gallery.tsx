@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { arrangedByFennl } from "../../shared/photoOrder";
 import type { RecipePhoto } from "../../shared/recipe";
 import { PhotoImage } from "./PhotoImage";
 import styles from "./gallery.module.css";
@@ -61,6 +62,9 @@ export function Gallery({
             </li>
           ))}
         </ul>
+      ) : null}
+      {arrangedByFennl(photos) ? (
+        <p className={styles.arranged}>Arranged by Fennl. Change the order in the editor.</p>
       ) : null}
       {open !== null ? (
         <Viewer

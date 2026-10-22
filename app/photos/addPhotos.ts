@@ -34,6 +34,8 @@ export interface AddPhotosRequest {
   room: number | null;
   maxFileBytes: number | null;
   cache: PhotoCache;
+  /** "person": the person chose this order (an import's cover), so Fennl leaves it (phase D4). */
+  arrangedBy?: "person";
   onProgress?(done: number, total: number): void;
 }
 
@@ -113,8 +115,14 @@ export async function addPhotos(request: AddPhotosRequest): Promise<AddPhotosRes
         kind: "photo",
         id: crypto.randomUUID(),
         recipeId,
-        create: { imageHash: hash, role: "photo", width: prepared.width, height: prepared.height },
-        fields: { sortOrder },
+        create: {
+          imageHash: hash,
+          role: "photo",
+          width: prepared.width,
+          height: prepared.height,
+          takenAt: prepared.takenAt,
+        },
+        fields: request.arrangedBy ? { sortOrder, arrangedBy: request.arrangedBy } : { sortOrder },
         changedAt: Date.now(),
       };
       if (!(await saveChanges([change]))) throw new UploadProblem("failed");

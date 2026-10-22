@@ -302,7 +302,21 @@ export interface RecipePhoto extends SyncColumns {
   sortOrder: number;
   /** Who added it ("Added by Sarah"). */
   addedByUserId: string;
+  /**
+   * When it was taken (phase D4), by the camera's clock read as UTC, in milliseconds; null when
+   * the photo didn't say. Absent from photos added before D4.
+   */
+  takenAt?: number | null;
+  /**
+   * Who put it where it is (phase D4): "fennl" when Fennl arranged the recipe's photos, "person"
+   * once someone moved it. A gallery with any photo moved by a person keeps its order: Fennl
+   * never rearranges it. Absent or null: added, not arranged.
+   */
+  arrangedBy?: PhotoArranger | null;
 }
+
+export const PHOTO_ARRANGERS = ["fennl", "person"] as const;
+export type PhotoArranger = (typeof PHOTO_ARRANGERS)[number];
 
 // ---------------------------------------------------------------------------------------------
 // Validation

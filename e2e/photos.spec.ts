@@ -107,6 +107,49 @@ test("Premium: add photos, choose the cover, and see them everywhere", async ({
   await phone.context().close();
 });
 
+test("Premium: Fennl arranges the photos, until someone moves one", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  // Phase D4. The local test server's stand-in AI takes the last photo for the finished dish.
+  test.setTimeout(120_000);
+  await useOwnAccount(context, baseURL!);
+  await premium(context, baseURL!);
+  await page.goto("/");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await addRecipe(page, "Pho");
+  await page.getByRole("link", { name: /Pho/ }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  const section = page.getByRole("region", { name: "Photos" });
+  const input = section.locator('input[type="file"][multiple]');
+  const order = () =>
+    photos(page)
+      .getByRole("listitem")
+      .evaluateAll((items) => items.map((li) => li.getAttribute("data-hash")));
+
+  await input.setInputFiles("test_images/Image_pho.png");
+  await expect(photos(page).getByRole("listitem")).toHaveCount(1, { timeout: 60_000 });
+  const [first] = await order();
+  await input.setInputFiles("test_images/Image_phos.png");
+  await expect(photos(page).getByRole("listitem")).toHaveCount(2, { timeout: 60_000 });
+  // The new photo is the finished dish, so it becomes the cover.
+  const arranged = section.getByText("Arranged by Fennl.");
+  await expect(arranged).toBeVisible({ timeout: 30_000 });
+  await expect.poll(order).toEqual([expect.not.stringMatching(first!), first]);
+  await expectAccessible(page);
+
+  // Moved by hand: the order is the person's from then on.
+  await section.getByRole("button", { name: "Move photo 2 earlier" }).click();
+  await expect.poll(order).toEqual([first, expect.any(String)]);
+  await expect(arranged).toHaveCount(0);
+  await input.setInputFiles("test_images/Image_stew.png");
+  await expect(photos(page).getByRole("listitem")).toHaveCount(3, { timeout: 60_000 });
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+  expect((await order())[0]).toBe(first);
+  await expect(arranged).toHaveCount(0);
+});
+
 test("Free: photos are a Premium feature", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");

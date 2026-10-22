@@ -81,7 +81,11 @@ import {
 // and PDFs, private samples included; estimated 2026-10-21) with all three ways, about $1.50 with
 // only Fennl's own, and about another dollar for the web pages. Run it from GitHub (Actions › AI model comparison › Run workflow;
 // .github/workflows/ai-compare.yml), where the key is a repository secret. Writes
-// import-quality/ai-report.md.
+// import-quality/ai-report.md, and ai-answers.json after every sample, so a run stopped part way
+// keeps what it read (npm run ai:rescore turns that into a report, free).
+//
+// AI_COMPARE_CONCURRENCY: samples read at the same time (3 unless set). AI_COMPARE_MINUTES: no
+// new sample is started after this many minutes; the report then covers the samples read.
 
 /** Which ways of reading a run compares: all three, or only Fennl's own (AI_COMPARE_WAYS). */
 type Ways = "all" | "fennl";
@@ -508,6 +512,15 @@ function importers(provider: AiProvider, cheap: string, strong: string, set: Set
   };
 }
 
+/** Every answer so far (or those `keep` picks), for ai:rescore and ai:replay. */
+async function saveAnswers(cheap: string, strong: string, keep?: (a: SavedAnswer) => boolean) {
+  const saved = keep ? answers.filter(keep) : answers;
+  await writeFile(
+    join(import.meta.dirname, "ai-answers.json"),
+    `${JSON.stringify({ cheap, strong, answers: saved }, null, 1)}\n`,
+  );
+}
+
 const dollars = (micro: number) => `$${(micro / 1_000_000).toFixed(3)}`;
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
@@ -521,7 +534,7 @@ async function main() {
   }
   const [cheap, strong] = (process.env.AI_MODELS?.split(",").map((m) => m.trim()) ??
     DEFAULT_MODELS) as [string, string];
-  const provider: AiProvider = fake ? new FakeProvider() : new AnthropicProvider(key ?? "");
+  const provider: AiProvider = fake ? new FakeProvider() : new AnthropicProvider(key ?? "", 6);
   if (!provider.knows(cheap) || !provider.knows(strong)) {
     console.error(`Unknown model in ${cheap}, ${strong}`);
     process.exit(2);
@@ -537,7 +550,29 @@ async function main() {
   // one's second look when needed): a fraction of the cost, for measuring Fennl's own changes.
   const ways: Ways = process.env.AI_COMPARE_WAYS === "fennl" ? "fennl" : "all";
   const groups = sets.map((set) => importers(provider, cheap, strong, set, ways));
-  const card = await runScorecard(groups.flatMap((g) => g.list));
+  // Several samples at a time (AI_COMPARE_CONCURRENCY, 3 unless set), each read every way at
+  // once, and no new sample started after AI_COMPARE_MINUTES, so a run that would outlast the
+  // workflow's time limit still ends with a report of what it read.
+  const concurrency = Math.max(1, Number(process.env.AI_COMPARE_CONCURRENCY) || 3);
+  const minutes = Number(process.env.AI_COMPARE_MINUTES) || 0;
+  const started = Date.now();
+  const reading = new Set<string>();
+  const card = await runScorecard(
+    groups.flatMap((g) => g.list),
+    {
+      concurrency,
+      ...(minutes > 0 ? { stopAt: started + minutes * 60_000 } : {}),
+      onStart: (sample) => reading.add(sample.id),
+      onSample: async (sample, done, total) => {
+        reading.delete(sample.id);
+        const spent = answers.reduce((sum, a) => sum + a.costMicroUsd, 0);
+        const elapsed = Math.round((Date.now() - started) / 60_000);
+        console.log(`${done}/${total} ${sample.id} (${elapsed} min, ${dollars(spent)} so far)`);
+        // Saved as it goes, finished samples only: if the run is stopped, what it read is kept.
+        await saveAnswers(cheap, strong, (a) => !reading.has(a.sample));
+      },
+    },
+  );
   const by = (name: string) =>
     new Map(card.results.filter((r) => r.importer === name).map((r) => [r.sample.id, r]));
 
@@ -618,10 +653,7 @@ async function main() {
     `Prices: Anthropic's (worker/ai/anthropic.ts). Run on ${new Date().toISOString().slice(0, 10)}. Every answer is saved in ai-answers.json, kept with the run.`,
   ].join("\n");
   await writeFile(join(import.meta.dirname, "ai-report.md"), `${out}\n`);
-  await writeFile(
-    join(import.meta.dirname, "ai-answers.json"),
-    `${JSON.stringify({ cheap, strong, answers }, null, 1)}\n`,
-  );
+  await saveAnswers(cheap, strong);
   console.log(out);
 }
 

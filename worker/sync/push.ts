@@ -407,6 +407,13 @@ function photoStatement(
   if ("sortOrder" in change.fields) {
     fields.push({ column: "sort_order", key: "sortOrder", value: p.add(change.fields.sortOrder) });
   }
+  if ("arrangedBy" in change.fields) {
+    fields.push({
+      column: "arranged_by",
+      key: "arrangedBy",
+      value: p.add(change.fields.arrangedBy ?? null),
+    });
+  }
   if (change.deleted !== undefined) {
     fields.push({
       column: "deleted_at",
@@ -449,9 +456,11 @@ function photoStatement(
       : `${galleryCount("r.id")} < ${p.add(maxPhotos)}`;
   return {
     sql: `insert into recipe_photo (id, recipe_id, owner_user_id, image_hash, role, width, height,
-        sort_order, added_by_user_id, field_times, created_at, updated_at, deleted_at, server_seq)
+        sort_order, added_by_user_id, taken_at, arranged_by, field_times, created_at, updated_at,
+        deleted_at, server_seq)
       select ${id}, r.id, r.owner_user_id, ${hash}, ${role}, ${p.add(c.width)}, ${p.add(c.height)},
-        ${value("sortOrder")}, ${p.add(caller.userId)}, ${fieldTimesObject(
+        ${value("sortOrder")}, ${p.add(caller.userId)}, ${p.add(c.takenAt ?? null)},
+        ${value("arrangedBy")}, ${fieldTimesObject(
           fields.map((f) => f.key),
           t,
         )}, ${at}, ${at}, ${value("deleted")}, ${seq(k)}

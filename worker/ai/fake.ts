@@ -1,6 +1,7 @@
 import type { AiAnswer, AiRecipe } from "../../shared/aiAnswer";
 import { anthropicCost, knownAnthropicModel } from "./anthropic";
 import { PDF_FIND_SCHEMA, type PdfRecipe } from "../../shared/pdfImport";
+import { PHOTO_LABELS_SCHEMA } from "../../shared/photoOrder";
 import type { AiProvider, AiRequest, AiResult, AiTokens } from "./provider";
 
 // A stand-in AI for tests and local development (AI_PROVIDER=fake; phase E7): no vendor, no key,
@@ -65,8 +66,24 @@ function fakeFind(request: AiRequest): AiResult {
   return { ok: true, output: { recipes }, tokens: FAKE_TOKENS };
 }
 
+/**
+ * Putting photos in order (phase D4): the fake can't see them, so it takes the last photo for the
+ * finished dish and the cover (the way people usually take them), and the others for the
+ * method's steps in turn, each one helpful.
+ */
+function fakeArrange(request: AiRequest): AiResult {
+  const count = request.parts.filter((p) => p.kind === "image").length;
+  const photos = Array.from({ length: count }, (_, i) =>
+    i === count - 1
+      ? { photo: i + 1, kind: "finished", step: null, helps: false }
+      : { photo: i + 1, kind: "step", step: i + 1, helps: true },
+  );
+  return { ok: true, output: { photos, cover: count }, tokens: FAKE_TOKENS };
+}
+
 const defaultReply: Reply = (request) => {
   if (request.schema === (PDF_FIND_SCHEMA as unknown)) return fakeFind(request);
+  if (request.schema === (PHOTO_LABELS_SCHEMA as unknown)) return fakeArrange(request);
   // One recipe of a PDF (phase E12): it reads the one asked for, by its title.
   const focus = /only the recipe titled "([^"]+)"/.exec(request.instruction)?.[1];
   if (focus) {

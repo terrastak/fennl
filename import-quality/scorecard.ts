@@ -220,6 +220,8 @@ export interface Scorecard {
   results: SampleResult[];
   /** Kinds with samples but no importer yet. */
   uncovered: { kind: SampleKind; samples: number }[];
+  /** Samples left unread because the run reached its time limit (RunOptions.stopAt). */
+  notRead?: number;
 }
 
 /**
@@ -244,24 +246,71 @@ export function exactMisses(card: Scorecard): string[] {
   return misses;
 }
 
-export async function runScorecard(importers: readonly Importer[]): Promise<Scorecard> {
+export interface RunOptions {
+  /** Samples read at the same time (each sample's importers run together too). Default 1. */
+  concurrency?: number;
+  /** When (Date.now()) to stop starting samples: the rest are left unread, and say so. */
+  stopAt?: number;
+  /** After each sample's importers are all done: for progress and saving as it goes. */
+  onSample?: (sample: Sample, done: number, total: number) => Promise<void> | void;
+  /** When a sample's importers start, so work in progress can be told apart. */
+  onStart?: (sample: Sample) => void;
+}
+
+export async function runScorecard(
+  importers: readonly Importer[],
+  options: RunOptions = {},
+): Promise<Scorecard> {
   const all = await loadSamples();
   const samples = all.filter((s) => !s.private || privateSamplesHere());
-  const results: SampleResult[] = [];
-  let answered = 0;
+  const work: { sample: Sample; expected: ExpectedRecipe[] }[] = [];
   for (const sample of samples) {
     const expected = await loadExpected(sample.id);
-    if (!expected) continue;
-    answered += 1;
-    for (const importer of importers.filter((i) => i.kinds.includes(sample.kind))) {
-      if (importer.accepts && !(await importer.accepts(sample))) continue;
-      results.push(await runOne(importer, sample, expected));
-    }
+    if (expected) work.push({ sample, expected });
   }
+  const answered = work.length;
+  // Results kept by sample, so the report's order doesn't depend on which finished first.
+  const bySample: SampleResult[][] = work.map(() => []);
+  let next = 0;
+  let done = 0;
+  let notRead = 0;
+  const worker = async () => {
+    while (next < work.length) {
+      const at = next++;
+      const item = work[at];
+      if (!item) break;
+      if (options.stopAt !== undefined && Date.now() >= options.stopAt) {
+        notRead += 1;
+        continue;
+      }
+      const { sample, expected } = item;
+      options.onStart?.(sample);
+      const wanted: Importer[] = [];
+      for (const importer of importers.filter((i) => i.kinds.includes(sample.kind))) {
+        if (importer.accepts && !(await importer.accepts(sample))) continue;
+        wanted.push(importer);
+      }
+      if ((options.concurrency ?? 1) > 1) {
+        bySample[at] = await Promise.all(wanted.map((i) => runOne(i, sample, expected)));
+      } else {
+        for (const importer of wanted) bySample[at]?.push(await runOne(importer, sample, expected));
+      }
+      done += 1;
+      await options.onSample?.(sample, done, work.length);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.max(1, options.concurrency ?? 1) }, worker));
   const uncovered = SAMPLE_KINDS.filter((k) => !importers.some((i) => i.kinds.includes(k)))
     .map((kind) => ({ kind, samples: samples.filter((s) => s.kind === kind).length }))
     .filter((u) => u.samples > 0);
-  return { samples, privateLeftOut: all.length - samples.length, answered, results, uncovered };
+  return {
+    samples,
+    privateLeftOut: all.length - samples.length,
+    answered,
+    results: bySample.flat(),
+    uncovered,
+    ...(notRead ? { notRead } : {}),
+  };
 }
 
 const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
@@ -296,6 +345,12 @@ export function reportMarkdown(card: Scorecard): string {
       ? [
           "",
           `${card.privateLeftOut} private samples (kept out of the public repository) aren't read here; the model comparison reads them.`,
+        ]
+      : []),
+    ...(card.notRead
+      ? [
+          "",
+          `**Stopped at the time limit:** ${card.answered - card.notRead} of ${card.answered} samples were read; the other ${card.notRead} weren't, so every number below covers only the samples read (each way of reading read the same ones).`,
         ]
       : []),
     "",

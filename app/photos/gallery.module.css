@@ -121,3 +121,10 @@
   width: auto;
   height: auto;
 }
+
+/* "Arranged by Fennl" (phase D4): quiet, under the photos. */
+.arranged {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

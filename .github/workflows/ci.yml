@@ -39,7 +39,9 @@ env:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # Usually about 14 minutes (the browser tests take 10). A slow package install (5 minutes on
+    # 2026-10-22) pushed it past 15, so there's room for that.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7

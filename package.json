@@ -28,7 +28,8 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:check && npm run test && npm run test:e2e",
     "ai:compare": "tsx import-quality/aiCompare.ts",
     "ai:replay": "tsx import-quality/aiReplay.ts",
-    "ai:rescore": "tsx import-quality/aiRescore.ts"
+    "ai:rescore": "tsx import-quality/aiRescore.ts",
+    "ai:photo-order": "tsx import-quality/photoOrderCompare.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",

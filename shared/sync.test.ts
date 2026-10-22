@@ -53,6 +53,26 @@ describe("checking a change", () => {
     ).toMatchObject({ ok: false, issues: [{ path: "import", problem: "invalid" }] });
   });
 
+  it("takes a photo's time taken and who arranged it (phase D4)", () => {
+    const photo = {
+      kind: "photo",
+      id: id(),
+      recipeId: id(),
+      create: { imageHash: "a".repeat(64), role: "photo", width: 10, height: 10, takenAt: 1000 },
+      fields: { sortOrder: 1, arrangedBy: "fennl" },
+      changedAt: now,
+    };
+    expect(checkChange(photo)).toEqual({ ok: true, value: photo });
+    expect(checkChange({ ...photo, fields: { sortOrder: 1, arrangedBy: "robot" } })).toMatchObject({
+      ok: false,
+      issues: [{ path: "fields.arrangedBy", problem: "invalid" }],
+    });
+    expect(checkChange({ ...photo, create: { ...photo.create, takenAt: -5 } })).toMatchObject({
+      ok: false,
+      issues: [{ path: "create", problem: "invalid" }],
+    });
+  });
+
   it("reports unknown fields, bad times and empty changes", () => {
     expect(
       checkChange({ kind: "recipe", id: id(), fields: { owner: "me" }, changedAt: -1 }),

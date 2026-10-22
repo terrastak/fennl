@@ -20,10 +20,10 @@ import type { AiProblem, AiTokens } from "./provider";
 
 /**
  * "read" (a new import), "second_look" (the stronger model, automatically), "reread" ("Read
- * again"), "find" (finding the recipes in a PDF, phase E12). Only "read" and "reread" count as
- * imports.
+ * again"), "find" (finding the recipes in a PDF, phase E12), "arrange" (putting a recipe's
+ * photos in order, phase D4). Only "read" and "reread" count as imports.
  */
-export type AiPurpose = "read" | "second_look" | "reread" | "find";
+export type AiPurpose = "read" | "second_look" | "reread" | "find" | "arrange";
 
 export interface AiCall {
   householdId: string;

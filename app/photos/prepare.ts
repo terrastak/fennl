@@ -192,6 +192,8 @@ export interface Prepared {
   width: number;
   height: number;
   thumb: Blob;
+  /** When it was taken, if the photo says (phase D4): read before preparing removes it. */
+  takenAt: number | null;
 }
 
 async function encodeBest(
@@ -224,6 +226,7 @@ export async function preparePhoto(
 ): Promise<Prepared> {
   const settings = PHOTO_SETTINGS[kind];
   const original = await inspect(file);
+  const takenAt = original.jpeg?.takenAt ?? null;
   const source = await open(file, original);
   const size = sizeOf(source);
   const edited = Boolean(edit && (edit.crop || edit.turns % 4 !== 0));
@@ -239,11 +242,11 @@ export async function preparePhoto(
     // A turned or cropped photo is always the new version.
     if (edited) {
       const prepared = await encodeBest(canvas, settings.quality, encoder);
-      return { file: prepared, width: canvas.width, height: canvas.height, thumb };
+      return { file: prepared, width: canvas.width, height: canvas.height, thumb, takenAt };
     }
     // A GIF is kept as it is (animation and all) whenever it fits.
     if (original.type === "image/gif" && (maxFileBytes === null || file.size <= maxFileBytes)) {
-      return { file, width: size.width, height: size.height, thumb };
+      return { file, width: size.width, height: size.height, thumb, takenAt };
     }
     const prepared = await encodeBest(canvas, settings.quality, encoder);
     const keep = keepOriginal({
@@ -258,8 +261,8 @@ export async function preparePhoto(
       maxFileBytes,
     });
     return keep
-      ? { file, width: size.width, height: size.height, thumb }
-      : { file: prepared, width: canvas.width, height: canvas.height, thumb };
+      ? { file, width: size.width, height: size.height, thumb, takenAt }
+      : { file: prepared, width: canvas.width, height: canvas.height, thumb, takenAt };
   } finally {
     release(canvas);
   }

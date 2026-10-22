@@ -232,6 +232,13 @@
       "when": 1792624004940,
       "tag": "0032_recipe_version",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "6",
+      "when": 1792634273653,
+      "tag": "0033_photo_arrangement",
+      "breakpoints": true
     }
   ]
 }

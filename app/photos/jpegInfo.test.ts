@@ -53,12 +53,14 @@ describe("readJpegInfo", () => {
       width: 4032,
       height: 3024,
       hasLocation: true,
+      takenAt: null,
     });
     expect(readJpegInfo(jpeg({ width: 800, height: 600, orientation: 3, little: true }))).toEqual({
       orientation: 3,
       width: 800,
       height: 600,
       hasLocation: false,
+      takenAt: null,
     });
   });
 
@@ -68,18 +70,22 @@ describe("readJpegInfo", () => {
       width: 10,
       height: 20,
       hasLocation: false,
+      takenAt: null,
     });
   });
 
-  it("reads the owner's iPhone photos: turned a quarter, with a location", () => {
+  it("reads the owner's iPhone photos: turned a quarter, with a location and when taken", () => {
     for (const name of ["IMG_0019", "IMG_0020"]) {
       const bytes = new Uint8Array(readFileSync(`test_images/${name}.jpeg`));
-      expect(readJpegInfo(bytes)).toEqual({
+      expect(readJpegInfo(bytes)).toMatchObject({
         orientation: 6,
         width: 5712,
         height: 4284,
         hasLocation: true,
       });
+      // The camera's clock, 2026-10-08 in the evening.
+      const taken = readJpegInfo(bytes)?.takenAt ?? 0;
+      expect(new Date(taken).toISOString().slice(0, 10)).toBe("2026-10-08");
     }
     // A small web JPEG with no EXIF.
     const card = readJpegInfo(new Uint8Array(readFileSync("test_images/handwriten1.jpg")));

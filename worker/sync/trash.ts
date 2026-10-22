@@ -79,8 +79,9 @@ export async function expungeRecipes(db: Database, recipeIds: string[], now = Da
           where ${theirs}`,
         params: [now, ...ids],
       },
-      // Earlier versions kept from an import (phase E13).
+      // Earlier versions kept from an import (phase E13), and what the AI made of its photos (D4).
       { sql: `delete from recipe_version where ${theirs}`, params: [now, ...ids] },
+      { sql: `delete from photo_arrangement where ${theirs}`, params: [now, ...ids] },
       bump(ids.length),
     );
     const results = await d1.batch(statements.map((s) => d1.prepare(s.sql).bind(...s.params)));

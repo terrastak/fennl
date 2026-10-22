@@ -102,4 +102,35 @@ describe("import quality scorecard", () => {
     ]);
     expect(reportMarkdown(exact)).toContain("## Must be exact");
   });
+
+  it("reads several samples at once in a steady order, and stops at its time limit", async () => {
+    const slow: Importer = {
+      name: "slow",
+      kinds: ["card"],
+      run: async (_files, sample) => {
+        await new Promise((resolve) => setTimeout(resolve, sample.id.length % 5));
+        return [];
+      },
+    };
+    const one = await runScorecard([slow]);
+    const seen: string[] = [];
+    const three = await runScorecard([slow], {
+      concurrency: 3,
+      onSample: (sample, done, total) => {
+        seen.push(sample.id);
+        expect(done).toBeLessThanOrEqual(total);
+      },
+    });
+    expect(three.results.map((r) => r.sample.id)).toEqual(one.results.map((r) => r.sample.id));
+    // Every sample with a correct answer is reported done, once.
+    expect(new Set(seen).size).toBe(three.answered);
+    expect(seen).toHaveLength(three.answered);
+    expect(three.notRead).toBeUndefined();
+
+    // Past its time limit, no sample is started, and the report says so.
+    const stopped = await runScorecard([slow], { stopAt: Date.now() - 1 });
+    expect(stopped.results).toEqual([]);
+    expect(stopped.notRead).toBe(stopped.answered);
+    expect(reportMarkdown(stopped)).toContain("Stopped at the time limit");
+  });
 });
