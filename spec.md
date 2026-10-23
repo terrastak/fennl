@@ -1159,8 +1159,55 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **Steps**:
   1. Common pan shapes (round, square, rectangle, loaf, bundt...) with area or volume math.
   2. Show the calculated factor and a note about baking times.
+- **Owner's choices (2026-10-23)**:
+  - **The math.**
+    - **Flat pans** (round, square, rectangle, sheet, jelly roll) are compared by floor area: factor = your pan's area ÷ the recipe pan's area (round: 3.14 × radius²; square or rectangle: length × width).
+      - Comparing area keeps the batter the same depth.
+      - Any size can be typed, in inches or centimetres, not only the common ones.
+    - **Shaped pans** (loaf, tube, bundt, muffin) are compared by how much they hold. Muffins go by number of cups × the size of each cup.
+    - **Between a flat and a shaped pan**, the comparison is by how much they hold.
+    - Capacities come from one published chart, Joy of Baking's "Pan Sizes" (checked 2026-10-23):
+
+      | Pan | Holds |
+      | --- | --- |
+      | Round 6×2, 8×1½ | 4 cups |
+      | Round 8×2, 9×1½ | 6 cups |
+      | Round 9×2 | 8 cups |
+      | Round 10×2 | 11 cups |
+      | Square 8×8×1½ / 8×8×2 / 9×9×1½ / 9×9×2 / 10×10×2 | 6 / 8 / 8 / 10 / 12 cups |
+      | Rectangle 11×7×2 / 13×9×2 | 10 / 14 cups |
+      | Jelly roll 10½×15½×1 / 12½×17½×1 | 10 / 12 cups |
+      | Loaf 8×4×2½ / 8½×4½×2½ / 9×5×3 | 4 / 6 / 8 cups |
+      | Tube 8×3 / 9×3 / 10×4 | 9 / 12 / 16 cups |
+      | Springform 9×2½ / 9×3 / 10×2½ | 10 / 12 / 12 cups |
+      | Muffin cup 1¾×¾ / 2¾×1⅛ / 2¾×1½ | ⅛ / ¼ / ½ cup |
+      | Bundt | Not in the chart, since sizes vary: Fennl asks what yours holds (fill it with water a cup at a time) |
+
+    - The amounts are worked out from the exact factor.
+  - **The factor shown.**
+    - The exact factor (×1.83) is never shown.
+    - A factor that is a simple one is named ("Doubled", "Halved").
+    - Otherwise Fennl shows the nearest friendly amount, "about 1¾×", to the nearest quarter or third.
+  - **The pans.**
+    - Fennl shows the recipe's pan as read from the recipe, saying where it came from ("Recipe's pan: 8×8, from the method").
+    - The person can correct it if it's wrong, and picks their own pan from the common sizes or types its size.
+  - **Bake times.** There is no agreed formula for a new bake time (sources agree only on the direction: deeper batter takes longer, shallower less), so Fennl gives a number only when it can be sure:
+    - **Where the suggestion appears.**
+      - It goes under the step where the recipe writes its bake time, in a bubble marked **Fennl's suggestion**.
+      - The bubble is styled apart from the recipe and labelled for screen readers.
+      - The step's own words are never changed.
+      - No bubble appears when the pan hasn't changed, or when no step gives a time.
+    - **What it says.**
+      - **Flat pan to flat pan, amounts scaled, so the batter is the same depth:** the recipe's own time stands, for example "Same depth of batter in your 9×13, so about the same time. Start checking at 25 minutes."
+      - **The recipe gives a time for the person's pan elsewhere** ("or 24 cupcakes, 18–20 minutes"): that time, quoted.
+      - **A change of shape** (a loaf baked as muffins), **or deeper or shallower batter:** only the direction and a doneness check, no minutes: "Muffins bake much faster than a loaf. Start checking early and use a toothpick."
+      - **The oven temperature is never changed**, since sources contradict each other.
 - **You check**: Scale a cake recipe to a different pan.
-- **Done when**: Pan math tests pass.
+- **Done when**:
+  - Pan math tests pass (area and capacity, every pan in the chart, sizes typed in inches and centimetres).
+  - The recipe's pan is read from the recipe on the test set's baking recipes.
+  - The friendly factor is never further than a few percent from the exact one.
+  - A bake-time suggestion appears only in the cases above, under the step that gives the time.
 
 ### F3. Linked sub-recipes
 - **Goal**: "1 cup BBQ sauce" can link to your BBQ sauce recipe.
@@ -1505,5 +1552,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | E18 | Done 2026-10-22 (merged) |
 | D4 | Done 2026-10-22 (merged as #77) |
 | E14 | Done 2026-10-22 (owner's call after two rounds: method lines exactly right 94% on photos, pages, screenshots and PDFs, 97% on text and documents, 97% on web pages; known issues written down) |
-| F1 | Approved 2026-10-23; built, waiting for review |
+| F1 | Done 2026-10-23 (merged as #85) |
+| F2 | Approved 2026-10-23 |
 | All others | Not started |
