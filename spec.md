@@ -1238,6 +1238,10 @@ Import quality is the core of the product, so this stage starts by building a wa
   3. Automatic calculation is not in the beta.
 - **You check**: See nutrition on an imported recipe; hide it in Settings.
 - **Done when**: Nutrition data survives import, edit, and export.
+- **Built (2026-10-23)**:
+  - Already in place from earlier phases: per-serving values in nine nutrients with their source (`RecipeNutrition`, C1), read by the Paprika, web-page and AI importers, shown on the recipe page with where they came from, kept in the export (its web pages and `fennl-recipes.json`), and the list's **Has nutrition** filter.
+  - Editor: **Nutrition per serving** (`app/recipes/NutritionFields.tsx`), closed until opened unless the recipe has nutrition, so it's one stop for the keyboard. A box per nutrient with its unit ("Calories (kcal)"), empty meaning not known (never zero), and **More about the nutrition** for the original wording. Changing anything records the source as entered by hand; imported values say so until then.
+  - **Settings › Recipes › Show nutrition** hides nutrition everywhere: the recipe page, the editor (which says it's hidden, with a link back) and the list's filter. Nothing is deleted, and the export still carries it. It belongs to the account (`user.hide_nutrition`, migration `0035`, `PUT /api/account/nutrition`), like the units, which are now also in Settings › Recipes.
 
 ### F5. Cook mode
 - **Goal**: Comfortable cooking from a phone or tablet.
@@ -1564,5 +1568,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | E14 | Done 2026-10-22 (owner's call after two rounds: method lines exactly right 94% on photos, pages, screenshots and PDFs, 97% on text and documents, 97% on web pages; known issues written down) |
 | F1 | Done 2026-10-23 (merged as #85) |
 | F2 | Done 2026-10-23 (merged as #86) |
-| F3 | Approved 2026-10-23; built, waiting for review |
+| F3 | Done 2026-10-23 (merged as #87) |
+| F4 | Approved 2026-10-23; built, waiting for review |
 | All others | Not started |

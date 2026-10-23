@@ -314,3 +314,25 @@
   margin-left: 0;
   text-align: left;
 }
+
+/* Nutrition per serving (phase F4). */
+.nutrition {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.nutrition summary {
+  min-height: var(--tap-target);
+  display: flex;
+  align-items: center;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-xl);
+  cursor: pointer;
+}
+
+.nutritionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  gap: var(--space-3) var(--space-4);
+}

@@ -10,6 +10,7 @@ export const authClient = createAuthClient({
       user: {
         colorScheme: { type: "string", required: false },
         units: { type: "string", required: false },
+        hideNutrition: { type: "boolean", required: false },
         mustChangePassword: { type: "boolean", required: false },
       },
     }),

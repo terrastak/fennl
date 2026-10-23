@@ -11,6 +11,7 @@ import {
   type MadeFilter,
   type RecipeFilters,
 } from "./filters";
+import { useHideNutrition } from "./nutritionSetting";
 import styles from "./recipes.module.css";
 
 // The list's "More filters" (phase C13a): the ways to narrow beyond words, a category and a
@@ -137,6 +138,8 @@ export function FilterPanel({
 }) {
   const set = (changes: Partial<RecipeFilters>) => onChange({ ...filters, ...changes });
   const anyId = useId();
+  // Nutrition hidden in Settings (phase F4): no filter for it either.
+  const [hideNutrition] = useHideNutrition();
   const mainCategory =
     filters.category && filters.category !== "__unfiled" ? [filters.category] : [];
   return (
@@ -264,14 +267,16 @@ export function FilterPanel({
           />
           Has a photo
         </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={filters.nutrition}
-            onChange={(e) => set({ nutrition: e.target.checked })}
-          />
-          Has nutrition
-        </label>
+        {hideNutrition ? null : (
+          <label>
+            <input
+              type="checkbox"
+              checked={filters.nutrition}
+              onChange={(e) => set({ nutrition: e.target.checked })}
+            />
+            Has nutrition
+          </label>
+        )}
       </div>
     </section>
   );

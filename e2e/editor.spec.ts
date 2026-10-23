@@ -126,6 +126,9 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await noAccessibilityProblems(page);
 
+  // Nutrition (phase F4) is closed until opened: one stop on the way.
+  await key.press("Tab");
+  await expect(page.getByText("Nutrition per serving", { exact: true })).toBeFocused();
   await key.press("Tab");
   await expect(page.getByRole("button", { name: "Done" }).last()).toBeFocused();
   await key.press("Enter");

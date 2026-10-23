@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { isHealthStatus } from "../../shared/health";
+import type { UnitSystem } from "../../shared/scale";
 import {
   SCHEME_PREVIEW,
   type ColorMode,
@@ -11,6 +12,8 @@ import { EmailSection } from "../account/EmailSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { ExportSection } from "../export/ExportSection";
 import { LocalCopySection } from "../sync/LocalCopySection";
+import { useHideNutrition } from "../recipes/nutritionSetting";
+import { useUnits } from "../recipes/units";
 import { Link } from "../router";
 import { PageHeader } from "./PageHeader";
 import styles from "./SettingsPage.module.css";
@@ -140,6 +143,8 @@ export function SettingsPage() {
         </fieldset>
       </section>
 
+      <RecipesSection />
+
       <EmailSection />
 
       <section aria-labelledby="signed-in-title" className={styles.section}>
@@ -201,5 +206,66 @@ function ServerStatus() {
     <p className={styles.help}>
       Server status: <output>{SERVER_LABELS[server]}</output>
     </p>
+  );
+}
+
+const UNIT_CHOICES: { value: UnitSystem; label: string }[] = [
+  { value: "written", label: "As written" },
+  { value: "us", label: "US (cups, ounces, pounds)" },
+  { value: "metric", label: "Metric (millilitres, grams)" },
+];
+
+/** How recipes read (phases F1 and F4): units, and nutrition shown or hidden. */
+function RecipesSection() {
+  const [units, chooseUnits] = useUnits();
+  const [hidden, chooseHidden] = useHideNutrition();
+  const [failed, setFailed] = useState(false);
+  const saved = (ok: boolean) => setFailed(!ok);
+  return (
+    <section id="recipes" aria-labelledby="recipes-title" className={styles.section}>
+      <h2 id="recipes-title">Recipes</h2>
+      <p className={styles.help}>Saved to your account, so they follow you to every device.</p>
+      {failed ? (
+        <p role="alert" className={styles.help}>
+          Couldn&rsquo;t save this to your account just now. It&rsquo;s used on this device, and you
+          can choose it again to retry.
+        </p>
+      ) : null}
+      <fieldset className={styles.fieldset}>
+        <legend>Units</legend>
+        <p className={styles.help}>
+          Recipes show their amounts in these units. The recipe itself never changes.
+        </p>
+        <div className={styles.segmented}>
+          {UNIT_CHOICES.map((choice) => (
+            <label key={choice.value} className={styles.segment}>
+              <input
+                type="radio"
+                name="units"
+                value={choice.value}
+                checked={units === choice.value}
+                onChange={() => void chooseUnits(choice.value).then(saved)}
+              />
+              <span>{choice.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <fieldset className={styles.fieldset}>
+        <legend>Nutrition</legend>
+        <label className={styles.check}>
+          <input
+            type="checkbox"
+            checked={!hidden}
+            onChange={(e) => void chooseHidden(!e.target.checked).then(saved)}
+          />
+          <span>Show nutrition</span>
+        </label>
+        <p className={styles.help}>
+          Turning this off hides nutrition everywhere. Nothing is deleted: turn it back on to see it
+          again.
+        </p>
+      </fieldset>
+    </section>
   );
 }
