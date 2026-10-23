@@ -116,6 +116,7 @@ export function applyChange(
         ...base,
         ...change.fields,
         ...(sameSource ? { import: change.import ?? null } : {}),
+        ...(change.scale !== undefined ? { scale: change.scale } : {}),
         updatedByUserId: ctx.userId,
         updatedAt: ctx.now,
         deletedAt: deletedAt(change.deleted, base.deletedAt),

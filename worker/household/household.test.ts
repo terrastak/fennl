@@ -170,3 +170,32 @@ describe("account color scheme", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("account units (phase F1)", () => {
+  it("is saved to the account and comes back with the session", async () => {
+    const v = await signUpConfirmed("units@example.com");
+    expect((await v.session())?.user.units ?? null).toBeNull();
+    const res = await v.request("/api/account/units", { method: "PUT", body: { units: "metric" } });
+    expect(res.status).toBe(200);
+    expect((await v.session())?.user.units).toBe("metric");
+  });
+
+  it("only accepts as written, US or metric, and not through update-user", async () => {
+    const v = await signUpConfirmed("bad.units@example.com");
+    const res = await v.request("/api/account/units", {
+      method: "PUT",
+      body: { units: "imperial" },
+    });
+    expect(res.status).toBe(400);
+    await v.request("/api/auth/update-user", { body: { units: "metric" } });
+    expect((await v.session())?.user.units ?? null).toBeNull();
+  });
+
+  it("needs a signed-in account", async () => {
+    const res = await visitor().request("/api/account/units", {
+      method: "PUT",
+      body: { units: "us" },
+    });
+    expect(res.status).toBe(401);
+  });
+});

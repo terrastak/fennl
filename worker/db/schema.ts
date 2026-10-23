@@ -334,6 +334,11 @@ export const recipe = sqliteTable(
     nutrition: text("nutrition"),
     /** JSON: RecipeImport, or null. Set when the recipe is created. */
     import: text("import"),
+    /**
+     * JSON: RecipeScale (shared/scale.ts), or null when shown as written (phase F1). Shared by the
+     * household and kept until someone changes it back; not part of the recipe's text.
+     */
+    scale: text("scale"),
     /** JSON: when each field last changed, { "title": 1791331703372, ... }. */
     fieldTimes: text("field_times").notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),

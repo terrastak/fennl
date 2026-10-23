@@ -33,6 +33,7 @@ const WIPED: Record<string, unknown> = {
   difficulty: null,
   difficulty_text: null,
   nutrition: null,
+  scale: null,
 };
 
 /** Still in Trash and not yet expunged: the only recipes expunging may touch. */

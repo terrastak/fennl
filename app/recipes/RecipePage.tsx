@@ -8,6 +8,7 @@ import {
   type NutritionSource,
   type Recipe,
 } from "../../shared/recipe";
+import { scaledServings, showIngredient, showStep } from "../../shared/scale";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
@@ -18,6 +19,8 @@ import { Gallery, Originals } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { EarlierVersion } from "./EarlierVersion";
+import { ScaleBar, ScaledLine, ShownText } from "./ScaleControls";
+import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
 import {
   dayText,
@@ -80,12 +83,13 @@ function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
   return groups;
 }
 
-function Facts({ recipe }: { recipe: Recipe }) {
+function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
+  const servings = scaledServings(recipe.servings, scaling.factor);
   const facts = [
     ["Prep", timeText(recipe.times.prep)],
     ["Cook", timeText(recipe.times.cook)],
     ["Total", timeText(recipe.times.total)],
-    ["Makes", servingsText(recipe.servings)],
+    ["Makes", servingsText(servings)],
     [
       "Difficulty",
       recipe.difficultyText ??
@@ -100,7 +104,13 @@ function Facts({ recipe }: { recipe: Recipe }) {
       {facts.map(([label, value]) => (
         <div key={label}>
           <dt>{label}</dt>
-          <dd>{value}</dd>
+          <dd>
+            {label === "Makes" && servings !== recipe.servings ? (
+              <ShownText line={{ pieces: [{ text: value, changed: true }], changed: true }} />
+            ) : (
+              value
+            )}
+          </dd>
         </div>
       ))}
     </dl>
@@ -185,7 +195,7 @@ interface Props {
   shared: boolean;
 }
 
-function Ingredients({ recipe }: { recipe: Recipe }) {
+function Ingredients({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   return (
     <section className={styles.panel} aria-labelledby="ingredients-title">
       <h2 id="ingredients-title">Ingredients</h2>
@@ -196,7 +206,15 @@ function Ingredients({ recipe }: { recipe: Recipe }) {
           {group.items.length > 0 ? (
             <ul className={styles.ingredients}>
               {group.items.map((line) => (
-                <li key={line.id}>{line.text}</li>
+                <li key={line.id}>
+                  <ScaledLine
+                    text={line.text}
+                    line={showIngredient(line.text, scaling, scaling.held.has(line.id))}
+                    scaling={scaling}
+                    lineId={line.id}
+                    canHold
+                  />
+                </li>
               ))}
             </ul>
           ) : null}
@@ -206,7 +224,7 @@ function Ingredients({ recipe }: { recipe: Recipe }) {
   );
 }
 
-function Method({ recipe }: { recipe: Recipe }) {
+function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   const groups = sections(recipe.directions);
   // Numbering carries on across sections: each list starts after the steps before it.
   const starts = groups.map((_, i) =>
@@ -222,7 +240,15 @@ function Method({ recipe }: { recipe: Recipe }) {
           {group.items.length > 0 ? (
             <ol className={styles.steps} start={starts[i]}>
               {group.items.map((step) => (
-                <li key={step.id}>{step.text}</li>
+                <li key={step.id}>
+                  <ScaledLine
+                    text={step.text}
+                    line={showStep(step.text, scaling)}
+                    scaling={scaling}
+                    lineId={step.id}
+                    canHold={false}
+                  />
+                </li>
               ))}
             </ol>
           ) : null}
@@ -522,7 +548,7 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
       </p>
 
       {recipe.description.trim() ? <p className={styles.headnote}>{recipe.description}</p> : null}
-      <Facts recipe={recipe} />
+      <Facts recipe={recipe} scaling={AS_WRITTEN} />
       {detail.categories.length > 0 ? (
         <ul className={styles.chips} aria-label="Categories">
           {detail.categories.map((path) => (
@@ -531,8 +557,8 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
         </ul>
       ) : null}
       <div className={styles.columns}>
-        <Ingredients recipe={recipe} />
-        <Method recipe={recipe} />
+        <Ingredients recipe={recipe} scaling={AS_WRITTEN} />
+        <Method recipe={recipe} scaling={AS_WRITTEN} />
       </div>
       {/* Everyone's signed notes, yours included: there's no "Yours" to edit here. */}
       <Notes detail={detail} name={name} shared={members.length > 1} me="" />
@@ -554,6 +580,7 @@ export function RecipePage({ id }: { id: string }) {
   const editable = canEdit(status);
   const heading = useRef<HTMLHeadingElement>(null);
   const title = detail?.recipe.title;
+  const scaling = useScaling(detail?.recipe ?? null);
 
   useEffect(() => {
     if (!title) return;
@@ -627,7 +654,7 @@ export function RecipePage({ id }: { id: string }) {
           {recipe.title}
         </h1>
         {recipe.description.trim() ? <p className={styles.headnote}>{recipe.description}</p> : null}
-        <Facts recipe={recipe} />
+        <Facts recipe={recipe} scaling={scaling} />
         <People detail={detail} name={name} shared={shared} me={me} />
         {detail.categories.length > 0 ? (
           <ul className={styles.chips} aria-label="Categories">
@@ -651,9 +678,13 @@ export function RecipePage({ id }: { id: string }) {
 
       <EarlierVersion detail={detail} me={me} editable={editable} />
 
+      <ScaleBar recipe={recipe} scaling={scaling} />
+      {scaling.active ? (
+        <p className={styles.scaleNote}>{scaleNote(scaling.factor, scaling.units)}</p>
+      ) : null}
       <div className={styles.columns}>
-        <Ingredients recipe={recipe} />
-        <Method recipe={recipe} />
+        <Ingredients recipe={recipe} scaling={scaling} />
+        <Method recipe={recipe} scaling={scaling} />
       </div>
 
       <Notes detail={detail} name={name} shared={shared} me={me} />
