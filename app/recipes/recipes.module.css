@@ -1358,3 +1358,43 @@ label.card {
 .suggestionLabel {
   font-weight: var(--weight-semibold);
 }
+
+/* Linked sub-recipes (phase F3). */
+.subRecipeLink {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-sm);
+}
+
+.subRecipeLink .textButton {
+  min-height: auto;
+  padding: var(--space-1) 0;
+}
+
+.subRecipe {
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--color-accent);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-sunken);
+  font-size: var(--text-md);
+}
+
+.subRecipe .steps {
+  margin-top: var(--space-3);
+}
+
+.subRecipeNote {
+  margin: 0 0 var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.subRecipeHeading {
+  font-weight: var(--weight-semibold);
+}
+
+.brokenLink {
+  margin: var(--space-1) 0 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}

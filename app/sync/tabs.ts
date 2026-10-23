@@ -25,6 +25,7 @@ interface Calls {
   findDuplicates: { args: [DuplicateQuery]; result: DuplicateMatch[] };
   findDuplicatePairs: { args: []; result: DuplicatePair[] };
   importedRecipes: { args: [ImportSource]; result: ImportedRecipe[] };
+  recipeLinks: { args: []; result: Record<string, string[]> };
   emptyTrash: { args: [string[] | undefined]; result: number };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
@@ -160,6 +161,11 @@ export class SyncClient {
     return this.call("importedRecipes", [source]);
   }
 
+  /** Every recipe's linked recipes, to refuse a link that would go round in a circle (F3). */
+  recipeLinks() {
+    return this.call("recipeLinks", []);
+  }
+
   emptyTrash(recipeIds?: string[]) {
     return this.call("emptyTrash", [recipeIds]);
   }
@@ -241,6 +247,8 @@ export class SyncClient {
         return engine.findDuplicatePairs();
       case "importedRecipes":
         return engine.importedRecipes(args[0] as ImportSource);
+      case "recipeLinks":
+        return engine.recipeLinks();
       case "emptyTrash":
         return engine.emptyTrash(args[0] as string[] | undefined);
       case "getRecipe":

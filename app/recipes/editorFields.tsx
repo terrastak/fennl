@@ -11,6 +11,7 @@ import editor from "./editor.module.css";
 import type { EditorSession, EditorState } from "./editorSession";
 import styles from "./recipes.module.css";
 import { highlightWords } from "./highlight";
+import { LinkPicker, LinkedName } from "./LinkControl";
 
 // The recipe editor's fields (phase C6), shared with the import review screen (phase E4), which
 // edits a draft with the same boxes before it becomes a recipe.
@@ -68,6 +69,7 @@ export function LinesBox({
   tools,
   marks,
   words,
+  linkFrom,
 }: {
   session: EditorSession;
   state: EditorState;
@@ -83,12 +85,16 @@ export function LinesBox({
   marks?: ReadonlyMap<string, string>;
   /** Words to highlight in lines, by line ID (the ones an AI import wasn't sure of, E10). */
   words?: ReadonlyMap<string, readonly string[]>;
+  /** The recipe being edited, so its ingredients can link to other recipes (phase F3). */
+  linkFrom?: string;
 }) {
   const id = `edit-${list}`;
   const box = useRef<HTMLTextAreaElement>(null);
   const cursorTo = useRef<number | null>(null);
   const [cursorLine, setCursorLine] = useState<number | null>(null);
   const [moved, setMoved] = useState("");
+  // The line a recipe is being chosen for (phase F3), by ID.
+  const [linking, setLinking] = useState<string | null>(null);
   const lines = state.draft[list];
   const current = cursorLine === null ? undefined : lines[cursorLine];
   const problems = problemsFor(state.issues, list);
@@ -159,6 +165,17 @@ export function LinesBox({
           >
             Heading
           </button>
+          {linkFrom && list === "ingredients" ? (
+            <button
+              type="button"
+              className={editor.small}
+              disabled={current === undefined || current.heading}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => setLinking(current?.id ?? null)}
+            >
+              Link a recipe
+            </button>
+          ) : null}
           {tools?.map((tool) => (
             <button
               key={tool.label}
@@ -202,6 +219,26 @@ export function LinesBox({
           <p className="visually-hidden" aria-live="polite">
             {moved}
           </p>
+          {linkFrom && linking
+            ? (() => {
+                const line = state.draft.ingredients.find((l) => l.id === linking);
+                return line ? (
+                  <LinkPicker
+                    line={line}
+                    recipeId={linkFrom}
+                    onLink={(recipeId) => {
+                      session.setLink(line.id, recipeId);
+                      setLinking(null);
+                      box.current?.focus();
+                    }}
+                    onClose={() => {
+                      setLinking(null);
+                      box.current?.focus();
+                    }}
+                  />
+                ) : null;
+              })()
+            : null}
         </div>
         <div className={editor.preview} role="group" aria-label={`${label}, as Fennl reads them`}>
           <p className={editor.previewTitle} aria-hidden="true">
@@ -236,6 +273,15 @@ export function LinesBox({
                     )}
                     {marks?.has(line.id) ? (
                       <span className={editor.mark}> {marks.get(line.id)}</span>
+                    ) : null}
+                    {linkFrom &&
+                    !line.heading &&
+                    "linkedRecipeId" in line &&
+                    line.linkedRecipeId ? (
+                      <LinkedName
+                        recipeId={line.linkedRecipeId}
+                        onUnlink={() => session.setLink(line.id, null)}
+                      />
                     ) : null}
                   </li>
                 );

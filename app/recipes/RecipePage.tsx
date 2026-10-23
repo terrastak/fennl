@@ -21,6 +21,7 @@ import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { EarlierVersion } from "./EarlierVersion";
 import { Suggestion } from "./PanControls";
+import { SubRecipe } from "./SubRecipe";
 import { ScaleBar, ScaledLine, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
@@ -206,7 +207,15 @@ interface Props {
   shared: boolean;
 }
 
-function Ingredients({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
+function Ingredients({
+  recipe,
+  scaling,
+  linked,
+}: {
+  recipe: Recipe;
+  scaling: Scaling;
+  linked: RecipeDetail["linked"];
+}) {
   return (
     <section className={styles.panel} aria-labelledby="ingredients-title">
       <h2 id="ingredients-title">Ingredients</h2>
@@ -225,6 +234,15 @@ function Ingredients({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) 
                     lineId={line.id}
                     canHold
                   />
+                  {line.linkedRecipeId ? (
+                    <SubRecipe
+                      targetId={line.linkedRecipeId}
+                      path={[recipe.id]}
+                      linked={linked}
+                      units={scaling.units}
+                      parentScaled={scaling.factor !== 1}
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -571,7 +589,7 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
         </ul>
       ) : null}
       <div className={styles.columns}>
-        <Ingredients recipe={recipe} scaling={AS_WRITTEN} />
+        <Ingredients recipe={recipe} scaling={AS_WRITTEN} linked={detail.linked} />
         <Method recipe={recipe} scaling={AS_WRITTEN} />
       </div>
       {/* Everyone's signed notes, yours included: there's no "Yours" to edit here. */}
@@ -703,7 +721,7 @@ export function RecipePage({ id }: { id: string }) {
         </p>
       ) : null}
       <div className={styles.columns}>
-        <Ingredients recipe={recipe} scaling={scaling} />
+        <Ingredients recipe={recipe} scaling={scaling} linked={detail.linked} />
         <Method recipe={recipe} scaling={scaling} />
       </div>
 

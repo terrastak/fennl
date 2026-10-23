@@ -7,6 +7,7 @@ import type {
   RecipeOpinion,
   RecipePhoto,
 } from "../../shared/recipe";
+import type { LinkedRecipe } from "../../shared/subRecipes";
 import type { Cursors, PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type { SearchResults } from "./search";
@@ -95,6 +96,8 @@ export interface RecipeDetail {
   members: Member[];
   /** Photos not removed, in order: the first gallery photo is the cover (phase D2). */
   photos: RecipePhoto[];
+  /** The recipes its ingredients link to, and theirs, by ID (phase F3). */
+  linked: Record<string, LinkedRecipe>;
 }
 
 /** A change waiting to be sent, in the order it was made. */
@@ -122,6 +125,7 @@ export type DbRequest =
   | { op: "findDuplicates"; query: DuplicateQuery }
   | { op: "findDuplicatePairs" }
   | { op: "importedRecipes"; source: ImportSource }
+  | { op: "recipeLinks" }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -147,6 +151,8 @@ export interface DbResults {
   findDuplicatePairs: DuplicatePair[];
   /** Recipes in the household imported from a source, Trash included (phase E13). */
   importedRecipes: ImportedRecipe[];
+  /** Every recipe's linked recipes, by recipe ID (phase F3). */
+  recipeLinks: Record<string, string[]>;
   wipe: null;
 }
 
