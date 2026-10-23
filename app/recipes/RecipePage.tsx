@@ -701,6 +701,11 @@ export function RecipePage({ id }: { id: string }) {
           </ul>
         ) : null}
         <div className={styles.actions}>
+          {recipe.directions.some((step) => !step.heading) ? (
+            <Link href={`/recipes/${id}/cook`} className={styles.primary}>
+              Start cooking
+            </Link>
+          ) : null}
           <MadeIt detail={detail} name={name} shared={shared} me={me} editable={editable} />
           <Link href={`/recipes/${id}/edit`} className={styles.secondary}>
             Edit recipe

@@ -1256,6 +1256,16 @@ Import quality is the core of the product, so this stage starts by building a wa
   5. At the last step, one tap answers "Made it today?" (C1's "last made").
 - **You check**: Cook a real recipe from your phone.
 - **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop, and the screen stays on through a whole recipe on both phones (in the browser and from the Home Screen), including after switching to another app and back.
+- **Owner's choices (2026-10-23)**: check-offs are kept on the device for the day; a linked recipe can be cooked first from cook mode and comes back; a finished timer alerts with the phone locked if a web app can.
+- **Built (2026-10-23)**:
+  - `shared/cook.ts` (tests in `shared/cook.test.ts`): the ingredients each step uses, by name (an ingredient's last word first, "tortillas" in "flour tortillas"; its other words only when no step names that, "pork" in "pork shoulder"), and the times a step gives ("25 to 30 minutes", "1 hour 15 minutes", "1½ hours", "30 seconds"; a timer runs for the low end).
+  - Cook mode, `/recipes/<id>/cook` (`app/cook/`), from **Start cooking** on the recipe page, the whole screen without the app's frame: **Get everything ready** (every ingredient, to tick off), then **Step 1 of 5** and on, in big type, with **For this step** beside it on a tablet or a phone on its side and above it on a phone held upright. Amounts are the recipe page's (scaled, converted, held lines kept), with a "Doubled" or "Scaled for your 9×13" note; F2's bake-time suggestion sits under its step. **Back** and **Next** (and the arrow keys), **Done with this step**, **Clear all checks**, and on the last step **Made it today** (the household's "Last made") and **Finish**.
+  - Timers: a time in a step is a button that starts a timer; several run at once, each with **+1 min** and **Stop**; a finished one says **Done!**, plays three short tones and buzzes where the device can. They're kept on the device (a reload or cooking a linked recipe doesn't lose them) and counted from when they end, so a phone that slept shows the right time when it comes back.
+  - The screen is kept on (item 1b) with the Screen Wake Lock API: **Keep the screen on** (on unless turned off, remembered on the device) and a line saying what the device did ("Screen stays on", or why not and the Auto-Lock tip).
+  - A linked recipe (F3) on the ingredient list offers **Cook Lime Crema first**: its cook mode, then **Back to Black Bean Tacos**.
+  - **Timer alerts with the phone locked (checked 2026-10-23):** **Tell me when a timer finishes while I'm in another app** asks for notifications; with them allowed, a timer that finishes while Fennl isn't on screen shows a notification. That works while the browser keeps running Fennl in the background (computers, Android; a background tab may be up to about a minute late, as browsers slow timers there). An iPhone suspends a web app that isn't on screen, so there the alert comes when Fennl is opened again. A reliable alert on a locked phone would need the server to send it (Web Push, with keys, stored subscriptions and a scheduler): not built, noted with open question 26.
+  - Tested with Playwright on desktop and a phone screen (keyboard-only on desktop, timers with a fast-forwarded clock, check-offs surviving a reload, Made it, cooking a linked recipe first). Real iPhone and Android checks, including the screen staying on from the Home Screen, are the owner's (You check).
+
 
 ### F6. Print view
 - **Goal**: A clean printed recipe.
@@ -1512,7 +1522,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 23 | Opt-in usage counts during the beta (proposed in `docs/research/2026-10-13-finding-what-people-want.md`, "Telemetry"): counts only, never recipe text, to see which features are used, which searches find nothing and which import sources fail. **Undecided; not needed now, and nothing waits on it.** Needs the owner to decide the opt-in wording, and the privacy policy to mention it. If wanted during the beta it becomes its own phase | Only if wanted during the beta; otherwise before public launch (H2) |
 | 24 | An introductory offer for Paprika owners (a Stripe promotion code, `docs/research/2026-10-13-paprika-user-requests.md` item 22). **Undecided; not needed now.** A business call, not a code change | Stage I (billing) |
 | 25 | When to research social and video import (Stage I item 8). The order is decided (only after the AI import phases E7–E12 are built and measured); what is **undecided** is when to start the research on each site's terms and what the AI costs per video. **Not needed now** | After E12 is measured |
-| 26 | Timers on the lock screen (owner's wish, 2026-10-23, F5 item 4b): a countdown on the iPhone lock screen (Live Activity) or an Android notification while cooking. Looks native-only (**Unverified**); the native app is not wanted for now (question 22), so this is saved for later, to revisit if browsers add it or a native app is ever reconsidered. **Not needed now** | Later |
+| 26 | Timers on the lock screen (owner's wish, 2026-10-23, F5 item 4b): a countdown on the iPhone lock screen (Live Activity) or an Android notification while cooking. Looks native-only (**Unverified**); the native app is not wanted for now (question 22), so this is saved for later, to revisit if browsers add it or a native app is ever reconsidered. A step on the way, for a reliable "timer done" alert on a locked phone: Web Push sent by the server at the timer's end (needs push keys, stored subscriptions and a scheduler; on iPhone only for Fennl added to the Home Screen). **Not needed now** | Later |
 
 ## Notes: AI provider research (2026-10-01)
 
@@ -1572,5 +1582,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | F1 | Done 2026-10-23 (merged as #85) |
 | F2 | Done 2026-10-23 (merged as #86) |
 | F3 | Done 2026-10-23 (merged as #87) |
-| F4 | Approved 2026-10-23; built, waiting for review |
+| F4 | Done 2026-10-23 (merged as #88) |
+| F5 | Approved 2026-10-23; built, waiting for review |
 | All others | Not started |

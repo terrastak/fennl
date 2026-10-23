@@ -67,6 +67,18 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   await page.getByRole("button", { name: "As written", exact: true }).click();
 
+  // Cook mode offers to cook the sauce first, and comes back (phase F5).
+  await page.getByRole("link", { name: "Start cooking" }).click();
+  await page.getByRole("link", { name: "Cook Lime Crema first" }).click();
+  await expect(page.getByLabel("½ cup sour cream")).toBeVisible();
+  await page
+    .getByRole("link", { name: "Back to Black Bean Tacos with Lime Crema" })
+    .first()
+    .click();
+  await expect(page.getByRole("heading", { level: 1, name: "Get everything ready" })).toBeVisible();
+  await expect(page.getByLabel("½ cup lime crema")).toBeVisible();
+  await page.getByRole("link", { name: "Leave cook mode" }).click();
+
   // The sauce can't link back to the tacos: that would go round in a circle.
   await ingredients.getByRole("link", { name: "Open it" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Lime Crema" })).toBeVisible();
