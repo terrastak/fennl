@@ -1150,7 +1150,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 - **Owner's choices (2026-10-23)**: amounts in the method scale too (only amounts with a measuring unit; times, temperatures, pan sizes and counts never do), and they're highlighted like the ingredients; the choice of units (as written, US or metric) is kept with the account; metric keeps teaspoons and tablespoons; the scale is kept with the recipe for the whole household, so once scaled it stays scaled on every device and for both partners until someone puts it back.
 - **Built (2026-10-23)**:
-  - `shared/scale.ts` (tests in `shared/scale.test.ts`) shows a line scaled and converted as pieces, each marked changed or left as written; the recipe's text is never changed. The bracket rule above; friendly rounding (cups in quarters and thirds, tablespoons in halves, teaspoons in quarters, "9 Tbsp" rather than "5/8 cup", ounces to pounds, grams to kilograms); ranges, "about", number words ("Two 28-ounce cans" → "Four"), decimals kept as decimals, items made plural or singular ("1 egg" → "2 eggs"); "a pinch" and lines with no amount left alone; weight never becomes volume (nothing converts between them yet). Metric: millilitres and litres, grams and kilograms, spoons kept; US: cups, spoons, ounces and pounds. A line that already gives both systems ("1 cup (240 g)") isn't converted again. The servings count and the first number in the yield words scale ("about 12 pancakes" → "about 24 pancakes").
+  - `shared/scale.ts` (tests in `shared/scale.test.ts`) shows a line scaled and converted as pieces, each marked changed or left as written; the recipe's text is never changed. The bracket rule above; friendly rounding (cups in quarters and thirds, tablespoons in halves, teaspoons in eighths and quarters, "9 Tbsp" rather than "5/8 cup", ounces to pounds, grams to kilograms); ranges, "about", number words ("Two 28-ounce cans" → "Four"), decimals kept as decimals, items made plural or singular ("1 egg" → "2 eggs"); "a pinch" and lines with no amount left alone; weight never becomes volume (nothing converts between them yet). Metric: millilitres and litres, grams and kilograms, spoons kept; US: cups, spoons, ounces and pounds. A line that already gives both systems ("1 cup (240 g)") isn't converted again. The servings count and the first number in the yield words scale ("about 12 pancakes" → "about 24 pancakes").
   - The scale is a synced recipe field, `recipe.scale` (`{factor, held}`, migration `0034`), changed like moving to Trash: last change wins, it isn't recipe text (not counted, not in versions or the export), and emptying Trash wipes it. `held` lists the ingredient lines kept at their written amount. The units are `user.units`, set with `PUT /api/account/units` and read with the session; the device keeps a copy for offline.
   - The recipe page (`app/recipes/ScaleControls.tsx`, `app/recipes/scaling.ts`): **Scale** ½×, As written, 2×, 3× and Other (from 1/16 to 100); **Makes** − and + by one serving when the recipe has a servings count; **Units**. A scaled or converted recipe says so at the top ("Doubled: changed amounts are highlighted. Tap a line to see the original."); changed numbers are highlighted with a background, bold and an underline; a bracket left as written is in italics with a dotted line and says so to screen readers. Tapping a changed line shows the original and the working, and on an ingredient **Keep this amount as written**. If the scale can't be saved (Free with no connection), it shows on that device only and says so.
 
@@ -1159,8 +1159,60 @@ Import quality is the core of the product, so this stage starts by building a wa
 - **Steps**:
   1. Common pan shapes (round, square, rectangle, loaf, bundt...) with area or volume math.
   2. Show the calculated factor and a note about baking times.
+- **Owner's choices (2026-10-23)**:
+  - **The math.**
+    - **Flat pans** (round, square, rectangle, sheet, jelly roll) are compared by floor area: factor = your pan's area ÷ the recipe pan's area (round: 3.14 × radius²; square or rectangle: length × width).
+      - Comparing area keeps the batter the same depth.
+      - Any size can be typed, in inches or centimetres, not only the common ones.
+    - **Shaped pans** (loaf, tube, bundt, muffin) are compared by how much they hold. Muffins go by number of cups × the size of each cup.
+    - **Between a flat and a shaped pan**, the comparison is by how much they hold.
+    - Capacities come from one published chart, Joy of Baking's "Pan Sizes" (checked 2026-10-23):
+
+      | Pan | Holds |
+      | --- | --- |
+      | Round 6×2, 8×1½ | 4 cups |
+      | Round 8×2, 9×1½ | 6 cups |
+      | Round 9×2 | 8 cups |
+      | Round 10×2 | 11 cups |
+      | Square 8×8×1½ / 8×8×2 / 9×9×1½ / 9×9×2 / 10×10×2 | 6 / 8 / 8 / 10 / 12 cups |
+      | Rectangle 11×7×2 / 13×9×2 | 10 / 14 cups |
+      | Jelly roll 10½×15½×1 / 12½×17½×1 | 10 / 12 cups |
+      | Loaf 8×4×2½ / 8½×4½×2½ / 9×5×3 | 4 / 6 / 8 cups |
+      | Tube 8×3 / 9×3 / 10×4 | 9 / 12 / 16 cups |
+      | Springform 9×2½ / 9×3 / 10×2½ | 10 / 12 / 12 cups |
+      | Muffin cup 1¾×¾ / 2¾×1⅛ / 2¾×1½ | ⅛ / ¼ / ½ cup |
+      | Bundt | Not in the chart, since sizes vary: Fennl asks what yours holds (fill it with water a cup at a time) |
+
+    - The amounts are worked out from the exact factor.
+  - **The factor shown.**
+    - The exact factor (×1.83) is never shown.
+    - A factor that is a simple one is named ("Doubled", "Halved").
+    - Otherwise Fennl shows the nearest friendly amount, "about 1¾×", to the nearest quarter or third.
+  - **The pans.**
+    - Fennl shows the recipe's pan as read from the recipe, saying where it came from ("Recipe's pan: 8×8, from the method").
+    - The person can correct it if it's wrong, and picks their own pan from the common sizes or types its size.
+  - **Bake times.** There is no agreed formula for a new bake time (sources agree only on the direction: deeper batter takes longer, shallower less), so Fennl gives a number only when it can be sure:
+    - **Where the suggestion appears.**
+      - It goes under the step where the recipe writes its bake time, in a bubble marked **Fennl's suggestion**.
+      - The bubble is styled apart from the recipe and labelled for screen readers.
+      - The step's own words are never changed.
+      - No bubble appears when the pan hasn't changed, or when no step gives a time.
+    - **What it says.**
+      - **Flat pan to flat pan, amounts scaled, so the batter is the same depth:** the recipe's own time stands, for example "Same depth of batter in your 9×13, so about the same time. Start checking at 25 minutes."
+      - **The recipe gives a time for the person's pan elsewhere** ("or 24 cupcakes, 18–20 minutes"): that time, quoted.
+      - **A change of shape** (a loaf baked as muffins), **or deeper or shallower batter:** only the direction and a doneness check, no minutes: "Muffins bake much faster than a loaf. Start checking early and use a toothpick."
+      - **The oven temperature is never changed**, since sources contradict each other.
 - **You check**: Scale a cake recipe to a different pan.
-- **Done when**: Pan math tests pass.
+- **Done when**:
+  - Pan math tests pass (area and capacity, every pan in the chart, sizes typed in inches and centimetres).
+  - The recipe's pan is read from the recipe on the test set's baking recipes.
+  - The friendly factor is never further than a few percent from the exact one.
+  - A bake-time suggestion appears only in the cases above, under the step that gives the time.
+- **Built (2026-10-23)**:
+  - `shared/pans.ts` (tests in `shared/pans.test.ts`): pan sizes, floor area and what each pan holds (the chart above; a flat pan or loaf not in it estimated from its measurements at 0.88 of length × width × depth, as the chart's pans compare; a Bundt or an unlisted tube is asked), the factor, `factorText` ("Doubled", "1½×", "about 1¾×"; within 6% of a quarter or a third, or two figures), reading the recipe's pan (`recipePan`: the method first, then the notes, Makes and the ingredients; "9x13 inch pan", "13-by-9-inch baking dish", "9- x 5- inch loaf pan", "two 8-inch round cake pans", "12-cup Bundt pan", "12 muffin cups", centimetres; a pan named without a size, such as "a loaf pan", is asked) and the bake-time suggestion (`bakeNote`). On the test set it reads the pan of every baking recipe that names one (33 of 88 samples).
+  - The pans are kept with the recipe's scale (`recipe.scale.pans`: the recipe's pan, as read or corrected, and the person's), so the household sees the same. Changing the scale by hand keeps the pans, so the suggestion can say the batter is now deeper or shallower; "As written" puts everything back.
+  - The recipe page: **Pan** in the scale bar shows "Recipe's pan: 9″ round, from the method" with **Change**, and **Your pan** from the common sizes, a Bundt by what it holds, or **Another size…** (shape, size in inches or centimetres). The note at the top says "Scaled for your 9×13 (about 1¾×)". Makes says "in your 9×13" where the recipe's yield named its pan, and counts come whole ("Serves 18"). The suggestion is a tinted bubble with Fennl's mark, **Fennl's suggestion:**, under the step that gives the bake time (`role="note"`).
+  - Measuring cups and spoons: amounts now round as the spoons and cups come (cups in quarters and thirds, tablespoons in halves, teaspoons in eighths and quarters), so an uneven pan factor never asks for "3⅔ teaspoons".
 
 ### F3. Linked sub-recipes
 - **Goal**: "1 cup BBQ sauce" can link to your BBQ sauce recipe.
@@ -1505,5 +1557,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | E18 | Done 2026-10-22 (merged) |
 | D4 | Done 2026-10-22 (merged as #77) |
 | E14 | Done 2026-10-22 (owner's call after two rounds: method lines exactly right 94% on photos, pages, screenshots and PDFs, 97% on text and documents, 97% on web pages; known issues written down) |
-| F1 | Approved 2026-10-23; built, waiting for review |
+| F1 | Done 2026-10-23 (merged as #85) |
+| F2 | Approved 2026-10-23; built, waiting for review |
 | All others | Not started |

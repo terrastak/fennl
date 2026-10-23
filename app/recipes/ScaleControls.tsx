@@ -7,6 +7,7 @@ import {
   type ShownLine,
   type UnitSystem,
 } from "../../shared/scale";
+import { PanControls } from "./PanControls";
 import { SHOWN_IN, lineText, type Scaling } from "./scaling";
 import styles from "./recipes.module.css";
 
@@ -72,7 +73,7 @@ export function ScaleBar({ recipe, scaling }: { recipe: Recipe; scaling: Scaling
         ))}
         {!PRESETS.includes(factor) ? (
           <span className={styles.scaleChoice} aria-current="true">
-            {`${amountText(factor, null, true)}×`}
+            {factorName(factor)}
           </span>
         ) : null}
         <form className={styles.scaleCustom} onSubmit={submitCustom}>
@@ -113,7 +114,7 @@ export function ScaleBar({ recipe, scaling }: { recipe: Recipe; scaling: Scaling
             −
           </button>
           <output className={styles.scaleCount} aria-live="polite">
-            {amountText(servings, null)}
+            {Number.isInteger(servings * 4) ? amountText(servings, null) : Math.round(servings)}
           </output>
           <button
             type="button"
@@ -126,6 +127,8 @@ export function ScaleBar({ recipe, scaling }: { recipe: Recipe; scaling: Scaling
           </button>
         </div>
       ) : null}
+
+      <PanControls recipe={recipe} scaling={scaling} />
 
       <div className={styles.scaleGroup}>
         <label htmlFor={`${id}-units`} className={styles.scaleLabel}>
