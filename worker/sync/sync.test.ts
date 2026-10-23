@@ -495,6 +495,34 @@ describe("a shared household", () => {
     const back = await pullAll(sam, first.cursors);
     expect(back.recipes.find((r) => r.id === recipeId)!.scale).toBeNull();
 
+    // Scaled for another pan (phase F2): the pans travel with the scale.
+    const square = {
+      shape: "square",
+      width: 8,
+      length: null,
+      depth: null,
+      unit: "in",
+      cups: null,
+      count: 1,
+    };
+    const pans = { recipe: square, yours: { ...square, shape: "rectangle", width: 9, length: 13 } };
+    await push(sam, [{ ...edit(recipeId, {}), scale: { factor: 117 / 64, held: [], pans } }]);
+    const panned = await pullAll(june, { [june.userId]: 0 });
+    expect(panned.recipes.find((r) => r.id === recipeId)!.scale).toEqual({
+      factor: 117 / 64,
+      held: [],
+      pans,
+    });
+    expect(
+      (
+        await push(june, [
+          { ...edit(recipeId, {}), scale: { factor: 2, held: [], pans: { recipe: square } } },
+        ])
+      ).body.results,
+    ).toEqual([
+      { status: "rejected", reason: "invalid", issues: [{ path: "scale", problem: "invalid" }] },
+    ]);
+
     expect(
       (await push(june, [{ ...edit(recipeId, {}), scale: { factor: 0, held: [] } }])).body.results,
     ).toEqual([

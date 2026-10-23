@@ -8,6 +8,7 @@ import {
   type NutritionSource,
   type Recipe,
 } from "../../shared/recipe";
+import { bakeNote, panName, readPan } from "../../shared/pans";
 import { scaledServings, showIngredient, showStep } from "../../shared/scale";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
@@ -19,6 +20,7 @@ import { Gallery, Originals } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { EarlierVersion } from "./EarlierVersion";
+import { Suggestion } from "./PanControls";
 import { ScaleBar, ScaledLine, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
@@ -69,6 +71,10 @@ const NUTRITION_FROM: Record<NutritionSource, string> = {
   ai: "Read from the recipe by AI; check before relying on it.",
 };
 
+/** Words that name a pan or its size ("one 9-inch cake", "a 9x13"). */
+const namesAPan = (words: string) =>
+  readPan(words) !== null || /\d\s*(?:-|\s)?(?:inch|in\b|"|″|cm)|\d\s*[x×]\s*\d/iu.test(words);
+
 /** Lines grouped under their headings (a list may start without one). */
 function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
   const groups: { heading: string | null; key: string; items: T[] }[] = [];
@@ -84,7 +90,12 @@ function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
 }
 
 function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
-  const servings = scaledServings(recipe.servings, scaling.factor);
+  const scaled = scaledServings(recipe.servings, scaling.factor);
+  // Scaled for another pan: words naming the recipe's pan ("one 9-inch cake") name yours instead.
+  const servings =
+    scaling.pans && recipe.servings.yield && namesAPan(recipe.servings.yield)
+      ? { ...scaled, yield: `in your ${panName(scaling.pans.yours)}` }
+      : scaled;
   const facts = [
     ["Prep", timeText(recipe.times.prep)],
     ["Cook", timeText(recipe.times.cook)],
@@ -226,6 +237,8 @@ function Ingredients({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) 
 
 function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   const groups = sections(recipe.directions);
+  // Fennl's bake-time suggestion for another pan (phase F2), under the step that gives the time.
+  const note = scaling.pans ? bakeNote(recipe, scaling.pans, scaling.factor) : null;
   // Numbering carries on across sections: each list starts after the steps before it.
   const starts = groups.map((_, i) =>
     groups.slice(0, i).reduce((count, group) => count + group.items.length, 1),
@@ -248,6 +261,7 @@ function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
                     lineId={step.id}
                     canHold={false}
                   />
+                  {note?.stepId === step.id ? <Suggestion text={note.text} /> : null}
                 </li>
               ))}
             </ol>
@@ -680,7 +694,13 @@ export function RecipePage({ id }: { id: string }) {
 
       <ScaleBar recipe={recipe} scaling={scaling} />
       {scaling.active ? (
-        <p className={styles.scaleNote}>{scaleNote(scaling.factor, scaling.units)}</p>
+        <p className={styles.scaleNote}>
+          {scaleNote(
+            scaling.factor,
+            scaling.units,
+            scaling.pans ? panName(scaling.pans.yours) : null,
+          )}
+        </p>
       ) : null}
       <div className={styles.columns}>
         <Ingredients recipe={recipe} scaling={scaling} />

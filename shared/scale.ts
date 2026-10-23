@@ -6,6 +6,7 @@ import {
   type IngredientAmount,
   type Unit,
 } from "./ingredients";
+import { factorText, storedPan, type Pan } from "./pans";
 import type { RecipeServings } from "./recipe";
 
 /**
@@ -37,6 +38,8 @@ export interface RecipeScale {
   factor: number;
   /** Ingredient lines kept at their written amount, by line id. */
   held: string[];
+  /** Scaled for another pan (phase F2): the recipe's pan, as read or corrected, and the person's. */
+  pans?: { recipe: Pan; yours: Pan };
 }
 
 export const SCALE_RULES = {
@@ -57,7 +60,16 @@ export function recipeScale(value: unknown): RecipeScale | null {
   if (!v.held.every((id) => typeof id === "string" && id.length > 0 && id.length <= 64)) {
     return null;
   }
-  return { factor: v.factor, held: v.held as string[] };
+  const scale: RecipeScale = { factor: v.factor, held: v.held as string[] };
+  const pans = (value as { pans?: unknown }).pans;
+  if (pans !== undefined) {
+    const p = pans as { recipe?: unknown; yours?: unknown } | null;
+    const recipe = storedPan(p?.recipe);
+    const yours = storedPan(p?.yours);
+    if (!recipe || !yours) return null;
+    scale.pans = { recipe, yours };
+  }
+  return scale;
 }
 
 /** A piece of a shown line: changed by Fennl, or left as written where it might have been. */
@@ -116,11 +128,13 @@ const FRACTIONS: [number, string, string][] = [
   [7 / 8, "7/8", "⅞"],
 ];
 
-/** The fractions a unit is measured in: eighths for cups and spoons, quarters for the rest. */
+/**
+ * The fractions a unit is measured in, as measuring cups and spoons come: cups in quarters and
+ * thirds, tablespoons in halves, teaspoons in eighths and quarters; quarters and thirds otherwise.
+ */
 function fractionsFor(unit: string | null): number[] {
-  if (unit === "cup" || unit === "teaspoon" || unit === "tablespoon") {
-    return FRACTIONS.map(([v]) => v);
-  }
+  if (unit === "teaspoon") return [1 / 8, 1 / 4, 1 / 2, 3 / 4];
+  if (unit === "tablespoon") return [1 / 2];
   return [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4];
 }
 
@@ -136,7 +150,7 @@ function nearest(value: number, unit: string | null): { whole: number; part: num
   }
   // Never round something to nothing: the smallest fraction instead.
   if (best.whole === 0 && best.part === 0 && value > 0) {
-    return { whole: 0, part: fractionsFor(unit)[0] ?? 1 / 4 };
+    return { whole: 0, part: unit === "cup" ? 1 / 8 : (fractionsFor(unit)[0] ?? 1 / 4) };
   }
   return { whole: best.whole, part: best.part };
 }
@@ -641,14 +655,14 @@ export function showStep(text: string, options: ShowOptions): ShownLine {
 /** Servings once scaled: the count, and the first number in the words ("about 12 pancakes"). */
 export function scaledServings(servings: RecipeServings, factor: number): RecipeServings {
   if (factor === 1) return servings;
-  const count =
-    servings.count === null
-      ? null
-      : Number.isInteger(servings.count * factor)
-        ? servings.count * factor
-        : Math.round(servings.count * factor * 100) / 100;
+  // People and pieces come whole: "Serves 18", not 18.4 (a pan's factor rarely comes out even).
+  const count = servings.count === null ? null : Math.max(1, Math.round(servings.count * factor));
   return { count, yield: servings.yield ? scaledYield(servings.yield, factor) : servings.yield };
 }
+
+/** A count in a yield: whole from 3 up ("about 22 pancakes"), a fraction below ("1½ loaves"). */
+const countText = (value: number) =>
+  value >= 3 ? String(Math.round(value)) : amountText(value, null);
 
 function scaledYield(words: string, factor: number): string {
   // "One 12x17-inch loaf": a number word first stays a word while it can.
@@ -671,7 +685,7 @@ function scaledYield(words: string, factor: number): string {
     /(?<![\d./x×-])(\d+)(?:(\s*(?:to|-|–)\s*)(\d+))?(?![\d./x×]|[-‐‑]?\s*(?:inch|in\b|"))(?:(\s+\p{Ll}+)(?=\s*(?:[,.;(]|$)))?/u,
     (_whole, low: string, joiner?: string, high?: string, after?: string) => {
       const top = high ? Number(high) * factor : null;
-      const shown = `${amountText(Number(low) * factor, null)}${top === null ? "" : `${joiner}${amountText(top, null)}`}`;
+      const shown = `${countText(Number(low) * factor)}${top === null ? "" : `${joiner}${countText(top)}`}`;
       if (!after) return shown;
       const many = readsAsMany(shownNumber(shown));
       const item = after.trimStart();
@@ -680,12 +694,9 @@ function scaledYield(words: string, factor: number): string {
   );
 }
 
-/** What a factor is called: "Doubled", "Halved", "×1½". */
+/** What a factor is called: "Doubled", "Halved", "1½×", "about 1¾×" (spec.md F2). */
 export function factorName(factor: number): string {
-  if (factor === 2) return "Doubled";
-  if (factor === 3) return "Tripled";
-  if (factor === 0.5) return "Halved";
-  return `×${amountText(factor, null, true)}`;
+  return factorText(factor);
 }
 
 /** Every unit the reader knows, for tests. */

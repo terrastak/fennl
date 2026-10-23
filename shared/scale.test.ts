@@ -176,7 +176,8 @@ describe("servings and the scale itself", () => {
   it("names a factor, and writes amounts", () => {
     expect(factorName(2)).toBe("Doubled");
     expect(factorName(0.5)).toBe("Halved");
-    expect(factorName(1.5)).toBe("×1½");
+    expect(factorName(1.5)).toBe("1½×");
+    expect(factorName(1.828)).toBe("about 1¾×");
     expect(amountText(0.33, "cup")).toBe("1/3");
     expect(amountText(0.01, "cup")).toBe("1/8");
     expect(amountText(453.6, "gram")).toBe("455");
@@ -190,5 +191,18 @@ describe("servings and the scale itself", () => {
     expect(recipeScale({ factor: 2, held: [1] })).toBeNull();
     expect(recipeScale({ factor: Number.NaN, held: [] })).toBeNull();
     expect(recipeScale(null)).toBeNull();
+    // Scaled for another pan (phase F2).
+    const pan = {
+      shape: "square",
+      width: 8,
+      length: null,
+      depth: null,
+      unit: "in",
+      cups: null,
+      count: 1,
+    };
+    const pans = { recipe: pan, yours: { ...pan, shape: "rectangle", width: 9, length: 13 } };
+    expect(recipeScale({ factor: 1.83, held: [], pans })).toEqual({ factor: 1.83, held: [], pans });
+    expect(recipeScale({ factor: 1.83, held: [], pans: { recipe: pan } })).toBeNull();
   });
 });
