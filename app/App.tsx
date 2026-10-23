@@ -2,6 +2,7 @@ import { isActing } from "./acting/acting";
 import { useEffect, type ComponentType } from "react";
 import { useAccountSchemeSync } from "./appearance/accountScheme";
 import { CategoriesPage } from "./categories/CategoriesPage";
+import { CookMode } from "./cook/CookMode";
 import { AuthLayout } from "./auth/AuthLayout";
 import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
@@ -136,6 +137,9 @@ export function App() {
 
   // A recipe's page: /recipes/<its ID> (phase C5), and its editor: /recipes/<its ID>/edit,
   // with ?new for a recipe that doesn't exist yet (phase C6).
+  // Cook mode (phase F5): /recipes/<its ID>/cook, the whole screen, without the app's frame.
+  const cook = /^\/recipes\/([0-9a-f-]{36})\/cook$/i.exec(path);
+  if (cook?.[1]) return <CookMode id={cook[1]} />;
   const recipe = /^\/recipes\/([0-9a-f-]{36})(\/edit)?$/i.exec(path);
   if (recipe?.[1]) {
     return (
