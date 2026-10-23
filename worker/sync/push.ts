@@ -132,6 +132,14 @@ function recipeFields(p: Params, change: RecipeChange, time: number): Field[] {
       value: p.add(change.deleted ? time : null),
     });
   }
+  // How the household shows it (phase F1): one more field, last change wins like the others.
+  if (change.scale !== undefined) {
+    fields.push({
+      column: "scale",
+      key: "scale",
+      value: p.add(change.scale === null ? null : JSON.stringify(change.scale)),
+    });
+  }
   return fields;
 }
 

@@ -9,6 +9,7 @@ export const authClient = createAuthClient({
     inferAdditionalFields({
       user: {
         colorScheme: { type: "string", required: false },
+        units: { type: "string", required: false },
         mustChangePassword: { type: "boolean", required: false },
       },
     }),

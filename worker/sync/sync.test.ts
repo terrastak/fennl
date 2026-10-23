@@ -466,6 +466,42 @@ describe("a shared household", () => {
     );
   });
 
+  it("shares how a recipe is scaled with the whole household (phase F1)", async () => {
+    const june = await person("June Lee");
+    const sam = await person("Sam Park");
+    const recipeId = id();
+    await push(june, [create(recipeId, "Tamales")]);
+    await share(june, sam);
+    const first = await pullAll(sam);
+    expect(first.recipes[0]!.scale).toBeNull();
+
+    const bytes = (await stored(recipeId))!.textBytes;
+    const doubled = { factor: 2, held: ["line-1"] };
+    expect((await push(sam, [{ ...edit(recipeId, {}), scale: doubled }])).body.results).toEqual([
+      applied,
+    ]);
+    const later = await pullAll(june, { [june.userId]: 0 });
+    expect(later.recipes.find((r) => r.id === recipeId)!.scale).toEqual(doubled);
+    // Scaling is how it's shown, not the recipe's text.
+    expect((await stored(recipeId))!.textBytes).toBe(bytes);
+    expect(later.recipes.find((r) => r.id === recipeId)!.title).toBe("Tamales");
+
+    // The later choice wins, and null puts it back as written.
+    const t = Date.now();
+    await push(june, [
+      { ...edit(recipeId, {}, t + 1), scale: null },
+      { ...edit(recipeId, {}, t), scale: { factor: 3, held: [] } },
+    ]);
+    const back = await pullAll(sam, first.cursors);
+    expect(back.recipes.find((r) => r.id === recipeId)!.scale).toBeNull();
+
+    expect(
+      (await push(june, [{ ...edit(recipeId, {}), scale: { factor: 0, held: [] } }])).body.results,
+    ).toEqual([
+      { status: "rejected", reason: "invalid", issues: [{ path: "scale", problem: "invalid" }] },
+    ]);
+  });
+
   it("keeps each person's rating, favorite and note apart", async () => {
     const june = await person("June Lee");
     const sam = await person("Sam Park");

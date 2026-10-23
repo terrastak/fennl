@@ -1,4 +1,5 @@
 import type { IngredientAmount } from "./ingredients";
+import type { RecipeScale } from "./scale";
 
 /**
  * What a recipe is (phase C1). The plain-English description is docs/design/recipe-model.md;
@@ -222,6 +223,11 @@ export interface Recipe extends RecipeContent, SyncColumns {
   /** A copy kept after a household split: the recipe it was copied from. */
   copiedFrom: string | null;
   import: RecipeImport | null;
+  /**
+   * How the household shows it (phase F1): scaled, with lines held at their amount. Null, or
+   * absent from records made before F1, when shown as written. Not part of the recipe's text.
+   */
+  scale?: RecipeScale | null;
   /**
    * Deleted for good (phase C9): its content is wiped, and devices drop it. Absent from records
    * made before C9.

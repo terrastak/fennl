@@ -19,6 +19,7 @@ export const user = sqliteTable("user", {
   banReason: text("ban_reason"),
   banExpires: integer("ban_expires", { mode: "timestamp_ms" }),
   colorScheme: text("color_scheme"),
+  units: text("units"),
   mustChangePassword: integer("must_change_password", {
     mode: "boolean",
   }).default(false),

@@ -21,6 +21,7 @@ import {
   type PhotoRole,
   type RecipePhoto,
 } from "./recipe";
+import { recipeScale, type RecipeScale } from "./scale";
 import { isImageHash } from "./images";
 import type { AddLimit, Usage } from "./limits";
 
@@ -85,6 +86,8 @@ export interface RecipeChange extends ChangeBase {
   fields: Partial<RecipeContent>;
   /** True: move to Trash. False: restore from Trash. */
   deleted?: boolean;
+  /** How the household shows it (phase F1): a scale, or null for as written. */
+  scale?: RecipeScale | null;
 }
 
 export type OpinionFields = Pick<RecipeOpinion, "rating" | "favorite" | "note">;
@@ -329,6 +332,9 @@ function checkRecipe(change: Fields, issues: RecipeIssue[]): RecipeChange | null
   if (change.deleted !== undefined && typeof change.deleted !== "boolean") {
     issues.push({ path: "deleted", problem: "invalid" });
   }
+  if (change.scale !== undefined && change.scale !== null && !recipeScale(change.scale)) {
+    issues.push({ path: "scale", problem: "invalid" });
+  }
   let create: RecipeChange["create"];
   if (change.create !== undefined) {
     const c = change.create;
@@ -340,7 +346,12 @@ function checkRecipe(change: Fields, issues: RecipeIssue[]): RecipeChange | null
         if (!keys.includes(key)) issues.push({ path: `fields.${key}`, problem: "missing" });
       }
     }
-  } else if (keys.length === 0 && change.deleted === undefined && change.import === undefined) {
+  } else if (
+    keys.length === 0 &&
+    change.deleted === undefined &&
+    change.import === undefined &&
+    change.scale === undefined
+  ) {
     issues.push({ path: "fields", problem: "missing" });
   }
   let reimport: RecipeImport | undefined;
@@ -359,6 +370,9 @@ function checkRecipe(change: Fields, issues: RecipeIssue[]): RecipeChange | null
     ...(reimport ? { import: reimport } : {}),
     fields,
     ...(change.deleted !== undefined ? { deleted: change.deleted as boolean } : {}),
+    ...(change.scale !== undefined
+      ? { scale: change.scale === null ? null : recipeScale(change.scale) }
+      : {}),
     changedAt: change.changedAt as number,
   };
 }

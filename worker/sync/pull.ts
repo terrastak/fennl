@@ -1,3 +1,4 @@
+import { recipeScale } from "../../shared/scale";
 import { and, asc, eq, gt } from "drizzle-orm";
 import type {
   Category,
@@ -57,6 +58,7 @@ export function toRecipe(row: typeof recipe.$inferSelect): Recipe {
     difficulty: row.difficulty as Difficulty | null,
     difficultyText: row.difficultyText,
     nutrition: row.nutrition ? (JSON.parse(row.nutrition) as Recipe["nutrition"]) : null,
+    scale: row.scale ? recipeScale(JSON.parse(row.scale)) : null,
     expungedAt: iso(row.expungedAt),
     ...sync(row),
   };

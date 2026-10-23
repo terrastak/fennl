@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isColorScheme } from "../shared/appearance";
+import { isUnitSystem } from "../shared/scale";
 import { healthStatus } from "../shared/health";
 import { removeUnverifiedAccounts } from "./account/purge";
 import { accountRoutes } from "./account/routes";
@@ -260,6 +261,16 @@ app.put("/api/account/appearance", requireHousehold, async (c) => {
   const { db, userId } = c.var.signedIn;
   await db.update(user).set({ colorScheme }).where(eq(user.id, userId));
   return c.json({ colorScheme });
+});
+
+// The account's choice of units for reading recipes (phase F1): as written, US or metric.
+app.put("/api/account/units", requireHousehold, async (c) => {
+  const body = await c.req.json<unknown>().catch(() => null);
+  const units = (body as { units?: unknown } | null)?.units;
+  if (!isUnitSystem(units)) return c.json({ error: "invalid_units" }, 400);
+  const { db, userId } = c.var.signedIn;
+  await db.update(user).set({ units }).where(eq(user.id, userId));
+  return c.json({ units });
 });
 
 // The admin console's own data. Every route here goes through requireAdmin.

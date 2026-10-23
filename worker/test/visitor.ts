@@ -77,7 +77,13 @@ export function visitor(ip = `203.0.113.${++ipCounter}`) {
     async session() {
       const res = await this.request("/api/auth/get-session");
       return (await res.json()) as {
-        user: { id: string; email: string; emailVerified: boolean; colorScheme?: string | null };
+        user: {
+          id: string;
+          email: string;
+          emailVerified: boolean;
+          colorScheme?: string | null;
+          units?: string | null;
+        };
         session: { id: string; activeOrganizationId?: string | null };
       } | null;
     },

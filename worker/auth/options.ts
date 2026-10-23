@@ -105,6 +105,9 @@ export function authOptions(settings: AuthSettings) {
         // PUT /api/account/appearance changes it, after checking the value; Better Auth's own
         // update-user endpoint can't (input: false).
         colorScheme: { type: "string", required: false, input: false },
+        // US, metric or as written (phase F1): follows the account like the color scheme. Only
+        // PUT /api/account/units changes it.
+        units: { type: "string", required: false, input: false },
         // Set when an admin gives a temporary password (phase B7): the app asks for a new one
         // before anything else, and household routes refuse until it's changed.
         mustChangePassword: {
