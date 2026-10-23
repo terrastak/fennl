@@ -18,6 +18,7 @@ import type { SearchResults } from "./search";
 import type {
   ImportedRecipe,
   OutboxEntry,
+  PrintSet,
   RecipeDetail,
   RecipeSummary,
   TrashItem,
@@ -369,6 +370,10 @@ export class SyncEngine {
 
   recipeLinks(): Promise<Record<string, string[]>> {
     return this.db.call({ op: "recipeLinks" });
+  }
+
+  printRecipes(ids: string[], withLinked: boolean): Promise<PrintSet> {
+    return this.db.call({ op: "printRecipes", recipeIds: ids, withLinked });
   }
 
   findDuplicates(query: DuplicateQuery): Promise<DuplicateMatch[]> {

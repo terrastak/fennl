@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isColorScheme } from "../shared/appearance";
+import { isPrintOptions } from "../shared/print";
 import { isUnitSystem } from "../shared/scale";
 import { healthStatus } from "../shared/health";
 import { removeUnverifiedAccounts } from "./account/purge";
@@ -281,6 +282,19 @@ app.put("/api/account/nutrition", requireHousehold, async (c) => {
   const { db, userId } = c.var.signedIn;
   await db.update(user).set({ hideNutrition: hidden }).where(eq(user.id, userId));
   return c.json({ hidden });
+});
+
+// What printouts hold (phase F6): the layout and switches, following the account to every device.
+app.put("/api/account/print", requireHousehold, async (c) => {
+  const body = await c.req.json<unknown>().catch(() => null);
+  const options = (body as { options?: unknown } | null)?.options;
+  if (!isPrintOptions(options)) return c.json({ error: "invalid_print_options" }, 400);
+  const { db, userId } = c.var.signedIn;
+  await db
+    .update(user)
+    .set({ printOptions: JSON.stringify(options) })
+    .where(eq(user.id, userId));
+  return c.json({ options });
 });
 
 // The admin console's own data. Every route here goes through requireAdmin.

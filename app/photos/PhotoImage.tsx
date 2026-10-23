@@ -40,7 +40,12 @@ export function PhotoImage({
   }
   if (!url)
     return (
-      <span className={`${styles.loading} ${className ?? ""}`} style={shape} aria-hidden="true" />
+      <span
+        className={`${styles.loading} ${className ?? ""}`}
+        style={shape}
+        aria-hidden="true"
+        data-photo-loading=""
+      />
     );
   return (
     <img

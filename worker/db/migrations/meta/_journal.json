@@ -253,6 +253,13 @@
       "when": 1792792689885,
       "tag": "0035_hide_nutrition",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1792796286546,
+      "tag": "0036_print_options",
+      "breakpoints": true
     }
   ]
 }

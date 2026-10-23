@@ -1,0 +1,163 @@
+/* The print page (phase F6): Print ready to press, the choices folded away, and the paper
+   previewed below. Printed, only the paper is left. */
+.page {
+  display: grid;
+  gap: var(--space-6);
+  min-height: 100dvh;
+  padding: var(--space-4) max(var(--space-4), env(safe-area-inset-right)) var(--space-12)
+    max(var(--space-4), env(safe-area-inset-left));
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.toolbar {
+  display: grid;
+  gap: var(--space-3);
+  justify-self: center;
+  width: 100%;
+  max-width: 8.5in;
+}
+
+.back {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+}
+
+.heading {
+  margin: 0;
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+
+.primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3rem;
+  min-width: 8rem;
+  padding: var(--space-2) var(--space-6);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.choices {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.choices summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.choices[open] {
+  padding-bottom: var(--space-4);
+}
+
+.choices > :not(summary) {
+  margin-inline: var(--space-4);
+}
+
+.fieldset {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-6);
+  margin-block: 0 var(--space-3);
+  padding: 0;
+  border: none;
+}
+
+.fieldset legend {
+  margin-bottom: var(--space-1);
+  font-weight: var(--weight-semibold);
+}
+
+.fieldset .hint {
+  flex-basis: 100%;
+}
+
+.choice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+}
+
+.choice input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-accent);
+}
+
+.preview {
+  justify-self: center;
+  width: 100%;
+  max-width: 8.5in;
+}
+
+@media print {
+  :global(html),
+  :global(body) {
+    background: var(--print-paper) !important;
+    color-scheme: light;
+  }
+
+  .page {
+    display: block;
+    min-height: 0;
+    padding: 0;
+    background: none;
+  }
+
+  .toolbar {
+    display: none;
+  }
+
+  .preview {
+    max-width: none;
+  }
+}

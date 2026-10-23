@@ -71,6 +71,14 @@
   --sidebar-width: 15.5rem;
   --content-max: 72rem;
   --tap-target: 2.75rem;
+
+  /* Printouts (phase F6): dark ink on white paper in every scheme and mode, since a page
+     printed from dark mode must not come out dark, and grey that a printer can still draw. */
+  --print-paper: #ffffff;
+  --print-ink: #1b1b1b;
+  --print-muted: #555555;
+  --print-subtle: #767676;
+  --print-rule: #b5b5b5;
 }
 
 /* ---------- Harbor (default): navy and coral on warm paper ---------- */

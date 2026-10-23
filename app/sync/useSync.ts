@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { deviceId } from "../devices/deviceId";
 import { categoryTree, type CategoryTree } from "../categories/tree";
-import type { RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
+import type { PrintSet, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
 import type { SearchResults } from "./search";
 import { STARTING, type SyncStatus } from "./status";
 import { SyncClient } from "./tabs";
@@ -283,4 +283,35 @@ export function useRecipeLinks(): Record<string, string[]> | null {
     };
   }, [client]);
   return links;
+}
+
+/**
+ * Recipes to print (phase F6), in order, read again whenever the local copy changes. Undefined
+ * while loading.
+ */
+export function usePrintSet(ids: readonly string[], withLinked: boolean): PrintSet | undefined {
+  const client = activeSyncClient();
+  const key = `${withLinked ? 1 : 0}:${ids.join(",")}`;
+  const [set, setSet] = useState<{ key: string; value: PrintSet } | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    const [linked, list] = [key.startsWith("1"), key.slice(2).split(",").filter(Boolean)];
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .printRecipes(list, linked)
+        .then((value) => {
+          if (call === latest) setSet({ key, value });
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client, key]);
+  return set?.key === key ? set.value : undefined;
 }

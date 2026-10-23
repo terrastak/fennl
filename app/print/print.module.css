@@ -1,0 +1,339 @@
+/* A printout (phase F6). On screen it's a preview of the paper; printed, it's all there is.
+   Dark ink on white in every colour scheme and mode. Sizes are in points, as on paper. */
+.paper {
+  --body: 10.5pt;
+  --small: 8.5pt;
+  --title: 20pt;
+  --gap: 10pt;
+  background: var(--print-paper);
+  color: var(--print-ink);
+  font-family: var(--font-ui);
+  font-size: var(--body);
+  line-height: 1.4;
+  color-scheme: light;
+}
+
+.paper[data-layout="large"] {
+  --body: 15pt;
+  --small: 11pt;
+  --title: 26pt;
+  --gap: 14pt;
+}
+
+.paper[data-layout="compact"] {
+  --body: 9pt;
+  --small: 7.5pt;
+  --title: 16pt;
+  --gap: 7pt;
+  line-height: 1.3;
+}
+
+.paper[data-layout="card4x6"] {
+  --body: 8pt;
+  --small: 6.5pt;
+  --title: 13pt;
+  --gap: 5pt;
+  line-height: 1.25;
+}
+
+.paper[data-layout="card3x5"] {
+  --body: 7pt;
+  --small: 6pt;
+  --title: 11pt;
+  --gap: 4pt;
+  line-height: 1.2;
+}
+
+/* Each recipe (and the contents) starts a new page; the first starts the printout. */
+.recipe,
+.contents {
+  break-before: page;
+}
+
+.paper > :first-child {
+  break-before: auto;
+}
+
+.head {
+  display: flex;
+  gap: var(--gap);
+  align-items: flex-start;
+  margin-bottom: var(--gap);
+  break-inside: avoid;
+}
+
+.headText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.headText > p {
+  margin: 0 0 calc(var(--gap) / 3);
+}
+
+.title {
+  margin: 0 0 calc(var(--gap) / 3);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: var(--title);
+  line-height: 1.15;
+}
+
+.byPerson {
+  font-family: var(--font-hand);
+  font-size: calc(var(--title) * 0.8);
+  line-height: 1;
+}
+
+.usedIn {
+  color: var(--print-muted);
+  font-size: var(--small);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.headnote {
+  font-style: italic;
+}
+
+.facts {
+  font-weight: var(--weight-semibold);
+}
+
+.scaled {
+  font-size: var(--small);
+}
+
+.stars {
+  font-size: var(--small);
+}
+
+.photo {
+  flex: 0 0 auto;
+  width: 2.2in;
+  max-height: 1.8in;
+  border-radius: 4pt;
+}
+
+.paper[data-layout="compact"] .photo {
+  width: 1.5in;
+  max-height: 1.2in;
+}
+
+.qr {
+  flex: 0 0 auto;
+  margin: 0;
+  width: 0.85in;
+  text-align: center;
+  font-size: calc(var(--small) * 0.85);
+  color: var(--print-muted);
+}
+
+.qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.paper[data-layout="card4x6"] .qr,
+.paper[data-layout="card3x5"] .qr {
+  width: 0.6in;
+}
+
+.qrPaper {
+  fill: var(--print-paper);
+}
+
+.qrInk {
+  fill: var(--print-ink);
+}
+
+/* Ingredients beside the method on the standard and compact pages and on cards; one after the
+   other in large type, where the words need the width. */
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: calc(var(--gap) * 1.6);
+}
+
+.paper[data-layout="large"] .body {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.part {
+  margin: 0 0 calc(var(--gap) / 2);
+  padding-bottom: 2pt;
+  border-bottom: 0.75pt solid var(--print-rule);
+  font-family: var(--font-display);
+  font-variation-settings: var(--font-display-settings);
+  font-size: calc(var(--body) * 1.2);
+  break-after: avoid;
+}
+
+.subheading {
+  margin: calc(var(--gap) / 2) 0 calc(var(--gap) / 4);
+  font-size: var(--body);
+  font-weight: var(--weight-semibold);
+  break-after: avoid;
+}
+
+.group {
+  margin-bottom: calc(var(--gap) / 2);
+}
+
+.list,
+.steps {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.list {
+  list-style: none;
+  padding-left: 0;
+}
+
+.list li {
+  margin-bottom: calc(var(--gap) / 4);
+  break-inside: avoid;
+  padding-left: 0.8em;
+  text-indent: -0.8em;
+}
+
+/* Breaks between steps, never inside one. */
+.steps li {
+  margin-bottom: calc(var(--gap) / 2);
+  break-inside: avoid;
+}
+
+.list strong,
+.steps strong,
+.scaled strong {
+  font-weight: 800;
+}
+
+.see {
+  color: var(--print-muted);
+  font-style: italic;
+}
+
+.suggestion {
+  margin: calc(var(--gap) / 3) 0 0;
+  padding: 3pt 6pt;
+  border: 0.75pt solid var(--print-ink);
+  border-radius: 3pt;
+  font-size: var(--small);
+}
+
+.notes,
+.nutrition {
+  margin-top: var(--gap);
+  break-inside: avoid;
+}
+
+.notes p,
+.nutrition p {
+  margin: 0 0 calc(var(--gap) / 3);
+  white-space: pre-line;
+}
+
+.signed {
+  font-style: italic;
+}
+
+.signature {
+  font-family: var(--font-hand);
+  font-style: normal;
+  font-size: calc(var(--body) * 1.3);
+}
+
+.foot {
+  margin-top: var(--gap);
+  font-size: var(--small);
+  color: var(--print-muted);
+  overflow-wrap: anywhere;
+}
+
+.foot p {
+  margin: 0 0 2pt;
+}
+
+/* The recipe's categories: listed, but quietly (owner's choice 2026-10-23). */
+.categories {
+  color: var(--print-subtle);
+}
+
+.contents ol {
+  padding-left: 1.4em;
+  columns: 2;
+  column-gap: calc(var(--gap) * 2);
+}
+
+.contents li {
+  margin-bottom: 3pt;
+  break-inside: avoid;
+}
+
+/* ---------- On screen: the paper, previewed ---------- */
+@media screen {
+  .paper {
+    display: grid;
+    gap: var(--space-6);
+    padding: 0;
+    background: transparent;
+  }
+
+  .recipe,
+  .contents {
+    padding: 0.6in;
+    background: var(--print-paper);
+    box-shadow: var(--shadow-md);
+  }
+
+  .paper[data-layout="card4x6"] > .recipe,
+  .paper[data-layout="card4x6"] > .contents {
+    padding: 0.25in;
+    max-width: 6in;
+  }
+
+  .paper[data-layout="card3x5"] > .recipe,
+  .paper[data-layout="card3x5"] > .contents {
+    padding: 0.2in;
+    max-width: 5in;
+  }
+
+  /* A phone: the preview reflows rather than scrolling sideways. */
+  @media (max-width: 40rem) {
+    .recipe,
+    .contents {
+      padding: var(--space-4);
+    }
+
+    .head {
+      flex-wrap: wrap;
+    }
+
+    .body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+/* The copy on a recipe's page for the browser's own print (Ctrl+P): out of sight on screen;
+   printed, it's the only thing on the page. */
+.copy {
+  display: none;
+}
+
+@media print {
+  .copy {
+    display: block;
+  }
+
+  :global(body:has(> [data-print-copy]) > :not([data-print-copy])) {
+    display: none !important;
+  }
+
+  :global(body:has(> [data-print-copy])) {
+    background: var(--print-paper) !important;
+  }
+}
