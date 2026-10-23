@@ -1246,14 +1246,16 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### F5. Cook mode
 - **Goal**: Comfortable cooking from a phone or tablet.
 - **Steps**:
-  1. Big-text, one-step-at-a-time view; screen stays on (where the browser allows).
+  1. Big-text, one-step-at-a-time view.
+  1b. **The screen never sleeps or turns off while cook mode is open (owner's request, 2026-10-23).** Cook mode asks the browser to keep the screen on (the Screen Wake Lock API) as it opens, asks again every time you come back to it (the browser lets go whenever you switch to another app or tab), and lets go when you leave cook mode. A small "Screen stays on" note shows it's working, with a switch to turn it off. If the device refuses (Low Power Mode, a low battery, or a browser without it), cook mode says so plainly and suggests the phone's own Auto-Lock setting, never failing silently. Checked 2026-10-23 on MDN ("Screen Wake Lock API"): works in current Chrome, Edge, Firefox and Safari (iPhone from iOS 16.4 in a browser tab); in an app added to the iPhone Home Screen it was broken until a fix that one source dates to iOS 18.4 and another table doesn't confirm (**Unverified**), so F5 is tested on a real iPhone both in Safari and from the Home Screen before it's done.
   2. Ingredients used in each step shown with that step, with amounts (scaled if scaling is on).
   3. Tap a time in a step ("bake 25 minutes") to start a timer; several timers at once.
   4. Check off ingredients and steps.
   4a. A "Clear all checks" button (a Paprika user request).
+  4b. **Not now, saved for later (owner's wish, 2026-10-23): timers on the lock screen.** A running timer shown on the phone's lock screen (on iPhone, a "Live Activity") would be great, but it looks to be a native-app feature (Apple's ActivityKit) that a web app can't reach (**Unverified**: checked 2026-10-23, no source says a web app can start one). F5's timers run while cook mode is open; whether one can at least alert when it finishes with the phone locked (a notification from the app installed on the Home Screen) is checked when F5 is built. Tracked in open question 26.
   5. At the last step, one tap answers "Made it today?" (C1's "last made").
 - **You check**: Cook a real recipe from your phone.
-- **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop.
+- **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop, and the screen stays on through a whole recipe on both phones (in the browser and from the Home Screen), including after switching to another app and back.
 
 ### F6. Print view
 - **Goal**: A clean printed recipe.
@@ -1510,6 +1512,7 @@ Things to decide before the phase listed. Items already in `CLAUDE.md` are not r
 | 23 | Opt-in usage counts during the beta (proposed in `docs/research/2026-10-13-finding-what-people-want.md`, "Telemetry"): counts only, never recipe text, to see which features are used, which searches find nothing and which import sources fail. **Undecided; not needed now, and nothing waits on it.** Needs the owner to decide the opt-in wording, and the privacy policy to mention it. If wanted during the beta it becomes its own phase | Only if wanted during the beta; otherwise before public launch (H2) |
 | 24 | An introductory offer for Paprika owners (a Stripe promotion code, `docs/research/2026-10-13-paprika-user-requests.md` item 22). **Undecided; not needed now.** A business call, not a code change | Stage I (billing) |
 | 25 | When to research social and video import (Stage I item 8). The order is decided (only after the AI import phases E7–E12 are built and measured); what is **undecided** is when to start the research on each site's terms and what the AI costs per video. **Not needed now** | After E12 is measured |
+| 26 | Timers on the lock screen (owner's wish, 2026-10-23, F5 item 4b): a countdown on the iPhone lock screen (Live Activity) or an Android notification while cooking. Looks native-only (**Unverified**); the native app is not wanted for now (question 22), so this is saved for later, to revisit if browsers add it or a native app is ever reconsidered. **Not needed now** | Later |
 
 ## Notes: AI provider research (2026-10-01)
 
