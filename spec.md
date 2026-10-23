@@ -1268,11 +1268,19 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 
 ### F6. Print view
-- **Goal**: A clean printed recipe.
-- **Steps**:
-  1. Print layout with title, sections, source, scaling state, optional notes and nutrition.
-- **You check**: Print a recipe (or save as PDF).
-- **Done when**: Print layout tested in Chrome and Safari.
+- **Goal**: A clean printed recipe, or several as a booklet, on paper or as a PDF.
+- **Steps** (fleshed out with the owner 2026-10-23, from the research in `docs/research/2026-10-13-finding-what-people-want.md` and `2026-10-13-paprika-user-requests.md`):
+  1. **One recipe.** **Print** on the recipe page opens a print preview with choices, then the browser's own print dialog (which also saves a PDF on every device). The page: title, who it's from, the headnote, times and servings, ingredients and method with their section headings, notes and the source; the recipe's categories as one small grey line at the bottom (owner's choice: listed but de-emphasised). Never the app's menus or buttons, always light colours (even in dark mode), one page where it fits, and breaks between steps, never inside one.
+  2. **Choices** (switches): the cover photo, the recipe's notes, the household's signed notes and stars, nutrition (left out when nutrition is hidden in Settings, F4), and a QR code.
+  3. **Layouts (owner's choice: all four):** Standard (ingredients beside the method), Large type (for arm's length), Compact (more on a page), and Recipe card in 4×6 or 3×5 (where the browser honours a paper size: Chrome does; Safari is **Unverified** and checked when built).
+  4. **Scaling, units and pans:** printed as shown, with "Doubled from the original" (or "Scaled for your 9×13"); changed amounts in bold, since highlight colours often don't print; F2's bake-time suggestion as a boxed "Fennl's suggestion".
+  5. **Linked recipes (F3):** a choice to print them after the recipe, each on its own page; otherwise the line says "(see Lime Crema)".
+  6. **Several recipes at once (owner's choice: in F6):** a booklet with a contents page and each recipe on a new page. How recipes are picked is the owner's to choose before building (proposed: both "print what the list shows" and ticking recipes in a Select mode); at most 200 recipes a booklet (proposed). Named cookbooks (G3) reuse it.
+  7. **QR code (owner's choice: on by default):** the recipe's own Fennl address, opening the recipe (or cook mode) when scanned. It grants nothing by itself: the person is asked to sign in and sees the recipe only if they may (today, a member of the recipe's household: the access rule every recipe read already follows on the server). When social sharing comes (after the beta), sharing decides who else may open it; the printed code keeps working.
+  8. **Print choices are kept with the account (owner's choice)**, like the units, so they follow the person to every device.
+  9. Every plan (printing has no running cost).
+- **You check**: Print a recipe, save one as a PDF, and print a category as a booklet.
+- **Done when**: The layouts are tested in Chrome and Safari; automated tests make PDFs (Chrome) and check nothing is cut off, no app buttons appear, and the QR code opens the recipe only for someone allowed to see it.
 
 ## Stage G: Premium sharing and history
 
