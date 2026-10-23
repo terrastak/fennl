@@ -1,6 +1,8 @@
 # Checks every pull request, gives it a preview link, and deploys main to production.
 #
-# - check:   format, lint, typecheck, migration check, unit tests, browser tests.
+# - check:   format, lint, typecheck, migration check, unit tests, browser tests. A change to
+#            documents only (spec.md, CLAUDE.md, README files, docs/) is checked for formatting
+#            only, and gets no preview or deploy.
 # - preview: (pull requests from this repo) applies migrations to the staging database, uploads a
 #            version of the "fennl-preview" Worker with a per-PR alias, checks it responds, and
 #            comments the link on the PR.
@@ -42,26 +44,53 @@ jobs:
     # Usually about 14 minutes (the browser tests take 10). A slow package install (5 minutes on
     # 2026-10-22) pushed it past 15, so there's room for that.
     timeout-minutes: 25
+    outputs:
+      code: ${{ steps.changes.outputs.code }}
     steps:
       - uses: actions/checkout@v7
+      # A change to documents only (the spec, CLAUDE.md, the README files, docs/) is checked for
+      # formatting and nothing else: no tests, no preview, no deploy (owner's request 2026-10-23).
+      # When in doubt (the comparison can't be made), everything runs.
+      - name: What changed
+        id: changes
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          code=true
+          if [ -n "$BASE" ] && git fetch -q --depth=1 origin "$BASE" 2>/dev/null; then
+            files=$(git diff --name-only "$BASE" HEAD)
+            if [ -n "$files" ] && ! printf '%s\n' "$files" | grep -qvE '^(spec\.md|CLAUDE\.md|README\.md|import-quality/README\.md|docs/.+\.md)$'; then
+              code=false
+              echo "### Only documents changed: formatting checked, tests, preview and deploy skipped" >> "$GITHUB_STEP_SUMMARY"
+              printf '%s\n' "$files" >> "$GITHUB_STEP_SUMMARY"
+            fi
+          fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run format:check
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm run db:check
-      - run: npm test
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run lint
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run typecheck
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run db:check
+      - if: steps.changes.outputs.code == 'true'
+        run: npm test
       # The import quality report (phase E1), written by the unit tests: printed here and added
       # to the run's summary page.
       - name: Import quality report
+        if: steps.changes.outputs.code == 'true'
         run: |
           cat import-quality/report.md
           cat import-quality/report.md >> "$GITHUB_STEP_SUMMARY"
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - if: steps.changes.outputs.code == 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.changes.outputs.code == 'true'
+        run: npm run test:e2e
       - name: Upload browser test report
         if: failure()
         uses: actions/upload-artifact@v7
@@ -74,7 +103,7 @@ jobs:
 
   preview:
     needs: check
-    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && needs.check.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -238,7 +267,7 @@ jobs:
 
   deploy:
     needs: check
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.check.outputs.code == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:
