@@ -1246,14 +1246,15 @@ Import quality is the core of the product, so this stage starts by building a wa
 ### F5. Cook mode
 - **Goal**: Comfortable cooking from a phone or tablet.
 - **Steps**:
-  1. Big-text, one-step-at-a-time view; screen stays on (where the browser allows).
+  1. Big-text, one-step-at-a-time view.
+  1b. **The screen never sleeps or turns off while cook mode is open (owner's request, 2026-10-23).** Cook mode asks the browser to keep the screen on (the Screen Wake Lock API) as it opens, asks again every time you come back to it (the browser lets go whenever you switch to another app or tab), and lets go when you leave cook mode. A small "Screen stays on" note shows it's working, with a switch to turn it off. If the device refuses (Low Power Mode, a low battery, or a browser without it), cook mode says so plainly and suggests the phone's own Auto-Lock setting, never failing silently. Checked 2026-10-23 on MDN ("Screen Wake Lock API"): works in current Chrome, Edge, Firefox and Safari (iPhone from iOS 16.4 in a browser tab); in an app added to the iPhone Home Screen it was broken until a fix that one source dates to iOS 18.4 and another table doesn't confirm (**Unverified**), so F5 is tested on a real iPhone both in Safari and from the Home Screen before it's done.
   2. Ingredients used in each step shown with that step, with amounts (scaled if scaling is on).
   3. Tap a time in a step ("bake 25 minutes") to start a timer; several timers at once.
   4. Check off ingredients and steps.
   4a. A "Clear all checks" button (a Paprika user request).
   5. At the last step, one tap answers "Made it today?" (C1's "last made").
 - **You check**: Cook a real recipe from your phone.
-- **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop.
+- **Done when**: Cook mode works on iPhone and Android, keyboard-only on desktop, and the screen stays on through a whole recipe on both phones (in the browser and from the Home Screen), including after switching to another app and back.
 
 ### F6. Print view
 - **Goal**: A clean printed recipe.
