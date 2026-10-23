@@ -1,8 +1,9 @@
 # Checks every pull request, gives it a preview link, and deploys main to production.
 #
-# - check:   format, lint, typecheck, migration check, unit tests, browser tests. A change to
-#            documents only (spec.md, CLAUDE.md, README files, docs/) is checked for formatting
-#            only, and gets no preview or deploy.
+# - check:   passes when format, lint, typecheck and the migration check (lint), the unit tests
+#            (unit) and the browser tests (browser, split across 4 machines) all pass; they run
+#            side by side. A change to documents only (spec.md, CLAUDE.md, README files, docs/)
+#            is checked for formatting only, and gets no preview or deploy.
 # - preview: (pull requests from this repo) applies migrations to the staging database, uploads a
 #            version of the "fennl-preview" Worker with a per-PR alias, checks it responds, and
 #            comments the link on the PR.
@@ -39,18 +40,16 @@ env:
   WRANGLER_SEND_METRICS: "false"
 
 jobs:
-  check:
+  # Which kind of change this is: a change to documents only (the spec, CLAUDE.md, the README
+  # files, docs/) is checked for formatting and nothing else: no tests, no preview, no deploy
+  # (owner's request 2026-10-23). When in doubt (the comparison can't be made), everything runs.
+  changes:
     runs-on: ubuntu-latest
-    # Usually about 14 minutes (the browser tests take 10). A slow package install (5 minutes on
-    # 2026-10-22) pushed it past 15, so there's room for that.
-    timeout-minutes: 25
+    timeout-minutes: 5
     outputs:
       code: ${{ steps.changes.outputs.code }}
     steps:
       - uses: actions/checkout@v7
-      # A change to documents only (the spec, CLAUDE.md, the README files, docs/) is checked for
-      # formatting and nothing else: no tests, no preview, no deploy (owner's request 2026-10-23).
-      # When in doubt (the comparison can't be made), everything runs.
       - name: What changed
         id: changes
         env:
@@ -66,40 +65,112 @@ jobs:
             fi
           fi
           echo "code=$code" >> "$GITHUB_OUTPUT"
+
+  # The quick checks, the unit tests and the browser tests run side by side, and the browser
+  # tests are split across 4 machines (owner's request 2026-10-23: about 16 minutes became
+  # about 5). "check" waits for them all, so it still says whether everything passed.
+  lint:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run format:check
-      - if: steps.changes.outputs.code == 'true'
+      - if: needs.changes.outputs.code == 'true'
         run: npm run lint
-      - if: steps.changes.outputs.code == 'true'
+      - if: needs.changes.outputs.code == 'true'
         run: npm run typecheck
-      - if: steps.changes.outputs.code == 'true'
+      - if: needs.changes.outputs.code == 'true'
         run: npm run db:check
-      - if: steps.changes.outputs.code == 'true'
-        run: npm test
+
+  unit:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm test
       # The import quality report (phase E1), written by the unit tests: printed here and added
       # to the run's summary page.
       - name: Import quality report
-        if: steps.changes.outputs.code == 'true'
         run: |
           cat import-quality/report.md
           cat import-quality/report.md >> "$GITHUB_STEP_SUMMARY"
-      - if: steps.changes.outputs.code == 'true'
+
+  browser:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    # A slow package install (5 minutes on 2026-10-22) once took the whole check past 15
+    # minutes, so there's room for that.
+    timeout-minutes: 20
+    strategy:
+      # Every group finishes, so one run shows every failing test.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      # The test browser is kept between runs for the Playwright version in use; the system
+      # libraries it needs are installed every time (they aren't kept).
+      - name: Playwright's version
+        id: playwright
+        run: echo "version=$(node -p 'require("@playwright/test/package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: Keep the test browser
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.browser-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
-      - if: steps.changes.outputs.code == 'true'
-        run: npm run test:e2e
+      - if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - run: npm run test:e2e -- --shard=${{ matrix.shard }}/4
       - name: Upload browser test report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report
+          name: playwright-report-${{ matrix.shard }}
           path: |
             playwright-report
             test-results
           retention-days: 7
+
+  # Passes only when every check above passed (or was skipped for a change to documents only).
+  check:
+    needs: [changes, lint, unit, browser]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      code: ${{ needs.changes.outputs.code }}
+    steps:
+      - name: Everything passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          if [[ " $RESULTS " == *" failure "* || " $RESULTS " == *" cancelled "* ]]; then
+            echo "::error::A check failed or was cancelled; see the jobs above."
+            exit 1
+          fi
 
   preview:
     needs: check
