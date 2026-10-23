@@ -273,6 +273,16 @@ app.put("/api/account/units", requireHousehold, async (c) => {
   return c.json({ units });
 });
 
+// Nutrition shown or hidden everywhere, kept either way (phase F4). Follows the account.
+app.put("/api/account/nutrition", requireHousehold, async (c) => {
+  const body = await c.req.json<unknown>().catch(() => null);
+  const hidden = (body as { hidden?: unknown } | null)?.hidden;
+  if (typeof hidden !== "boolean") return c.json({ error: "invalid_setting" }, 400);
+  const { db, userId } = c.var.signedIn;
+  await db.update(user).set({ hideNutrition: hidden }).where(eq(user.id, userId));
+  return c.json({ hidden });
+});
+
 // The admin console's own data. Every route here goes through requireAdmin.
 app.get("/api/admin/me", requireAdmin, async (c) => {
   const admin = c.var.admin;

@@ -20,6 +20,7 @@ import { Gallery, Originals } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { EarlierVersion } from "./EarlierVersion";
+import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
 import { SubRecipe } from "./SubRecipe";
 import { ScaleBar, ScaledLine, ShownText } from "./ScaleControls";
@@ -477,8 +478,10 @@ function OwnNote({
 }
 
 function Nutrition({ recipe }: { recipe: Recipe }) {
+  const [hidden] = useHideNutrition();
   const nutrition = recipe.nutrition;
-  if (!nutrition) return null;
+  // Hidden in Settings (phase F4): kept, just out of sight.
+  if (!nutrition || hidden) return null;
   const values = (Object.keys(NUTRIENTS) as Nutrient[]).filter(
     (key) => nutrition.perServing[key] !== undefined,
   );

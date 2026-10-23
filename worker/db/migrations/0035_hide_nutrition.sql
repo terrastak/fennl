@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `hide_nutrition` integer DEFAULT false;

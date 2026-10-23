@@ -12,6 +12,7 @@ import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import editor from "./editor.module.css";
 import { Field, LinesBox, SourceFields, TimeBox } from "./editorFields";
+import { NutritionFields } from "./NutritionFields";
 import { described, problemsFor } from "./fieldProblems";
 import { EditorSession, type EditorState, type SaveState } from "./editorSession";
 import styles from "./recipes.module.css";
@@ -283,6 +284,8 @@ function Editor({
               onChange={(e) => set({ notes: e.target.value })}
             />
           </Field>
+
+          <NutritionFields session={session} state={state} />
         </fieldset>
       </form>
 

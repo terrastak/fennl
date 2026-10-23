@@ -199,3 +199,35 @@ describe("account units (phase F1)", () => {
     expect(res.status).toBe(401);
   });
 });
+
+describe("hiding nutrition (phase F4)", () => {
+  it("is saved to the account and comes back with the session", async () => {
+    const v = await signUpConfirmed("nutrition@example.com");
+    expect((await v.session())?.user.hideNutrition ?? false).toBe(false);
+    const res = await v.request("/api/account/nutrition", {
+      method: "PUT",
+      body: { hidden: true },
+    });
+    expect(res.status).toBe(200);
+    expect((await v.session())?.user.hideNutrition).toBe(true);
+  });
+
+  it("only takes yes or no, and not through update-user", async () => {
+    const v = await signUpConfirmed("bad.nutrition@example.com");
+    const res = await v.request("/api/account/nutrition", {
+      method: "PUT",
+      body: { hidden: "yes" },
+    });
+    expect(res.status).toBe(400);
+    await v.request("/api/auth/update-user", { body: { hideNutrition: true } });
+    expect((await v.session())?.user.hideNutrition ?? false).toBe(false);
+  });
+
+  it("needs a signed-in account", async () => {
+    const res = await visitor().request("/api/account/nutrition", {
+      method: "PUT",
+      body: { hidden: true },
+    });
+    expect(res.status).toBe(401);
+  });
+});

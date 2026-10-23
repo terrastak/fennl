@@ -185,6 +185,14 @@ describe("exporting the library", () => {
       "Lemon <Olive> Oil Cake",
     ]);
     expect(first.file.categories).toEqual(["Desserts", "Desserts › Cakes", "Someday"]);
+    // Nutrition goes out with its source (phase F4), in the file and on the page.
+    expect(first.file.recipes.find((r) => r.title === "Green Chile Stew")!.nutrition).toEqual({
+      perServing: { calories: 320 },
+      text: null,
+      source: "manual",
+    });
+    const stewPage = strFromU8(first.files[pages.find((p) => p.includes("stew"))!]!);
+    expect(stewPage).toContain("Nutrition per serving");
 
     // Into another account, and out again.
     const sam = await person("June");
