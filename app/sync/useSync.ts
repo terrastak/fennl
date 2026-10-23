@@ -258,3 +258,29 @@ export function useTrash(): TrashItem[] | null {
   }, [client]);
   return items;
 }
+
+/** Every recipe's linked recipes (phase F3), read again whenever the local copy changes. */
+export function useRecipeLinks(): Record<string, string[]> | null {
+  const client = activeSyncClient();
+  const [links, setLinks] = useState<Record<string, string[]> | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .recipeLinks()
+        .then((value) => {
+          if (call === latest) setLinks(value);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client]);
+  return links;
+}

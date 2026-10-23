@@ -367,6 +367,10 @@ export class SyncEngine {
     return this.db.call({ op: "importedRecipes", source });
   }
 
+  recipeLinks(): Promise<Record<string, string[]>> {
+    return this.db.call({ op: "recipeLinks" });
+  }
+
   findDuplicates(query: DuplicateQuery): Promise<DuplicateMatch[]> {
     return this.db.call({ op: "findDuplicates", query });
   }

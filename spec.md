@@ -1224,6 +1224,11 @@ Import quality is the core of the product, so this stage starts by building a wa
   5. Scaling the parent does not silently scale the sub-recipe.
 - **You check**: Link a sauce to a main dish and expand it.
 - **Done when**: Loop and deletion tests pass.
+- **Built (2026-10-23)**:
+  - `shared/subRecipes.ts` (tests in `shared/subRecipes.test.ts`): the recipes a list links to, every recipe reachable through links, `wouldLoop` (a link to the recipe itself, or to one that already uses it through its own links, is refused; a circle already in the data, made on two devices at once, never hangs the check) and `linkView` (what a link shows at a place on the page: the recipe, "already shown above", "open it" once 3 levels deep, or gone).
+  - The link is the ingredient line's `linkedRecipeId`, inside the recipe's ingredient list, so it syncs with the list and follows its line through light edits (C1). Any recipe in the household can be linked, a partner's too.
+  - Editor: **Link a recipe**, beside **Heading**, links the ingredient the cursor is on (one button rather than one per line, so the keyboard still goes straight from box to box). It suggests recipes whose title shares words with the line ("½ cup lime crema" → Lime Crema) or finds one by name, and never offers the recipe itself or one that already uses it. In **How Fennl reads it** a linked line shows "→ Lime Crema" with **Unlink**, or says the linked recipe is in Trash or gone.
+  - Recipe page: a linked line has **Show Lime Crema** (expands it in place: Makes, ingredients and method, its own links expanding up to 3 levels) and **Open it**. Scaling the recipe never scales the linked one: it's shown as written, saying so when the recipe is scaled; the account's units still apply. A linked recipe in Trash says so with a link to Trash; one deleted for good, or no longer shared, says the line is kept as written. The line's own words never change.
 
 ### F4. Nutrition
 - **Goal**: Store and show nutrition.
@@ -1558,5 +1563,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | D4 | Done 2026-10-22 (merged as #77) |
 | E14 | Done 2026-10-22 (owner's call after two rounds: method lines exactly right 94% on photos, pages, screenshots and PDFs, 97% on text and documents, 97% on web pages; known issues written down) |
 | F1 | Done 2026-10-23 (merged as #85) |
-| F2 | Approved 2026-10-23; built, waiting for review |
+| F2 | Done 2026-10-23 (merged as #86) |
+| F3 | Approved 2026-10-23; built, waiting for review |
 | All others | Not started |

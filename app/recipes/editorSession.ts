@@ -197,6 +197,18 @@ export class EditorSession {
     this.changed();
   }
 
+  /** Links an ingredient line to a recipe in the household, or unlinks it (phase F3). */
+  setLink(lineId: string, recipeId: string | null): void {
+    if (!this.draft.ingredients.some((line) => line.id === lineId && !line.heading)) return;
+    this.draft = {
+      ...this.draft,
+      ingredients: this.draft.ingredients.map((line) =>
+        line.id === lineId ? { ...line, linkedRecipeId: recipeId } : line,
+      ),
+    };
+    this.changed();
+  }
+
   /** Whether changes may be handed to the sync engine (CLAUDE.md, "Write paths"). */
   setEditable(editable: boolean): void {
     if (editable === this.editable) return;

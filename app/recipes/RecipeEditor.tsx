@@ -194,6 +194,7 @@ function Editor({
             list="ingredients"
             label="Ingredients"
             hint="One per line, as you'd write them."
+            linkFrom={id}
           />
           <LinesBox
             session={session}

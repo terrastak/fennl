@@ -263,3 +263,54 @@
   font-weight: var(--weight-semibold);
   white-space: nowrap;
 }
+
+/* Linking an ingredient to another recipe (phase F3). */
+.link {
+  font-size: var(--text-sm);
+}
+
+.linkButton {
+  margin-left: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linkPicker {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.linkPicker input {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.linkPicker ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.linkPicker .linkButton {
+  min-height: var(--tap-target);
+  margin-left: 0;
+  text-align: left;
+}

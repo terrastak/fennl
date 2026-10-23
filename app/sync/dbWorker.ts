@@ -10,6 +10,7 @@ import {
   type RecipeOpinion,
   type RecipePhoto,
 } from "../../shared/recipe";
+import { MAX_LINK_DEPTH, linkedIds, reachable, type LinkedRecipe } from "../../shared/subRecipes";
 import type { PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type {
@@ -394,15 +395,65 @@ function members(): Member[] {
   return rows.map(([memberId, name]) => ({ userId: memberId, name }));
 }
 
-function getRecipe(id: string): RecipeDetail | null {
-  const d = database();
-  const data = d.selectValue(
+/** One recipe from the local copy, or undefined when it isn't here. */
+function recipeById(id: string): Recipe | undefined {
+  const data = database().selectValue(
     "select data from record where kind = 'recipe' and key = ? and data is not null",
     [id],
   ) as string | undefined;
-  if (!data) return null;
+  return data ? (JSON.parse(data) as Recipe) : undefined;
+}
+
+/**
+ * The recipes a recipe links to, and theirs, as deep as a page expands them and one more (so the
+ * deepest can still be named), for showing in place (phase F3).
+ */
+function linkedRecipes(recipe: Recipe): Record<string, LinkedRecipe> {
+  const found = new Map<string, Recipe | undefined>([[recipe.id, recipe]]);
+  const load = (id: string) => {
+    if (!found.has(id)) found.set(id, recipeById(id));
+    return found.get(id);
+  };
+  const ids = reachable(
+    recipe.id,
+    (id) => {
+      const r = load(id);
+      return r && !r.expungedAt ? linkedIds(r.ingredients) : [];
+    },
+    MAX_LINK_DEPTH + 1,
+  );
+  const linked: Record<string, LinkedRecipe> = {};
+  for (const id of ids) {
+    const r = load(id);
+    if (!r || r.expungedAt) continue;
+    linked[id] = {
+      id,
+      title: r.title,
+      status: r.deletedAt ? "trash" : "ok",
+      servings: r.servings,
+      ingredients: r.ingredients,
+      directions: r.directions,
+    };
+  }
+  return linked;
+}
+
+/** Every recipe's links, for refusing a link that would go round in a circle (phase F3). */
+function recipeLinks(): Record<string, string[]> {
+  const links: Record<string, string[]> = {};
+  for (const recipe of values<Recipe>("recipe")) {
+    if (!recipe.expungedAt) links[recipe.id] = linkedIds(recipe.ingredients);
+  }
+  return links;
+}
+
+function getRecipe(id: string): RecipeDetail | null {
+  const d = database();
+  const recipe = recipeById(id);
+  if (!recipe) return null;
   return {
-    recipe: JSON.parse(data) as Recipe,
+    recipe,
+    linked: linkedRecipes(recipe),
     waiting: Boolean(
       d.selectValue("select exists (select 1 from outbox where kind = 'recipe' and key = ?)", [id]),
     ),
@@ -560,6 +611,9 @@ scope.onmessage = (event) => {
           break;
         case "importedRecipes":
           value = importedRecipes(request.source);
+          break;
+        case "recipeLinks":
+          value = recipeLinks();
           break;
         case "photoHashes":
           value = [...new Set(livePhotos().map((p) => p.imageHash))];

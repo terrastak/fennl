@@ -57,6 +57,7 @@ function detail(r: Recipe, extra: Partial<RecipeDetail> = {}): RecipeDetail {
     categories: [],
     members: [{ userId: ME, name: "Brian" }],
     photos: [],
+    linked: {},
     ...extra,
   };
 }
