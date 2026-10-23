@@ -575,6 +575,10 @@ export interface BakeNote {
   text: string;
 }
 
+/** Words that name a pan or its size ("one 9-inch cake", "a 9x13"). */
+export const namesAPan = (words: string) =>
+  readPan(words) !== null || /\d\s*(?:-|\s)?(?:inch|in\b|"|″|cm)|\d\s*[x×]\s*\d/iu.test(words);
+
 /**
  * Fennl's suggestion for the bake time in the person's pan, under the step that gives the time
  * (owner's choices 2026-10-23): minutes only when Fennl can be sure, never the temperature.

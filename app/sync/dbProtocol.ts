@@ -100,6 +100,25 @@ export interface RecipeDetail {
   linked: Record<string, LinkedRecipe>;
 }
 
+/** A recipe as printed (phase F6). */
+export interface PrintedRecipe {
+  recipe: Recipe;
+  /** The recipe whose ingredient links to this one, when it's printed because of that. */
+  linkedFrom: string | null;
+  /** Each person's rating and signed note (only those not removed). */
+  opinions: RecipeOpinion[];
+  categories: string[];
+  cover: RecipePhoto | null;
+  /** The titles of the working recipes its ingredients link to, by ID (phase F3). */
+  links: Record<string, string>;
+}
+
+/** Recipes to print, in order, and the household whose names sign their notes. */
+export interface PrintSet {
+  members: Member[];
+  recipes: PrintedRecipe[];
+}
+
 /** A change waiting to be sent, in the order it was made. */
 export interface OutboxEntry {
   seq: number;
@@ -126,6 +145,7 @@ export type DbRequest =
   | { op: "findDuplicatePairs" }
   | { op: "importedRecipes"; source: ImportSource }
   | { op: "recipeLinks" }
+  | { op: "printRecipes"; recipeIds: string[]; withLinked: boolean }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -153,6 +173,8 @@ export interface DbResults {
   importedRecipes: ImportedRecipe[];
   /** Every recipe's linked recipes, by recipe ID (phase F3). */
   recipeLinks: Record<string, string[]>;
+  /** Recipes to print, each chosen one followed by those it links to when asked (phase F6). */
+  printRecipes: PrintSet;
   wipe: null;
 }
 

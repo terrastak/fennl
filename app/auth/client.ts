@@ -11,6 +11,7 @@ export const authClient = createAuthClient({
         colorScheme: { type: "string", required: false },
         units: { type: "string", required: false },
         hideNutrition: { type: "boolean", required: false },
+        printOptions: { type: "string", required: false },
         mustChangePassword: { type: "boolean", required: false },
       },
     }),

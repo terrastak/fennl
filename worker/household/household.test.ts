@@ -1,6 +1,7 @@
 import { env } from "cloudflare:test";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { DEFAULT_PRINT } from "../../shared/print";
 import { database } from "../db/client";
 import { organization, session, user } from "../db/schema";
 import { signUp, signUpConfirmed, visitor, setUpDatabase } from "../test/visitor";
@@ -195,6 +196,42 @@ describe("account units (phase F1)", () => {
     const res = await visitor().request("/api/account/units", {
       method: "PUT",
       body: { units: "us" },
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("print choices (phase F6)", () => {
+  const options = { ...DEFAULT_PRINT, layout: "card4x6", qr: false };
+
+  it("are saved to the account and come back with the session", async () => {
+    const v = await signUpConfirmed("print@example.com");
+    expect((await v.session())?.user.printOptions ?? null).toBeNull();
+    const res = await v.request("/api/account/print", { method: "PUT", body: { options } });
+    expect(res.status).toBe(200);
+    expect(JSON.parse((await v.session())?.user.printOptions ?? "null")).toEqual(options);
+  });
+
+  it("only take a whole, correct set of choices, and not through update-user", async () => {
+    const v = await signUpConfirmed("bad.print@example.com");
+    for (const bad of [
+      { ...options, layout: "poster" },
+      { ...options, qr: "yes" },
+      { ...options, extra: true },
+      { layout: "standard" },
+      "standard",
+    ]) {
+      const res = await v.request("/api/account/print", { method: "PUT", body: { options: bad } });
+      expect(res.status).toBe(400);
+    }
+    await v.request("/api/auth/update-user", { body: { printOptions: JSON.stringify(options) } });
+    expect((await v.session())?.user.printOptions ?? null).toBeNull();
+  });
+
+  it("need a signed-in account", async () => {
+    const res = await visitor().request("/api/account/print", {
+      method: "PUT",
+      body: { options },
     });
     expect(res.status).toBe(401);
   });

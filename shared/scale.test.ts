@@ -42,6 +42,8 @@ describe("scaling an ingredient", () => {
     );
     const line = showIngredient("1 bag (16 oz) chips", { factor: 1.5, units: "written" });
     expect(line.total).toBe("24 oz in all");
+    // Never "each" twice when the recipe already says it.
+    expect(show("2 cans (15 oz each) black beans", 2)).toBe("[4 cans] (15 oz each) black beans");
   });
 
   it("never scales a size written before the container", () => {

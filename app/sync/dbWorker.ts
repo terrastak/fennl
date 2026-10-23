@@ -10,6 +10,7 @@ import {
   type RecipeOpinion,
   type RecipePhoto,
 } from "../../shared/recipe";
+import { printOrder } from "../../shared/print";
 import { MAX_LINK_DEPTH, linkedIds, reachable, type LinkedRecipe } from "../../shared/subRecipes";
 import type { PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
@@ -20,6 +21,7 @@ import type {
   ImportedRecipe,
   Member,
   OutboxEntry,
+  PrintSet,
   RecipeDetail,
   RecipeSummary,
   TrashItem,
@@ -469,6 +471,56 @@ function getRecipe(id: string): RecipeDetail | null {
   };
 }
 
+/**
+ * Recipes to print (phase F6), read in one go so a booklet of many is quick: the ones chosen
+ * that are here and not in Trash, each followed by the recipes it links to when asked.
+ */
+function printRecipes(ids: string[], withLinked: boolean): PrintSet {
+  const found = new Map<string, Recipe | null>();
+  const load = (id: string) => {
+    if (!found.has(id)) {
+      const recipe = recipeById(id);
+      found.set(id, recipe && !recipe.deletedAt && !recipe.expungedAt ? recipe : null);
+    }
+    return found.get(id) ?? null;
+  };
+  const linksOf = (id: string) => {
+    const recipe = load(id);
+    return recipe ? linkedIds(recipe.ingredients).filter((linked) => load(linked)) : [];
+  };
+  const order = printOrder(
+    ids.filter((id) => load(id)),
+    linksOf,
+    withLinked,
+  );
+  const categories = recipeCategories();
+  const cover = covers();
+  const opinions = new Map<string, RecipeOpinion[]>();
+  for (const opinion of values<RecipeOpinion>("opinion")) {
+    if (opinion.deletedAt) continue;
+    opinions.set(opinion.recipeId, [...(opinions.get(opinion.recipeId) ?? []), opinion]);
+  }
+  return {
+    members: members(),
+    recipes: order.flatMap(({ id, linkedFrom }) => {
+      const recipe = load(id);
+      if (!recipe) return [];
+      return [
+        {
+          recipe,
+          linkedFrom,
+          opinions: opinions.get(id) ?? [],
+          categories: categories.get(id) ?? [],
+          cover: cover.get(id) ?? null,
+          links: Object.fromEntries(
+            linksOf(id).map((linked) => [linked, load(linked)?.title ?? ""]),
+          ),
+        },
+      ];
+    }),
+  };
+}
+
 /** Recipes in the library (not in Trash) an import may duplicate (phase E4). */
 function duplicatesOf(query: DuplicateQuery): DuplicateMatch[] {
   return findDuplicates(
@@ -614,6 +666,9 @@ scope.onmessage = (event) => {
           break;
         case "recipeLinks":
           value = recipeLinks();
+          break;
+        case "printRecipes":
+          value = printRecipes(request.recipeIds, request.withLinked);
           break;
         case "photoHashes":
           value = [...new Set(livePhotos().map((p) => p.imageHash))];

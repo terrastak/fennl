@@ -30,6 +30,7 @@ import styles from "../recipes/recipes.module.css";
 import { SAMPLE_COUNT, sampleRecipeChanges } from "../recipes/samples";
 import { Link } from "../router";
 import { PhotoImage } from "../photos/PhotoImage";
+import { printRecipes } from "../print/booklet";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import type { SearchHit } from "../sync/search";
@@ -395,6 +396,8 @@ export function RecipesPage() {
   const nameOf = (key: string) => tree?.byKey.get(key)?.path ?? key;
   const chips = filterChips(filters, nameOf);
   const hasCategories = (tree?.nodes.length ?? 0) > 0;
+  // Printing several at once (phase F6), coming back to the list as it was.
+  const print = (ids: string[]) => printRecipes(ids, `/${window.location.search}`);
 
   return (
     <>
@@ -627,6 +630,16 @@ export function RecipesPage() {
             </button>
           </div>
           <BulkFile tree={tree} selected={chosen} editable={editable} run={run} />
+          <div>
+            <button
+              type="button"
+              className={styles.secondary}
+              disabled={chosen.length === 0}
+              onClick={() => print(chosen)}
+            >
+              Print {chosen.length === 1 ? "this recipe" : "these recipes"}
+            </button>
+          </div>
         </section>
       ) : null}
       <UndoBar done={done} failed={failed} onUndo={() => void undo()} disabled={!editable} />
@@ -656,6 +669,15 @@ export function RecipesPage() {
             {narrowing ? (
               <button type="button" className={styles.textButton} onClick={clearAll}>
                 Show all recipes
+              </button>
+            ) : null}
+            {narrowing && !selecting && shown.length > 0 && !found.pending ? (
+              <button
+                type="button"
+                className={styles.textButton}
+                onClick={() => print(shown.map((recipe) => recipe.id))}
+              >
+                {shown.length === 1 ? "Print it" : "Print these"}
               </button>
             ) : null}
           </p>

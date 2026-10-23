@@ -3,6 +3,8 @@ import { useEffect, type ComponentType } from "react";
 import { useAccountSchemeSync } from "./appearance/accountScheme";
 import { CategoriesPage } from "./categories/CategoriesPage";
 import { CookMode } from "./cook/CookMode";
+import { printBack, recipesToPrint } from "./print/booklet";
+import { PrintPage } from "./print/PrintPage";
 import { AuthLayout } from "./auth/AuthLayout";
 import { ChangePasswordScreen } from "./auth/ChangePasswordScreen";
 import { CheckEmailPage } from "./auth/CheckEmailPage";
@@ -140,6 +142,11 @@ export function App() {
   // Cook mode (phase F5): /recipes/<its ID>/cook, the whole screen, without the app's frame.
   const cook = /^\/recipes\/([0-9a-f-]{36})\/cook$/i.exec(path);
   if (cook?.[1]) return <CookMode id={cook[1]} />;
+  // Printing (phase F6), also without the app's frame: one recipe, or several handed over by the
+  // recipe list.
+  const print = /^\/recipes\/([0-9a-f-]{36})\/print$/i.exec(path);
+  if (print?.[1]) return <PrintPage ids={[print[1]]} back={`/recipes/${print[1]}`} />;
+  if (path === "/print") return <PrintPage ids={recipesToPrint()} back={printBack("/")} />;
   const recipe = /^\/recipes\/([0-9a-f-]{36})(\/edit)?$/i.exec(path);
   if (recipe?.[1]) {
     return (

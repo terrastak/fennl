@@ -2,7 +2,13 @@ import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared
 import type { SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type { ImportSource } from "../../shared/recipe";
-import type { ImportedRecipe, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
+import type {
+  ImportedRecipe,
+  PrintSet,
+  RecipeDetail,
+  RecipeSummary,
+  TrashItem,
+} from "./dbProtocol";
 import type { SearchResults } from "./search";
 import { SyncEngine } from "./engine";
 import { STARTING, type SyncStatus } from "./status";
@@ -26,6 +32,7 @@ interface Calls {
   findDuplicatePairs: { args: []; result: DuplicatePair[] };
   importedRecipes: { args: [ImportSource]; result: ImportedRecipe[] };
   recipeLinks: { args: []; result: Record<string, string[]> };
+  printRecipes: { args: [string[], boolean]; result: PrintSet };
   emptyTrash: { args: [string[] | undefined]; result: number };
   listRecipes: { args: []; result: RecipeSummary[] };
   getRecipe: { args: [string]; result: RecipeDetail | null };
@@ -166,6 +173,11 @@ export class SyncClient {
     return this.call("recipeLinks", []);
   }
 
+  /** Recipes to print, with those they link to when asked (phase F6). */
+  printRecipes(ids: string[], withLinked: boolean) {
+    return this.call("printRecipes", [ids, withLinked]);
+  }
+
   emptyTrash(recipeIds?: string[]) {
     return this.call("emptyTrash", [recipeIds]);
   }
@@ -249,6 +261,8 @@ export class SyncClient {
         return engine.importedRecipes(args[0] as ImportSource);
       case "recipeLinks":
         return engine.recipeLinks();
+      case "printRecipes":
+        return engine.printRecipes(args[0] as string[], args[1] as boolean);
       case "emptyTrash":
         return engine.emptyTrash(args[0] as string[] | undefined);
       case "getRecipe":

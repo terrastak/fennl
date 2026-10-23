@@ -8,7 +8,7 @@ import {
   type NutritionSource,
   type Recipe,
 } from "../../shared/recipe";
-import { bakeNote, panName, readPan } from "../../shared/pans";
+import { bakeNote, namesAPan, panName } from "../../shared/pans";
 import { scaledServings, showIngredient, showStep } from "../../shared/scale";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
@@ -19,6 +19,7 @@ import type { Member, RecipeDetail } from "../sync/dbProtocol";
 import { Gallery, Originals } from "../photos/Gallery";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
+import { PrintCopy } from "../print/PrintCopy";
 import { EarlierVersion } from "./EarlierVersion";
 import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
@@ -72,10 +73,6 @@ const NUTRITION_FROM: Record<NutritionSource, string> = {
   website: "From the recipe's website.",
   ai: "Read from the recipe by AI; check before relying on it.",
 };
-
-/** Words that name a pan or its size ("one 9-inch cake", "a 9x13"). */
-const namesAPan = (words: string) =>
-  readPan(words) !== null || /\d\s*(?:-|\s)?(?:inch|in\b|"|″|cm)|\d\s*[x×]\s*\d/iu.test(words);
 
 /** Lines grouped under their headings (a list may start without one). */
 function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
@@ -710,7 +707,11 @@ export function RecipePage({ id }: { id: string }) {
           <Link href={`/recipes/${id}/edit`} className={styles.secondary}>
             Edit recipe
           </Link>
+          <Link href={`/recipes/${id}/print`} className={styles.secondary}>
+            Print
+          </Link>
         </div>
+        <PrintCopy id={id} />
         {detail.waiting ? (
           <p className={styles.hint}>Changes here haven&rsquo;t synced yet.</p>
         ) : null}

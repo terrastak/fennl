@@ -579,8 +579,10 @@ export function showIngredient(text: string, options: ShowOptions, held = false)
         const r = rewrite(text, a, 1, units);
         const size = r?.text ?? text.slice(a.start, a.end);
         const count = main.low * factor;
-        let shown = factor !== 1 ? `${size} each` : size;
-        if (factor !== 1 && !Number.isInteger(Math.round(count * 1000) / 1000)) {
+        // Not twice when the recipe already says it: "2 cans (15 oz each)".
+        const saysEach = /^[\s.,]*each\b/iu.test(text.slice(a.end));
+        let shown = factor !== 1 && !saysEach ? `${size} each` : size;
+        if (factor !== 1 && !saysEach && !Number.isInteger(Math.round(count * 1000) / 1000)) {
           // In the size's own unit, so the two can be compared: "16 oz each, 24 oz in all".
           const all = rewrite(text, { ...a, high: null }, count, units, false);
           total = `${all?.text ?? text.slice(a.start, a.end)} in all`;

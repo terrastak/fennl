@@ -111,6 +111,9 @@ export function authOptions(settings: AuthSettings) {
         // Nutrition hidden everywhere without deleting it (phase F4). Only
         // PUT /api/account/nutrition changes it.
         hideNutrition: { type: "boolean", required: false, input: false },
+        // What printouts hold (phase F6), as JSON (shared/print.ts). Only PUT /api/account/print
+        // changes it.
+        printOptions: { type: "string", required: false, input: false },
         // Set when an admin gives a temporary password (phase B7): the app asks for a new one
         // before anything else, and household routes refuse until it's changed.
         mustChangePassword: {
