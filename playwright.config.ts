@@ -6,6 +6,25 @@ const port = 4173;
 const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 const launchOptions = executablePath ? { executablePath } : {};
 
+const PHONE_TESTS = [
+  "accessibility",
+  "auth",
+  "cook",
+  "devices",
+  "discover",
+  "editor",
+  "feedback",
+  "filters",
+  "import",
+  "navigation",
+  "photos",
+  "print",
+  "recipes",
+  "scan",
+  "scanCamera",
+  "smoke",
+].map((name) => `${name}.spec.ts`);
+
 export default defineConfig({
   testDir: "e2e",
   forbidOnly: !!process.env.CI,
@@ -29,6 +48,11 @@ export default defineConfig({
     },
     {
       name: "phone",
+      // Only the tests where a phone shows or does something different from a computer: the
+      // bottom tabs and top bar, the camera and touch, layouts that fold to one column, and the
+      // pages people use in the kitchen. The rest test the same thing twice (owner's request
+      // 2026-10-23: faster checks). Add a test file here when it covers a phone-only layout.
+      testMatch: PHONE_TESTS,
       use: { ...devices["Pixel 7"], launchOptions, storageState: SIGNED_IN_STATE },
       dependencies: ["setup"],
     },
