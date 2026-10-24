@@ -5,7 +5,6 @@ import { PASTED_TEXT_CHARS } from "../../shared/pastedText";
 import { addBlockedText } from "../limits/limitText";
 import { navigate } from "../navigation";
 import { PageHeader } from "../pages/PageHeader";
-import pages from "../pages/pages.module.css";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
 import { PdfImport } from "../pdf/PdfImport";
@@ -351,15 +350,6 @@ export function ImportPage() {
           </p>
         </section>
       ) : null}
-
-      <section className={pages.card} aria-labelledby="import-soon-title">
-        <span className={pages.soon}>Coming soon</span>
-        <h2 id="import-soon-title">What you&rsquo;ll also be able to import</h2>
-        <ul className={pages.list}>
-          <li>Recipes from websites in one click, with the Fennl extension for Chrome</li>
-          <li>Your whole Paprika library, photos included</li>
-        </ul>
-      </section>
     </>
   );
 }

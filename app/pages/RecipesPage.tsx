@@ -716,8 +716,7 @@ export function RecipesPage() {
         />
       )}
       <p className={`${styles.hint} ${styles.footnote}`}>
-        Your recipes are stored in your account. This browser keeps a copy for speed. Deleted
-        recipes stay in <Link href="/trash">Trash</Link> for 30 days.
+        Deleted recipes stay in <Link href="/trash">Trash</Link> for 30 days.
       </p>
     </>
   );

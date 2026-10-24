@@ -34,10 +34,6 @@ export function AuthLayout({ path, title, children }: AuthLayoutProps) {
       </header>
       <main id="main" ref={mainRef} tabIndex={-1} className={styles.main}>
         <div className={styles.card}>{children}</div>
-        <p className={styles.note}>
-          Your recipes are stored in your Fennl account. This browser keeps a temporary copy for
-          speed.
-        </p>
       </main>
     </div>
   );

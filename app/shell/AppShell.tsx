@@ -146,7 +146,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
           aria-current={path === FEEDBACK_PATH ? "page" : undefined}
         >
           <FeedbackIcon />
-          Feedback
+          <span className={styles.topBarLabel}>Feedback</span>
         </Link>
       </header>
 
