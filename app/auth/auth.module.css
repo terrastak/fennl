@@ -238,14 +238,6 @@
   color: var(--color-text-muted);
 }
 
-.note {
-  margin: var(--space-8) 0 0;
-  text-align: center;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  max-width: 28rem;
-}
-
 .deviceList {
   display: grid;
   gap: var(--space-3);

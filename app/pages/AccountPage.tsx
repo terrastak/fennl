@@ -73,9 +73,6 @@ export function AccountPage() {
             <dd>{methods ? methods.join(", ") : "…"}</dd>
           </div>
         </dl>
-        <p>
-          Your recipes are stored in your account. This browser keeps a temporary copy for speed.
-        </p>
         <button type="button" className={styles.button} onClick={signOut} disabled={busy}>
           {busy ? "Signing out…" : "Sign out"}
         </button>

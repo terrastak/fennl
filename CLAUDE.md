@@ -40,7 +40,7 @@ Stripe is the billing engine and Fennl is the merchant of record. A merchant-of-
 
 Browsers can evict local storage (OPFS, IndexedDB) without the user doing anything wrong. That is unacceptable for user recipes, so no data may exist only in the browser longer than a short sync window. Losing the local copy must cost the user nothing but a re-download.
 
-UI copy should say: recipes are stored in your account, and the browser keeps a temporary copy for speed. Never imply data lives in the browser.
+UI copy should say: recipes are stored in your account, and the browser keeps a temporary copy for speed. Never imply data lives in the browser. Say it in full only once (Settings › This browser's copy) and where it reassures at that moment (switching devices, keeping photos), not as a note on every page: the "Saved to cloud" status in the app's frame says it everywhere (owner's choice 2026-10-23).
 
 ## Tiers
 
