@@ -360,7 +360,7 @@ Other current thinking:
 
 New Claude Code threads can't see earlier conversations; this section carries what they established. Keep it current.
 
-**Status (2026-10-23).** Stages A to F are built: accounts, the admin console, sync, photos, every importer, scaling and units, pan sizes, linked recipes, nutrition, cook mode and printing (F6). The owner is now **using the app on their own** before households (Stage G) and other beta users (Stage H). **G and H wait until the owner says they like how the app works for their own use.** Problems and changes found in use start in new threads: fix them as small, separate changes, without starting G or H.
+**Status (2026-10-24).** Stages A to F are built and live: accounts, the admin console, sync, photos, every importer, scaling and units, pan sizes, linked recipes, nutrition, cook mode and printing (F6). The owner is now **using the app on their own** before households (Stage G) and other beta users (Stage H). **G and H wait until the owner says they like how the app works for their own use.** Problems and changes found in use start in new threads: fix them as small, separate changes, without starting G or H.
 
 **How the owner (Brian) likes to work:**
 
@@ -369,6 +369,8 @@ New Claude Code threads can't see earlier conversations; this section carries wh
 - Each change is a draft pull request on the session's branch; the owner merges it, sometimes before its checks finish, so check `main`'s CI after a merge and fix anything red. Changes to documents only go in their own PR (CI then checks formatting only).
 - **Always ask before any paid AI run** (the model comparison and anything else that spends on the AI).
 - Real phones, Safari and printers are the owner's to check; say exactly what to check ("You check" in `spec.md`).
+- **Waiting on tests frustrates the owner (2026-10-23).** In a session, run only what a change touches: format, lint and typecheck, the app and shared unit tests (`npx vitest run --project node`, seconds), the server test files changed, and the browser test files changed (`npx playwright test e2e/<file>`); leave the full set to CI. CI runs the quick checks, the unit and server tests and the browser tests side by side, the browser tests split across 4 machines, about 5 to 8 minutes in all (`.github/workflows/ci.yml`). Browser tests run as a computer, and as a phone only for the files listed in `PHONE_TESTS` (`playwright.config.ts`); add a file there when it covers a phone-only layout.
+- The owner often merges before CI finishes. After a merge, reset the session's branch from `main`, check `main`'s run (it also deploys) and fix anything red with a new PR.
 - Outstanding owner tasks (2026-10-23): delete the old branch `claude/adoring-maxwell-znsm3g`; ask GitHub Support to clear cached pull-request copies of the removed files; re-clone the repository; remove the 4 personal photos in Paprika; check cook mode on real phones (screen stays on, in the browser and from the Home Screen); check printing in Safari and on a real printer, including recipe cards. The privacy policy (H2) must say photos go to the AI company for arranging (D4) and reading.
 
 **What the owner wants from the product** (their words, from phases F1 to F6):
