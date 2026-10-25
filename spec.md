@@ -1603,20 +1603,36 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | C9 | Done 2026-10-08 (merged; live; the owner deleted on one device and put back on another, on the preview) |
 | C10 | Done 2026-10-08 (merged; live) |
 | C11 | Done 2026-10-08 (merged; live; the owner checked the limit of 5 on the preview) |
-| C12 | Approved 2026-10-08; built, waiting for review |
+| C12 | Done 2026-10-08 (merged as #35) |
 | C13a | Done 2026-10-20 (merged) |
 | C13b | Done 2026-10-20 (merged) |
 | C13c | Done 2026-10-20 (merged). C13 is complete |
 | C14 | Done 2026-10-20 (merged) |
-| E15 | Built 2026-10-20, waiting for review |
-| E13 | Done 2026-10-22 (merged) |
-| E18 | Done 2026-10-22 (merged) |
+| D1 | Done 2026-10-08 (merged as #37) |
+| D2 | Done 2026-10-09 (merged as #38) |
+| D3 | Done 2026-10-09 (merged as #39) |
 | D4 | Done 2026-10-22 (merged as #77) |
-| E14 | Done 2026-10-22 (owner's call after two rounds: method lines exactly right 94% on photos, pages, screenshots and PDFs, 97% on text and documents, 97% on web pages; known issues written down) |
+| E1 | Done 2026-10-10 (merged as #42) |
+| E2 | Done 2026-10-11 (merged as #43) |
+| E3 | Done 2026-10-11 (merged as #45) |
+| E4 | Done 2026-10-11 (merged as #46) |
+| E5 | Done 2026-10-12 (merged as #47) |
+| E6 | Done 2026-10-12 (merged as #48) |
+| E7 | Done 2026-10-12 (merged as #53) |
+| E8 | Done 2026-10-12 (merged as #54) |
+| E9 | Done 2026-10-19 (merged as #61) |
+| E10 | Done 2026-10-21 (merged as #68, #69 and #70) |
+| E11 | Done 2026-10-21 (merged as #71) |
+| E12 | Done 2026-10-21 (merged as #72) |
+| E13 | Done 2026-10-22 (merged as #76) |
+| E14 | Done 2026-10-22 (merged as #80 and #81; owner's call after two rounds: method lines exactly right 94% on photos, pages, screenshots and PDFs, 97% on text and documents, 97% on web pages; known issues written down) |
+| E15 | Done 2026-10-19 (merged as #66) |
+| E18 | Done 2026-10-22 (merged as #76) |
 | F1 | Done 2026-10-23 (merged as #85) |
 | F2 | Done 2026-10-23 (merged as #86) |
 | F3 | Done 2026-10-23 (merged as #87) |
 | F4 | Done 2026-10-23 (merged as #88) |
-| F5 | Approved 2026-10-23; built, waiting for review |
-| U1 | Built 2026-10-24, waiting for review |
+| F5 | Done 2026-10-23 (merged as #90; live). Still the owner's to check on real phones: the screen stays on, in the browser and from the Home Screen |
+| F6 | Done 2026-10-23 (merged as #91; live). Still the owner's to check: Safari, and a real printer with recipe cards |
+| U1 | Done 2026-10-25 (merged as #96; live). More recipe-page changes to come, one step at a time |
 | All others | Not started |
