@@ -4,7 +4,8 @@ import { adjust, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F1: scaling a recipe and showing it in other units. Owner's choice 2026-10-24: the
-// ingredients show "Serves − 4 +"; halving, doubling, another pan and units are under "Adjust".
+// ingredients show "Serves − 4 +"; halving, doubling, another pan and units are under "Adjust",
+// beside it (2026-10-25).
 
 test("Double a recipe and show it in metric; it stays that way", async ({
   page,
@@ -34,7 +35,7 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(page.getByText("Doubled: changed amounts are highlighted.")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "4 cups" })).toHaveCount(2);
   await expect(ingredients.locator("mark", { hasText: "1/4 cup" })).toBeVisible();
-  await expect(page.getByRole("definition").filter({ hasText: "about 24 pancakes" })).toBeVisible();
+  await expect(ingredients.getByText("Makes about 24 pancakes")).toBeVisible();
   const serves = ingredients.getByRole("group", { name: "Serves" });
   await expect(serves.locator("output")).toHaveText("8");
 
@@ -84,4 +85,34 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   });
   await expect(page.locator("mark")).toHaveCount(0);
   await expect(ingredients.getByText("2 cups all-purpose flour")).toBeVisible();
+});
+
+test("A recipe that makes things says Makes, once, beside Adjust", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  await page.getByRole("button", { name: /sample recipes to try/ }).click();
+  await expect(recipeCard(page, "Buttermilk Pancakes")).toBeVisible();
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  await page.getByLabel("Serves").fill("14");
+  await page.getByLabel("Makes").fill("14 pancakes");
+  await expect(page.getByLabel("Makes")).toHaveValue("14 pancakes");
+  await page.getByRole("button", { name: "Done" }).first().click();
+
+  const ingredients = page.getByRole("region", { name: "Ingredients" });
+  const makes = ingredients.getByRole("group", { name: "Makes" });
+  await expect(makes).toContainText("14");
+  await expect(makes).toContainText("pancakes");
+  await expect(ingredients.getByRole("group", { name: "Serves" })).toHaveCount(0);
+  // Said once: not in the details under the title.
+  await expect(page.getByRole("term").filter({ hasText: /^(Serves|Makes)$/ })).toHaveCount(0);
+  await makes.getByRole("button", { name: "One more" }).click();
+  await expect(makes.locator("output")).toHaveText("15");
+  await adjust(page, (panel) => panel.getByRole("button", { name: "As written" }).click());
+  await expect(makes.locator("output")).toHaveText("14");
 });

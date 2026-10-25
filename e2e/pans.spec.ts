@@ -29,8 +29,10 @@ test("Scale a cake for a different pan, with a bake-time suggestion", async ({
   ).toBeVisible();
   const ingredients = page.getByRole("region", { name: "Ingredients" });
   await expect(ingredients.locator("mark", { hasText: "1 3/4 cups" })).toBeVisible();
-  // Prep, Cook, Serves and Pan, each said once (owner's choice 2026-10-25).
-  await expect(page.getByRole("definition").filter({ hasText: "18" })).toBeVisible();
+  // Serves with the ingredients, the pan with the details: each said once (owner's choices 2026-10-25).
+  await expect(ingredients.getByRole("group", { name: "Serves" }).locator("output")).toHaveText(
+    "18",
+  );
   await expect(page.getByRole("definition").filter({ hasText: "Your 9×13" })).toBeVisible();
 
   // The suggestion sits under the step that gives the bake time, marked as Fennl's.

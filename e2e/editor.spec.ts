@@ -148,8 +148,10 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await expect(method.getByRole("heading", { name: "Serving" })).toBeVisible();
   await expect(method.locator("ol").last()).toHaveAttribute("start", "3");
   await expect(page.getByText("2 hr 20 min")).toBeVisible();
-  // "Serves" over "6", in the row of details.
-  await expect(page.getByRole("definition").filter({ hasText: /^6$/ })).toBeVisible();
+  // "Serves 6", said once, with the ingredients (owner's choice 2026-10-25).
+  await expect(
+    page.getByRole("region", { name: "Ingredients" }).getByRole("group", { name: "Serves" }),
+  ).toContainText("6");
   await expect(page.getByText("Easy")).toBeVisible();
   await expect(page.getByText("Better the next day.")).toBeVisible();
 });

@@ -8,8 +8,8 @@ import {
   type NutritionSource,
   type Recipe,
 } from "../../shared/recipe";
-import { bakeNote, namesAPan, panName } from "../../shared/pans";
-import { scaledServings, showIngredient, showStep } from "../../shared/scale";
+import { bakeNote, panName } from "../../shared/pans";
+import { showIngredient, showStep } from "../../shared/scale";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
@@ -25,7 +25,7 @@ import { EarlierVersion } from "./EarlierVersion";
 import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
 import { SubRecipe } from "./SubRecipe";
-import { Adjust, ScaleStatus, ScaledLine, ServesStepper, ShownText } from "./ScaleControls";
+import { ScaleStatus, ScaledLine, ServingsBar, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
 import {
@@ -34,7 +34,6 @@ import {
   lastMade,
   localDay,
   namesText,
-  servingsFacts,
   sourceCredit,
   stars,
   timeText,
@@ -121,18 +120,13 @@ function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
 }
 
 function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
-  const scaled = scaledServings(recipe.servings, scaling.factor);
-  // Scaled for another pan: words naming the recipe's pan ("one 9-inch cake") give way to yours.
-  const yourPan =
-    scaling.pans && recipe.servings.yield && namesAPan(recipe.servings.yield)
-      ? panName(scaling.pans.yours)
-      : null;
-  const servings = yourPan ? { ...scaled, yield: null } : scaled;
+  // How many it serves or makes is said once, with the ingredients (owner's choice 2026-10-25);
+  // scaled for another pan, the pan is said here.
+  const yourPan = scaling.pans ? panName(scaling.pans.yours) : null;
   const facts = [
     ["Prep", timeText(recipe.times.prep)],
     ["Cook", timeText(recipe.times.cook)],
     ["Total", timeText(recipe.times.total)],
-    ...servingsFacts(servings).map(({ label, value }) => [label, value]),
     ["Pan", yourPan ? `Your ${yourPan}` : null],
     [
       "Difficulty",
@@ -149,7 +143,7 @@ function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
         <div key={label}>
           <dt>{label}</dt>
           <dd>
-            {["Serves", "Makes", "Pan"].includes(label) && servings !== recipe.servings ? (
+            {label === "Pan" ? (
               <ShownText line={{ pieces: [{ text: value, changed: true }], changed: true }} />
             ) : (
               value
@@ -371,18 +365,15 @@ function Ingredients({
   recipe: Recipe;
   scaling: Scaling;
   linked: RecipeDetail["linked"];
-  /** With "Serves − 4 +" and "Adjust" (not in Trash). */
+  /** With "Serves − 4 +" and "Adjust" working (not in Trash). */
   adjustable?: boolean;
 }) {
   return (
     <section className={styles.panel} aria-labelledby="ingredients-title">
-      <div className={styles.panelHead}>
-        <h2 id="ingredients-title">Ingredients</h2>
-        {adjustable ? <Adjust recipe={recipe} scaling={scaling} /> : null}
-      </div>
+      <h2 id="ingredients-title">Ingredients</h2>
+      <ServingsBar recipe={recipe} scaling={scaling} adjustable={adjustable} />
       {adjustable ? (
         <>
-          <ServesStepper recipe={recipe} scaling={scaling} />
           <ScaleStatus
             note={
               scaling.active
