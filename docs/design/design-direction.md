@@ -45,7 +45,7 @@ Every scheme defines the same set of color tokens. `app/styles/tokens.test.ts` c
 - **Desktop:** a left sidebar (logo, "Add a recipe", navigation, categories, a "saved to your account" note), with content to the right.
 - **Phone:** a full-width photo at the top, content in a sheet that slides over it, and a "Start cooking" button plus bottom tab bar (Recipes, Search, Import, You).
 - **Recipe cards:** photo on top; a family card's photo is the card itself. Title in Commissioner; the person's name in Caveat, or the category and time.
-- **Recipe page:** photo with title block; ingredients in a card on the left, numbered method on the right; scale control (½×, 1×, 2×).
+- **Recipe page** (reworked 2026-10-24, owner's choices; `spec.md` U1): on a computer the cover photo is framed beside the title block (categories small above the title, the title, the person's name in Caveat, Prep · Cook · Makes between two rules, **Start cooking** and **Made it today**), over Fennl's own painting of the photo in brush strokes, softened and fading out with no edge; on a phone the photo fills the top and fades into the page colour, with the title over the fade and no painting. "All 4 photos" on the cover when there are more. Ingredients in a card on the left with **Serves − 4 +** and **Adjust** (amount, pan, units), numbered method on the right.
 - **Import review:** the original photo on the left (kept with the recipe); the draft on the right, with uncertain items highlighted in the warm color and a short note; nothing is saved until the user chooses.
 - **Settings › Appearance:** color scheme cards with a preview, a Light/Dark/Match-my-device switch, and text size.
 

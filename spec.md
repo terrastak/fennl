@@ -1290,6 +1290,22 @@ Import quality is the core of the product, so this stage starts by building a wa
   - Tested with Playwright, Chrome making real PDFs read back with pdf.js: letter pages and 4×6 cards with no text off the paper, no app buttons or menus, the linked recipe on its own page, the choices kept with the account after the device's copy is cleared, Ctrl+P printing only the recipe, and the QR address sending a signed-out person to sign in and showing someone outside the household "This recipe isn't here". Safari, a real printer and the card sizes on a real printer are the owner's to check (You check).
   - Fixed on the way (F1): a package size that already said "each" ("2 cans (15 oz each)") said it twice once scaled.
 
+## Changes found in use (owner using the app, from 2026-10-24)
+
+Small changes the owner asked for while using the app before Stages G and H. Mockups on the owner's design canvas ("Fennl recipe screens").
+
+### U1. A polished recipe page (owner's choices 2026-10-24)
+- **Goal**: The recipe page looks like a recipe app, not a database: the food first, then the recipe, with fewer controls in view.
+- **Owner's choices**:
+  1. **Computer:** the cover photo framed (square, rounded, a soft shadow) beside the title block: categories small above the title, the title, the person's name in handwriting, then Prep, Cook and Makes in one row between two rules, then **Start cooking** and **Made it today**. Edit and Print sit quietly at the top beside **All recipes**.
+  2. **Behind it, a painting of the dish, not the photo blurred**: Fennl paints the cover in loose brush strokes from the photo's small copy, on the device and with no AI (bold strokes; each takes the photo's colour where it lands and follows its edges), then shows it softened (blurred about 26 px) behind the top of the page, fading out gently so there's no line where it ends. Every photo gets its own painting, and the same photo always the same one. Earlier ideas set aside: a blur of the photo itself, a blur of another of the recipe's photos (colours that don't match the cover), colour washes and textures ("a colour layered on a fake texture"), and blurred abstract shapes ("doesn't feel like food").
+  3. **Phone:** no painting ("too busy" with the photo already filling the top): the cover fills the top of the screen and fades into the page colour, with the title over the fade; **All recipes**, Edit and Print are small pills on the photo.
+  4. **"All 4 photos"** on the cover, in its corner on a computer and above the fade on a phone, whenever a recipe has more than one photo; it opens the full-screen viewer, which also says when Fennl arranged them. The strip of small photos under the cover is gone.
+  5. **Simpler scaling (F1):** the ingredients show only **Serves − 4 +** and **Adjust**; Adjust opens a small panel (a sheet from the bottom on a phone) with the amount (½×, as written, 2×, 3×, any other), another pan (F2) and the units. When the recipe is shown changed, a line under Serves says so, with **Back to as written**.
+  6. Step photos beside their method steps: not now. The AI already names a step for each step photo (D4) but how often it's right is unmeasured; if built later, only photos it's sure of, movable by hand, measured on real recipes first.
+- **You check**: on the preview, a recipe with several photos and one without, on a computer and a phone, in light and dark mode: the painting behind the top on the computer with no line where it fades; the photo fading into the page on the phone; "All 4 photos"; Serves − + and Adjust.
+- **Built (2026-10-24)**: `app/photos/painting.ts` (painting on a canvas from the photo's small copy, kept for the visit) and `app/photos/brushStrokes.ts` (the strokes, unit-tested: same photo same painting, the photo's own colours, strokes along its edges); `app/recipes/RecipePage.tsx`, `app/photos/Gallery.tsx`, `app/recipes/ScaleControls.tsx` (`ServesStepper`, `Adjust`, `ScaleStatus`); how much of the painting shows is a token (`--photo-painting-opacity`: 0.5, 0.38 in dark mode).
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1602,4 +1618,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | F3 | Done 2026-10-23 (merged as #87) |
 | F4 | Done 2026-10-23 (merged as #88) |
 | F5 | Approved 2026-10-23; built, waiting for review |
+| U1 | Built 2026-10-24, waiting for review |
 | All others | Not started |

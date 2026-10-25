@@ -4,9 +4,10 @@ import type { RecipePhoto } from "../../shared/recipe";
 import { PhotoImage } from "./PhotoImage";
 import styles from "./gallery.module.css";
 
-// A recipe's photos on its page (phase D2): the cover large at the top, the others as small
-// copies under it. Any of them opens full screen, where a photographed cookbook page can be read:
-// pinch to zoom on a phone, or "Actual size" to scroll around it.
+// A recipe's photos on its page (phase D2; owner's choices 2026-10-24): the cover, framed on a
+// computer and filling the top of the screen on a phone, with "All 4 photos" on it when there are
+// more. Any of them opens full screen, where a photographed cookbook page can be read: pinch to
+// zoom on a phone, or "Actual size" to scroll around it.
 
 export function Gallery({
   photos,
@@ -22,7 +23,6 @@ export function Gallery({
   const [open, setOpen] = useState<number | null>(null);
   const cover = photos[0];
   if (!cover) return null;
-  const rest = photos.slice(1);
   return (
     <section className={styles.gallery} aria-label="Photos">
       <button
@@ -40,31 +40,25 @@ export function Gallery({
           className={styles.cover}
         />
       </button>
-      {rest.length > 0 ? (
-        <ul className={styles.strip}>
-          {rest.map((photo, i) => (
-            <li key={photo.id}>
-              <button
-                type="button"
-                className={styles.thumbButton}
-                onClick={() => setOpen(i + 1)}
-                aria-label={`Open photo ${i + 2} of ${photos.length} full screen`}
-              >
-                <PhotoImage
-                  hash={photo.imageHash}
-                  size="thumb"
-                  width={photo.width}
-                  height={photo.height}
-                  alt=""
-                  className={styles.thumb}
-                />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      {arrangedByFennl(photos) ? (
-        <p className={styles.arranged}>Arranged by Fennl. Change the order in the editor.</p>
+      {photos.length > 1 ? (
+        <button type="button" className={styles.allPhotos} onClick={() => setOpen(0)}>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="3" y="5" width="18" height="14" rx="2" />
+            <circle cx="9" cy="10" r="1.5" />
+            <path d="m21 16-5-5-8 8" />
+          </svg>
+          All {photos.length} photos
+        </button>
       ) : null}
       {open !== null ? (
         <Viewer
@@ -72,6 +66,7 @@ export function Gallery({
           index={open}
           title={title}
           addedBy={addedBy}
+          arranged={arrangedByFennl(photos)}
           onIndex={setOpen}
           onClose={() => setOpen(null)}
         />
@@ -133,6 +128,7 @@ function Viewer({
   index,
   title,
   addedBy,
+  arranged = false,
   onIndex,
   onClose,
 }: {
@@ -140,6 +136,8 @@ function Viewer({
   index: number;
   title: string;
   addedBy: (photo: RecipePhoto) => string | null;
+  /** Put in order by Fennl (phase D4), which the viewer says. */
+  arranged?: boolean;
   onIndex: (index: number) => void;
   onClose: () => void;
 }) {
@@ -173,6 +171,7 @@ function Viewer({
         <p className={styles.viewerText}>
           {photos.length > 1 ? `${index + 1} of ${photos.length}` : null}
           {by ? `${photos.length > 1 ? " · " : ""}Added by ${by}` : null}
+          {arranged ? " · Arranged by Fennl. Change the order in the editor." : null}
         </p>
         <div className={styles.viewerButtons}>
           <button

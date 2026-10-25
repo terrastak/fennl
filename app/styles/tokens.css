@@ -79,6 +79,10 @@
   --print-muted: #555555;
   --print-subtle: #767676;
   --print-rule: #b5b5b5;
+
+  /* Fennl's painting of a recipe's photo behind its page (owner's choice 2026-10-24): how much
+     of it shows. A little less in dark mode, where colours glow more. */
+  --photo-painting-opacity: 0.5;
 }
 
 /* ---------- Harbor (default): navy and coral on warm paper ---------- */
@@ -139,6 +143,7 @@
 /* ---------- Dark mode, chosen explicitly ---------- */
 :root[data-mode="dark"] {
   color-scheme: dark;
+  --photo-painting-opacity: 0.38;
   --color-bg: #111412;
   --color-sidebar: #141815;
   --color-surface: #171b18;
@@ -165,6 +170,7 @@
 
 :root[data-scheme="heirloom"][data-mode="dark"] {
   color-scheme: dark;
+  --photo-painting-opacity: 0.38;
   --color-bg: #1a1613;
   --color-sidebar: #1d1915;
   --color-surface: #231e1a;
@@ -194,6 +200,7 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-mode="light"]) {
     color-scheme: dark;
+    --photo-painting-opacity: 0.38;
     --color-bg: #111412;
     --color-sidebar: #141815;
     --color-surface: #171b18;
@@ -220,6 +227,7 @@
 
   :root[data-scheme="heirloom"]:not([data-mode="light"]) {
     color-scheme: dark;
+    --photo-painting-opacity: 0.38;
     --color-bg: #1a1613;
     --color-sidebar: #1d1915;
     --color-surface: #231e1a;

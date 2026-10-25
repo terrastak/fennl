@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { recipeCard, syncStatus } from "./recipes";
+import { adjust, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F2: scaling a recipe for another pan, and Fennl's bake-time suggestion.
@@ -17,12 +17,13 @@ test("Scale a cake for a different pan, with a bake-time suggestion", async ({
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
 
-  // The recipe's pan, read from the method.
-  const pans = page.getByRole("group", { name: "Pan" });
-  await expect(pans).toContainText("Recipe’s pan: 9″ round, from the method");
+  // The recipe's pan, read from the method, under "Adjust".
   await expect(page.getByRole("note")).toHaveCount(0);
-
-  await pans.getByLabel("Your pan").selectOption({ label: "9×13" });
+  await adjust(page, async (panel) => {
+    const pans = panel.getByRole("group", { name: "Pan" });
+    await expect(pans).toContainText("Recipe’s pan: 9″ round, from the method");
+    await pans.getByLabel("Your pan").selectOption({ label: "9×13" });
+  });
   await expect(
     page.getByText("Scaled for your 9×13 (about 1¾×): changed amounts are highlighted."),
   ).toBeVisible();
@@ -43,12 +44,20 @@ test("Scale a cake for a different pan, with a bake-time suggestion", async ({
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   // The recipe's pan was wrong: correct it.
-  await pans.getByRole("button", { name: "Change" }).click();
-  await pans.getByLabel("Recipe’s pan").selectOption({ label: "8″ round" });
+  await adjust(page, async (panel) => {
+    const pans = panel.getByRole("group", { name: "Pan" });
+    await pans.getByRole("button", { name: "Change" }).click();
+    await pans.getByLabel("Recipe’s pan").selectOption({ label: "8″ round" });
+  });
   await expect(page.getByText("Scaled for your 9×13 (about 2⅓×)")).toBeVisible();
 
   // A loaf as muffins: no minutes, only what to watch for.
-  await pans.getByLabel("Your pan").selectOption({ label: "12 muffins" });
+  await adjust(page, (panel) =>
+    panel
+      .getByRole("group", { name: "Pan" })
+      .getByLabel("Your pan")
+      .selectOption({ label: "12 muffins" }),
+  );
   await expect(bake.getByRole("note")).toContainText("Start checking early and use a toothpick.");
   await expect(bake.getByRole("note")).not.toContainText("minutes");
 
@@ -57,7 +66,7 @@ test("Scale a cake for a different pan, with a bake-time suggestion", async ({
   await page.reload();
   await expect(page.getByText(/Scaled for your 12 muffins/)).toBeVisible();
 
-  await page.getByRole("button", { name: "As written", exact: true }).click();
+  await page.getByRole("button", { name: "Back to as written" }).click();
   await expect(page.locator("mark")).toHaveCount(0);
   await expect(page.getByRole("note")).toHaveCount(0);
 });

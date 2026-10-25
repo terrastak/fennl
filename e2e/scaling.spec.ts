@@ -1,9 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { recipeCard, syncStatus } from "./recipes";
+import { adjust, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
-// Phase F1: scaling a recipe and showing it in other units.
+// Phase F1: scaling a recipe and showing it in other units. Owner's choice 2026-10-24: the
+// ingredients show "Serves − 4 +"; halving, doubling, another pan and units are under "Adjust".
 
 test("Double a recipe and show it in metric; it stays that way", async ({
   page,
@@ -22,13 +23,20 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(ingredients.getByText("2 cups all-purpose flour")).toBeVisible();
   await expect(page.locator("mark")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "2×" }).click();
-  await expect(page.getByRole("button", { name: "2×" })).toHaveAttribute("aria-pressed", "true");
+  await adjust(page, async (panel) => {
+    await panel.getByRole("button", { name: "2×" }).click();
+    await expect(panel.getByRole("button", { name: "2×" })).toHaveAttribute("aria-pressed", "true");
+    const axe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
+      .analyze();
+    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  });
   await expect(page.getByText("Doubled: changed amounts are highlighted.")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "4 cups" })).toHaveCount(2);
   await expect(ingredients.locator("mark", { hasText: "1/4 cup" })).toBeVisible();
   await expect(page.getByText("Serves 8 · about 24 pancakes")).toBeVisible();
-  await expect(page.getByRole("group", { name: "Makes" }).locator("output")).toHaveText("8");
+  const serves = ingredients.getByRole("group", { name: "Serves" });
+  await expect(serves.locator("output")).toHaveText("8");
 
   // Tapping a line shows the original and the working.
   const flour = ingredients.getByRole("button", { name: /4 cups all-purpose flour/ });
@@ -42,7 +50,9 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(ingredients.getByText("kept as written")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "4 cups" })).toHaveCount(1); // buttermilk
 
-  await page.getByLabel("Units", { exact: true }).selectOption({ label: "Metric" });
+  await adjust(page, (panel) =>
+    panel.getByLabel("Units", { exact: true }).selectOption({ label: "Metric" }),
+  );
   await expect(page.getByText("Doubled and shown in metric:")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "950 ml" })).toBeVisible();
   // Spoons stay spoons.
@@ -59,12 +69,19 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.reload();
   await expect(page.getByText("Doubled and shown in metric:")).toBeVisible();
-  await expect(page.getByLabel("Units", { exact: true })).toHaveValue("metric");
   await expect(ingredients.getByText("kept as written")).toBeVisible();
 
-  // Back to the recipe as written.
-  await page.getByRole("button", { name: "As written", exact: true }).click();
-  await page.getByLabel("Units", { exact: true }).selectOption({ label: "As written" });
+  // One more serving from "Serves": about 2¼×.
+  await serves.getByRole("button", { name: "One more" }).click();
+  await expect(serves.locator("output")).toHaveText("9");
+
+  // Back to the recipe's own amounts, then its own units.
+  await page.getByRole("button", { name: "Back to as written" }).click();
+  await expect(serves.locator("output")).toHaveText("4");
+  await adjust(page, async (panel) => {
+    await expect(panel.getByLabel("Units", { exact: true })).toHaveValue("metric");
+    await panel.getByLabel("Units", { exact: true }).selectOption({ label: "As written" });
+  });
   await expect(page.locator("mark")).toHaveCount(0);
   await expect(ingredients.getByText("2 cups all-purpose flour")).toBeVisible();
 });
