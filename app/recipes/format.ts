@@ -3,7 +3,14 @@ import { TRASH_DAYS, type RecipeMade } from "../../shared/recipe";
 // How recipe details read on screen (phase C5). Those the export shares are in
 // shared/recipeText.ts.
 
-export { minutesText, servingsText, sourceLine, timeText } from "../../shared/recipeText";
+export {
+  minutesText,
+  servingsFacts,
+  servingsText,
+  sourceCredit,
+  sourceLine,
+  timeText,
+} from "../../shared/recipeText";
 
 /** "2026-10-03" → "Oct 3" this year, "Oct 3, 2025" otherwise. */
 export function dayText(day: string, today = new Date()): string {

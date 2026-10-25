@@ -1306,6 +1306,19 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
 - **You check**: on the preview, a recipe with several photos and one without, on a computer and a phone, in light and dark mode: the painting behind the top on the computer with no line where it fades; the photo fading into the page on the phone; "All 4 photos"; Serves − + and Adjust.
 - **Built (2026-10-24)**: `app/photos/painting.ts` (painting on a canvas from the photo's small copy, kept for the visit) and `app/photos/brushStrokes.ts` (the strokes, unit-tested: same photo same painting, the photo's own colours, strokes along its edges); `app/recipes/RecipePage.tsx`, `app/photos/Gallery.tsx`, `app/recipes/ScaleControls.tsx` (`ServesStepper`, `Adjust`, `ScaleStatus`); how much of the painting shows is a token (`--photo-painting-opacity`: 0.5, 0.38 in dark mode).
 
+### U2. More of the recipe on the first screen (owner's choices 2026-10-25)
+- **Goal**: Open a recipe and see it, not just its photo: as much as fits on the first screen, with less scrolling.
+- **Owner's choices**:
+  1. **Layout A** (chosen from two mockups, 2026-10-25): on a computer the photo is smaller, framed beside the title block, so the ingredients and the method start on the first screen. (B, the photo and ingredients in a left column with the method beside the title, was set aside.)
+  2. **One line under the title**: your stars and heart, set right there (choosing your star again takes the rating back), the household's stars and favorites, "Added by" in a shared household, and where the recipe came from, linked to its page. The big "Yours" section is gone; your signed note stays at the bottom, as just **Add your note** until you write one.
+  3. **The intro**: up to five lines, then **More**; a short intro or none takes no extra room.
+  4. **The details**: one row, each said once: Prep, Cook, Total, then Serves and Makes only when they differ ("Makes 14", not "Serves 14 · Makes 14"); scaled for another pan, "Pan: Your 9×13".
+  5. **Made it**: one button, with "Last made Oct 3" in small type under it once it's been made ("Not made yet" is gone).
+  6. **Sources** (`sourceCredit`, `shared/recipeText.ts`, used on the page, in printouts and the export): "Nigella Lawson via Food Network", linking to the recipe's page; just the site when the author is the site itself ("Cookie and Kate", not "Cookie and Kate, by Cookie and Kate"); just the person when the site is their own ("Donna Hay" for donnahay.com.au, "Nigella" for Nigella.com); an editor ("Edited by …") left out; a site's tagline after a dash or bar left off ("Bake from Scratch"); the site's address when that's all Fennl has ("thefoodcharlatan.com"); a cookbook as "Samin Nosrat, Salt Fat Acid Heat, page 42". A family recipe's person stays handwritten under the title.
+  7. **The painting behind the top is quieter**: softer and fainter (`--photo-painting-opacity` 0.32, 0.24 in dark mode; blurred about 44 px), and it fades out sooner, so its colours blend into the page and never compete with the reading.
+  8. Phones get the same line under the title and the same details row.
+- **You check**: on the preview, on a laptop: a recipe with a photo shows its ingredients and the start of its method without scrolling; the stars and heart work from the line under the title; a website recipe's source reads once and opens the recipe's page; the painting is barely there. On a phone: the same line under the title.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1635,4 +1648,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | F5 | Done 2026-10-23 (merged as #90; live). Still the owner's to check on real phones: the screen stays on, in the browser and from the Home Screen |
 | F6 | Done 2026-10-23 (merged as #91; live). Still the owner's to check: Safari, and a real printer with recipe cards |
 | U1 | Done 2026-10-25 (merged as #96; live). More recipe-page changes to come, one step at a time |
+| U2 | Built 2026-10-25, waiting for review |
 | All others | Not started |

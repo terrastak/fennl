@@ -67,7 +67,8 @@ test("A recipe page shows the whole recipe, and Made it is remembered", async ({
   await expect(page.getByText("Nana", { exact: true })).toBeVisible();
   await expect(page.getByText("Prep", { exact: true })).toBeVisible();
   await expect(page.getByText("2 hr 5 min")).toBeVisible();
-  await expect(page.getByText("Serves 6")).toBeVisible();
+  // "Serves" over "6", in the row of details.
+  await expect(page.getByRole("definition").filter({ hasText: /^6$/ })).toBeVisible();
   await expect(page.getByRole("heading", { level: 3, name: "For the stew:" })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "2 lb pork shoulder" })).toBeVisible();
   // Five steps, numbered 1 to 5.
@@ -75,7 +76,7 @@ test("A recipe page shows the whole recipe, and Made it is remembered", async ({
   await expect(steps).toHaveCount(5);
   await expect(page.getByRole("list", { name: "Categories" })).toContainText("Mexican");
   await expect(page.getByText("Freezes well for up to three months.")).toBeVisible();
-  await expect(page.getByText("Not made yet")).toBeVisible();
+  await expect(page.getByText(/Last made/)).toHaveCount(0);
   await noAccessibilityProblems(page);
 
   await page.getByRole("button", { name: "Made it today" }).click();
@@ -84,7 +85,7 @@ test("A recipe page shows the whole recipe, and Made it is remembered", async ({
   await page.reload();
   await expect(page.getByText("Last made today")).toBeVisible();
   await page.getByRole("button", { name: "Undo “made it”" }).click();
-  await expect(page.getByText("Not made yet")).toBeVisible();
+  await expect(page.getByText(/Last made/)).toHaveCount(0);
 
   // Nutrition shows when a recipe has it.
   await page.getByRole("link", { name: "← All recipes" }).click();
@@ -127,11 +128,10 @@ test("A rating, favorite and note made on another device show on the recipe", as
   expect(res.ok()).toBe(true);
 
   await page.reload();
-  const yours = page.getByRole("region", { name: "Yours" });
-  await expect(yours.getByRole("radio", { name: "4 stars" })).toBeChecked();
-  await expect(yours.getByLabel("A favorite of mine")).toBeChecked();
-  await expect(yours.getByLabel("Your note")).toHaveValue("Add a little more zest.");
-  await expect(yours).toContainText("Signed June");
+  await expect(page.getByRole("radio", { name: "4 stars" })).toBeChecked();
+  await expect(page.getByLabel("A favorite of mine")).toBeChecked();
+  await expect(page.getByLabel("Your note")).toHaveValue("Add a little more zest.");
+  await expect(page.getByText(/^Signed June/)).toBeVisible();
   // Not shown twice: your own aren't in the household's ratings and signed notes.
   await expect(page.getByText(/out of 5 stars from/)).toHaveCount(0);
   await expect(page.locator("figcaption")).toHaveCount(0);

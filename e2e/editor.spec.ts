@@ -148,7 +148,8 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await expect(method.getByRole("heading", { name: "Serving" })).toBeVisible();
   await expect(method.locator("ol").last()).toHaveAttribute("start", "3");
   await expect(page.getByText("2 hr 20 min")).toBeVisible();
-  await expect(page.getByText("Serves 6")).toBeVisible();
+  // "Serves" over "6", in the row of details.
+  await expect(page.getByRole("definition").filter({ hasText: /^6$/ })).toBeVisible();
   await expect(page.getByText("Easy")).toBeVisible();
   await expect(page.getByText("Better the next day.")).toBeVisible();
 });
@@ -251,23 +252,27 @@ test("Your rating, favorite and note are kept, and only you set them", async ({
   await addRecipe(page, "Capirotada");
   await page.getByRole("link", { name: /Capirotada/ }).click();
 
-  const yours = page.getByRole("region", { name: "Yours" });
+  // Your stars and heart are on the line under the title (owner's choice 2026-10-25).
+  const yours = page.getByRole("group", { name: "Your rating" });
   await expect(yours.getByRole("radio", { name: "No rating" })).toBeChecked();
   await yours.getByRole("radio", { name: "4 stars" }).focus();
   await page.keyboard.press("Space");
   await expect(yours.getByRole("radio", { name: "4 stars" })).toBeChecked();
   await page.keyboard.press("ArrowRight");
   await expect(yours.getByRole("radio", { name: "5 stars" })).toBeChecked();
-  await yours.getByLabel("A favorite of mine").check();
-  await yours.getByLabel("Your note").fill("Mom's, with extra raisins.");
-  await expect(yours.locator("[data-note-status]")).toHaveText("Saved.");
+  await page.getByLabel("A favorite of mine").check({ force: true });
+  // With no note yet, just a way to add one.
+  await page.getByRole("button", { name: "Add your note" }).click();
+  await expect(page.getByLabel("Your note")).toBeFocused();
+  await page.getByLabel("Your note").fill("Mom's, with extra raisins.");
+  await expect(page.locator("[data-note-status]")).toHaveText("Saved.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await noAccessibilityProblems(page);
 
   await page.reload();
   await expect(yours.getByRole("radio", { name: "5 stars" })).toBeChecked();
-  await expect(yours.getByLabel("A favorite of mine")).toBeChecked();
-  await expect(yours.getByLabel("Your note")).toHaveValue("Mom's, with extra raisins.");
+  await expect(page.getByLabel("A favorite of mine")).toBeChecked();
+  await expect(page.getByLabel("Your note")).toHaveValue("Mom's, with extra raisins.");
   // And taken back.
   await yours.getByRole("radio", { name: "No rating" }).focus();
   await page.keyboard.press("Space");

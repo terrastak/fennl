@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   NUTRIENTS,
   RECIPE_RULES,
@@ -34,8 +34,8 @@ import {
   lastMade,
   localDay,
   namesText,
-  servingsText,
-  sourceLine,
+  servingsFacts,
+  sourceCredit,
   stars,
   timeText,
   trashText,
@@ -122,16 +122,18 @@ function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
 
 function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   const scaled = scaledServings(recipe.servings, scaling.factor);
-  // Scaled for another pan: words naming the recipe's pan ("one 9-inch cake") name yours instead.
-  const servings =
+  // Scaled for another pan: words naming the recipe's pan ("one 9-inch cake") give way to yours.
+  const yourPan =
     scaling.pans && recipe.servings.yield && namesAPan(recipe.servings.yield)
-      ? { ...scaled, yield: `in your ${panName(scaling.pans.yours)}` }
-      : scaled;
+      ? panName(scaling.pans.yours)
+      : null;
+  const servings = yourPan ? { ...scaled, yield: null } : scaled;
   const facts = [
     ["Prep", timeText(recipe.times.prep)],
     ["Cook", timeText(recipe.times.cook)],
     ["Total", timeText(recipe.times.total)],
-    ["Makes", servingsText(servings)],
+    ...servingsFacts(servings).map(({ label, value }) => [label, value]),
+    ["Pan", yourPan ? `Your ${yourPan}` : null],
     [
       "Difficulty",
       recipe.difficultyText ??
@@ -147,7 +149,7 @@ function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
         <div key={label}>
           <dt>{label}</dt>
           <dd>
-            {label === "Makes" && servings !== recipe.servings ? (
+            {["Serves", "Makes", "Pan"].includes(label) && servings !== recipe.servings ? (
               <ShownText line={{ pieces: [{ text: value, changed: true }], changed: true }} />
             ) : (
               value
@@ -159,31 +161,154 @@ function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   );
 }
 
-/** Others' ratings and favorites (your own are in "Yours", below). */
-function People({ detail, name, shared, me }: Props & { me: string }) {
+/** Where the recipe came from, linked to its own page when Fennl knows it (owner's choices 2026-10-25). */
+function SourceLink({ recipe }: { recipe: Recipe }) {
+  const credit = sourceCredit(recipe.source);
+  if (!credit) return null;
+  return credit.url ? (
+    <a className={styles.source} href={credit.url} target="_blank" rel="noreferrer noopener">
+      {credit.text}
+      <span aria-hidden="true"> ↗</span>
+      <span className="visually-hidden"> (the recipe&rsquo;s page)</span>
+    </a>
+  ) : (
+    <span className={styles.source}>{credit.text}</span>
+  );
+}
+
+/**
+ * The line under the title (owner's choices 2026-10-25): your stars and heart, set right there,
+ * the household's stars and favorites, who added it, and where it came from.
+ */
+function Meta({ detail, name, shared, me, editable }: Props & { me: string; editable: boolean }) {
+  const recipeId = detail.recipe.id;
+  const mine = detail.opinions.find((o) => o.userId === me);
+  const stored = { rating: mine?.rating ?? null, favorite: mine?.favorite ?? false };
+  // Shown straight away when changed here; the local copy catches up a moment later.
+  const [shown, setShown] = useState(stored);
+  const [last, setLast] = useState(stored);
+  if (stored.rating !== last.rating || stored.favorite !== last.favorite) {
+    setLast(stored);
+    setShown(stored);
+  }
+  const rating = shown.rating;
+  const choose = (fields: { rating?: number | null; favorite?: boolean }) => {
+    setShown({ ...shown, ...fields });
+    void saveOpinion(recipeId, fields);
+  };
   const others = detail.opinions.filter((o) => o.userId !== me);
   const rated = others.filter((o) => o.rating !== null);
   const favorites = others.filter((o) => o.favorite).map((o) => name(o.userId));
-  if (!shared && rated.length === 0 && favorites.length === 0) return null;
+
   return (
-    <ul className={styles.people}>
-      {shared ? <li>Added by {name(detail.recipe.ownerUserId)}</li> : null}
+    <div className={styles.meta}>
+      <fieldset className={styles.rating} disabled={!editable}>
+        <legend className="visually-hidden">Your rating</legend>
+        <div className={styles.ratingStars}>
+          {RATINGS.map((n) => (
+            <label
+              key={n}
+              className={n <= (rating ?? 0) ? styles.starOn : styles.starOff}
+              title={`${n} ${n === 1 ? "star" : "stars"}`}
+            >
+              <input
+                type="radio"
+                name="rating"
+                className="visually-hidden"
+                checked={rating === n}
+                onChange={() => choose({ rating: n })}
+                // The star already chosen, chosen again: no rating.
+                onClick={() => {
+                  if (rating === n) choose({ rating: null });
+                }}
+              />
+              <span aria-hidden="true">★</span>
+              <span className="visually-hidden">
+                {n} {n === 1 ? "star" : "stars"}
+              </span>
+            </label>
+          ))}
+          <label className={styles.noRating}>
+            <input
+              type="radio"
+              name="rating"
+              className="visually-hidden"
+              checked={rating === null}
+              onChange={() => choose({ rating: null })}
+            />
+            No rating
+          </label>
+        </div>
+      </fieldset>
+      <label className={styles.heart} title="A favorite of mine">
+        <input
+          type="checkbox"
+          className="visually-hidden"
+          checked={shown.favorite}
+          disabled={!editable}
+          onChange={(e) => choose({ favorite: e.target.checked })}
+        />
+        <span aria-hidden="true">{shown.favorite ? "♥" : "♡"}</span>
+        <span className="visually-hidden">A favorite of mine</span>
+      </label>
       {rated.map((o) => (
-        <li key={o.userId}>
+        <span key={o.userId} className={styles.metaItem}>
           <span className={styles.stars} aria-hidden="true">
             {stars(o.rating ?? 0)}
-          </span>{" "}
-          <span className="visually-hidden">{o.rating} out of 5 stars from </span>
-          {name(o.userId)}
-        </li>
+          </span>
+          <span className="visually-hidden">{o.rating} out of 5 stars from</span> {name(o.userId)}
+        </span>
       ))}
       {favorites.length > 0 ? (
-        <li>
+        <span className={styles.metaItem}>
           <span aria-hidden="true">♥ </span>
           {shared ? `A favorite of ${namesText(favorites)}` : "A favorite"}
-        </li>
+        </span>
       ) : null}
-    </ul>
+      {shared ? (
+        <span className={styles.metaItem}>Added by {name(detail.recipe.ownerUserId)}</span>
+      ) : null}
+      <SourceLink recipe={detail.recipe} />
+    </div>
+  );
+}
+
+/**
+ * The recipe's introduction, a few lines of it with More for the rest (owner's choice
+ * 2026-10-25); a short one takes only the room it needs.
+ */
+function Headnote({ text }: { text: string }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [open, setOpen] = useState(false);
+  const [long, setLong] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || open) return;
+    const observer = new ResizeObserver(() => setLong(el.scrollHeight > el.clientHeight + 1));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [text, open]);
+  return (
+    <>
+      <p
+        ref={ref}
+        id="recipe-headnote"
+        className={`${styles.headnote} ${open ? "" : styles.clamped}`}
+      >
+        {text}
+      </p>
+      {long ? (
+        <button
+          type="button"
+          className={styles.more}
+          aria-expanded={open}
+          aria-controls="recipe-headnote"
+          onClick={() => setOpen(!open)}
+        >
+          {open ? "Less" : "More"}
+        </button>
+      ) : null}
+    </>
   );
 }
 
@@ -215,9 +340,6 @@ function MadeIt({ detail, name, shared, me, editable }: Props & { me: string; ed
   const when = last ? (last.madeOn === today ? "today" : dayText(last.madeOn)) : null;
   return (
     <div className={styles.made}>
-      <p role="status">
-        {last ? `Last made ${when}${shared ? ` by ${name(last.userId)}` : ""}` : "Not made yet"}
-      </p>
       {mine ? (
         <button type="button" className={styles.secondary} onClick={undo} disabled={!editable}>
           Undo &ldquo;made it&rdquo;
@@ -227,6 +349,9 @@ function MadeIt({ detail, name, shared, me, editable }: Props & { me: string; ed
           Made it today
         </button>
       )}
+      <p role="status">
+        {last ? `Last made ${when}${shared ? ` by ${name(last.userId)}` : ""}` : ""}
+      </p>
     </div>
   );
 }
@@ -369,8 +494,11 @@ function saveOpinion(recipeId: string, fields: OpinionChange["fields"]): Promise
   return save({ kind: "opinion", recipeId, fields, changedAt: Date.now() });
 }
 
-/** Your own rating, favorite and signed note (CLAUDE.md, "Recipe ownership in households"). */
-function Yours({
+/**
+ * Your signed note (CLAUDE.md, "Recipe ownership in households"); your stars and heart are by the
+ * title. With no note yet, just a way to add one (owner's choice 2026-10-25).
+ */
+function YourNote({
   detail,
   me,
   myName,
@@ -384,73 +512,32 @@ function Yours({
   editable: boolean;
 }) {
   const recipeId = detail.recipe.id;
-  const mine = detail.opinions.find((o) => o.userId === me);
-  const stored = { rating: mine?.rating ?? null, favorite: mine?.favorite ?? false };
-  // Shown straight away when changed here; the local copy catches up a moment later.
-  const [shown, setShown] = useState(stored);
-  const [last, setLast] = useState(stored);
-  if (stored.rating !== last.rating || stored.favorite !== last.favorite) {
-    setLast(stored);
-    setShown(stored);
-  }
-  const rating = shown.rating;
-  const opinion = (fields: OpinionChange["fields"]) => saveOpinion(recipeId, fields);
-  const choose = (fields: { rating?: number | null; favorite?: boolean }) => {
-    setShown({ ...shown, ...fields });
-    void opinion(fields);
-  };
-
-  return (
-    <section className={styles.section} aria-labelledby="yours-title">
-      <h2 id="yours-title">Yours</h2>
-      <div className={styles.yours}>
-        <fieldset className={styles.rating} disabled={!editable}>
-          <legend>Your rating</legend>
-          <div className={styles.ratingStars}>
-            {RATINGS.map((n) => (
-              <label key={n} className={n <= (rating ?? 0) ? styles.starOn : styles.starOff}>
-                <input
-                  type="radio"
-                  name="rating"
-                  className="visually-hidden"
-                  checked={rating === n}
-                  onChange={() => choose({ rating: n })}
-                />
-                <span aria-hidden="true">★</span>
-                <span className="visually-hidden">
-                  {n} {n === 1 ? "star" : "stars"}
-                </span>
-              </label>
-            ))}
-            <label className={styles.noRating}>
-              <input
-                type="radio"
-                name="rating"
-                className="visually-hidden"
-                checked={rating === null}
-                onChange={() => choose({ rating: null })}
-              />
-              No rating
-            </label>
-          </div>
-        </fieldset>
-        <label className={styles.favorite}>
-          <input
-            type="checkbox"
-            checked={shown.favorite}
-            disabled={!editable}
-            onChange={(e) => choose({ favorite: e.target.checked })}
-          />
-          A favorite of mine
-        </label>
+  const note = detail.opinions.find((o) => o.userId === me)?.note ?? "";
+  const [adding, setAdding] = useState(false);
+  if (!note.trim() && !adding) {
+    return (
+      <div className={styles.section}>
+        <button
+          type="button"
+          className={styles.more}
+          disabled={!editable}
+          onClick={() => setAdding(true)}
+        >
+          Add your note
+        </button>
       </div>
+    );
+  }
+  return (
+    <section className={styles.section}>
       <OwnNote
         key={recipeId}
-        note={mine?.note ?? ""}
+        note={note}
         signature={myName}
         shared={shared}
         editable={editable}
-        onSave={(note) => opinion({ note })}
+        autoFocus={adding}
+        onSave={(fields) => saveOpinion(recipeId, { note: fields })}
       />
     </section>
   );
@@ -462,12 +549,14 @@ function OwnNote({
   signature,
   shared,
   editable,
+  autoFocus = false,
   onSave,
 }: {
   note: string;
   signature: string;
   shared: boolean;
   editable: boolean;
+  autoFocus?: boolean;
   onSave: (note: string) => Promise<boolean>;
 }) {
   const [text, setText] = useState(note);
@@ -514,6 +603,7 @@ function OwnNote({
         value={text}
         disabled={!editable}
         maxLength={RECIPE_RULES.notesLength}
+        autoFocus={autoFocus}
         aria-describedby="own-note-hint"
         onChange={(e) => setText(e.target.value)}
       />
@@ -556,24 +646,6 @@ function Nutrition({ recipe }: { recipe: Recipe }) {
       {nutrition.text ? <p className={styles.notes}>{nutrition.text}</p> : null}
       <p className={styles.hint}>{NUTRITION_FROM[nutrition.source]}</p>
     </section>
-  );
-}
-
-function Source({ recipe }: { recipe: Recipe }) {
-  const line = sourceLine(recipe.source);
-  const url = recipe.source.url;
-  if (!line && !url) return null;
-  return (
-    <p className={styles.hint}>
-      Source:{" "}
-      {url ? (
-        <a href={url} target="_blank" rel="noreferrer noopener">
-          {line ?? new URL(url).hostname}
-        </a>
-      ) : (
-        line
-      )}
-    </p>
   );
 }
 
@@ -655,7 +727,9 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
           photos={detail.photos.filter((p) => p.role === "import_original")}
           title={recipe.title}
         />
-        <Source recipe={recipe} />
+        <p className={styles.hint}>
+          <SourceLink recipe={recipe} />
+        </p>
       </div>
     </article>
   );
@@ -795,10 +869,8 @@ export function RecipePage({ id }: { id: string }) {
           {recipe.source.kind === "person" && recipe.source.name ? (
             <p className={styles.byPerson}>{recipe.source.name}</p>
           ) : null}
-          {recipe.description.trim() ? (
-            <p className={styles.headnote}>{recipe.description}</p>
-          ) : null}
-          <People detail={detail} name={name} shared={shared} me={me} />
+          <Meta detail={detail} name={name} shared={shared} me={me} editable={editable} />
+          {recipe.description.trim() ? <Headnote text={recipe.description} /> : null}
           <Facts recipe={recipe} scaling={scaling} />
           <div className={styles.actions}>
             {recipe.directions.some((step) => !step.heading) ? (
@@ -823,14 +895,13 @@ export function RecipePage({ id }: { id: string }) {
       </div>
 
       <Notes detail={detail} name={name} shared={shared} me={me} />
-      <Yours detail={detail} me={me} myName={name(me)} shared={shared} editable={editable} />
+      <YourNote detail={detail} me={me} myName={name(me)} shared={shared} editable={editable} />
       <Nutrition recipe={recipe} />
       <div className={styles.section}>
         <Originals
           photos={detail.photos.filter((p) => p.role === "import_original")}
           title={recipe.title}
         />
-        <Source recipe={recipe} />
       </div>
 
       <div className={styles.danger}>

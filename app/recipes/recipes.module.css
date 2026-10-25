@@ -285,7 +285,7 @@
   top: calc(-1 * var(--space-10));
   left: calc(-1 * var(--space-12));
   right: calc(-1 * var(--space-12));
-  height: 72rem;
+  height: 52rem;
   overflow: hidden;
   pointer-events: none;
   -webkit-mask-image:
@@ -320,7 +320,9 @@
   width: calc(100% + 8rem);
   height: calc(100% + 8rem);
   object-fit: cover;
-  filter: blur(26px) saturate(1.1);
+  /* Softened further so its colours blend into the page and never compete with the reading
+     (owner's choice 2026-10-25). */
+  filter: blur(44px) saturate(0.9);
   opacity: var(--photo-painting-opacity);
 }
 
@@ -419,13 +421,15 @@
   }
 }
 
+/* A computer: the photo smaller beside the title block, so the ingredients and the method start
+   on the first screen (owner's choice 2026-10-25, layout A). */
 @media (min-width: 900px) {
   .hero {
     display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-    align-items: center;
-    gap: var(--space-12);
-    margin-bottom: var(--space-10);
+    grid-template-columns: minmax(13rem, 17.5rem) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-8);
+    margin-bottom: var(--space-8);
   }
 
   .hero .recipeHeader {
@@ -495,7 +499,111 @@
 .headnote {
   margin: var(--space-3) 0 0;
   color: var(--color-text-muted);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  white-space: pre-line;
+}
+
+/* A long introduction: five lines of it, then More (owner's choice 2026-10-25). */
+.clamped {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+  overflow: hidden;
+}
+
+.more {
+  min-height: var(--tap-target);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.more:hover {
+  text-decoration: underline;
+}
+
+.more:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
+/* The line under the title: your stars and heart, the household's, and where it came from. */
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.meta .rating {
+  display: flex;
+}
+
+.meta .ratingStars {
+  gap: 0;
+}
+
+.meta .starOn,
+.meta .starOff {
+  min-width: 1.75rem;
+  min-height: var(--tap-target);
   font-size: var(--text-lg);
+}
+
+/* "No rating" is there for the keyboard; it shows only while it has the focus. */
+.meta .noRating:not(:focus-within) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.heart {
+  display: grid;
+  place-items: center;
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  border-radius: var(--radius-md);
+  color: var(--color-warm-text);
+  font-size: var(--text-xl);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.heart:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.heart:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.metaItem {
+  white-space: nowrap;
+}
+
+.source {
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+a.source:hover {
+  text-decoration: underline;
 }
 
 /* Prep, Cook, Makes...: a row between two rules, each fact after a divider. */
@@ -503,7 +611,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3) 0;
-  margin: var(--space-5) 0 0;
+  margin: var(--space-4) 0 0;
   padding: var(--space-3) 0;
   border-top: 1px solid var(--color-border);
   border-bottom: 1px solid var(--color-border);
@@ -511,7 +619,7 @@
 
 .facts div {
   display: grid;
-  padding: 0 var(--space-5);
+  padding: 0 var(--space-4);
   border-left: 1px solid var(--color-border);
 }
 
@@ -532,15 +640,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-settings);
-  font-size: var(--text-lg);
-}
-
-.people {
-  display: grid;
-  gap: var(--space-2);
-  margin: var(--space-4) 0 0;
-  padding: 0;
-  list-style: none;
+  font-size: var(--text-md);
 }
 
 .stars {
@@ -567,7 +667,7 @@
 .actions {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3) var(--space-4);
   margin: var(--space-5) 0 0;
 }
@@ -594,16 +694,19 @@
 }
 
 .made {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
+  display: grid;
+  justify-items: start;
+  gap: var(--space-1);
 }
 
 .made p {
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
+}
+
+.made p:empty {
+  display: none;
 }
 
 .made .secondary {
@@ -827,14 +930,6 @@
 
 /* --- Yours: your rating, favorite and note (phase C6) ------------------------------------- */
 
-.yours {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-4) var(--space-8);
-  margin-bottom: var(--space-5);
-}
-
 .rating {
   margin: 0;
   padding: 0;
@@ -898,21 +993,6 @@
 .rating:disabled label {
   cursor: not-allowed;
   opacity: 0.6;
-}
-
-.favorite {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--tap-target);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.favorite input {
-  width: 1.25rem;
-  height: 1.25rem;
-  accent-color: var(--color-accent);
 }
 
 .ownNote {

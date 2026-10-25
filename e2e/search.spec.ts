@@ -84,10 +84,10 @@ test("Search finds changes straight away, and works with the filters", async ({
 
   // A note written just now is found.
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
-  const yours = page.getByRole("region", { name: "Yours" });
-  await yours.getByRole("radio", { name: "5 stars" }).check({ force: true });
-  await yours.getByLabel("Your note").fill("Grandma used Meyer lemons");
-  await expect(yours.locator("[data-note-status]")).toHaveText("Saved.");
+  await page.getByRole("radio", { name: "5 stars" }).check({ force: true });
+  await page.getByRole("button", { name: "Add your note" }).click();
+  await page.getByLabel("Your note").fill("Grandma used Meyer lemons");
+  await expect(page.locator("[data-note-status]")).toHaveText("Saved.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: "All recipes" }).click();
   await searchBox(page).fill("meyer");
