@@ -145,6 +145,34 @@ describe("scaling a step", () => {
     );
     expect(showStep(step, { factor: 1, units: "written" }).changed).toBe(false);
   });
+
+  it("keeps one piece's size: more cookies, not bigger ones", () => {
+    const doubled = { factor: 2, units: "written" } as const;
+    const cookies =
+      "With clean hands, roll ¼ cupfuls (60 ml) of the mixture into balls. Bake for 20 minutes.";
+    expect(showStep(cookies, doubled).changed).toBe(false);
+    for (const step of [
+      "Pour in ¼ cup of batter per pancake.",
+      "Drop 2 tablespoons of dough onto the tray, 5 cm apart.",
+      "Spoon 1/3 cup into each muffin case.",
+      "Roll 1 tablespoon into balls and flatten slightly.",
+      "Drop heaped tablespoonfuls (30 ml) onto the tray.",
+      "Use 2 tablespoons per cookie.",
+    ]) {
+      expect(showStep(step, doubled).changed, step).toBe(false);
+    }
+    // Still converted to the units chosen.
+    expect(
+      marked(showStep("Pour in ¼ cup of batter per pancake.", { factor: 2, units: "metric" })),
+    ).toBe("Pour in [59 ml] of batter per pancake.");
+    // The rest of the step still scales.
+    expect(marked(showStep("Reserve 1 cup of the mixture for the topping.", doubled))).toBe(
+      "Reserve [2 cups] of the mixture for the topping.",
+    );
+    expect(marked(showStep("Add 1/2 cup sugar, then roll 1 tablespoon into balls.", doubled))).toBe(
+      "Add [1 cup] sugar, then roll 1 tablespoon into balls.",
+    );
+  });
 });
 
 describe("servings and the scale itself", () => {

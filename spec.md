@@ -1319,6 +1319,11 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   8. Phones get the same line under the title and the same details row.
 - **You check**: on the preview, on a laptop: a recipe with a photo shows its ingredients and the start of its method without scrolling; the stars and heart work from the line under the title; a website recipe's source reads once and opens the recipe's page; the painting is barely there. On a phone: the same line under the title.
 
+### U3. A piece's size in the method doesn't scale (owner's choice 2026-10-25)
+- **Found in use**: Apple crumble cookies doubled said "roll ¼ cupfuls (120 ml) of the mixture into balls". Doubling a batch makes twice as many cookies, not bigger ones.
+- **Owner's choice**: an amount in the method that measures out one piece stays as written when the recipe is scaled (by a number or for another pan); it still converts to metric or US. Fennl reads it as one piece's size when it's followed by "of the mixture, batter, dough or filling" going into, onto or per something ("¼ cup of batter per pancake"), by "per cookie", "into each muffin case" and the like, or by "into balls", or when it's a spoonful's size in brackets ("tablespoonfuls (30 ml)"). Every other amount in the method scales as before ("Reserve 1 cup of the mixture for the topping" doubles). `showStep`, `shared/scale.ts`.
+- **You check**: double Apple crumble cookies: step 4 still says "¼ cupfuls (60 ml)", not highlighted.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1648,5 +1653,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | F5 | Done 2026-10-23 (merged as #90; live). Still the owner's to check on real phones: the screen stays on, in the browser and from the Home Screen |
 | F6 | Done 2026-10-23 (merged as #91; live). Still the owner's to check: Safari, and a real printer with recipe cards |
 | U1 | Done 2026-10-25 (merged as #96; live). More recipe-page changes to come, one step at a time |
-| U2 | Built 2026-10-25, waiting for review |
+| U2 | Done 2026-10-25 (merged as #99; live) |
+| U3 | Built 2026-10-25, waiting for review |
 | All others | Not started |

@@ -637,9 +637,31 @@ export function showIngredient(text: string, options: ShowOptions, held = false)
   return { pieces, changed: pieces.some((p) => p.changed), ...(total ? { total } : {}) };
 }
 
+// One piece's size in a step ("¼ cupfuls (60 ml) of the mixture into balls", "¼ cup of batter
+// per pancake"): a bigger batch makes more pieces, not bigger ones (owner's choice 2026-10-25).
+const PIECES =
+  "(?:cookie|biscuit|muffin|cupcake|pancake|crepe|fritter|ball|patty|patties|portion|piece|tart|ramekin|mou?ld|hole|case|liner|round|mound|log)s?";
+const PORTION_AFTER = new RegExp(
+  [
+    // "… of the mixture into balls", "… of batter per pancake", "… of dough onto the tray"
+    String.raw`^\s*(?:\([^)]*\)\s*)?(?:of\s+)?(?:the\s+|this\s+|that\s+|your\s+)?(?:[a-z]+\s+)?(?:mixture|batter|dough|filling)\b[^.;!?]*?\b(?:into|onto|per|each)\b`,
+    // "… per cookie", "… into each muffin case"
+    String.raw`^[^.;!?,]*?\b(?:per|for\s+each|in\s+each|into\s+each)\s+(?:[a-z]+\s+)?${PIECES}\b`,
+    // "… into balls"
+    String.raw`^\s*(?:\([^)]*\)\s*)?(?:into|onto)\s+(?:[a-z]+\s+)?(?:balls|rounds|mounds|patties|logs)\b`,
+  ].join("|"),
+  "iu",
+);
+// "tablespoonfuls (30 ml)": the size of a spoonful, in brackets.
+const SPOONFUL_BEFORE = /\b[a-z]+fuls?\s*\(\s*$/iu;
+
+const isPortion = (text: string, a: IngredientAmount) =>
+  PORTION_AFTER.test(text.slice(a.end)) || SPOONFUL_BEFORE.test(text.slice(0, a.start));
+
 /**
  * A step as it's shown: amounts with a measuring unit scale and convert ("1/2 cup of the sugar");
- * times, temperatures, pan sizes and plain counts stay as written.
+ * times, temperatures, pan sizes, plain counts and one piece's size stay as written (a piece's
+ * size still converts).
  */
 export function showStep(text: string, options: ShowOptions): ShownLine {
   if (options.factor === 1 && options.units === "written") return plain(text);
@@ -647,7 +669,8 @@ export function showStep(text: string, options: ShowOptions): ShownLine {
   for (const a of amountsWithin(text)) {
     const unit = a.unit ? unitNamed(a.unit) : undefined;
     if (!unit || (unit.kind !== "volume" && unit.kind !== "weight")) continue;
-    const r = rewrite(text, a, options.factor, options.units);
+    const factor = isPortion(text, a) ? 1 : options.factor;
+    const r = rewrite(text, a, factor, options.units);
     if (r) edits.push({ start: a.start, end: a.end, text: r.text });
   }
   const pieces = piecesOf(text, edits);
