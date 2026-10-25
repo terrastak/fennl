@@ -125,8 +125,7 @@ test("Over the limit (say, Premium ended): everything stays, adding waits", asyn
 
   // Still editable: a rating, and a recipe moved to Trash.
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
-  const yours = page.getByRole("region", { name: "Yours" });
-  await yours.getByRole("radio", { name: "4 stars" }).check({ force: true });
+  await page.getByRole("radio", { name: "4 stars" }).check({ force: true });
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: "All recipes" }).click();
   await moveToTrash(page, "Buttermilk Pancakes");

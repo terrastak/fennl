@@ -27,15 +27,99 @@ export function servingsText(servings: RecipeServings): string | null {
   return count ?? made;
 }
 
+/** A domain-like name ("donnahay.com.au", "tasty.co"): no spaces, a dot. */
+const isDomain = (name: string) => !/\s/u.test(name) && /\.[a-z]{2,}/iu.test(name);
+
+/** A name's letters only, a domain without its ending: "donnahay.com.au" → "donnahay". */
+function letters(name: string): string {
+  const base = isDomain(name) ? (name.replace(/^www\./iu, "").split(".")[0] ?? name) : name;
+  return base
+    .toLowerCase()
+    .replace(/^the\s+/u, "")
+    .replace(/[^\p{L}\p{N}]/gu, "");
+}
+
+/** The same source named twice: "donnahay.com.au" and "Donna Hay", "Good Housekeeping" and "The Good Housekeeping Test Kitchen". */
+function sameName(a: string, b: string): boolean {
+  const x = letters(a);
+  const y = letters(b);
+  if (x.length < 3 || y.length < 3) return false;
+  if (x === y) return true;
+  // One inside the other only for names long enough not to match by chance ("Ann").
+  return Math.min(x.length, y.length) >= 4 && (x.includes(y) || y.includes(x));
+}
+
+/** A site's name without the tagline after it: "Bake from Scratch - #thebakefeed". */
+function siteName(name: string | null, url: string | null): string | null {
+  const trimmed = name?.trim();
+  if (trimmed) {
+    const first = trimmed.split(/\s+[-–—|:]\s+/u)[0]?.trim();
+    return first && first.length >= 2 ? first : trimmed;
+  }
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./iu, "") || null;
+  } catch {
+    return null;
+  }
+}
+
+/** The recipe's author as credited: "By Sally" is Sally; an editor isn't the author. */
+function authorName(author: string | null): string | null {
+  const trimmed = author?.trim();
+  if (!trimmed || /^edited\s+by\b/iu.test(trimmed)) return null;
+  return trimmed.replace(/^(?:recipe\s+)?by\s+/iu, "") || null;
+}
+
+/**
+ * Where a recipe came from, as one short credit and the link it opens (owner's choices
+ * 2026-10-25): "Nigella Lawson via Food Network"; just the site when the author is the site
+ * itself ("Cookie and Kate"), or just the person when the site is their own ("Donna Hay" for
+ * donnahay.com.au); "Samin Nosrat, Salt Fat Acid Heat, page 42" for a cookbook. A person's
+ * name (a family recipe) shows by the title instead, so it has no credit here.
+ */
+export function sourceCredit(source: RecipeSource): { text: string; url: string | null } | null {
+  if (source.kind === "person") return null;
+  const url = source.url?.trim() || null;
+  const site = siteName(source.name, source.kind === "cookbook" ? null : url);
+  const author = authorName(source.author);
+  const page = source.page?.trim() ? `page ${source.page.trim()}` : null;
+  let text: string | null;
+  if (source.kind === "cookbook") {
+    text = [author, site, page].filter(Boolean).join(", ") || null;
+  } else {
+    const who =
+      author && site
+        ? sameName(author, site)
+          ? isDomain(site)
+            ? author
+            : site
+          : `${author} via ${site}`
+        : (author ?? site);
+    text = [who, page].filter(Boolean).join(", ") || null;
+  }
+  return text ? { text, url } : null;
+}
+
 /** A source worth showing as a line of its own (a person's name shows by the title instead). */
 export function sourceLine(source: RecipeSource): string | null {
-  if (source.kind === "person") return null;
-  const parts = [
-    source.name,
-    source.author ? `by ${source.author}` : null,
-    source.page ? `page ${source.page}` : null,
-  ].filter(Boolean);
-  return parts.length > 0 ? parts.join(", ") : null;
+  return sourceCredit(source)?.text ?? null;
+}
+
+/** What a recipe serves and makes, each once: "Serves 8" and "Makes about 24 cookies". */
+export function servingsFacts(servings: RecipeServings): { label: string; value: string }[] {
+  const count = servings.count;
+  const made = servings.yield?.trim() || null;
+  if (!made) return count !== null ? [{ label: "Serves", value: String(count) }] : [];
+  const serves = /^serves\s+(.+)$/iu.exec(made);
+  if (serves?.[1]) return [{ label: "Serves", value: serves[1] }];
+  const value = made.replace(/^(?:makes|yields?|yield:)\s*/iu, "") || made;
+  // "Makes 14" on a recipe that serves 14: the same number, said once.
+  const sameNumber = count !== null && new RegExp(`(^|\\D)${count}(\\D|$)`, "u").test(value);
+  const facts = [{ label: "Makes", value }];
+  return count !== null && !sameNumber
+    ? [{ label: "Serves", value: String(count) }, ...facts]
+    : facts;
 }
 
 const FRACTIONS: Record<string, string> = {

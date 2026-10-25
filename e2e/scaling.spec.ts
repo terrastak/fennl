@@ -34,7 +34,7 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(page.getByText("Doubled: changed amounts are highlighted.")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "4 cups" })).toHaveCount(2);
   await expect(ingredients.locator("mark", { hasText: "1/4 cup" })).toBeVisible();
-  await expect(page.getByText("Serves 8 · about 24 pancakes")).toBeVisible();
+  await expect(page.getByRole("definition").filter({ hasText: "about 24 pancakes" })).toBeVisible();
   const serves = ingredients.getByRole("group", { name: "Serves" });
   await expect(serves.locator("output")).toHaveText("8");
 
