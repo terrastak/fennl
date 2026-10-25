@@ -1332,6 +1332,17 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   3. **Adjust** sits in the same bar, at its end, not above it.
 - **You check**: on a laptop and a phone, a recipe that makes cookies and one that serves people: the bar reads right, Adjust is in it, and nothing under the title repeats it.
 
+### U5. Quick amounts, categories from the page, Trash beside Edit (owner's choices 2026-10-25)
+- **Found in use**: the "Makes − 14 +" stepper looked less polished, and doubling cookies took 14 taps; the pan choices showed on recipes with no pan; categories could only be changed in the editor; "Move to Trash" sat alone at the bottom of the page.
+- **Owner's choices**:
+  1. The ingredients bar says how many it serves or makes ("Makes 14 cookies", "Serves 10 · Makes one 9-inch cake"), highlighted when scaled, with **Adjust** at its end and quick amounts under it: **½×, As written, 2×, 3×**. This replaces U4's stepper on the page.
+  2. **Adjust** holds how many it serves or makes ("Makes − 14 + cookies", a box you can type any number into, and a step at a time), "Scale by" any amount, another pan and units.
+  3. The pan choices show only when Fennl found a pan in the recipe (or a pan scale is already set); "Scale for a different pan" is gone.
+  4. "Add your note" is **+ Add a note**, the plus in a small circle.
+  5. **Trash** (a bin icon and the word) sits with Edit and Print at the top; the "Move to Trash" button at the bottom is gone. On a narrow phone over a photo, Edit, Print and Trash show as round icons so they fit, their names still read out.
+  6. **Categories** (option B of three mockups): the small line above the title keeps its look, with **Change** beside it (or **+ Add a category** when there are none), opening the editor's categories in a small window: remove one, the suggestions, type to find or add, each change saved straight away with Undo.
+- **You check**: on a laptop and a phone: double cookies from the 2× button; type a number under Adjust; a cake shows the pan choices and cookies don't; Trash at the top moves the recipe to Trash (the list offers Undo); Change adds and removes a category.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1663,5 +1674,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U1 | Done 2026-10-25 (merged as #96; live). More recipe-page changes to come, one step at a time |
 | U2 | Done 2026-10-25 (merged as #99; live) |
 | U3 | Done 2026-10-25 (merged as #100) |
-| U4 | Built 2026-10-25, waiting for review |
+| U4 | Done 2026-10-25 (merged as #101) |
+| U5 | Built 2026-10-25, waiting for review |
 | All others | Not started |

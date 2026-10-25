@@ -377,6 +377,20 @@
   color: var(--color-text);
 }
 
+/* Trash, beside Edit and Print (owner's choice 2026-10-25): a button that looks like them. */
+button.topAction {
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+button.topAction:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
 /* Phone, with a photo: the cover runs to the screen's edges, and the way back and Edit and Print
    sit on it as small pills. */
 @media (max-width: 899px) {
@@ -412,12 +426,32 @@
   }
 
   .hero .eyebrow,
+  .hero .categoryChange,
   .hero .recipeTitle,
   .hero .byPerson {
     text-shadow:
       0 0 2px var(--color-bg),
       0 0 14px var(--color-bg),
       0 0 28px var(--color-bg);
+  }
+}
+
+/* A narrow phone, over the photo: Edit, Print and Trash as round icons, their names still read
+   out, so the four fit on one row. */
+@media (max-width: 479px) {
+  .recipeWithPhoto .topAction {
+    padding: 0;
+    width: 2.5rem;
+    justify-content: center;
+  }
+
+  .recipeWithPhoto .topLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }
 
@@ -443,10 +477,43 @@
 }
 
 /* The recipe's categories, small above the title; each leads to the list, filtered. */
+/* The categories above the title, with "Change" beside them (owner's choice 2026-10-25). */
+.categoryLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0 0 var(--space-2);
+}
+
+.categoryChange {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.categoryChange:hover {
+  text-decoration: underline;
+}
+
+.categoryChange:disabled {
+  color: var(--color-text-subtle);
+  cursor: not-allowed;
+}
+
 .eyebrow {
   display: flex;
   flex-wrap: wrap;
-  margin: 0 0 var(--space-2);
+  margin: 0;
   padding: 0;
   list-style: none;
   color: var(--color-text-muted);
@@ -513,7 +580,9 @@
   overflow: hidden;
 }
 
-.more {
+.moreButton {
+  display: inline-flex;
+  align-items: center;
   min-height: var(--tap-target);
   padding: 0;
   border: 0;
@@ -525,11 +594,24 @@
   cursor: pointer;
 }
 
-.more:hover {
+/* "+ Add a note": the plus in a small circle, the words beside it. */
+.moreButton .plus {
+  display: inline-grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-right: var(--space-2);
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  font-size: var(--text-md);
+  line-height: 1;
+}
+
+.moreButton:hover {
   text-decoration: underline;
 }
 
-.more:disabled {
+.moreButton:disabled {
   color: var(--color-text-subtle);
   cursor: not-allowed;
 }
@@ -741,48 +823,78 @@ a.source:hover {
   font-size: var(--text-2xl);
 }
 
-/* How many it serves or makes, with "Adjust" beside it, at the top of the ingredients (owner's
-   choices 2026-10-24 and 2026-10-25). */
+/* How many it serves or makes, with "Adjust" and the quick amounts, at the top of the
+   ingredients (owner's choices 2026-10-25). */
 .serves {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-1) var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-2) var(--space-3) var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--color-surface-sunken);
 }
 
-.servesSaid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-4);
-  min-height: var(--tap-target);
-}
-
-/* "Makes − 14 + cookies": the words wrap under the count when the box is narrow. */
-.servesCount {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
-}
-
-.servesRow {
+.servesTop {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+}
+
+.servesSaid {
+  margin: 0;
 }
 
 .servesLabel {
   font-weight: var(--weight-semibold);
 }
 
-.servesMade {
-  margin: 0;
-  color: var(--color-text-muted);
+/* Half, as written, double, triple: one row of equal buttons. */
+.quickScale {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  justify-content: start;
+  gap: var(--space-1);
+}
+
+.quickChoice {
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.quickChoice:hover {
+  border-color: var(--color-border-strong);
+}
+
+.quickChoice[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.servesInput {
+  width: 3.5rem;
+  min-height: var(--tap-target);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-align: center;
+}
+
+.scaleNow {
+  font-weight: var(--weight-semibold);
 }
 
 .servesButtons {
@@ -1033,10 +1145,6 @@ a.source:hover {
 .nutrition dd {
   margin: 0;
   font-weight: var(--weight-semibold);
-}
-
-.danger {
-  margin-top: var(--space-8);
 }
 
 /* Category chips on a recipe's page lead to the list, filtered (phase C7). */

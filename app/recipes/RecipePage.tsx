@@ -16,6 +16,7 @@ import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
+import { RecipeCategories } from "../categories/RecipeCategories";
 import { Gallery, Originals } from "../photos/Gallery";
 import { usePainting } from "../photos/painting";
 import { canEdit } from "../sync/status";
@@ -152,6 +153,65 @@ function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * "Change" beside the categories above the title, or "Add a category" when there are none: the
+ * editor's categories in a small window, each change saved straight away (owner's choice
+ * 2026-10-25).
+ */
+function ChangeCategories({
+  recipeId,
+  any,
+  disabled,
+}: {
+  recipeId: string;
+  any: boolean;
+  disabled: boolean;
+}) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  return (
+    <>
+      <button
+        type="button"
+        className={styles.categoryChange}
+        disabled={disabled}
+        aria-haspopup="dialog"
+        onClick={() => dialog.current?.showModal()}
+      >
+        {any ? (
+          <>
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 20h4L19 9l-4-4L4 16z" />
+            </svg>
+            Change<span className="visually-hidden"> categories</span>
+          </>
+        ) : (
+          <>
+            <span aria-hidden="true">+ </span>Add a category
+          </>
+        )}
+      </button>
+      <dialog ref={dialog} className={styles.adjust} aria-labelledby="recipe-categories-title">
+        <RecipeCategories recipeId={recipeId} disabled={disabled} />
+        <div className={styles.adjustButtons}>
+          <button type="button" className={styles.primary} onClick={() => dialog.current?.close()}>
+            Done
+          </button>
+        </div>
+      </dialog>
+    </>
   );
 }
 
@@ -294,7 +354,7 @@ function Headnote({ text }: { text: string }) {
       {long ? (
         <button
           type="button"
-          className={styles.more}
+          className={styles.moreButton}
           aria-expanded={open}
           aria-controls="recipe-headnote"
           onClick={() => setOpen(!open)}
@@ -510,11 +570,14 @@ function YourNote({
       <div className={styles.section}>
         <button
           type="button"
-          className={styles.more}
+          className={styles.moreButton}
           disabled={!editable}
           onClick={() => setAdding(true)}
         >
-          Add your note
+          <span aria-hidden="true" className={styles.plus}>
+            +
+          </span>
+          Add a note
         </button>
       </div>
     );
@@ -811,7 +874,9 @@ export function RecipePage({ id }: { id: string }) {
             >
               <path d="M4 20h4L19 9l-4-4L4 16z" />
             </svg>
-            Edit<span className="visually-hidden"> recipe</span>
+            <span className={styles.topLabel}>
+              Edit<span className="visually-hidden"> recipe</span>
+            </span>
           </Link>
           <Link href={`/recipes/${id}/print`} className={styles.topAction}>
             <svg
@@ -828,8 +893,31 @@ export function RecipePage({ id }: { id: string }) {
               <path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2" />
               <path d="M7 14h10v6H7z" />
             </svg>
-            Print
+            <span className={styles.topLabel}>Print</span>
           </Link>
+          <button
+            type="button"
+            className={styles.topAction}
+            onClick={() => void trash()}
+            disabled={!editable}
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 7h16M10 11v6M14 11v6M5 7l1 12a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1l1-12M9 7V4h6v3" />
+            </svg>
+            <span className={styles.topLabel}>
+              <span className="visually-hidden">Move to </span>Trash
+            </span>
+          </button>
         </div>
       </div>
       <div className={cover ? styles.hero : undefined}>
@@ -845,15 +933,22 @@ export function RecipePage({ id }: { id: string }) {
           </div>
         ) : null}
         <header className={styles.recipeHeader}>
-          {detail.categories.length > 0 ? (
-            <ul className={styles.eyebrow} aria-label="Categories">
-              {detail.categories.map((path) => (
-                <li key={path}>
-                  <Link href={`/?category=${encodeURIComponent(path)}`}>{path}</Link>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+          <div className={styles.categoryLine}>
+            {detail.categories.length > 0 ? (
+              <ul className={styles.eyebrow} aria-label="Categories">
+                {detail.categories.map((path) => (
+                  <li key={path}>
+                    <Link href={`/?category=${encodeURIComponent(path)}`}>{path}</Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <ChangeCategories
+              recipeId={id}
+              any={detail.categories.length > 0}
+              disabled={!editable}
+            />
+          </div>
           <h1 ref={heading} tabIndex={-1} className={styles.recipeTitle}>
             {recipe.title}
           </h1>
@@ -893,17 +988,6 @@ export function RecipePage({ id }: { id: string }) {
           photos={detail.photos.filter((p) => p.role === "import_original")}
           title={recipe.title}
         />
-      </div>
-
-      <div className={styles.danger}>
-        <button
-          type="button"
-          className={styles.secondary}
-          onClick={() => void trash()}
-          disabled={!editable}
-        >
-          Move to Trash
-        </button>
       </div>
     </article>
   );

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { adjust, editorStatus, recipeCard, syncStatus } from "./recipes";
+import { editorStatus, recipeCard, syncStatus, quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F3: linked sub-recipes.
@@ -56,7 +56,7 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   );
 
   // Scaling the tacos doesn't silently scale the sauce.
-  await adjust(page, (panel) => panel.getByRole("button", { name: "2×" }).click());
+  await quickScale(page, "2×");
   await expect(sauce).toContainText("Shown as written: scaling this recipe doesn't change it.");
   await expect(sauce).toContainText("½ cup sour cream");
   await expect(sauce.locator("mark")).toHaveCount(0);
