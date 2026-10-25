@@ -1,4 +1,10 @@
-import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import {
+  expect,
+  type Browser,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { PASSWORD, makeCode, useFreshAddress } from "./support";
 
 // Helpers for browser tests that work with recipes (phases C4 to C6).
@@ -59,4 +65,17 @@ export async function signInElsewhere(
   await page.getByRole("button", { name: "Sign in" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
   return page;
+}
+
+/**
+ * On a recipe's page: opens "Adjust" (amount, another pan, units; phase F1, owner's choice
+ * 2026-10-24), does `act` there, then closes it with "Done".
+ */
+export async function adjust(page: Page, act: (panel: Locator) => Promise<unknown>) {
+  await page.getByRole("button", { name: "Adjust" }).click();
+  const panel = page.getByRole("dialog", { name: "Adjust this recipe" });
+  await expect(panel).toBeVisible();
+  await act(panel);
+  await panel.getByRole("button", { name: "Done" }).click();
+  await expect(panel).toBeHidden();
 }

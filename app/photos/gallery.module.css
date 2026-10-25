@@ -1,9 +1,10 @@
 /* A recipe's photos on its page, and the full-screen viewer (phase D2). Tokens only. */
 
+/* Owner's choices 2026-10-24: on a phone the cover fills the top of the screen and fades into the
+   page; on a computer it's framed beside the title. */
 .gallery {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-6);
+  position: relative;
+  margin: 0;
 }
 
 .coverButton,
@@ -12,15 +13,64 @@
   width: 100%;
   padding: 0;
   border: 0;
-  border-radius: var(--radius-md);
   background: none;
   overflow: hidden;
   cursor: zoom-in;
 }
 
+.thumbButton {
+  border-radius: var(--radius-md);
+}
+
 .cover {
-  max-height: 28rem;
+  width: 100%;
+  height: min(112vw, 34rem);
   object-fit: cover;
+  -webkit-mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 45%, transparent 100%);
+}
+
+/* "All 4 photos", on the photo: above the fade on a phone, in the corner when framed. */
+.allPhotos {
+  position: absolute;
+  right: var(--space-4);
+  bottom: 42%;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  box-shadow: var(--shadow-md);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.allPhotos:hover {
+  background: var(--color-surface);
+}
+
+@media (min-width: 900px) {
+  .coverButton {
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .cover {
+    height: auto;
+    aspect-ratio: 1 / 1;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .allPhotos {
+    bottom: var(--space-4);
+  }
 }
 
 .strip {
@@ -120,11 +170,4 @@
   max-width: none;
   width: auto;
   height: auto;
-}
-
-/* "Arranged by Fennl" (phase D4): quiet, under the photos. */
-.arranged {
-  margin: var(--space-2) 0 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-sm);
 }

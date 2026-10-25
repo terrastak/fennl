@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus } from "./recipes";
+import { adjust, editorStatus, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F3: linked sub-recipes.
@@ -56,7 +56,7 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   );
 
   // Scaling the tacos doesn't silently scale the sauce.
-  await page.getByRole("button", { name: "2×" }).click();
+  await adjust(page, (panel) => panel.getByRole("button", { name: "2×" }).click());
   await expect(sauce).toContainText("Shown as written: scaling this recipe doesn't change it.");
   await expect(sauce).toContainText("½ cup sour cream");
   await expect(sauce.locator("mark")).toHaveCount(0);
@@ -65,7 +65,7 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
     .analyze();
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-  await page.getByRole("button", { name: "As written", exact: true }).click();
+  await page.getByRole("button", { name: "Back to as written" }).click();
 
   // Cook mode offers to cook the sauce first, and comes back (phase F5).
   await page.getByRole("link", { name: "Start cooking" }).click();

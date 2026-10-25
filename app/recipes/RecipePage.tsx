@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   NUTRIENTS,
   RECIPE_RULES,
@@ -17,6 +17,7 @@ import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
 import { Gallery, Originals } from "../photos/Gallery";
+import { usePainting } from "../photos/painting";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { PrintCopy } from "../print/PrintCopy";
@@ -24,7 +25,7 @@ import { EarlierVersion } from "./EarlierVersion";
 import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
 import { SubRecipe } from "./SubRecipe";
-import { ScaleBar, ScaledLine, ShownText } from "./ScaleControls";
+import { Adjust, ScaleStatus, ScaledLine, ServesStepper, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
 import {
@@ -73,6 +74,37 @@ const NUTRITION_FROM: Record<NutritionSource, string> = {
   website: "From the recipe's website.",
   ai: "Read from the recipe by AI; check before relying on it.",
 };
+
+const WIDE = "(min-width: 900px)";
+
+/** Whether the screen is wide enough for the sidebar layout (where the painting shows). */
+function useWide(): boolean {
+  return useSyncExternalStore(
+    (changed) => {
+      const query = window.matchMedia(WIDE);
+      query.addEventListener("change", changed);
+      return () => query.removeEventListener("change", changed);
+    },
+    () => window.matchMedia(WIDE).matches,
+    () => false,
+  );
+}
+
+/**
+ * The painting of the cover behind the top of the page, on wide screens only (owner's choice
+ * 2026-10-24: on a phone the photo itself fades into the page instead). It fades out gently, so
+ * there's no edge where it ends.
+ */
+function Painting({ hash }: { hash: string }) {
+  const wide = useWide();
+  const url = usePainting(wide ? hash : null);
+  if (!url) return null;
+  return (
+    <div className={styles.painting} aria-hidden="true">
+      <img src={url} alt="" />
+    </div>
+  );
+}
 
 /** Lines grouped under their headings (a list may start without one). */
 function sections<T extends IngredientLine | DirectionStep>(lines: T[]) {
@@ -191,7 +223,7 @@ function MadeIt({ detail, name, shared, me, editable }: Props & { me: string; ed
           Undo &ldquo;made it&rdquo;
         </button>
       ) : (
-        <button type="button" className={styles.primary} onClick={madeIt} disabled={!editable}>
+        <button type="button" className={styles.secondary} onClick={madeIt} disabled={!editable}>
           Made it today
         </button>
       )}
@@ -209,14 +241,37 @@ function Ingredients({
   recipe,
   scaling,
   linked,
+  adjustable = false,
 }: {
   recipe: Recipe;
   scaling: Scaling;
   linked: RecipeDetail["linked"];
+  /** With "Serves − 4 +" and "Adjust" (not in Trash). */
+  adjustable?: boolean;
 }) {
   return (
     <section className={styles.panel} aria-labelledby="ingredients-title">
-      <h2 id="ingredients-title">Ingredients</h2>
+      <div className={styles.panelHead}>
+        <h2 id="ingredients-title">Ingredients</h2>
+        {adjustable ? <Adjust recipe={recipe} scaling={scaling} /> : null}
+      </div>
+      {adjustable ? (
+        <>
+          <ServesStepper recipe={recipe} scaling={scaling} />
+          <ScaleStatus
+            note={
+              scaling.active
+                ? scaleNote(
+                    scaling.factor,
+                    scaling.units,
+                    scaling.pans ? panName(scaling.pans.yours) : null,
+                  )
+                : null
+            }
+            scaling={scaling}
+          />
+        </>
+      ) : null}
       {recipe.ingredients.length === 0 ? <p className={styles.hint}>None written yet.</p> : null}
       {sections(recipe.ingredients).map((group) => (
         <div key={group.key} className={styles.group}>
@@ -666,71 +721,104 @@ export function RecipePage({ id }: { id: string }) {
     }
   };
 
+  const gallery = detail.photos.filter((p) => p.role === "photo");
+  const cover = gallery[0] ?? null;
+
   return (
-    <article>
-      <Link href="/" className={styles.back}>
-        ← All recipes
-      </Link>
-      <Gallery
-        photos={detail.photos.filter((p) => p.role === "photo")}
-        title={recipe.title}
-        addedBy={(photo) =>
-          shared && photo.addedByUserId !== me ? name(photo.addedByUserId) : null
-        }
-      />
-      <header className={styles.recipeHeader}>
-        {recipe.source.kind === "person" && recipe.source.name ? (
-          <p className={styles.byPerson}>{recipe.source.name}</p>
-        ) : null}
-        <h1 ref={heading} tabIndex={-1} className={styles.recipeTitle}>
-          {recipe.title}
-        </h1>
-        {recipe.description.trim() ? <p className={styles.headnote}>{recipe.description}</p> : null}
-        <Facts recipe={recipe} scaling={scaling} />
-        <People detail={detail} name={name} shared={shared} me={me} />
-        {detail.categories.length > 0 ? (
-          <ul className={styles.chips} aria-label="Categories">
-            {detail.categories.map((path) => (
-              <li key={path}>
-                <Link href={`/?category=${encodeURIComponent(path)}`}>{path}</Link>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <div className={styles.actions}>
-          {recipe.directions.some((step) => !step.heading) ? (
-            <Link href={`/recipes/${id}/cook`} className={styles.primary}>
-              Start cooking
-            </Link>
-          ) : null}
-          <MadeIt detail={detail} name={name} shared={shared} me={me} editable={editable} />
-          <Link href={`/recipes/${id}/edit`} className={styles.secondary}>
-            Edit recipe
+    <article className={cover ? styles.recipeWithPhoto : styles.recipe}>
+      {cover ? <Painting hash={cover.imageHash} /> : null}
+      <div className={styles.recipeTop}>
+        <Link href="/" className={styles.back}>
+          ← All recipes
+        </Link>
+        <div className={styles.topActions}>
+          <Link href={`/recipes/${id}/edit`} className={styles.topAction}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M4 20h4L19 9l-4-4L4 16z" />
+            </svg>
+            Edit<span className="visually-hidden"> recipe</span>
           </Link>
-          <Link href={`/recipes/${id}/print`} className={styles.secondary}>
+          <Link href={`/recipes/${id}/print`} className={styles.topAction}>
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 9V4h10v5M7 17H5a1 1 0 0 1-1-1v-6a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1h-2" />
+              <path d="M7 14h10v6H7z" />
+            </svg>
             Print
           </Link>
         </div>
-        <PrintCopy id={id} />
-        {detail.waiting ? (
-          <p className={styles.hint}>Changes here haven&rsquo;t synced yet.</p>
+      </div>
+      <div className={cover ? styles.hero : undefined}>
+        {cover ? (
+          <div className={styles.heroPhoto}>
+            <Gallery
+              photos={gallery}
+              title={recipe.title}
+              addedBy={(photo) =>
+                shared && photo.addedByUserId !== me ? name(photo.addedByUserId) : null
+              }
+            />
+          </div>
         ) : null}
-      </header>
+        <header className={styles.recipeHeader}>
+          {detail.categories.length > 0 ? (
+            <ul className={styles.eyebrow} aria-label="Categories">
+              {detail.categories.map((path) => (
+                <li key={path}>
+                  <Link href={`/?category=${encodeURIComponent(path)}`}>{path}</Link>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <h1 ref={heading} tabIndex={-1} className={styles.recipeTitle}>
+            {recipe.title}
+          </h1>
+          {recipe.source.kind === "person" && recipe.source.name ? (
+            <p className={styles.byPerson}>{recipe.source.name}</p>
+          ) : null}
+          {recipe.description.trim() ? (
+            <p className={styles.headnote}>{recipe.description}</p>
+          ) : null}
+          <People detail={detail} name={name} shared={shared} me={me} />
+          <Facts recipe={recipe} scaling={scaling} />
+          <div className={styles.actions}>
+            {recipe.directions.some((step) => !step.heading) ? (
+              <Link href={`/recipes/${id}/cook`} className={styles.startCooking}>
+                Start cooking
+              </Link>
+            ) : null}
+            <MadeIt detail={detail} name={name} shared={shared} me={me} editable={editable} />
+          </div>
+          <PrintCopy id={id} />
+          {detail.waiting ? (
+            <p className={styles.hint}>Changes here haven&rsquo;t synced yet.</p>
+          ) : null}
+        </header>
+      </div>
 
       <EarlierVersion detail={detail} me={me} editable={editable} />
 
-      <ScaleBar recipe={recipe} scaling={scaling} />
-      {scaling.active ? (
-        <p className={styles.scaleNote}>
-          {scaleNote(
-            scaling.factor,
-            scaling.units,
-            scaling.pans ? panName(scaling.pans.yours) : null,
-          )}
-        </p>
-      ) : null}
       <div className={styles.columns}>
-        <Ingredients recipe={recipe} scaling={scaling} linked={detail.linked} />
+        <Ingredients recipe={recipe} scaling={scaling} linked={detail.linked} adjustable />
         <Method recipe={recipe} scaling={scaling} />
       </div>
 
