@@ -85,7 +85,9 @@ test("review a web page's recipe, fix it, and save it", async ({
     page.getByRole("heading", { level: 1, name: "Big Soft Ginger Cookies" }),
   ).toBeVisible();
   await expect(page.getByText("¾ cup butter, softened")).toBeVisible();
-  await expect(page.getByRole("link", { name: "Cookies" })).toBeVisible();
+  await expect(
+    page.getByRole("list", { name: "Categories" }).getByRole("link", { name: "Cookies" }),
+  ).toBeVisible();
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
   // Nothing waits on the Import page any more.
