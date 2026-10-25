@@ -57,8 +57,8 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(ingredients.locator("mark", { hasText: "950 ml" })).toBeVisible();
   // Spoons stay spoons.
   await expect(ingredients.getByRole("button", { name: "4 tablespoons sugar" })).toBeVisible();
-  // Steps scale their measured amounts too.
-  await expect(page.locator("ol mark", { hasText: "120 ml" })).toBeVisible();
+  // Steps convert too, but one pancake's batter stays one pancake's size.
+  await expect(page.locator("ol mark", { hasText: "59 ml" })).toBeVisible();
 
   const axe = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
