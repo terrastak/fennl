@@ -38,10 +38,10 @@ test("An empty recipe box invites you in, and sample recipes fill it", async ({
 
   await addSamples(page);
   await expect(cardTitles(page)).toHaveCount(4);
-  // Alphabetical at first, with categories and time on each card.
+  // Alphabetical at first, with the time on each card (owner's choice 2026-10-25: the photo, the
+  // title and the time, nothing more).
   await expect(cardTitles(page).first()).toContainText("Black Bean Tacos with Lime Crema");
-  await expect(recipeCard(page, "Green Chile Stew")).toContainText("Mexican, Soups · 2 hr 5 min");
-  await expect(recipeCard(page, "Lemon Olive Oil Cake")).toContainText("Desserts › Cakes");
+  await expect(recipeCard(page, "Green Chile Stew")).toContainText("2 hr 5 min");
   await noAccessibilityProblems(page);
 
   // A newer recipe comes first when sorted by newest.

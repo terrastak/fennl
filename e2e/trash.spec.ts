@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { premium, recipeCard, signInElsewhere, syncStatus } from "./recipes";
+import { fromListMenu, premium, recipeCard, signInElsewhere, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C9: Trash and restore.
@@ -47,7 +47,7 @@ test("Moved to Trash, then put back: from the list's Undo, and from Trash", asyn
   await expect(recipeCard(page, "Buttermilk Pancakes")).toBeVisible();
 
   await moveToTrash(page, "Buttermilk Pancakes");
-  await page.getByRole("link", { name: "Trash", exact: true }).first().click();
+  await fromListMenu(page, "link", "Trash");
   await expect(page.getByRole("heading", { level: 1, name: "Trash" })).toBeVisible();
   await expect(trashList(page).getByRole("listitem")).toHaveCount(1);
   await expect(trashList(page)).toContainText("Deleted for good in 30 days");

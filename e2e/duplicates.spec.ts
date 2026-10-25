@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus } from "./recipes";
+import { editorStatus, fromListMenu, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C14: the duplicate finder.
@@ -43,7 +43,7 @@ const pairCount = (page: Page) => page.getByRole("heading", { name: /possible du
 
 async function findDuplicates(page: Page) {
   await page.goto("/");
-  await page.getByRole("link", { name: "Find duplicates" }).click();
+  await fromListMenu(page, "link", "Find duplicates");
   await expect(page.getByRole("heading", { level: 1, name: "Find duplicates" })).toBeVisible();
   await page.getByRole("button", { name: "Find duplicates" }).click();
 }
@@ -59,7 +59,7 @@ test("Nothing runs until asked, and a library with no duplicates says so", async
   await expect(recipeCard(page, "Lemon Olive Oil Cake")).toBeVisible();
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
-  await page.getByRole("link", { name: "Find duplicates" }).click();
+  await fromListMenu(page, "link", "Find duplicates");
   await expect(page.getByRole("heading", { level: 1, name: "Find duplicates" })).toBeVisible();
   // Not looked yet.
   await expect(page.getByText(/No duplicates found/)).toHaveCount(0);

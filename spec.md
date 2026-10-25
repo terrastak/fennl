@@ -1306,6 +1306,19 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
 - **You check**: on the preview, a recipe with several photos and one without, on a computer and a phone, in light and dark mode: the painting behind the top on the computer with no line where it fades; the photo fading into the page on the phone; "All 4 photos"; Serves − + and Adjust.
 - **Built (2026-10-24)**: `app/photos/painting.ts` (painting on a canvas from the photo's small copy, kept for the visit) and `app/photos/brushStrokes.ts` (the strokes, unit-tested: same photo same painting, the photo's own colours, strokes along its edges); `app/recipes/RecipePage.tsx`, `app/photos/Gallery.tsx`, `app/recipes/ScaleControls.tsx` (`ServesStepper`, `Adjust`, `ScaleStatus`); how much of the painting shows is a token (`--photo-painting-opacity`: 0.5, 0.38 in dark mode).
 
+### U2. A polished recipe list (owner's choices 2026-10-25)
+- **Goal**: The recipe list shows the food first, with the tools kept small, as in the mockup on the design canvas.
+- **Owner's choices**:
+  1. **The heading** "Your recipes" with **Add recipe** beside it (just a + on a phone) and a **⋯** menu holding the less-used tools: Select, Categories, Find duplicates, Trash.
+  2. **Quick choices** in one row under the heading: All, Favorites, 30 minutes or less, Made recently (last 30 days), Not tried yet (never made), then **Filters**, which opens everything else: the category and rating (moved from the toolbar), and the rest of C13a's filters. Each filter that's on shows as a chip to take it off; saved searches (C13b) stay just above the list.
+  3. **Search** (owner's choice): on a computer, one search, the sidebar's; on the list, what it's searching for shows as a chip with × to clear it, and a search from the sidebar keeps the category and filters the list is showing. On a phone, a search box under the "Your recipes" heading (the top bar's search stays too).
+  4. **Categories in the sidebar on a computer** (owner's choice), under Recipes and Import, with **Edit categories**; one click shows that category's recipes. On a phone they're in Filters.
+  5. **The count and tools row**: "9 recipes" (or "Showing 2 of 9", with Show all recipes and Print these), then **Surprise me** and **Sort by**, kept small.
+  6. **The cards**: the photo (4:3; square, two across, on a phone) with the title and the time under it, no box around them; a heart on favorites; a recipe with no photo gets a warm card with a sprig of fennel. Categories no longer show on the cards.
+  7. **Phone tabs unchanged for now** (owner's choice): Recipes, Import, Settings, Account. The mockup's Recipes, Search, Import, You is for later, after trying this list.
+- **You check**: on the preview, on a computer and a phone: the quick choices, Filters, a search from the sidebar (computer) and from the box under the heading (phone), a category from the sidebar, the ⋯ menu, and Select.
+- **Built (2026-10-25)**: `app/pages/RecipesPage.tsx` (`MoreMenu`, `QUICK`), `app/shell/SideCategories.tsx`, `app/shell/ShellSearch.tsx` (keeps the list's filters), `replaceAddress` and `ADDRESS_EVENT` in `app/navigation.ts` (so the sidebar knows the category shown).
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1618,5 +1631,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | F3 | Done 2026-10-23 (merged as #87) |
 | F4 | Done 2026-10-23 (merged as #88) |
 | F5 | Approved 2026-10-23; built, waiting for review |
-| U1 | Built 2026-10-24, waiting for review |
+| U1 | Done 2026-10-25 (merged as #96) |
+| U2 | Built 2026-10-25, waiting for review |
 | All others | Not started |

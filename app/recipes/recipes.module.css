@@ -2,15 +2,6 @@
 
 /* --- List ------------------------------------------------------------------------------- */
 
-.toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-bottom: var(--space-6);
-}
-
 .sort {
   display: grid;
   gap: var(--space-1);
@@ -84,19 +75,6 @@
   cursor: pointer;
 }
 
-.quickAdd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-  max-width: 44rem;
-  margin-bottom: var(--space-6);
-  padding: var(--space-5);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-}
-
 .field {
   display: grid;
   flex: 1 1 16rem;
@@ -130,67 +108,421 @@
   color: var(--color-danger);
 }
 
+/* --- The list (owner's choices 2026-10-25): the recipes first, tools kept small ---------- */
+
+.listHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.listHead > header {
+  margin-bottom: 0;
+}
+
+.listActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.addButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: var(--tap-target);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-5);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  background: var(--color-accent-hover);
+}
+
+.addButton:disabled,
+.addButton[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* A phone has room for the + only; the name stays for screen readers. */
+@media (max-width: 599px) {
+  .addButton {
+    width: 3rem;
+    height: 3rem;
+    padding: 0;
+  }
+
+  .addLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+.menuBox {
+  position: relative;
+}
+
+.iconButton {
+  display: grid;
+  place-items: center;
+  width: var(--tap-target);
+  height: var(--tap-target);
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.iconButton:hover,
+.iconButton[aria-expanded="true"] {
+  background: var(--color-surface-sunken);
+}
+
+.menu {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  min-width: 13rem;
+  margin: 0;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  list-style: none;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.menuItem:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+/* The list's own search box: on a phone only (owner's choice 2026-10-25); a computer searches
+   from the sidebar. */
+.search {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4);
+}
+
+@media (min-width: 900px) {
+  .search {
+    display: none;
+  }
+}
+
+.searchInput {
+  width: 100%;
+  min-height: calc(var(--tap-target) + var(--space-1));
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+/* All, Favorites, 30 minutes or less...: one row that scrolls sideways on a phone. */
+.quick {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+@media (max-width: 599px) {
+  .quick {
+    flex-wrap: nowrap;
+    margin-inline: calc(-1 * var(--space-4));
+    padding-inline: var(--space-4);
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .quick > * {
+    flex-shrink: 0;
+  }
+}
+
+.chipButton,
+.filtersButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chipButton:hover,
+.filtersButton:hover {
+  border-color: var(--color-text-muted);
+}
+
+.chipButton[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.filtersButton[aria-expanded="true"] {
+  background: var(--color-surface-sunken);
+}
+
+.filtersBox {
+  margin-bottom: var(--space-4);
+}
+
+.filtersBox > .filterGrid {
+  margin-bottom: var(--space-4);
+}
+
+.countRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.countRow .filterNote {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.countTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.quietButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  cursor: pointer;
+}
+
+.quietButton:hover:not(:disabled) {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.quietButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.sortQuiet {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.sortSelect {
+  field-sizing: content;
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.sortSelect:hover {
+  background: var(--color-surface-sunken);
+}
+
+/* The cards: the photo with its title under it, no box around them. Two across on a phone. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6) var(--space-3);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
+@media (min-width: 600px) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
+    gap: var(--space-8) var(--space-6);
+  }
+}
+
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
   height: 100%;
-  overflow: hidden;
   border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-sm);
   color: var(--color-text);
   text-decoration: none;
-  transition: box-shadow var(--duration-fast) var(--ease-out);
 }
 
 .card:hover {
-  box-shadow: var(--shadow-md);
   color: var(--color-text);
 }
 
-/* Until photos (phase D2): a soft block with the recipe's first letter. */
+.card:hover .cardTitle {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.cardPicture {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-sunken);
+}
+
+.coverPhoto,
+.cover {
+  aspect-ratio: 1 / 1;
+  transition: transform 300ms var(--ease-out);
+}
+
+@media (min-width: 600px) {
+  .coverPhoto,
+  .cover {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+.coverPhoto {
+  width: 100%;
+  object-fit: cover;
+}
+
+.card:hover .coverPhoto,
+.card:hover .cover {
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coverPhoto,
+  .cover {
+    transition: none;
+  }
+
+  .card:hover .coverPhoto,
+  .card:hover .cover {
+    transform: none;
+  }
+}
+
+/* No photo: a warm card with a sprig of fennel. */
 .cover {
   display: grid;
   place-items: center;
-  aspect-ratio: 16 / 10;
-  background: var(--color-accent-soft);
-  color: var(--color-accent-soft-text);
-  font-family: var(--font-display);
-  font-variation-settings: var(--font-display-settings);
-  font-size: var(--text-4xl);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
 }
 
-/* A cover photo in the list (phase D2): the same box as the letter it replaces. */
-.coverPhoto {
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+.cover svg {
+  opacity: 0.6;
+}
+
+.cardFavorite {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  color: var(--color-warm-text);
 }
 
 .cardBody {
   display: grid;
   gap: var(--space-1);
-  padding: var(--space-3) var(--space-4) var(--space-4);
 }
 
 .cardTitle {
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-settings);
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   line-height: var(--leading-snug);
   overflow-wrap: anywhere;
 }
 
+@media (min-width: 600px) {
+  .cardTitle {
+    font-size: var(--text-lg);
+  }
+}
+
 .cardMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
@@ -258,10 +590,6 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: var(--space-3);
-}
-
-.footnote {
-  margin-top: var(--space-8);
 }
 
 /* --- Recipe page ------------------------------------------------------------------------ */
@@ -957,21 +1285,6 @@
 
 /* --- Category filter and Select (phase C7) ---------------------------------------------- */
 
-.toolbarStart,
-.toolbarEnd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
-
-.toolbarLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap-target);
-  font-weight: var(--weight-semibold);
-}
-
 .filterNote {
   display: flex;
   flex-wrap: wrap;
@@ -1011,6 +1324,7 @@ label.card {
 
 .cardCheck {
   position: absolute;
+  z-index: 1;
   top: var(--space-3);
   left: var(--space-3);
   width: 1.5rem;
@@ -1024,29 +1338,6 @@ label.card {
 }
 
 /* --- Search (phase C8) ------------------------------------------------------------------- */
-
-.search {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 40rem;
-  margin-bottom: var(--space-5);
-}
-
-.searchLabel {
-  font-weight: var(--weight-semibold);
-}
-
-.searchInput {
-  width: 100%;
-  min-height: calc(var(--tap-target) + var(--space-2));
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-lg);
-}
 
 .cardHit {
   color: var(--color-text-muted);
@@ -1313,6 +1604,13 @@ label.card {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
+}
+
+.surprise .coverPhoto,
+.surprise .cover {
+  flex-shrink: 0;
+  width: 6rem;
+  border-radius: var(--radius-md);
 }
 
 .surpriseBody {

@@ -6,6 +6,18 @@ import { useSyncExternalStore } from "react";
  */
 export const NAVIGATE_EVENT = "fennl:navigate";
 
+/**
+ * A page changed its own address in place (the recipe list's search and filters), without
+ * switching page; for anything that shows what the address says, like the sidebar's categories.
+ */
+export const ADDRESS_EVENT = "fennl:address";
+
+/** Swaps the address for `to` in place, and says so (ADDRESS_EVENT). */
+export function replaceAddress(to: string): void {
+  window.history.replaceState(null, "", to);
+  window.dispatchEvent(new Event(ADDRESS_EVENT));
+}
+
 function subscribe(listener: () => void): () => void {
   window.addEventListener("popstate", listener);
   window.addEventListener(NAVIGATE_EVENT, listener);

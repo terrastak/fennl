@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { recipeCard, syncStatus } from "./recipes";
+import { expectListSearch, recipeCard, searchList, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C13a: more filters on the recipe list. The four sample recipes are:
@@ -30,7 +30,7 @@ const titles = (page: Page) =>
 const panel = (page: Page) => page.getByRole("region", { name: "More filters" });
 
 async function openFilters(page: Page) {
-  await page.getByRole("button", { name: /^More filters/ }).click();
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await expect(panel(page)).toBeVisible();
 }
 
@@ -128,7 +128,7 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await panel(page).getByRole("combobox", { name: /^Time/ }).selectOption("60");
   await panel(page).getByLabel("Without ingredient").fill("cumin");
   await panel(page).getByLabel("Without ingredient").press("Enter");
-  await page.getByRole("searchbox", { name: "Search recipes" }).fill("lemon");
+  await searchList(page, "lemon");
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake", "Buttermilk Pancakes"]);
   await expect(page).toHaveURL(/q=lemon/);
   await expect(page).toHaveURL(/time=60/);
@@ -136,16 +136,16 @@ test("Filters are kept in the address, work with search, and can all be cleared"
 
   // A reload keeps them, with the panel already open and the chips showing.
   await page.reload();
-  await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
+  await expectListSearch(page, "lemon");
   await expect(panel(page)).toBeVisible();
-  await expect(page.getByRole("button", { name: "More filters (2)" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filters (2)" })).toBeVisible();
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake", "Buttermilk Pancakes"]);
 
   // One button puts everything back.
   await page.getByRole("button", { name: "Show all recipes" }).click();
   await expect(titles(page)).toHaveCount(4);
   await expect(page).toHaveURL(/\/$/);
-  await expect(page.getByRole("button", { name: "More filters" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible();
 });
 
 test("A recipe with no time written down is left out of a time filter, and the list says so", async ({

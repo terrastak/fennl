@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus } from "./recipes";
+import { editorStatus, expectListSearch, recipeCard, searchList, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C13c: search from any screen, "Surprise me", and category suggestions in the editor.
@@ -51,19 +51,19 @@ test("Search from a recipe page, from the keyboard, and while already on the lis
   await shellSearch(page).fill("lime");
   await shellSearch(page).press("Enter");
   await expect(page).toHaveURL(/\?q=lime$/);
-  await expect(listSearch(page)).toHaveValue("lime");
+  await expectListSearch(page, "lime");
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
 
   // While already on the list: the list follows.
   await openShellSearch(page);
   await shellSearch(page).fill("pancakes");
   await shellSearch(page).press("Enter");
-  await expect(listSearch(page)).toHaveValue("pancakes");
+  await expectListSearch(page, "pancakes");
   await expect(titles(page)).toHaveText(["Buttermilk Pancakes"]);
 
   // The back button goes back to the earlier search.
   await page.goBack();
-  await expect(listSearch(page)).toHaveValue("lime");
+  await expectListSearch(page, "lime");
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
 
   // "/" from a page that isn't a place to type; and never while typing.
@@ -74,9 +74,11 @@ test("Search from a recipe page, from the keyboard, and while already on the lis
   await shellSearch(page).fill("cumin");
   await shellSearch(page).press("Enter");
   await expect(titles(page)).toHaveText(["Green Chile Stew"]);
-  await listSearch(page).fill("a");
+  // The list's own box on a phone; on a computer the sidebar's is the one search.
+  const typing = (await listSearch(page).isVisible()) ? listSearch(page) : shellSearch(page);
+  await typing.fill("a");
   await page.keyboard.type("/b");
-  await expect(listSearch(page)).toHaveValue("a/b");
+  await expect(typing).toHaveValue("a/b");
 
   await noAccessibilityProblems(page);
 });
@@ -121,7 +123,7 @@ test("Surprise me follows the filters and search", async ({ page, context, baseU
   await addSamples(page);
 
   // Only the two 30-minute recipes can come up.
-  await page.getByRole("button", { name: /^More filters/ }).click();
+  await page.getByRole("button", { name: /^Filters/ }).click();
   await page
     .getByRole("region", { name: "More filters" })
     .getByRole("combobox", { name: /^Time/ })
@@ -136,11 +138,11 @@ test("Surprise me follows the filters and search", async ({ page, context, baseU
   }
 
   // A suggestion goes when the list moves on from it.
-  await listSearch(page).fill("cake");
+  await searchList(page, "cake");
   await expect(suggestion(page)).toHaveCount(0);
 
   // With nothing to pick from the button is off.
-  await listSearch(page).fill("nothing like this");
+  await searchList(page, "nothing like this");
   await expect(page.getByRole("button", { name: "Surprise me" })).toBeDisabled();
   await noAccessibilityProblems(page);
 });

@@ -1,7 +1,14 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { keys } from "./keys";
-import { premium, recipeCard, signInElsewhere, syncStatus } from "./recipes";
+import {
+  fromListMenu,
+  openFilters,
+  premium,
+  recipeCard,
+  signInElsewhere,
+  syncStatus,
+} from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C7: categories.
@@ -98,7 +105,7 @@ test("Many recipes filed at once, with a preview, a count and undo; the list fil
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
 
-  await page.getByRole("button", { name: "Select" }).click();
+  await fromListMenu(page, "button", "Select");
   const bulk = page.getByRole("region", { name: "Selected recipes" });
   await expect(bulk).toContainText("0 of 4 selected");
   await page.getByRole("checkbox", { name: "Green Chile Stew" }).check();
@@ -130,20 +137,22 @@ test("Many recipes filed at once, with a preview, a count and undo; the list fil
 
   // The filter, kept in the address.
   await page.getByRole("button", { name: "Done selecting" }).click();
-  await page.getByLabel("Category").selectOption({ label: "Weeknight (2)" });
+  await openFilters(page);
+  await page.getByLabel("Category", { exact: true }).selectOption({ label: "Weeknight (2)" });
   await expect(cardTitles(page)).toHaveText([/Black Bean Tacos/, /Green Chile Stew/]);
   await expect(page).toHaveURL(/\?category=Weeknight$/);
   await page.reload();
   await expect(cardTitles(page)).toHaveCount(2);
-  await page.getByLabel("Category").selectOption({ label: "Desserts (1)" });
+  await openFilters(page);
+  await page.getByLabel("Category", { exact: true }).selectOption({ label: "Desserts (1)" });
   await expect(cardTitles(page)).toHaveText([/Lemon Olive Oil Cake/]);
-  await page.getByLabel("Category").selectOption({ label: "Not in a category" });
+  await page.getByLabel("Category", { exact: true }).selectOption({ label: "Not in a category" });
   await expect(page.getByText("Every recipe is in a category.")).toBeVisible();
   await page.getByRole("button", { name: "Show all recipes" }).click();
   await expect(cardTitles(page)).toHaveCount(4);
 
   // Taken out again, many at once.
-  await page.getByRole("button", { name: "Select" }).click();
+  await fromListMenu(page, "button", "Select");
   await bulk.getByRole("button", { name: "Select all shown" }).click();
   await bulk.getByRole("button", { name: "Take out of a category" }).click();
   await bulk.getByLabel("Take the selected recipes out of").selectOption({
@@ -189,7 +198,8 @@ test("A recipe's categories, chosen in the editor by typing", async ({
 
   // The recipe page's categories lead to the list, filtered.
   await page.getByRole("link", { name: "Desserts › Cakes" }).click();
-  await expect(page.getByLabel("Category")).toHaveValue("desserts › cakes");
+  await openFilters(page);
+  await expect(page.getByLabel("Category", { exact: true })).toHaveValue("desserts › cakes");
   await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
 });
 

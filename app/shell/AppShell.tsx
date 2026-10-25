@@ -14,6 +14,7 @@ import {
 } from "./icons";
 import { Logo } from "./Logo";
 import { ShellSearch } from "./ShellSearch";
+import { SideCategories } from "./SideCategories";
 
 interface NavItem {
   href: string;
@@ -107,6 +108,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
               <NavLink key={item.href} item={item} path={path} />
             ))}
           </ul>
+          <SideCategories />
           <ul className={`${styles.navList} ${styles.navListBottom}`}>
             <li>
               <Link

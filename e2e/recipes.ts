@@ -79,3 +79,49 @@ export async function adjust(page: Page, act: (panel: Locator) => Promise<unknow
   await panel.getByRole("button", { name: "Done" }).click();
   await expect(panel).toBeHidden();
 }
+
+/**
+ * On the recipe list: one of the tools under "⋯" (owner's choice 2026-10-25: Select,
+ * Categories, Find duplicates and Trash).
+ */
+export async function fromListMenu(page: Page, role: "button" | "link", name: string) {
+  await page.getByRole("button", { name: "More options" }).click();
+  await page.getByRole(role, { name, exact: true }).click();
+}
+
+/** Opens the recipe list's Filters (the category and rating are in there too). */
+export async function openFilters(page: Page) {
+  const button = page.getByRole("button", { name: /^Filters/ });
+  if ((await button.getAttribute("aria-expanded")) !== "true") await button.click();
+}
+
+/**
+ * Searches the recipe list: with its own box on a phone, from the sidebar on a computer
+ * (owner's choice 2026-10-25); no words clears the search.
+ */
+export async function searchList(page: Page, words: string) {
+  const box = page.getByRole("searchbox", { name: "Search recipes" });
+  if (await box.isVisible()) {
+    await box.fill(words);
+    return;
+  }
+  if (!words) {
+    await page.getByRole("button", { name: "Clear the search" }).click();
+    return;
+  }
+  const side = page.getByRole("searchbox", { name: "Find a recipe" });
+  await side.fill(words);
+  await side.press("Enter");
+}
+
+/** What the recipe list says it's searching for: its box on a phone, a chip on a computer. */
+export async function expectListSearch(page: Page, words: string) {
+  const box = page.getByRole("searchbox", { name: "Search recipes" });
+  if (await box.isVisible()) {
+    await expect(box).toHaveValue(words);
+  } else if (words) {
+    await expect(page.getByRole("list", { name: "Filters on" })).toContainText(`“${words}”`);
+  } else {
+    await expect(page.getByRole("button", { name: "Clear the search" })).toHaveCount(0);
+  }
+}

@@ -23,7 +23,7 @@ const timeBox = (page: Page) =>
 
 /** Opens the filters panel, unless a saved search already opened it. */
 async function openFilters(page: Page) {
-  const toggle = page.getByRole("button", { name: /^More filters/ });
+  const toggle = page.getByRole("button", { name: /^Filters/ });
   if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
   await expect(page.getByRole("region", { name: "More filters" })).toBeVisible();
 }
@@ -60,7 +60,10 @@ test("Save a search, use it again, update it, rename it and remove it", async ({
   await chooser(page).selectOption({ label: "Quick dinners" });
   await expect(titles(page)).toHaveCount(2);
   await expect(page).toHaveURL(/time=30/);
-  await expect(page.getByRole("button", { name: "Remove filter: Up to 30 minutes" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "30 minutes or less" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 
   // It is a rule, not a list: it follows the recipes. A reload still has it.
   await page.reload();
@@ -141,7 +144,7 @@ test("Premium: saved searches are on another device, and show with no connection
   const phone = await signInElsewhere(browser, baseURL!, email);
   await expect(chooser(phone).getByRole("option", { name: "Quick dinners" })).toBeAttached();
   await chooser(phone).selectOption({ label: "Quick dinners" });
-  await phone.getByRole("button", { name: /^More filters/ }).waitFor();
+  await phone.getByRole("button", { name: /^Filters/ }).waitFor();
   await expect(phone).toHaveURL(/time=30/);
   await phone.context().close();
 

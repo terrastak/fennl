@@ -21,7 +21,13 @@ export function ShellSearch({
     event.preventDefault();
     const words = text.trim();
     if (!words) return;
-    navigate(`/?q=${encodeURIComponent(words)}`);
+    // On the recipe list, the search joins what the list is already showing (a category, its
+    // filters); from anywhere else it starts afresh.
+    const params = new URLSearchParams(
+      window.location.pathname === "/" ? window.location.search : "",
+    );
+    params.set("q", words);
+    navigate(`/?${params.toString()}`);
     setText("");
     onDone?.();
   };

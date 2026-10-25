@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
@@ -6,7 +6,7 @@ import { UsageNote } from "../limits/Usage";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
-import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
+import { NAVIGATE_EVENT, navigate, queryParam, replaceAddress } from "../navigation";
 import { FilterPanel } from "../recipes/FilterPanel";
 import { SavedSearches } from "../recipes/SavedSearches";
 import {
@@ -18,6 +18,7 @@ import {
   ingredientWords,
   NO_FILTERS,
   pickSurprise,
+  recipeMinutes,
   UNFILED,
   type RatingFilter,
   type RecipeFilters,
@@ -103,28 +104,35 @@ function RecipeCard({
   /** Where the search found it, when not in the title. */
   hit: SearchHit | undefined;
 }) {
-  const meta = [
-    recipe.categories.join(", "),
-    recipe.totalMinutes !== null ? minutesText(recipe.totalMinutes) : "",
-  ].filter(Boolean);
   const titleId = `card-title-${recipe.id}`;
+  // The total time, or prep and cook added up when the recipe gives no total.
+  const minutes = recipeMinutes(recipe);
   const body = (
     <>
-      {recipe.cover ? (
-        // The cover's small copy (phase D2); recipes without one keep their first letter.
-        <PhotoImage
-          hash={recipe.cover.hash}
-          size="thumb"
-          width={recipe.cover.width}
-          height={recipe.cover.height}
-          alt=""
-          className={styles.coverPhoto}
-        />
-      ) : (
-        <span className={styles.cover} aria-hidden="true">
-          {recipe.title.trim().charAt(0).toUpperCase()}
-        </span>
-      )}
+      <span className={styles.cardPicture}>
+        {recipe.cover ? (
+          // The cover's small copy (phase D2).
+          <PhotoImage
+            hash={recipe.cover.hash}
+            size="thumb"
+            width={recipe.cover.width}
+            height={recipe.cover.height}
+            alt=""
+            className={styles.coverPhoto}
+          />
+        ) : (
+          // No photo: a warm card with a sprig of fennel.
+          <span className={styles.cover} aria-hidden="true">
+            <LogoSprig />
+          </span>
+        )}
+        {recipe.favorite ? (
+          <span className={styles.cardFavorite}>
+            <HeartIcon />
+            <span className="visually-hidden">A favorite</span>
+          </span>
+        ) : null}
+      </span>
       <span className={styles.cardBody}>
         <span id={titleId} className={styles.cardTitle}>
           <Highlight text={recipe.title} terms={terms} />
@@ -136,7 +144,12 @@ function RecipeCard({
           </span>
         ) : null}
         {recipe.addedBy ? <span className={styles.cardBy}>{recipe.addedBy}</span> : null}
-        {meta.length > 0 ? <span className={styles.cardMeta}>{meta.join(" · ")}</span> : null}
+        {minutes !== null ? (
+          <span className={styles.cardMeta}>
+            <ClockIcon />
+            {minutesText(minutes)}
+          </span>
+        ) : null}
         {recipe.waiting ? <span className={styles.cardMeta}>Not synced yet</span> : null}
       </span>
     </>
@@ -166,6 +179,153 @@ function RecipeCard({
     </li>
   );
 }
+
+function LogoSprig() {
+  return (
+    <svg width="40" height="40" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+      <path
+        d="M17 28V10M17 15l-6-7M17 15l6-7M17 20l-5-4M17 20l5-4"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinecap="round"
+        fill="none"
+      />
+    </svg>
+  );
+}
+
+function HeartIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path
+        fill="currentColor"
+        d="M12 20s-7-4.4-9.2-9A5 5 0 0 1 12 6a5 5 0 0 1 9.2 5c-2.2 4.6-9.2 9-9.2 9z"
+      />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </svg>
+  );
+}
+
+/**
+ * "⋯" beside Add recipe (owner's choice 2026-10-25): the list's less-used tools, out of the way.
+ */
+function MoreMenu({ selecting, onSelect }: { selecting: boolean; onSelect: () => void }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  const button = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const outside = (event: PointerEvent) => {
+      if (!box.current?.contains(event.target as Node)) setOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [open]);
+  return (
+    <div ref={box} className={styles.menuBox}>
+      <button
+        ref={button}
+        type="button"
+        className={styles.iconButton}
+        aria-label="More options"
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <circle cx="5" cy="12" r="1.8" fill="currentColor" />
+          <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+          <circle cx="19" cy="12" r="1.8" fill="currentColor" />
+        </svg>
+      </button>
+      <ul id={id} className={styles.menu} hidden={!open}>
+        <li>
+          <button
+            type="button"
+            className={styles.menuItem}
+            onClick={() => {
+              setOpen(false);
+              onSelect();
+            }}
+          >
+            {selecting ? "Done selecting" : "Select"}
+          </button>
+        </li>
+        <li>
+          <Link href="/categories" className={styles.menuItem}>
+            Categories
+          </Link>
+        </li>
+        <li>
+          <Link href="/duplicates" className={styles.menuItem}>
+            Find duplicates
+          </Link>
+        </li>
+        <li>
+          <Link href="/trash" className={styles.menuItem}>
+            Trash
+          </Link>
+        </li>
+      </ul>
+    </div>
+  );
+}
+
+/** The quick choices above the list (owner's choice 2026-10-25), each one of the filters. */
+const QUICK: {
+  label: string;
+  on: (f: RecipeFilters) => boolean;
+  toggle: (f: RecipeFilters) => RecipeFilters;
+}[] = [
+  {
+    label: "Favorites",
+    on: (f) => f.rating === "favorite",
+    toggle: (f) => ({ ...f, rating: f.rating === "favorite" ? "" : "favorite" }),
+  },
+  {
+    label: "30 minutes or less",
+    on: (f) => f.maxMinutes === 30,
+    toggle: (f) => ({ ...f, maxMinutes: f.maxMinutes === 30 ? null : 30 }),
+  },
+  {
+    label: "Made recently",
+    on: (f) => f.made === "recent",
+    toggle: (f) => ({ ...f, made: f.made === "recent" ? "" : "recent" }),
+  },
+  {
+    label: "Not tried yet",
+    on: (f) => f.made === "never",
+    toggle: (f) => ({ ...f, made: f.made === "never" ? "" : "never" }),
+  },
+];
 
 function EmptyState({
   disabled,
@@ -313,7 +473,7 @@ export function RecipesPage() {
   const remember = (nextQuery: string, next: RecipeFilters) => {
     const params = filtersToParams(nextQuery, next, (key) => tree?.byKey.get(key)?.path);
     const search = params.toString();
-    window.history.replaceState(null, "", search ? `/?${search}` : "/");
+    replaceAddress(search ? `/?${search}` : "/");
     setLimit(PAGE);
   };
 
@@ -338,7 +498,7 @@ export function RecipesPage() {
   const clearAll = () => {
     setQuery("");
     setFilters(NO_FILTERS);
-    window.history.replaceState(null, "", "/");
+    replaceAddress("/");
     setLimit(PAGE);
   };
 
@@ -395,16 +555,93 @@ export function RecipesPage() {
       : (tree?.byKey.get(filters.category)?.path ?? filters.category);
   const nameOf = (key: string) => tree?.byKey.get(key)?.path ?? key;
   const chips = filterChips(filters, nameOf);
-  const hasCategories = (tree?.nodes.length ?? 0) > 0;
   // Printing several at once (phase F6), coming back to the list as it was.
   const print = (ids: string[]) => printRecipes(ids, `/${window.location.search}`);
 
+  // Each filter that's on, as a chip to take it off; the quick choices above show their own.
+  const removable: { id: string; label: string; remove: () => void }[] = [
+    ...(searching ? [{ id: "q", label: `“${query.trim()}”`, remove: () => typeQuery("") }] : []),
+    ...(filters.category
+      ? [
+          {
+            id: "category",
+            label: filters.category === UNFILED ? "Not in a category" : `In ${filterName}`,
+            remove: () => changeFilters({ ...filters, category: "" }),
+          },
+        ]
+      : []),
+    ...(filters.rating && filters.rating !== "favorite"
+      ? [
+          {
+            id: "rating",
+            label: RATINGS.find((r) => r.value === filters.rating)?.label ?? "",
+            remove: () => changeFilters({ ...filters, rating: "" }),
+          },
+        ]
+      : []),
+    ...chips
+      .filter(
+        (chip) =>
+          !(chip.id === "time" && filters.maxMinutes === 30) &&
+          !(chip.id === "made" && (filters.made === "recent" || filters.made === "never")),
+      )
+      .map((chip) => ({
+        id: chip.id,
+        label: chip.label,
+        remove: () => changeFilters(chip.remove(filters)),
+      })),
+  ];
+  const moreOn = removable.filter((chip) => chip.id !== "q").length;
+
   return (
     <>
-      <PageHeader title="Your recipes" note={greetingFor(new Date())} />
+      <div className={styles.listHead}>
+        <PageHeader title="Your recipes" note={greetingFor(new Date())} />
+        <div className={styles.listActions}>
+          {list.length > 0 ? (
+            <button
+              type="button"
+              className={styles.addButton}
+              onClick={add}
+              disabled={!editable}
+              aria-disabled={addBlocked ? true : undefined}
+              aria-describedby={addBlocked ? "add-blocked" : undefined}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+              <span className={styles.addLabel}>Add recipe</span>
+            </button>
+          ) : null}
+          <MoreMenu
+            selecting={selecting}
+            onSelect={() => (selecting ? stopSelecting() : setSelecting(true))}
+          />
+        </div>
+      </div>
+
+      {/* On a phone the list has its own search box (owner's choice 2026-10-25); on a computer
+          the sidebar's search is the one search, and what it found shows as a chip below. */}
       {list.length > 0 ? (
-        <form role="search" className={styles.search} onSubmit={(e) => e.preventDefault()}>
-          <label htmlFor="recipe-search" className={styles.searchLabel}>
+        <form
+          role="search"
+          className={styles.search}
+          onSubmit={(e) => {
+            e.preventDefault();
+            (document.activeElement as HTMLElement | null)?.blur();
+          }}
+        >
+          <label htmlFor="recipe-search" className="visually-hidden">
             Search recipes
           </label>
           <input
@@ -412,83 +649,91 @@ export function RecipesPage() {
             type="search"
             className={styles.searchInput}
             value={query}
-            placeholder="A title, an ingredient, a word in the notes…"
+            placeholder="Search your recipes"
             autoComplete="off"
             enterKeyHint="search"
             onChange={(e) => typeQuery(e.target.value)}
           />
         </form>
       ) : null}
+
       {list.length > 0 ? (
-        <SavedSearches
-          query={query}
-          filters={filters}
-          narrowing={narrowing}
-          currentText={filtersToParams(
-            query,
-            filters,
-            (key) => tree?.byKey.get(key)?.path,
-          ).toString()}
-          onApply={applySearch}
-        />
+        <div className={styles.quick} role="group" aria-label="Show">
+          <button
+            type="button"
+            className={styles.chipButton}
+            aria-pressed={!narrowing}
+            onClick={clearAll}
+          >
+            All
+          </button>
+          {QUICK.map((q) => (
+            <button
+              key={q.label}
+              type="button"
+              className={styles.chipButton}
+              aria-pressed={q.on(filters)}
+              onClick={() => changeFilters(q.toggle(filters))}
+            >
+              {q.label}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={styles.filtersButton}
+            aria-expanded={showMore}
+            aria-controls="more-filters"
+            onClick={() => setShowMore(!showMore)}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+              <circle cx="16" cy="7" r="2" />
+              <circle cx="10" cy="17" r="2" />
+            </svg>
+            {moreOn > 0 ? `Filters (${moreOn})` : "Filters"}
+          </button>
+        </div>
       ) : null}
-      {list.length > 0 ? (
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarStart}>
-            <button
-              type="button"
-              className={styles.primary}
-              onClick={add}
-              disabled={!editable}
-              aria-disabled={addBlocked ? true : undefined}
-              aria-describedby={addBlocked ? "add-blocked" : undefined}
-            >
-              Add recipe
-            </button>
-            <button
-              type="button"
-              className={styles.secondary}
-              aria-pressed={selecting}
-              onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
-            >
-              {selecting ? "Done selecting" : "Select"}
-            </button>
-            <button
-              type="button"
-              className={styles.secondary}
-              disabled={shown.length === 0}
-              onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
-            >
-              Surprise me
-            </button>
-          </div>
-          <div className={styles.toolbarEnd}>
-            {hasCategories || filters.category ? (
-              <label className={styles.sort}>
-                Category
-                <select
-                  className={styles.select}
-                  value={filters.category}
-                  onChange={(e) => changeFilters({ ...filters, category: e.target.value })}
-                >
-                  <option value="">All recipes</option>
-                  {tree?.nodes.map((node) => (
-                    <option key={node.key} value={node.key}>
-                      {node.path} ({node.count})
-                    </option>
-                  ))}
-                  {filters.category &&
-                  filters.category !== UNFILED &&
-                  !tree?.byKey.has(filters.category) ? (
-                    <option value={filters.category}>{filterName}</option>
-                  ) : null}
-                  <option value={UNFILED}>Not in a category</option>
-                </select>
-              </label>
-            ) : null}
-            <label className={styles.sort}>
-              Rating
+
+      {list.length > 0 && showMore ? (
+        <div id="more-filters" className={styles.filtersBox}>
+          <div className={styles.filterGrid}>
+            <div className={styles.sort}>
+              <label htmlFor="list-category">Category</label>
               <select
+                id="list-category"
+                className={styles.select}
+                value={filters.category}
+                onChange={(e) => changeFilters({ ...filters, category: e.target.value })}
+              >
+                <option value="">All recipes</option>
+                {tree?.nodes.map((node) => (
+                  <option key={node.key} value={node.key}>
+                    {node.path} ({node.count})
+                  </option>
+                ))}
+                {filters.category &&
+                filters.category !== UNFILED &&
+                !tree?.byKey.has(filters.category) ? (
+                  <option value={filters.category}>{filterName}</option>
+                ) : null}
+                <option value={UNFILED}>Not in a category</option>
+              </select>
+            </div>
+            <div className={styles.sort}>
+              <label htmlFor="list-rating">Rating</label>
+              <select
+                id="list-rating"
                 className={styles.select}
                 value={filters.rating}
                 onChange={(e) =>
@@ -501,110 +746,43 @@ export function RecipesPage() {
                   </option>
                 ))}
               </select>
-            </label>
-            <button
-              type="button"
-              className={styles.secondary}
-              aria-expanded={showMore}
-              aria-controls="more-filters"
-              onClick={() => setShowMore(!showMore)}
-            >
-              {moreCount > 0 ? `More filters (${moreCount})` : "More filters"}
-            </button>
-            {list.length > 1 ? (
-              <label className={styles.sort}>
-                Sort by
-                <select
-                  className={styles.select}
-                  value={sortBy}
-                  onChange={(e) => chooseSort(e.target.value as SortBy)}
-                >
-                  {SORTS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
-            <Link href="/categories" className={styles.toolbarLink}>
-              Categories
-            </Link>
-            <Link href="/duplicates" className={styles.toolbarLink}>
-              Find duplicates
-            </Link>
-            <Link href="/trash" className={styles.toolbarLink}>
-              Trash
-            </Link>
+            </div>
           </div>
-        </div>
-      ) : null}
-
-      {/* Right under the toolbar, where the button is, so it is seen on a phone too. */}
-      <div aria-live="polite">
-        {surpriseRecipe ? (
-          <section className={styles.surprise} aria-label="A suggestion">
-            {surpriseRecipe.cover ? (
-              <PhotoImage
-                hash={surpriseRecipe.cover.hash}
-                size="thumb"
-                width={surpriseRecipe.cover.width}
-                height={surpriseRecipe.cover.height}
-                alt=""
-                className={styles.coverPhoto}
-              />
-            ) : (
-              <span className={styles.cover} aria-hidden="true">
-                {surpriseRecipe.title.trim().charAt(0).toUpperCase()}
-              </span>
-            )}
-            <div className={styles.surpriseBody}>
-              <p className={styles.hint}>How about…</p>
-              <p className={styles.surpriseTitle}>{surpriseRecipe.title}</p>
-              {surpriseRecipe.totalMinutes !== null ? (
-                <p className={styles.hint}>{minutesText(surpriseRecipe.totalMinutes)}</p>
-              ) : null}
-            </div>
-            <div className={styles.surpriseActions}>
-              <Link href={`/recipes/${surpriseRecipe.id}`} className={styles.primary}>
-                Open
-              </Link>
-              <button
-                type="button"
-                className={styles.secondary}
-                onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
-              >
-                Another one
-              </button>
-              <button type="button" className={styles.textButton} onClick={() => setSurprise(null)}>
-                Not now
-              </button>
-            </div>
-          </section>
-        ) : null}
-      </div>
-
-      {list.length > 0 && showMore ? (
-        <div id="more-filters">
           <FilterPanel filters={filters} tree={tree} onChange={changeFilters} />
         </div>
       ) : null}
-      {list.length > 0 && chips.length > 0 ? (
+
+      {list.length > 0 && removable.length > 0 ? (
         <ul className={styles.activeFilters} aria-label="Filters on">
-          {chips.map((chip) => (
+          {removable.map((chip) => (
             <li key={chip.id} className={categoryStyles.chip}>
+              {chip.id === "q" ? <span className="visually-hidden">Search: </span> : null}
               {chip.label}
               <button
                 type="button"
                 className={categoryStyles.chipRemove}
-                aria-label={`Remove filter: ${chip.label}`}
-                onClick={() => changeFilters(chip.remove(filters))}
+                aria-label={chip.id === "q" ? "Clear the search" : `Remove filter: ${chip.label}`}
+                onClick={chip.remove}
               >
                 ×
               </button>
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {list.length > 0 ? (
+        <SavedSearches
+          query={query}
+          filters={filters}
+          narrowing={narrowing}
+          currentText={filtersToParams(
+            query,
+            filters,
+            (key) => tree?.byKey.get(key)?.path,
+          ).toString()}
+          onApply={applySearch}
+        />
       ) : null}
 
       {list.length > 0 ? <UsageNote id="add-blocked" ref={limitNote} /> : null}
@@ -628,6 +806,9 @@ export function RecipesPage() {
                 ? "Select none"
                 : "Select all shown"}
             </button>
+            <button type="button" className={styles.secondary} onClick={stopSelecting}>
+              Done selecting
+            </button>
           </div>
           <BulkFile tree={tree} selected={chosen} editable={editable} run={run} />
           <div>
@@ -649,38 +830,132 @@ export function RecipesPage() {
           <h2 id="list-title" className="visually-hidden">
             {shown.length} {shown.length === 1 ? "recipe" : "recipes"}
           </h2>
-          <p className={styles.filterNote}>
-            <span aria-live="polite">
-              {!narrowing
-                ? ""
-                : (searching && !search) || found.pending
-                  ? "Searching…"
-                  : shown.length === 0
-                    ? filters.category === UNFILED && !searching && filtering === 1
-                      ? "Every recipe is in a category."
-                      : "No recipes found."
-                    : `Showing ${shown.length} of ${list.length}${
-                        search && search.titleIds.length > 0 && shown.length > 1
-                          ? "; titles with every word come first"
-                          : ""
-                      }.`}
-              {unknownNote(found.unknown, filters)}
-            </span>{" "}
-            {narrowing ? (
-              <button type="button" className={styles.textButton} onClick={clearAll}>
-                Show all recipes
-              </button>
-            ) : null}
-            {narrowing && !selecting && shown.length > 0 && !found.pending ? (
+          <div className={styles.countRow}>
+            <p className={styles.filterNote}>
+              <span aria-live="polite">
+                {!narrowing
+                  ? `${list.length} ${list.length === 1 ? "recipe" : "recipes"}`
+                  : (searching && !search) || found.pending
+                    ? "Searching…"
+                    : shown.length === 0
+                      ? filters.category === UNFILED && !searching && filtering === 1
+                        ? "Every recipe is in a category."
+                        : "No recipes found."
+                      : `Showing ${shown.length} of ${list.length}${
+                          search && search.titleIds.length > 0 && shown.length > 1
+                            ? "; titles with every word come first"
+                            : ""
+                        }.`}
+                {unknownNote(found.unknown, filters)}
+              </span>{" "}
+              {narrowing ? (
+                <button type="button" className={styles.textButton} onClick={clearAll}>
+                  Show all recipes
+                </button>
+              ) : null}
+              {narrowing && !selecting && shown.length > 0 && !found.pending ? (
+                <button
+                  type="button"
+                  className={styles.textButton}
+                  onClick={() => print(shown.map((recipe) => recipe.id))}
+                >
+                  {shown.length === 1 ? "Print it" : "Print these"}
+                </button>
+              ) : null}
+            </p>
+            <div className={styles.countTools}>
               <button
                 type="button"
-                className={styles.textButton}
-                onClick={() => print(shown.map((recipe) => recipe.id))}
+                className={styles.quietButton}
+                disabled={shown.length === 0}
+                onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
               >
-                {shown.length === 1 ? "Print it" : "Print these"}
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <rect x="4" y="4" width="16" height="16" rx="3" />
+                  <circle cx="9" cy="9" r="1" fill="currentColor" />
+                  <circle cx="15" cy="15" r="1" fill="currentColor" />
+                  <circle cx="15" cy="9" r="1" fill="currentColor" />
+                  <circle cx="9" cy="15" r="1" fill="currentColor" />
+                </svg>
+                Surprise me
               </button>
+              {list.length > 1 ? (
+                <label className={styles.sortQuiet}>
+                  Sort by
+                  <select
+                    className={styles.sortSelect}
+                    value={sortBy}
+                    onChange={(e) => chooseSort(e.target.value as SortBy)}
+                  >
+                    {SORTS.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+            </div>
+          </div>
+
+          {/* Under the button, so it is seen on a phone too. */}
+          <div aria-live="polite">
+            {surpriseRecipe ? (
+              <section className={styles.surprise} aria-label="A suggestion">
+                {surpriseRecipe.cover ? (
+                  <PhotoImage
+                    hash={surpriseRecipe.cover.hash}
+                    size="thumb"
+                    width={surpriseRecipe.cover.width}
+                    height={surpriseRecipe.cover.height}
+                    alt=""
+                    className={styles.coverPhoto}
+                  />
+                ) : (
+                  <span className={styles.cover} aria-hidden="true">
+                    <LogoSprig />
+                  </span>
+                )}
+                <div className={styles.surpriseBody}>
+                  <p className={styles.hint}>How about…</p>
+                  <p className={styles.surpriseTitle}>{surpriseRecipe.title}</p>
+                  {surpriseRecipe.totalMinutes !== null ? (
+                    <p className={styles.hint}>{minutesText(surpriseRecipe.totalMinutes)}</p>
+                  ) : null}
+                </div>
+                <div className={styles.surpriseActions}>
+                  <Link href={`/recipes/${surpriseRecipe.id}`} className={styles.primary}>
+                    Open
+                  </Link>
+                  <button
+                    type="button"
+                    className={styles.secondary}
+                    onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
+                  >
+                    Another one
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.textButton}
+                    onClick={() => setSurprise(null)}
+                  >
+                    Not now
+                  </button>
+                </div>
+              </section>
             ) : null}
-          </p>
+          </div>
+
           <ul className={styles.grid}>
             {shown.slice(0, limit).map((recipe) => (
               <RecipeCard
@@ -715,9 +990,6 @@ export function RecipesPage() {
           addingSamples={addingSamples}
         />
       )}
-      <p className={`${styles.hint} ${styles.footnote}`}>
-        Deleted recipes stay in <Link href="/trash">Trash</Link> for 30 days.
-      </p>
     </>
   );
 }
