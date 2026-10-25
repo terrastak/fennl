@@ -741,34 +741,48 @@ a.source:hover {
   font-size: var(--text-2xl);
 }
 
-.panelHead {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.panelHead h2 {
-  margin: 0;
-}
-
-/* "Serves − 4 +" at the top of the ingredients (owner's choice 2026-10-24). */
+/* How many it serves or makes, with "Adjust" beside it, at the top of the ingredients (owner's
+   choices 2026-10-24 and 2026-10-25). */
 .serves {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
-  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  padding: var(--space-2) var(--space-1) var(--space-2) var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--color-surface-sunken);
 }
 
+.servesSaid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-4);
+  min-height: var(--tap-target);
+}
+
+/* "Makes − 14 + cookies": the words wrap under the count when the box is narrow. */
+.servesCount {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.servesRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
 .servesLabel {
   font-weight: var(--weight-semibold);
+}
+
+.servesMade {
+  margin: 0;
+  color: var(--color-text-muted);
 }
 
 .servesButtons {
@@ -798,7 +812,7 @@ a.source:hover {
 }
 
 .adjustButton:hover {
-  background: var(--color-surface-sunken);
+  background: var(--color-surface);
 }
 
 /* The Adjust panel: a sheet from the bottom on a phone, a small window on a computer. */

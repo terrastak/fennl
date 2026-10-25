@@ -1324,6 +1324,14 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
 - **Owner's choice**: an amount in the method that measures out one piece stays as written when the recipe is scaled (by a number or for another pan); it still converts to metric or US. Fennl reads it as one piece's size when it's followed by "of the mixture, batter, dough or filling" going into, onto or per something ("¼ cup of batter per pancake"), by "per cookie", "into each muffin case" and the like, or by "into balls", or when it's a spoonful's size in brackets ("tablespoonfuls (30 ml)"). Every other amount in the method scales as before ("Reserve 1 cup of the mixture for the topping" doubles). `showStep`, `shared/scale.ts`.
 - **You check**: double Apple crumble cookies: step 4 still says "¼ cupfuls (60 ml)", not highlighted.
 
+### U4. Serves or Makes said once, beside Adjust (owner's choices 2026-10-25)
+- **Found in use**: Apple crumble cookies said "Makes 28" under the title and "Serves 28" in the ingredients.
+- **Owner's choices**:
+  1. A recipe that makes things says **Makes** in the ingredients: "Makes − 14 + cookies" (the yield's words after the number, which wrap under the count when the box is narrow). One that serves people still says "Serves − 4 +", with what it makes beside it ("Makes about 12 pancakes", scaled with it); one with only a yield says it plainly ("Makes 1 loaf").
+  2. Said once: Serves and Makes are no longer in the details under the title (Prep, Cook, Total, the pan when scaled for another, Difficulty). This replaces U2 item 4's Serves and Makes.
+  3. **Adjust** sits in the same bar, at its end, not above it.
+- **You check**: on a laptop and a phone, a recipe that makes cookies and one that serves people: the bar reads right, Adjust is in it, and nothing under the title repeats it.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1654,5 +1662,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | F6 | Done 2026-10-23 (merged as #91; live). Still the owner's to check: Safari, and a real printer with recipe cards |
 | U1 | Done 2026-10-25 (merged as #96; live). More recipe-page changes to come, one step at a time |
 | U2 | Done 2026-10-25 (merged as #99; live) |
-| U3 | Built 2026-10-25, waiting for review |
+| U3 | Done 2026-10-25 (merged as #100) |
+| U4 | Built 2026-10-25, waiting for review |
 | All others | Not started |
