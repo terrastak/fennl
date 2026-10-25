@@ -71,7 +71,7 @@ export async function signInElsewhere(
  * On a recipe's page: opens "Adjust" (amount, another pan, units; phase F1, owner's choice
  * 2026-10-24), does `act` there, then closes it with "Done".
  */
-export async function adjust(page: Page, act: (panel: Locator) => Promise<void>) {
+export async function adjust(page: Page, act: (panel: Locator) => Promise<unknown>) {
   await page.getByRole("button", { name: "Adjust" }).click();
   const panel = page.getByRole("dialog", { name: "Adjust this recipe" });
   await expect(panel).toBeVisible();
