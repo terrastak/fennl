@@ -130,12 +130,44 @@ test("A rating, favorite and note made on another device show on the recipe", as
   await page.reload();
   await expect(page.getByRole("radio", { name: "4 stars" })).toBeChecked();
   await expect(page.getByLabel("A favorite of mine")).toBeChecked();
-  await expect(page.getByLabel("Your note")).toHaveValue("Add a little more zest.");
-  await expect(page.getByText(/^Signed June/)).toBeVisible();
+  // Your note, saved, as text signed with your name (owner's choices 2026-10-26).
+  const mine = page.locator("figure").filter({ hasText: "Add a little more zest." });
+  await expect(mine.locator("figcaption")).toContainText("June");
   // Not shown twice: your own aren't in the household's ratings and signed notes.
   await expect(page.getByText(/out of 5 stars from/)).toHaveCount(0);
-  await expect(page.locator("figcaption")).toHaveCount(0);
+  await expect(page.locator("figcaption")).toHaveCount(1);
   await noAccessibilityProblems(page);
+
+  // Edit: Cancel leaves it; Save changes it.
+  await page.getByRole("button", { name: "Edit your note" }).click();
+  const box = page.getByLabel("Your note");
+  await expect(box).toHaveValue("Add a little more zest.");
+  await box.fill("Something else");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(mine).toBeVisible();
+  await page.getByRole("button", { name: "Edit your note" }).click();
+  await box.fill("Add a lot more zest.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText("Add a lot more zest.", { exact: true })).toBeVisible();
+
+  // "+ Add a note" adds a dated part under it, in the same note.
+  await page.getByRole("button", { name: "Add a note" }).click();
+  await page.getByLabel("Add to your note").fill("Doubled it for a party.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  const grown = page.locator("figure blockquote");
+  await expect(grown).toContainText("Add a lot more zest.");
+  await expect(grown).toContainText(/\w{3} \d{1,2}, \d{4}: Doubled it for a party\./);
+  await expect(page.getByRole("button", { name: "Add a note" })).toBeVisible();
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await page.reload();
+  await expect(page.locator("figure blockquote")).toContainText("Doubled it for a party.");
+
+  // Deleting everything removes the note.
+  await page.getByRole("button", { name: "Edit your note" }).click();
+  await page.getByLabel("Your note").fill("");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.locator("figcaption")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add a note" })).toBeVisible();
 });
 
 test("Recipes open and close from the keyboard", async ({ page, context, baseURL }) => {
