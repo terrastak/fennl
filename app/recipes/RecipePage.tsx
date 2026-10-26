@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
+  CATEGORY_SEPARATOR,
   NUTRIENTS,
   RECIPE_RULES,
   type DirectionStep,
@@ -153,6 +154,32 @@ function Facts({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * A category above the title, each level its own link to the recipe list filtered to it:
+ * "Desserts" shows every dessert, "Cakes" only Desserts › Cakes (owner's choice 2026-10-25).
+ */
+function CategoryPath({ path }: { path: string }) {
+  const names = path.split(CATEGORY_SEPARATOR);
+  return (
+    <>
+      {names.map((name, i) => {
+        const upTo = names.slice(0, i + 1).join(CATEGORY_SEPARATOR);
+        return (
+          <span key={upTo}>
+            {i > 0 ? <span aria-hidden="true"> › </span> : null}
+            <Link
+              href={`/?category=${encodeURIComponent(upTo)}`}
+              aria-label={i > 0 ? upTo : undefined}
+            >
+              {name}
+            </Link>
+          </span>
+        );
+      })}
+    </>
   );
 }
 
@@ -938,7 +965,7 @@ export function RecipePage({ id }: { id: string }) {
               <ul className={styles.eyebrow} aria-label="Categories">
                 {detail.categories.map((path) => (
                   <li key={path}>
-                    <Link href={`/?category=${encodeURIComponent(path)}`}>{path}</Link>
+                    <CategoryPath path={path} />
                   </li>
                 ))}
               </ul>

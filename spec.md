@@ -1341,7 +1341,10 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   4. "Add your note" is **+ Add a note**, the plus in a small circle.
   5. **Trash** (a bin icon and the word) sits with Edit and Print at the top; the "Move to Trash" button at the bottom is gone. On a narrow phone over a photo, Edit, Print and Trash show as round icons so they fit, their names still read out.
   6. **Categories** (option B of three mockups): the small line above the title keeps its look, with **Change** beside it (or **+ Add a category** when there are none), opening the editor's categories in a small window: remove one, the suggestions, type to find or add, each change saved straight away with Undo.
-- **You check**: on a laptop and a phone: double cookies from the 2× button; type a number under Adjust; a cake shows the pan choices and cookies don't; Trash at the top moves the recipe to Trash (the list offers Undo); Change adds and removes a category.
+  7. Each level of a category above the title is its own link to the recipe list filtered to it: "Desserts" shows every dessert (those in Desserts › Cakes too), "Cakes" only the cakes. A recipe in several categories shows each, every one a link.
+  8. **Changed amounts** use the colour scheme's highlight (blue in Harbor) with a thin dashed underline, in place of the warm red and thick line; they stay semibold so they never rely on colour alone.
+  9. A worded yield agrees with its new count: "one 9-inch cake" doubled is "two 9-inch cakes", "loaf" becomes "loaves".
+- **You check**: on a laptop and a phone: double cookies from the 2× button; type a number under Adjust; a cake shows the pan choices and cookies don't; Trash at the top moves the recipe to Trash (the list offers Undo); Change adds and removes a category; tapping a category, or its first part, opens the list filtered to it; changed amounts show in blue with a thin dashed underline.
 
 ## Stage G: Premium sharing and history
 

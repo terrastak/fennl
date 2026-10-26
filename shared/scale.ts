@@ -507,12 +507,12 @@ function numberedItem(word: string, many: boolean): string {
     if (/(?:s|x|z|ch|sh)$/.test(lower)) return /s$/.test(lower) ? word : `${word}es`;
     if (/[^aeiou]y$/.test(lower)) return `${word.slice(0, -1)}ies`;
     if (/(?:tomato|potato)$/.test(lower)) return `${word}es`;
-    if (/leaf$/.test(lower)) return `${word.slice(0, -1)}ves`;
+    if (/(?:leaf|loaf)$/.test(lower)) return `${word.slice(0, -1)}ves`;
     return `${word}s`;
   }
   if (/ies$/.test(lower)) return `${word.slice(0, -3)}y`;
   if (/(?:tomato|potato)es$/.test(lower)) return word.slice(0, -2);
-  if (/leaves$/.test(lower)) return `${word.slice(0, -3)}f`;
+  if (/(?:leaves|loaves)$/.test(lower)) return `${word.slice(0, -3)}f`;
   if (/(?:ch|sh|x|z)es$/.test(lower)) return word.slice(0, -2);
   if (/[^s]s$/.test(lower)) return word.slice(0, -1);
   return word;
@@ -702,7 +702,14 @@ function scaledYield(words: string, factor: number): string {
       word[1]?.[0] === word[1]?.[0]?.toUpperCase() && /^\p{L}/u.test(next)
         ? next[0]?.toUpperCase() + next.slice(1)
         : next;
-    return cased + words.slice(word[0].length);
+    // "one 9-inch cake" doubled is "two 9-inch cakes": its last word made plural or singular.
+    const rest = words
+      .slice(word[0].length)
+      .replace(
+        /(\s)(\p{Ll}+)$/u,
+        (_all, gap: string, item: string) => `${gap}${numberedItem(item, readsAsMany(value))}`,
+      );
+    return cased + rest;
   }
   // The first number that isn't a size ("Serves 4 to 6", not "9-inch"), and the word after it
   // made plural or singular when it's the last one ("1 pie" doubled is "2 pies").

@@ -187,9 +187,16 @@ test("A recipe's categories, chosen in the editor by typing", async ({
   ]);
   await page.getByRole("button", { name: "Done" }).first().click();
 
-  // The recipe page's categories lead to the list, filtered.
-  await page.getByRole("link", { name: "Desserts › Cakes" }).click();
+  // The recipe page's categories lead to the list, filtered; each level is its own link
+  // (owner's choice 2026-10-25): "Cakes" for Desserts › Cakes, "Desserts" for every dessert.
+  const above = page.getByRole("list", { name: "Categories" });
+  await expect(above).toHaveText("Desserts › Cakes");
+  await above.getByRole("link", { name: "Desserts › Cakes" }).click();
   await expect(page.getByLabel("Category")).toHaveValue("desserts › cakes");
+  await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
+  await page.goBack();
+  await above.getByRole("link", { name: "Desserts", exact: true }).click();
+  await expect(page.getByLabel("Category")).toHaveValue("desserts");
   await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
 });
 

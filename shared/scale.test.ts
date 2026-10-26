@@ -187,8 +187,14 @@ describe("servings and the scale itself", () => {
     });
     expect(scaledServings({ count: 1, yield: "One 12x17-inch loaf" }, 2)).toEqual({
       count: 2,
-      yield: "Two 12x17-inch loaf",
+      yield: "Two 12x17-inch loaves",
     });
+    expect(scaledServings({ count: 10, yield: "one 9-inch cake" }, 2).yield).toBe(
+      "two 9-inch cakes",
+    );
+    expect(scaledServings({ count: 10, yield: "two 9-inch cakes" }, 0.5).yield).toBe(
+      "one 9-inch cake",
+    );
     expect(scaledServings({ count: null, yield: "1 pie" }, 2)).toEqual({
       count: null,
       yield: "2 pies",

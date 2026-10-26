@@ -1827,16 +1827,18 @@ label.card {
 }
 
 /* A number Fennl changed: never colour alone, so bold and underlined too. */
+/* An amount Fennl changed: the scheme's highlight colour, semibold and a thin dashed underline,
+   so it never relies on colour alone (owner's choice 2026-10-25). */
 .changed {
   padding: 0 0.1em;
   border-radius: 0.2em;
-  background: var(--color-warm-soft);
+  background: var(--color-accent-soft);
   color: inherit;
   font-weight: var(--weight-semibold);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
+  text-decoration: underline dashed;
+  text-decoration-thickness: 1px;
   text-underline-offset: 0.2em;
-  text-decoration-color: var(--color-warm);
+  text-decoration-color: var(--color-accent);
 }
 
 /* A bracket Fennl left as written where it might have changed it. */
