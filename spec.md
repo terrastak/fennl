@@ -1346,6 +1346,15 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   9. A worded yield agrees with its new count: "one 9-inch cake" doubled is "two 9-inch cakes", "loaf" becomes "loaves".
 - **You check**: on a laptop and a phone: double cookies from the 2× button; type a number under Adjust; a cake shows the pan choices and cookies don't; Trash at the top moves the recipe to Trash (the list offers Undo); Change adds and removes a category; tapping a category, or its first part, opens the list filtered to it; changed amounts show in blue with a thin dashed underline.
 
+### U6. Notes written with Save and Cancel, a dated part at a time (owner's choices 2026-10-26)
+- **Found in use**: a note saved itself while typing, with no way to decide whether to keep it, and stayed an open box.
+- **Owner's choices**:
+  1. Writing a note has **Save** and **Cancel**; nothing is kept until Save, and Cancel leaves the note as it was.
+  2. Once saved, your note shows as text, signed with your name in your hand, with **Edit** beside it (change it, or delete everything to remove it).
+  3. **+ Add a note** stays under your note. Each part added goes in as a new paragraph of the same note with the day in front ("Oct 26, 2026: Doubled it for a party."), option 1 of two: still one signed note per person per recipe (`recipe_opinion.note`, Decided 2026-10-07, unchanged), so nothing about storage or sync changes (`app/recipes/notes.ts`). Separate notes, each with its own Edit and Delete, were set aside as a bigger change.
+  4. When the note reaches its length limit, "+ Add a note" gives way to "Your note is full. Edit it to make room."
+- **You check**: on a laptop and a phone: add a note and Save; Cancel one; add a second part and see the dates; Edit and delete.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1678,5 +1687,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U2 | Done 2026-10-25 (merged as #99; live) |
 | U3 | Done 2026-10-25 (merged as #100) |
 | U4 | Done 2026-10-25 (merged as #101) |
-| U5 | Built 2026-10-25, waiting for review |
+| U5 | Done 2026-10-26 (merged as #102) |
+| U6 | Built 2026-10-26, waiting for review |
 | All others | Not started |

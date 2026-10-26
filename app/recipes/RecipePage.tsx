@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+} from "react";
 import {
   CATEGORY_SEPARATOR,
   NUTRIENTS,
@@ -18,6 +25,7 @@ import { navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
 import { RecipeCategories } from "../categories/RecipeCategories";
+import { addToNote, roomInNote } from "./notes";
 import { Gallery, Originals } from "../photos/Gallery";
 import { usePainting } from "../photos/painting";
 import { canEdit } from "../sync/status";
@@ -574,7 +582,8 @@ function saveOpinion(recipeId: string, fields: OpinionChange["fields"]): Promise
 
 /**
  * Your signed note (CLAUDE.md, "Recipe ownership in households"); your stars and heart are by the
- * title. With no note yet, just a way to add one (owner's choice 2026-10-25).
+ * title. Owner's choices 2026-10-26: written with Save and Cancel, shown as text once saved (Edit
+ * changes or deletes it), and "+ Add a note" under it adds a new dated part.
  */
 function YourNote({
   detail,
@@ -590,113 +599,142 @@ function YourNote({
   editable: boolean;
 }) {
   const recipeId = detail.recipe.id;
-  const note = detail.opinions.find((o) => o.userId === me)?.note ?? "";
-  const [adding, setAdding] = useState(false);
-  if (!note.trim() && !adding) {
-    return (
-      <div className={styles.section}>
+  const note = (detail.opinions.find((o) => o.userId === me)?.note ?? "").trim();
+  const [writing, setWriting] = useState<"add" | "edit" | null>(null);
+  const [failed, setFailed] = useState(false);
+  const room = roomInNote(note, new Date());
+
+  const save = async (next: string) => {
+    const ok = await saveOpinion(recipeId, { note: next });
+    setFailed(!ok);
+    if (ok) setWriting(null);
+  };
+
+  return (
+    <div className={styles.section}>
+      {note && writing !== "edit" ? (
+        <figure className={styles.signed}>
+          <blockquote>
+            <p>{note}</p>
+          </blockquote>
+          <figcaption className={styles.ownSignature}>
+            <span className={styles.signature}>{myName}</span>
+            <button
+              type="button"
+              className={styles.textButton}
+              disabled={!editable || writing !== null}
+              onClick={() => setWriting("edit")}
+            >
+              Edit<span className="visually-hidden"> your note</span>
+            </button>
+          </figcaption>
+        </figure>
+      ) : null}
+      {writing ? (
+        <NoteForm
+          key={writing}
+          label={writing === "edit" || !note ? "Your note" : "Add to your note"}
+          initial={writing === "edit" ? note : ""}
+          maxLength={writing === "edit" ? RECIPE_RULES.notesLength : room}
+          hint={
+            writing === "edit"
+              ? "Delete everything to remove your note."
+              : shared
+                ? `Signed ${myName}, with today's date, and shown to your household.`
+                : `Signed ${myName}, with today's date.`
+          }
+          editable={editable}
+          onSave={(text) =>
+            save(writing === "edit" ? text.trim() : addToNote(note, text, new Date()))
+          }
+          onCancel={() => {
+            setFailed(false);
+            setWriting(null);
+          }}
+        />
+      ) : room > 0 ? (
         <button
           type="button"
           className={styles.moreButton}
           disabled={!editable}
-          onClick={() => setAdding(true)}
+          onClick={() => setWriting("add")}
         >
           <span aria-hidden="true" className={styles.plus}>
             +
           </span>
           Add a note
         </button>
-      </div>
-    );
-  }
-  return (
-    <section className={styles.section}>
-      <OwnNote
-        key={recipeId}
-        note={note}
-        signature={myName}
-        shared={shared}
-        editable={editable}
-        autoFocus={adding}
-        onSave={(fields) => saveOpinion(recipeId, { note: fields })}
-      />
-    </section>
+      ) : (
+        <p className={styles.hint}>Your note is full. Edit it to make room.</p>
+      )}
+      {failed ? (
+        <p role="alert" className={styles.error}>
+          Couldn&rsquo;t save your note just now. Please try again.
+        </p>
+      ) : null}
+    </div>
   );
 }
 
-/** Your signed note, saved as you type. */
-function OwnNote({
-  note,
-  signature,
-  shared,
+/** Writing a note: nothing is kept until Save; Cancel leaves it as it was. */
+function NoteForm({
+  label,
+  initial,
+  maxLength,
+  hint,
   editable,
-  autoFocus = false,
   onSave,
+  onCancel,
 }: {
-  note: string;
-  signature: string;
-  shared: boolean;
+  label: string;
+  initial: string;
+  maxLength: number;
+  hint: string;
   editable: boolean;
-  autoFocus?: boolean;
-  onSave: (note: string) => Promise<boolean>;
+  onSave: (text: string) => Promise<void>;
+  onCancel: () => void;
 }) {
-  const [text, setText] = useState(note);
-  // The note as last saved (or as it arrived from another device).
-  const [saved, setSaved] = useState(note);
-  const waiting = useRef<string | null>(null);
-  const saveNote = useRef(onSave);
-  useEffect(() => {
-    saveNote.current = onSave;
-  });
-  // A change from elsewhere, while nothing is being typed here: show it.
-  if (note !== saved && text === saved) {
-    setSaved(note);
-    setText(note);
-  }
-
-  useEffect(() => {
-    if (text === saved || !editable) return;
-    waiting.current = text;
-    const timer = setTimeout(() => {
-      waiting.current = null;
-      void saveNote.current(text).then((ok) => {
-        if (ok) setSaved(text);
-      });
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [text, saved, editable]);
-
-  // Leaving the page with typing not yet saved: save it now.
-  useEffect(
-    () => () => {
-      if (waiting.current !== null) void saveNote.current(waiting.current);
-    },
-    [],
-  );
-
+  const [text, setText] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const unchanged = text.trim() === initial.trim();
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (saving || (unchanged && initial)) return onCancel();
+    if (!text.trim() && !initial) return onCancel();
+    setSaving(true);
+    await onSave(text);
+    setSaving(false);
+  };
   return (
-    <div className={styles.ownNote}>
-      <label htmlFor="own-note">Your note</label>
+    <form className={styles.ownNote} onSubmit={(event) => void submit(event)}>
+      <label htmlFor="own-note">{label}</label>
       <textarea
         id="own-note"
         className={styles.input}
         rows={3}
         value={text}
-        disabled={!editable}
-        maxLength={RECIPE_RULES.notesLength}
-        autoFocus={autoFocus}
+        disabled={!editable || saving}
+        maxLength={maxLength}
+        autoFocus
         aria-describedby="own-note-hint"
         onChange={(e) => setText(e.target.value)}
       />
       <p id="own-note-hint" className={styles.hint}>
-        {shared
-          ? `Signed ${signature}, and shown to your household under the recipe's notes.`
-          : `Signed ${signature}. Saved as you type.`}{" "}
-        <span data-note-status aria-live="polite">
-          {text === saved ? (text ? "Saved." : "") : "Saving…"}
-        </span>
+        {hint}
       </p>
-    </div>
+      <div className={styles.noteButtons}>
+        <button
+          type="submit"
+          className={styles.primary}
+          disabled={!editable || saving || (!text.trim() && !initial)}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        <button type="button" className={styles.secondary} disabled={saving} onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
   );
 }
 

@@ -265,14 +265,15 @@ test("Your rating, favorite and note are kept, and only you set them", async ({
   await page.getByRole("button", { name: "Add a note" }).click();
   await expect(page.getByLabel("Your note")).toBeFocused();
   await page.getByLabel("Your note").fill("Mom's, with extra raisins.");
-  await expect(page.locator("[data-note-status]")).toHaveText("Saved.");
+  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByText(/: Mom's, with extra raisins\.$/)).toBeVisible();
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await noAccessibilityProblems(page);
 
   await page.reload();
   await expect(yours.getByRole("radio", { name: "5 stars" })).toBeChecked();
   await expect(page.getByLabel("A favorite of mine")).toBeChecked();
-  await expect(page.getByLabel("Your note")).toHaveValue("Mom's, with extra raisins.");
+  await expect(page.getByText(/: Mom's, with extra raisins\.$/)).toBeVisible();
   // And taken back.
   await yours.getByRole("radio", { name: "No rating" }).focus();
   await page.keyboard.press("Space");
