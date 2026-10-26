@@ -16,8 +16,9 @@ import styles from "./recipes.module.css";
 
 // The recipe page's scale and units controls, and its lines as shown (phase F1): every number
 // Fennl changed is highlighted, never by colour alone, and a line can be tapped to show the
-// original and the working. Owner's choice 2026-10-24: the ingredients show only "Serves − 4 +";
-// the rest (half, double, any amount, another pan, units) is under "Adjust", beside it (2026-10-25).
+// original and the working. Owner's choices 2026-10-25: the ingredients say how many it serves or
+// makes, with quick choices (half, as written, double, triple) and "Adjust", which holds the rest:
+// how many, any amount, another pan (only when the recipe names one) and units.
 
 const PRESETS = [0.5, 1, 2, 3];
 
@@ -27,28 +28,13 @@ const UNIT_NAMES: Record<UnitSystem, string> = {
   metric: "Metric",
 };
 
-/**
- * How many it serves or makes, at the top of the ingredients and said only here: "Makes − 14 +
- * cookies", "Serves − 4 +" with "Makes about 12 pancakes" beside it, or "Makes 1 loaf" when no
- * count is given; with "Adjust" in the same bar (owner's choices 2026-10-24 and 2026-10-25).
- * Without `adjustable` (Trash), the same words without buttons.
- */
-export function ServingsBar({
-  recipe,
-  scaling,
-  adjustable,
-}: {
-  recipe: Recipe;
-  scaling: Scaling;
-  adjustable: boolean;
-}) {
-  const id = useId();
+/** How many the recipe serves or makes, as written and as shown now. */
+function servingsSaid(recipe: Recipe, scaling: Scaling) {
   const written = recipe.servings;
   const count = written.count;
   const facts = servingsFacts(written);
   // "Makes 14 cookies" on a recipe for 14: the count is what it makes.
   const makesCount = count !== null && facts.length === 1 && facts[0]?.label === "Makes";
-  const label = makesCount ? "Makes" : "Serves";
   const servings = count === null ? 0 : count * scaling.factor;
   const shownCount = Number.isInteger(servings * 4)
     ? amountText(servings, null)
@@ -63,66 +49,156 @@ export function ServingsBar({
       : servingsFacts(scaledServings(written, scaling.factor)).filter(
           (fact) => count === null || fact.label !== "Serves",
         );
-  const scaled = scaling.factor !== 1;
-  const setServings = (next: number) => {
-    if (!count || next <= 0) return;
-    const f = next / count;
-    if (f >= SCALE_RULES.minFactor && f <= SCALE_RULES.maxFactor) scaling.setFactor(f);
+  return {
+    count,
+    servings,
+    label: makesCount ? "Makes" : "Serves",
+    shownCount,
+    words: words && shownCount !== "1" ? words : null,
+    others,
   };
-  if (count === null && others.length === 0 && !adjustable) return null;
+}
+
+/** Text Fennl changed, highlighted like a scaled amount. */
+const changedText = (text: string) => (
+  <ShownText line={{ pieces: [{ text, changed: true }], changed: true }} />
+);
+
+/**
+ * How many it serves or makes, at the top of the ingredients and said only here ("Makes 14
+ * cookies", "Serves 4 · Makes about 12 pancakes", "Makes 1 loaf"), with "Adjust" and quick
+ * choices for the amount: half, as written, double, triple (owner's choices 2026-10-25). Without
+ * `adjustable` (Trash), just the words.
+ */
+export function ServingsBar({
+  recipe,
+  scaling,
+  adjustable,
+}: {
+  recipe: Recipe;
+  scaling: Scaling;
+  adjustable: boolean;
+}) {
+  const said = servingsSaid(recipe, scaling);
+  const scaled = scaling.factor !== 1;
+  const lines = [
+    ...(said.count !== null
+      ? [
+          {
+            label: said.label,
+            value: said.words ? `${said.shownCount} ${said.words}` : said.shownCount,
+          },
+        ]
+      : []),
+    ...said.others,
+  ];
+  if (lines.length === 0 && !adjustable) return null;
   return (
     <div className={styles.serves}>
-      <div className={styles.servesSaid}>
-        {count !== null ? (
-          <div className={styles.servesCount} role="group" aria-labelledby={`${id}-serves`}>
-            <div className={styles.servesRow}>
-              <span id={`${id}-serves`} className={styles.servesLabel}>
-                {label}
-              </span>
-              {adjustable ? (
-                <div className={styles.servesButtons}>
-                  <button
-                    type="button"
-                    className={styles.scaleStep}
-                    aria-label="One fewer"
-                    disabled={servings - 1 < count * SCALE_RULES.minFactor || servings <= 1}
-                    onClick={() => setServings(Math.ceil(servings) - 1)}
-                  >
-                    −
-                  </button>
-                  <output className={styles.scaleCount} aria-live="polite">
-                    {shownCount}
-                  </output>
-                  <button
-                    type="button"
-                    className={styles.scaleStep}
-                    aria-label="One more"
-                    disabled={servings + 1 > count * SCALE_RULES.maxFactor}
-                    onClick={() => setServings(Math.floor(servings) + 1)}
-                  >
-                    +
-                  </button>
-                </div>
-              ) : (
-                <span className={styles.scaleCount}>{shownCount}</span>
-              )}
-            </div>
-            {words && shownCount !== "1" ? <span>{words}</span> : null}
-          </div>
-        ) : null}
-        {others.map((fact) => (
-          <p key={fact.label} className={styles.servesMade}>
-            {fact.label}{" "}
-            {scaled ? (
-              <ShownText line={{ pieces: [{ text: fact.value, changed: true }], changed: true }} />
-            ) : (
-              fact.value
-            )}
-          </p>
-        ))}
+      <div className={styles.servesTop}>
+        <p className={styles.servesSaid}>
+          {lines.map((line, i) => (
+            <span key={line.label}>
+              {i > 0 ? <span aria-hidden="true"> · </span> : null}
+              <span className={styles.servesLabel}>{line.label}</span>{" "}
+              {scaled ? changedText(line.value) : line.value}
+            </span>
+          ))}
+        </p>
+        {adjustable ? <Adjust recipe={recipe} scaling={scaling} /> : null}
       </div>
-      {adjustable ? <Adjust recipe={recipe} scaling={scaling} /> : null}
+      {adjustable ? (
+        <div className={styles.quickScale} role="group" aria-label="Amount">
+          {PRESETS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              className={styles.quickChoice}
+              aria-pressed={scaling.factor === preset && !scaling.pans}
+              onClick={() => scaling.setFactor(preset)}
+            >
+              {preset === 1 ? "As written" : `${amountText(preset, null, true)}×`}
+            </button>
+          ))}
+        </div>
+      ) : null}
     </div>
+  );
+}
+
+/** "Makes − 14 + cookies" in the Adjust panel: any number, typed or a step at a time. */
+function ServingsStepper({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
+  const id = useId();
+  const said = servingsSaid(recipe, scaling);
+  const [typed, setTyped] = useState<string | null>(null);
+  const [wrong, setWrong] = useState(false);
+  const count = said.count;
+  if (count === null) return null;
+  const lowest = Math.max(1, Math.ceil(count * SCALE_RULES.minFactor));
+  const highest = Math.floor(count * SCALE_RULES.maxFactor);
+  const setServings = (next: number) => {
+    if (!Number.isFinite(next) || next < lowest || next > highest) return false;
+    scaling.setFactor(next / count);
+    return true;
+  };
+  const commit = () => {
+    if (typed === null) return;
+    const ok = setServings(Number(typed.replace(",", ".")));
+    setWrong(!ok);
+    if (ok) setTyped(null);
+  };
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    commit();
+  };
+  const step = (next: number) => {
+    setTyped(null);
+    setWrong(false);
+    setServings(next);
+  };
+  return (
+    <form className={styles.scaleGroup} onSubmit={submit}>
+      <label htmlFor={`${id}-count`} className={styles.scaleLabel}>
+        {said.label}
+      </label>
+      <div className={styles.servesButtons}>
+        <button
+          type="button"
+          className={styles.scaleStep}
+          aria-label="One fewer"
+          disabled={said.servings - 1 < lowest}
+          onClick={() => step(Math.ceil(said.servings) - 1)}
+        >
+          −
+        </button>
+        <input
+          id={`${id}-count`}
+          className={styles.servesInput}
+          inputMode="numeric"
+          size={3}
+          value={typed ?? said.shownCount}
+          aria-describedby={wrong ? `${id}-wrong` : undefined}
+          aria-invalid={wrong || undefined}
+          onChange={(event) => setTyped(event.target.value)}
+          onBlur={commit}
+        />
+        <button
+          type="button"
+          className={styles.scaleStep}
+          aria-label="One more"
+          disabled={said.servings + 1 > highest}
+          onClick={() => step(Math.floor(said.servings) + 1)}
+        >
+          +
+        </button>
+      </div>
+      {said.words ? <span>{said.words}</span> : null}
+      {wrong ? (
+        <p id={`${id}-wrong`} className={styles.scaleProblem}>
+          Choose a number from {lowest} to {highest}.
+        </p>
+      ) : null}
+    </form>
   );
 }
 
@@ -163,7 +239,7 @@ export function ScaleStatus({ note, scaling }: { note: string | null; scaling: S
   );
 }
 
-/** "Adjust", and the panel it opens: amount, another pan and units. */
+/** "Adjust", and the panel it opens: how many, amount, another pan and units. */
 export function Adjust({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -232,28 +308,16 @@ function ScaleBar({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
 
   return (
     <div className={styles.scaleBar}>
+      <ServingsStepper recipe={recipe} scaling={scaling} />
       <div className={styles.scaleGroup} role="group" aria-labelledby={`${id}-scale`}>
         <span id={`${id}-scale`} className={styles.scaleLabel}>
           Amount
         </span>
-        {PRESETS.map((preset) => (
-          <button
-            key={preset}
-            type="button"
-            className={styles.scaleChoice}
-            aria-pressed={factor === preset}
-            onClick={() => onFactor(preset)}
-          >
-            {preset === 1 ? "As written" : `${amountText(preset, null, true)}×`}
-          </button>
-        ))}
-        {!PRESETS.includes(factor) ? (
-          <span className={styles.scaleChoice} aria-current="true">
-            {factorName(factor)}
-          </span>
-        ) : null}
+        <span className={styles.scaleNow}>
+          {factor === 1 && !scaling.pans ? "As written" : factorName(factor)}
+        </span>
         <form className={styles.scaleCustom} onSubmit={submitCustom}>
-          <label htmlFor={`${id}-custom`}>Other</label>
+          <label htmlFor={`${id}-custom`}>Scale by</label>
           <input
             id={`${id}-custom`}
             inputMode="decimal"

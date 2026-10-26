@@ -225,18 +225,13 @@ export function PanControls({ recipe, scaling }: { recipe: Recipe; scaling: Scal
   const read = useMemo(() => recipePan(recipe), [recipe]);
   const [corrected, setCorrected] = useState<Pan | null>(null);
   const [changing, setChanging] = useState(false);
-  const [open, setOpen] = useState(false);
   const theirs = scaling.pans?.recipe ?? corrected ?? (read && !read.sizeMissing ? read.pan : null);
   const [yoursWaiting, setYoursWaiting] = useState<Pan | null>(null);
   const [cantCompare, setCantCompare] = useState(false);
 
-  if (!read && !scaling.pans && !open) {
-    return (
-      <button type="button" className={styles.textButton} onClick={() => setOpen(true)}>
-        Scale for a different pan
-      </button>
-    );
-  }
+  // No pan in the recipe (cookies, say): nothing to scale from, so nothing to show (owner's
+  // choice 2026-10-25).
+  if (!read && !scaling.pans) return null;
 
   const chooseYours = (yours: Pan, from: Pan | null = theirs) => {
     if (!from) {

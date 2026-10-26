@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { emptyRecipeContent } from "../shared/recipe";
 import { directionsFromText, ingredientsFromText } from "../shared/recipeLines";
-import { adjust, editorStatus, premium, recipeCard, syncStatus } from "./recipes";
+import { editorStatus, premium, recipeCard, syncStatus, quickScale } from "./recipes";
 import { signUpConfirmed, useFreshAddress, useOwnAccount } from "./support";
 
 // Phase F6: printing. Chrome makes real PDFs here, which are read back to check nothing is cut
@@ -99,7 +99,7 @@ test("Print a recipe in two taps, with its linked recipe, and save it as a PDF",
   await page.getByRole("button", { name: /sample recipes to try/ }).click();
   await expect(recipeCard(page, TACOS)).toBeVisible();
   await linkLimeCrema(page);
-  await adjust(page, (panel) => panel.getByRole("button", { name: "2×" }).click());
+  await quickScale(page, "2×");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
   // Tap one: Print on the recipe. Tap two: Print, already focused, with the last choices used.

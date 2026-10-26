@@ -1,11 +1,11 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { adjust, recipeCard, syncStatus } from "./recipes";
+import { adjust, recipeCard, syncStatus, quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
-// Phase F1: scaling a recipe and showing it in other units. Owner's choice 2026-10-24: the
-// ingredients show "Serves − 4 +"; halving, doubling, another pan and units are under "Adjust",
-// beside it (2026-10-25).
+// Phase F1: scaling a recipe and showing it in other units. Owner's choices 2026-10-25: the
+// ingredients say how many it serves or makes, with half, as written, double and triple beside
+// it; any number of servings, another pan and units are under "Adjust".
 
 test("Double a recipe and show it in metric; it stays that way", async ({
   page,
@@ -24,20 +24,15 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(ingredients.getByText("2 cups all-purpose flour")).toBeVisible();
   await expect(page.locator("mark")).toHaveCount(0);
 
-  await adjust(page, async (panel) => {
-    await panel.getByRole("button", { name: "2×" }).click();
-    await expect(panel.getByRole("button", { name: "2×" })).toHaveAttribute("aria-pressed", "true");
-    const axe = await new AxeBuilder({ page })
-      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
-      .analyze();
-    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
-  });
+  // Doubled from the quick amounts beside "Serves" (owner's choice 2026-10-25).
+  await quickScale(page, "2×");
+  await expect(
+    ingredients.getByRole("group", { name: "Amount" }).getByRole("button", { name: "2×" }),
+  ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("Doubled: changed amounts are highlighted.")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "4 cups" })).toHaveCount(2);
   await expect(ingredients.locator("mark", { hasText: "1/4 cup" })).toBeVisible();
-  await expect(ingredients.getByText("Makes about 24 pancakes")).toBeVisible();
-  const serves = ingredients.getByRole("group", { name: "Serves" });
-  await expect(serves.locator("output")).toHaveText("8");
+  await expect(ingredients).toContainText("Serves 8 · Makes about 24 pancakes");
 
   // Tapping a line shows the original and the working.
   const flour = ingredients.getByRole("button", { name: /4 cups all-purpose flour/ });
@@ -72,13 +67,26 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(page.getByText("Doubled and shown in metric:")).toBeVisible();
   await expect(ingredients.getByText("kept as written")).toBeVisible();
 
-  // One more serving from "Serves": about 2¼×.
-  await serves.getByRole("button", { name: "One more" }).click();
-  await expect(serves.locator("output")).toHaveText("9");
+  // Any number of servings, typed or a step at a time, under "Adjust": 9 is about 2¼×.
+  await adjust(page, async (panel) => {
+    const serves = panel.getByLabel("Serves", { exact: true });
+    await expect(serves).toHaveValue("8");
+    await panel.getByRole("button", { name: "One more" }).click();
+    await expect(serves).toHaveValue("9");
+    await serves.fill("12");
+    await serves.press("Enter");
+    await expect(serves).toHaveValue("12");
+    const axe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
+      .analyze();
+    expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  });
+  await expect(ingredients).toContainText("Serves 12");
+  await expect(page.getByText("Tripled and shown in metric:")).toBeVisible();
 
   // Back to the recipe's own amounts, then its own units.
   await page.getByRole("button", { name: "Back to as written" }).click();
-  await expect(serves.locator("output")).toHaveText("4");
+  await expect(ingredients).toContainText("Serves 4");
   await adjust(page, async (panel) => {
     await expect(panel.getByLabel("Units", { exact: true })).toHaveValue("metric");
     await panel.getByLabel("Units", { exact: true }).selectOption({ label: "As written" });
@@ -87,7 +95,7 @@ test("Double a recipe and show it in metric; it stays that way", async ({
   await expect(ingredients.getByText("2 cups all-purpose flour")).toBeVisible();
 });
 
-test("A recipe that makes things says Makes, once, beside Adjust", async ({
+test("A recipe that makes things says Makes, once, with the quick amounts", async ({
   page,
   context,
   baseURL,
@@ -105,14 +113,28 @@ test("A recipe that makes things says Makes, once, beside Adjust", async ({
   await page.getByRole("button", { name: "Done" }).first().click();
 
   const ingredients = page.getByRole("region", { name: "Ingredients" });
-  const makes = ingredients.getByRole("group", { name: "Makes" });
-  await expect(makes).toContainText("14");
-  await expect(makes).toContainText("pancakes");
-  await expect(ingredients.getByRole("group", { name: "Serves" })).toHaveCount(0);
+  await expect(ingredients).toContainText("Makes 14 pancakes");
+  await expect(ingredients).not.toContainText("Serves");
   // Said once: not in the details under the title.
   await expect(page.getByRole("term").filter({ hasText: /^(Serves|Makes)$/ })).toHaveCount(0);
-  await makes.getByRole("button", { name: "One more" }).click();
-  await expect(makes.locator("output")).toHaveText("15");
-  await adjust(page, (panel) => panel.getByRole("button", { name: "As written" }).click());
-  await expect(makes.locator("output")).toHaveText("14");
+  await quickScale(page, "2×");
+  await expect(ingredients).toContainText("Makes 28 pancakes");
+  await adjust(page, (panel) =>
+    expect(panel.getByLabel("Makes", { exact: true })).toHaveValue("28"),
+  );
+  await quickScale(page, "As written");
+  await expect(ingredients).toContainText("Makes 14 pancakes");
+});
+
+test("No pan in the recipe: no pan choices under Adjust", async ({ page, context, baseURL }) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  await page.getByRole("button", { name: /sample recipes to try/ }).click();
+  await expect(recipeCard(page, "Buttermilk Pancakes")).toBeVisible();
+  await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
+  await adjust(page, async (panel) => {
+    await expect(panel.getByLabel("Serves", { exact: true })).toBeVisible();
+    await expect(panel.getByRole("group", { name: "Pan" })).toHaveCount(0);
+    await expect(panel.getByText(/pan/i)).toHaveCount(0);
+  });
 });

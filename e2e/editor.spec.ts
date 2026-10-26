@@ -149,9 +149,7 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await expect(method.locator("ol").last()).toHaveAttribute("start", "3");
   await expect(page.getByText("2 hr 20 min")).toBeVisible();
   // "Serves 6", said once, with the ingredients (owner's choice 2026-10-25).
-  await expect(
-    page.getByRole("region", { name: "Ingredients" }).getByRole("group", { name: "Serves" }),
-  ).toContainText("6");
+  await expect(page.getByRole("region", { name: "Ingredients" })).toContainText("Serves 6");
   await expect(page.getByText("Easy")).toBeVisible();
   await expect(page.getByText("Better the next day.")).toBeVisible();
 });
@@ -264,7 +262,7 @@ test("Your rating, favorite and note are kept, and only you set them", async ({
   await expect(yours.getByRole("radio", { name: "5 stars" })).toBeChecked();
   await page.getByLabel("A favorite of mine").check({ force: true });
   // With no note yet, just a way to add one.
-  await page.getByRole("button", { name: "Add your note" }).click();
+  await page.getByRole("button", { name: "Add a note" }).click();
   await expect(page.getByLabel("Your note")).toBeFocused();
   await page.getByLabel("Your note").fill("Mom's, with extra raisins.");
   await expect(page.locator("[data-note-status]")).toHaveText("Saved.");

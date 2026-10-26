@@ -68,9 +68,7 @@ test("A recipe page shows the whole recipe, and Made it is remembered", async ({
   await expect(page.getByText("Prep", { exact: true })).toBeVisible();
   await expect(page.getByText("2 hr 5 min")).toBeVisible();
   // "Serves 6", said once, with the ingredients (owner's choice 2026-10-25).
-  await expect(
-    page.getByRole("region", { name: "Ingredients" }).getByRole("group", { name: "Serves" }),
-  ).toContainText("6");
+  await expect(page.getByRole("region", { name: "Ingredients" })).toContainText("Serves 6");
   await expect(page.getByRole("heading", { level: 3, name: "For the stew:" })).toBeVisible();
   await expect(page.getByRole("listitem").filter({ hasText: "2 lb pork shoulder" })).toBeVisible();
   // Five steps, numbered 1 to 5.

@@ -71,6 +71,15 @@ export async function signInElsewhere(
  * On a recipe's page: opens "Adjust" (amount, another pan, units; phase F1, owner's choice
  * 2026-10-24), does `act` there, then closes it with "Done".
  */
+/** One of the quick amounts at the top of the ingredients: "½×", "As written", "2×" or "3×". */
+export async function quickScale(page: Page, name: string) {
+  await page
+    .getByRole("region", { name: "Ingredients" })
+    .getByRole("group", { name: "Amount" })
+    .getByRole("button", { name, exact: true })
+    .click();
+}
+
 export async function adjust(page: Page, act: (panel: Locator) => Promise<unknown>) {
   await page.getByRole("button", { name: "Adjust" }).click();
   const panel = page.getByRole("dialog", { name: "Adjust this recipe" });

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { adjust, recipeCard, syncStatus } from "./recipes";
+import { recipeCard, syncStatus, quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F5: cook mode.
@@ -18,7 +18,7 @@ test("Cook a recipe one step at a time, with timers, check-offs and Made it", as
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
   // Doubled on the recipe page: cook mode uses the same amounts.
-  await adjust(page, (panel) => panel.getByRole("button", { name: "2×" }).click());
+  await quickScale(page, "2×");
   await page.getByRole("link", { name: "Start cooking" }).click();
 
   // First, everything to get ready.

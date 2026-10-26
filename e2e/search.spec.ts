@@ -85,7 +85,7 @@ test("Search finds changes straight away, and works with the filters", async ({
   // A note written just now is found.
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
   await page.getByRole("radio", { name: "5 stars" }).check({ force: true });
-  await page.getByRole("button", { name: "Add your note" }).click();
+  await page.getByRole("button", { name: "Add a note" }).click();
   await page.getByLabel("Your note").fill("Grandma used Meyer lemons");
   await expect(page.locator("[data-note-status]")).toHaveText("Saved.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");

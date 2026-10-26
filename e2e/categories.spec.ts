@@ -187,9 +187,16 @@ test("A recipe's categories, chosen in the editor by typing", async ({
   ]);
   await page.getByRole("button", { name: "Done" }).first().click();
 
-  // The recipe page's categories lead to the list, filtered.
-  await page.getByRole("link", { name: "Desserts › Cakes" }).click();
+  // The recipe page's categories lead to the list, filtered; each level is its own link
+  // (owner's choice 2026-10-25): "Cakes" for Desserts › Cakes, "Desserts" for every dessert.
+  const above = page.getByRole("list", { name: "Categories" });
+  await expect(above).toHaveText("Desserts › Cakes");
+  await above.getByRole("link", { name: "Desserts › Cakes" }).click();
   await expect(page.getByLabel("Category")).toHaveValue("desserts › cakes");
+  await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
+  await page.goBack();
+  await above.getByRole("link", { name: "Desserts", exact: true }).click();
+  await expect(page.getByLabel("Category")).toHaveValue("desserts");
   await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
 });
 
@@ -221,4 +228,43 @@ test("Premium: category changes sync between devices", async ({
   await page.reload();
   await expect(page.getByRole("button", { name: "Rename Holidays › Friendsgiving" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Rename Holidays › Thanksgiving" })).toHaveCount(0);
+});
+
+test("A recipe's categories, changed from its page with Change", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await addSamples(page);
+  await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
+
+  // The categories above the title, with Change beside them (owner's choice 2026-10-25).
+  const above = page.getByRole("list", { name: "Categories" });
+  await expect(above).toHaveText("Breakfast");
+  await page.getByRole("button", { name: "Change categories" }).click();
+  const window = page.getByRole("dialog", { name: "Categories" });
+  await expect(window).toBeVisible();
+  const box = window.getByRole("combobox", { name: "Add a category" });
+  await box.fill("Weekend");
+  await window.getByRole("option", { name: "New category: Weekend" }).click();
+  await expect(window.getByRole("list", { name: "This recipe's categories" })).toContainText(
+    "Weekend",
+  );
+  const axe = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
+    .analyze();
+  expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  await window.getByRole("button", { name: "Take out of Breakfast" }).click();
+  await window.getByRole("button", { name: "Done" }).click();
+  await expect(window).toBeHidden();
+  await expect(above).toHaveText("Weekend");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+
+  // None left: "Add a category" in its place.
+  await page.getByRole("button", { name: "Change categories" }).click();
+  await window.getByRole("button", { name: "Take out of Weekend" }).click();
+  await window.getByRole("button", { name: "Done" }).click();
+  await expect(above).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Add a category" })).toBeVisible();
 });
