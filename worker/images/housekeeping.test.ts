@@ -2,7 +2,7 @@ import { env } from "cloudflare:test";
 import { strFromU8, unzipSync } from "fflate";
 import { and, eq, inArray } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
-import { readExportFile } from "../../shared/exportFormat";
+import { EXPORT_VERSION, readExportFile } from "../../shared/exportFormat";
 import { RECIPE_SCHEMA_VERSION, emptyRecipeContent } from "../../shared/recipe";
 import {
   formatCursors,
@@ -519,7 +519,7 @@ describe("photos in the export", () => {
     expect(res.status).toBe(200);
     const files = unzipSync(new Uint8Array(await res.arrayBuffer()));
     const file = readExportFile(JSON.parse(strFromU8(files["fennl-recipes.json"]!)))!;
-    expect(file.version).toBe(2);
+    expect(file.version).toBe(EXPORT_VERSION);
     const shakshuka = file.recipes.find((r) => r.id === first)!;
     expect(shakshuka.photos).toEqual([
       { hash: cover, file: `photos/${cover}.jpg`, role: "photo", width: 800, height: 600 },
