@@ -298,19 +298,26 @@ function createChange(recipeId: string, recipe: PaprikaRecipe, now: number): Rec
   };
 }
 
-/** Paprika's stars and notes, as the importing person's own, where Paprika has them. */
+/**
+ * Paprika's stars and notes, as the importing person's own, where Paprika has them. The notes
+ * come as a note of theirs (U7); an update whose notes they don't already have adds them as a new
+ * one, so nothing they wrote is replaced.
+ */
 function opinionChange(
   recipeId: string,
   recipe: PaprikaRecipe,
-  mine: { rating: number | null; note: string } | null,
+  mine: { rating: number | null; notes: string[] } | null,
   now: number,
 ): SyncChange[] {
-  const fields: { rating?: number; note?: string } = {};
-  if (recipe.rating !== null && recipe.rating !== mine?.rating) fields.rating = recipe.rating;
-  if (recipe.note && recipe.note !== mine?.note) fields.note = recipe.note;
-  return Object.keys(fields).length > 0
-    ? [{ kind: "opinion", recipeId, fields, changedAt: now }]
-    : [];
+  const changes: SyncChange[] = [];
+  if (recipe.rating !== null && recipe.rating !== mine?.rating) {
+    changes.push({ kind: "opinion", recipeId, fields: { rating: recipe.rating }, changedAt: now });
+  }
+  const note = recipe.note.trim();
+  if (note && !(mine?.notes ?? []).some((text) => text.trim() === note)) {
+    changes.push({ kind: "note", id: crypto.randomUUID(), recipeId, text: note, changedAt: now });
+  }
+  return changes;
 }
 
 function base64Blob(data: string): Blob {
@@ -488,8 +495,9 @@ export async function runPaprikaImport(
           ...update,
           import: { ...importRecord(recipe, now, existing.import.photos ?? []) },
         });
-        const mine = detail.opinions.find((o) => o.userId === ctx.me) ?? null;
-        changes.push(...opinionChange(existing.id, recipe, mine, now));
+        const rating = detail.opinions.find((o) => o.userId === ctx.me)?.rating ?? null;
+        const notes = detail.notes.filter((n) => n.userId === ctx.me).map((n) => n.text);
+        changes.push(...opinionChange(existing.id, recipe, { rating, notes }, now));
         const tree = {
           ...ctx.tree,
           recipeOwners: { ...ctx.tree.recipeOwners, [existing.id]: existing.ownerUserId },

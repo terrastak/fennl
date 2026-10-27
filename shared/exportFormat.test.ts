@@ -41,6 +41,33 @@ function file(): ExportFile {
 }
 
 describe("reading an export back", () => {
+  it("brings the exporter's own notes, with their dates, not other people's", () => {
+    const original = file();
+    const cake = original.recipes[0]!;
+    original.version = 3;
+    original.recipes = [
+      {
+        ...cake,
+        opinions: [{ userId: "june", rating: 4, favorite: true }],
+        signedNotes: [
+          { userId: "june", text: "First", writtenAt: "2026-10-01T12:00:00.000Z", editedAt: null },
+          { userId: "sam", text: "Sam's", writtenAt: "2026-10-02T12:00:00.000Z", editedAt: null },
+          {
+            userId: "june",
+            text: " Second ",
+            writtenAt: "2026-10-03T12:00:00.000Z",
+            editedAt: null,
+          },
+        ],
+      },
+    ];
+    const plan = importChanges(original, { now: 1000, newId });
+    expect(plan.changes.filter((c) => c.kind === "note")).toEqual([
+      expect.objectContaining({ text: "First", writtenAt: "2026-10-01T12:00:00.000Z" }),
+      expect.objectContaining({ text: "Second", writtenAt: "2026-10-03T12:00:00.000Z" }),
+    ]);
+  });
+
   it("knows its own files", () => {
     expect(readExportFile({ format: "something-else" })).toBeNull();
     expect(readExportFile({ ...file(), version: 99 })).toBeNull();
@@ -65,9 +92,10 @@ describe("reading an export back", () => {
   it("brings the exporter's own rating and made-it days, not other people's", () => {
     const plan = importChanges(file(), { now: 1000, newId });
     const opinions = plan.changes.filter((c) => c.kind === "opinion");
-    expect(opinions).toEqual([
-      expect.objectContaining({ fields: { rating: 5, favorite: false, note: "Mine" } }),
-    ]);
+    expect(opinions).toEqual([expect.objectContaining({ fields: { rating: 5, favorite: false } })]);
+    // An earlier file's note (version 1) comes as one entry of theirs.
+    const notes = plan.changes.filter((c) => c.kind === "note");
+    expect(notes).toEqual([expect.objectContaining({ text: "Mine" })]);
     const made = plan.changes.filter((c) => c.kind === "made");
     expect(made).toEqual([expect.objectContaining({ madeOn: "2026-10-01" })]);
   });

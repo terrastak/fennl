@@ -23,9 +23,55 @@ export function usePath(): string {
   );
 }
 
-/** Switches page without reloading. `replace` swaps the current history entry (for redirects). */
-export function navigate(to: string, options: { replace?: boolean } = {}): void {
-  if (to === `${window.location.pathname}${window.location.search}`) return;
+const here = () => `${window.location.pathname}${window.location.search}`;
+
+/**
+ * Something on the page that mustn't be lost by leaving it (U7: a note being written). While
+ * it's set, leaving the page asks first: `onLeave` is told where to, and goes there itself
+ * (navigate with `force`) once the person has chosen. Closing or reloading the tab gets the
+ * browser's own question.
+ */
+let guard: { path: string; onLeave: (to: string) => void } | null = null;
+
+const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+  event.preventDefault();
+  // Older browsers ask only when this is set.
+  event.returnValue = "";
+};
+
+/** Asks before leaving this page; returns the function that stops asking. */
+export function guardLeaving(onLeave: (to: string) => void): () => void {
+  const mine = { path: here(), onLeave };
+  guard = mine;
+  window.addEventListener("beforeunload", warnBeforeUnload);
+  return () => {
+    if (guard !== mine) return;
+    guard = null;
+    window.removeEventListener("beforeunload", warnBeforeUnload);
+  };
+}
+
+// Back and forward: the address has changed already, so it's put back while the person chooses.
+// Added before any page listens, so pages never see the address they didn't go to.
+if (typeof window !== "undefined") {
+  window.addEventListener("popstate", () => {
+    if (!guard || here() === guard.path) return;
+    const to = here();
+    window.history.pushState(null, "", guard.path);
+    guard.onLeave(to);
+  });
+}
+
+/**
+ * Switches page without reloading. `replace` swaps the current history entry (for redirects);
+ * `force` leaves without asking (guardLeaving).
+ */
+export function navigate(to: string, options: { replace?: boolean; force?: boolean } = {}): void {
+  if (to === here()) return;
+  if (guard && !options.force && guard.path === here()) {
+    guard.onLeave(to);
+    return;
+  }
   if (options.replace) window.history.replaceState(null, "", to);
   else window.history.pushState(null, "", to);
   window.dispatchEvent(new Event(NAVIGATE_EVENT));

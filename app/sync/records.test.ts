@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { emptyRecipeContent, type Recipe, type RecipeOpinion } from "../../shared/recipe";
+import {
+  emptyRecipeContent,
+  type Recipe,
+  type RecipeNote,
+  type RecipeOpinion,
+} from "../../shared/recipe";
 import type { SyncChange } from "../../shared/sync";
 import {
   applyChange,
@@ -103,6 +108,37 @@ describe("applying a change here", () => {
       ctx,
     ) as RecipeOpinion;
     expect(opinion).toMatchObject({ userId: me, rating: 4, favorite: false, note: "" });
+  });
+});
+
+describe("notes added in Fennl (U7)", () => {
+  const noteId = "7a0c1d2e-3a4b-4c5d-8e9f-0a1b2c3d4e5f";
+  const add: SyncChange = { kind: "note", id: noteId, recipeId, text: "Less sugar.", changedAt: 1 };
+
+  it("are the person's own, written now, or when carried from elsewhere", () => {
+    expect(applyChange(null, add, ctx)).toMatchObject({
+      userId: me,
+      recipeId,
+      text: "Less sugar.",
+      writtenAt: ctx.now,
+      editedAt: null,
+    });
+    const carried = { ...add, writtenAt: "2026-03-01T12:00:00.000Z" };
+    expect((applyChange(null, carried, ctx) as RecipeNote).writtenAt).toBe(carried.writtenAt);
+    // Never later than now.
+    const later = { ...add, writtenAt: "2027-01-01T00:00:00.000Z" };
+    expect((applyChange(null, later, ctx) as RecipeNote).writtenAt).toBe(ctx.now);
+  });
+
+  it("are marked edited only when their words change, and can be removed", () => {
+    const first = applyChange(null, add, { ...ctx, now: "2026-10-01T12:00:00.000Z" });
+    expect((applyChange(first, add, ctx) as RecipeNote).editedAt).toBeNull();
+    const edited = applyChange(first, { ...add, text: "No sugar." }, ctx) as RecipeNote;
+    expect(edited).toMatchObject({ text: "No sugar.", editedAt: ctx.now });
+    const remove: SyncChange = { kind: "note", id: noteId, recipeId, deleted: true, changedAt: 2 };
+    const removed = applyChange(edited, remove, ctx);
+    expect(removed).toMatchObject({ deletedAt: ctx.now, text: "No sugar." });
+    expect(recordOf(add, me)).toEqual({ kind: "note", key: noteId });
   });
 });
 

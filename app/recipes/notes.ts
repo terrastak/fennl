@@ -1,23 +1,37 @@
-import { RECIPE_RULES } from "../../shared/recipe";
+import type { RecipeNote, RecipeSource } from "../../shared/recipe";
+import { sourceCredit } from "../../shared/recipeText";
 
-// Your signed note on a recipe grows a part at a time (owner's choice 2026-10-26): each part added
-// with "+ Add a note" goes in as a new paragraph with the day in front of it, all in the one note
-// kept with your stars and heart (recipe_opinion.note).
+// Notes on a recipe (U7, owner's choices 2026-10-27): one Notes section. The recipe's own note
+// comes first, labelled with where the recipe came from; then each note added in Fennl, oldest
+// first, signed with its writer's name and the day it was written.
 
-/** "Oct 26, 2026", the day in front of a part of a note. */
-export const noteDay = (now: Date): string =>
-  now.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+/** "Oct 26, 2026", the day a note was written. */
+export const noteDay = (when: Date): string =>
+  when.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 
-const GAP = "\n\n";
-
-/** The note with `text` added as a new dated paragraph. */
-export function addToNote(note: string, text: string, now: Date): string {
-  const part = `${noteDay(now)}: ${text.trim()}`;
-  return note.trim() ? `${note.trim()}${GAP}${part}` : part;
+/** How a note is dated: "Oct 26, 2026", and "· edited Oct 28" when changed on a later day. */
+export function noteDate(note: Pick<RecipeNote, "writtenAt" | "editedAt">): string {
+  const written = new Date(note.writtenAt);
+  const day = noteDay(written);
+  if (!note.editedAt) return day;
+  const edited = new Date(note.editedAt);
+  if (noteDay(edited) === day) return day;
+  const sameYear = edited.getFullYear() === written.getFullYear();
+  const editedDay = sameYear
+    ? edited.toLocaleDateString(undefined, { month: "short", day: "numeric" })
+    : noteDay(edited);
+  return `${day} · edited ${editedDay}`;
 }
 
-/** How many characters a new part can have before the note is full. */
-export function roomInNote(note: string, now: Date): number {
-  const taken = note.trim() ? note.trim().length + GAP.length : 0;
-  return Math.max(0, RECIPE_RULES.notesLength - taken - `${noteDay(now)}: `.length);
+/** Where the recipe's own note came from: "From Donna Hay", or "From the recipe". */
+export function noteFrom(source: RecipeSource): string {
+  if (source.kind === "person") {
+    return source.name?.trim() ? `From ${source.name.trim()}` : "From the recipe";
+  }
+  const credit = sourceCredit(source);
+  return credit ? `From ${credit.text}` : "From the recipe";
 }
+
+/** Whether a note being written has changed: only its words count, not spaces around them. */
+export const noteChanged = (text: string, initial: string): boolean =>
+  text.trim() !== initial.trim();

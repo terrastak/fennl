@@ -1,11 +1,11 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
-import type { Recipe, RecipeOpinion } from "../../shared/recipe";
+import type { Recipe, RecipeNote } from "../../shared/recipe";
 
 // Searching the browser's copy of the recipe box (phase C8). Search runs on this device, so it
 // works offline, and it's built on SQLite's full-text search (FTS5), chosen in C2.
 //
 // The index holds each recipe's title, headnote, ingredients, directions, notes (the recipe's
-// own and everyone's signed notes) and source. It's kept up to date as records change here or
+// own and the notes added in Fennl, U7) and source. It's kept up to date as records change here or
 // arrive from the server (indexRecipe). Categories aren't in it: they're matched by their paths
 // when searching, so renaming a category doesn't mean indexing every recipe in it again.
 //
@@ -19,7 +19,7 @@ export const SEARCH_SCHEMA = `
     tokenize = 'unicode61 remove_diacritics 2', prefix = '2 3'
   );`;
 
-/** One recipe's index entry, from its record (and its opinions' notes). */
+/** One recipe's index entry, from its record (and the notes added to it). */
 const INDEX_SQL = `
   insert into recipe_search (rowid, recipe_id, title, description, ingredients, directions, notes, source)
   select r.rowid, r.key,
@@ -30,9 +30,9 @@ const INDEX_SQL = `
     (select group_concat(json_extract(l.value, '$.text'), char(10))
        from json_each(r.data, '$.directions') l),
     concat_ws(char(10), json_extract(r.data, '$.notes'),
-      (select group_concat(json_extract(o.data, '$.note'), char(10)) from record o
-        where o.kind = 'opinion' and o.key > r.key || '|' and o.key < r.key || '|~'
-          and o.data is not null and json_extract(o.data, '$.deletedAt') is null)),
+      (select group_concat(json_extract(n.data, '$.text'), char(10)) from record n
+        where n.kind = 'note' and json_extract(n.data, '$.recipeId') = r.key
+          and json_extract(n.data, '$.deletedAt') is null)),
     concat_ws(' ', json_extract(r.data, '$.source.name'), json_extract(r.data, '$.source.author'),
       json_extract(r.data, '$.source.page'), json_extract(r.data, '$.source.url'))
   from record r
@@ -42,7 +42,7 @@ const INDEX_SQL = `
 export const INDEX_ALL_SQL = `delete from recipe_search; ${INDEX_SQL};`;
 
 /**
- * Brings one recipe's entry up to date: after it changed, an opinion on it changed, or it went
+ * Brings one recipe's entry up to date: after it changed, a note on it changed, or it went
  * to Trash (then it has no entry). Entries go by the record's row; removing a recipe's record
  * removes its entry first (unindexRecords). A search also checks each entry against its record,
  * so a stale one never shows.
@@ -200,13 +200,13 @@ export function searchRecipes(
     ) as [string, string][];
     const notes = new Map<string, string[]>();
     for (const text of db.selectValues(
-      `select data from record where kind = 'opinion' and data is not null
-        and substr(key, 1, 36) in (${marks})`,
+      `select data from record where kind = 'note' and data is not null
+        and json_extract(data, '$.recipeId') in (${marks})`,
       others,
     ) as string[]) {
-      const opinion = JSON.parse(text) as RecipeOpinion;
-      if (!opinion.deletedAt && opinion.note) {
-        notes.set(opinion.recipeId, [...(notes.get(opinion.recipeId) ?? []), opinion.note]);
+      const note = JSON.parse(text) as RecipeNote;
+      if (!note.deletedAt && note.text) {
+        notes.set(note.recipeId, [...(notes.get(note.recipeId) ?? []), note.text]);
       }
     }
     for (const [recipeId, data] of rows) {

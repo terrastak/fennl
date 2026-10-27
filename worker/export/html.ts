@@ -76,6 +76,15 @@ function lines(items: (IngredientLine | DirectionStep)[], numbered: boolean): st
 
 const name = (people: Map<string, string>, userId: string) => people.get(userId) ?? "Someone";
 
+/** "Oct 26, 2026". */
+const day = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+
 /** A photo, from a page in the recipes folder. Only photos that are in the .zip. */
 function photo(p: { file: string | null; width: number; height: number }, alt: string): string {
   return p.file
@@ -116,14 +125,15 @@ export function recipePage(recipe: ExportRecipe, people: ExportPerson[]): string
     recipe.directions.length ? `<h2>Method</h2>\n${lines(recipe.directions, true)}` : "",
   ];
 
-  const notes = recipe.opinions.filter((o) => o.note.trim());
+  // The recipe's own note, then the notes added in Fennl, each signed and dated (U7).
+  const notes = (recipe.signedNotes ?? []).filter((n) => n.text.trim());
   if (recipe.notes.trim() || notes.length) {
     parts.push(
       `<h2>Notes</h2>`,
       recipe.notes.trim() ? paragraphs(recipe.notes) : "",
       ...notes.map(
-        (o) =>
-          `<blockquote>${paragraphs(o.note)}<p class="muted">— ${escape(name(names, o.userId))}</p></blockquote>`,
+        (n) =>
+          `<blockquote>${paragraphs(n.text)}<p class="muted">— ${escape(name(names, n.userId))}, ${day(n.writtenAt)}</p></blockquote>`,
       ),
     );
   }

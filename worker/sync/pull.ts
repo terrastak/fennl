@@ -6,6 +6,7 @@ import type {
   Recipe,
   RecipeCategory,
   RecipeMade,
+  RecipeNote,
   RecipeOpinion,
   RecipePhoto,
   PhotoArranger,
@@ -19,6 +20,7 @@ import {
   recipe,
   recipeCategory,
   recipeMade,
+  recipeNote,
   recipeOpinion,
   recipePhoto,
   user,
@@ -85,6 +87,18 @@ function toMade(row: typeof recipeMade.$inferSelect): RecipeMade {
   };
 }
 
+function toNote(row: typeof recipeNote.$inferSelect): RecipeNote {
+  return {
+    id: row.id,
+    recipeId: row.recipeId,
+    userId: row.userId,
+    text: row.text,
+    writtenAt: row.writtenAt.toISOString(),
+    editedAt: iso(row.editedAt),
+    ...sync(row),
+  };
+}
+
 function toCategory(row: typeof category.$inferSelect): Category {
   return {
     id: row.id,
@@ -120,6 +134,7 @@ type Item =
   | { kind: "recipes"; seq: number; value: Recipe }
   | { kind: "opinions"; seq: number; value: RecipeOpinion }
   | { kind: "made"; seq: number; value: RecipeMade }
+  | { kind: "notes"; seq: number; value: RecipeNote }
   | { kind: "categories"; seq: number; value: Category }
   | { kind: "recipeCategories"; seq: number; value: RecipeCategory }
   | { kind: "photos"; seq: number; value: RecipePhoto };
@@ -131,7 +146,7 @@ async function changesFor(
   after: number,
 ): Promise<{ items: Item[]; complete: boolean }> {
   const rows = SYNC_RULES.pullRows;
-  const [recipes, opinions, made, categories, links, photos] = await db.batch([
+  const [recipes, opinions, made, notes, categories, links, photos] = await db.batch([
     db
       .select()
       .from(recipe)
@@ -149,6 +164,12 @@ async function changesFor(
       .from(recipeMade)
       .where(and(eq(recipeMade.ownerUserId, owner), gt(recipeMade.serverSeq, after)))
       .orderBy(asc(recipeMade.serverSeq))
+      .limit(rows),
+    db
+      .select()
+      .from(recipeNote)
+      .where(and(eq(recipeNote.ownerUserId, owner), gt(recipeNote.serverSeq, after)))
+      .orderBy(asc(recipeNote.serverSeq))
       .limit(rows),
     db
       .select()
@@ -180,6 +201,7 @@ async function changesFor(
   full(recipes, SYNC_RULES.pullRecipes);
   full(opinions, rows);
   full(made, rows);
+  full(notes, rows);
   full(categories, rows);
   full(links, rows);
   full(photos, rows);
@@ -188,6 +210,7 @@ async function changesFor(
     ...recipes.map((r): Item => ({ kind: "recipes", seq: r.serverSeq, value: toRecipe(r) })),
     ...opinions.map((r): Item => ({ kind: "opinions", seq: r.serverSeq, value: toOpinion(r) })),
     ...made.map((r): Item => ({ kind: "made", seq: r.serverSeq, value: toMade(r) })),
+    ...notes.map((r): Item => ({ kind: "notes", seq: r.serverSeq, value: toNote(r) })),
     ...categories.map((r): Item => ({
       kind: "categories",
       seq: r.serverSeq,
@@ -236,6 +259,7 @@ export async function pullChanges(
     recipes: [],
     opinions: [],
     made: [],
+    notes: [],
     categories: [],
     recipeCategories: [],
     photos: [],

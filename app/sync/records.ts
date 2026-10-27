@@ -4,6 +4,7 @@ import type {
   RecipeContent,
   RecipeCategory,
   RecipeMade,
+  RecipeNote,
   RecipeOpinion,
   RecipePhoto,
 } from "../../shared/recipe";
@@ -14,10 +15,11 @@ import type { CategoryFields, PullResponse, SyncChange } from "../../shared/sync
 // people see is that combination. When the server sends a newer copy, the pending changes are
 // applied to it again, so nothing typed here is lost while it waits to be sent.
 
-export type RecordKind = "recipe" | "opinion" | "made" | "category" | "recipeCategory" | "photo";
+export type RecordKind =
+  "recipe" | "opinion" | "made" | "note" | "category" | "recipeCategory" | "photo";
 
 export type RecordValue =
-  Recipe | RecipeOpinion | RecipeMade | Category | RecipeCategory | RecipePhoto;
+  Recipe | RecipeOpinion | RecipeMade | RecipeNote | Category | RecipeCategory | RecipePhoto;
 
 /** Who is working here, and how to find a recipe's owner (for opinions, links and "made it"). */
 export interface ApplyContext {
@@ -35,6 +37,8 @@ export function recordOf(change: SyncChange, userId: string): { kind: RecordKind
       return { kind: "opinion", key: `${change.recipeId}|${userId}` };
     case "made":
       return { kind: "made", key: change.id };
+    case "note":
+      return { kind: "note", key: change.id };
     case "category":
       return { kind: "category", key: change.id };
     case "recipeCategory":
@@ -67,12 +71,13 @@ export function pulledRecords(page: PullResponse): { kind: RecordKind; value: Re
     ...page.categories.map((value) => ({ kind: "category" as const, value })),
     ...page.opinions.map((value) => ({ kind: "opinion" as const, value })),
     ...page.made.map((value) => ({ kind: "made" as const, value })),
+    ...(page.notes ?? []).map((value) => ({ kind: "note" as const, value })),
     ...page.recipeCategories.map((value) => ({ kind: "recipeCategory" as const, value })),
     ...(page.photos ?? []).map((value) => ({ kind: "photo" as const, value })),
   ];
 }
 
-/** The owner of a record: the recipe's owner for opinions, links, "made it" and photos. */
+/** The owner of a record: the recipe's owner for opinions, links, "made it", notes and photos. */
 export function ownerOfRecord(kind: RecordKind, value: RecordValue, ctx: ApplyContext): string {
   if (kind === "recipe" || kind === "category") return (value as Recipe | Category).ownerUserId;
   return ctx.ownerOf((value as { recipeId: string }).recipeId) ?? "";
@@ -147,6 +152,35 @@ export function applyChange(
           ...unsynced(ctx.now),
         }
       );
+    }
+    case "note": {
+      // Notes added in Fennl (U7): written by the person here; a change to its words marks it
+      // edited.
+      const base = current as RecipeNote | null;
+      if (!base) {
+        if (change.text === undefined) return null;
+        return {
+          id: change.id,
+          recipeId: change.recipeId,
+          userId: ctx.userId,
+          text: change.text,
+          writtenAt:
+            change.writtenAt && change.writtenAt < ctx.now
+              ? new Date(change.writtenAt).toISOString()
+              : ctx.now,
+          editedAt: null,
+          deletedAt: deletedAt(change.deleted, null),
+          ...unsynced(ctx.now),
+        };
+      }
+      const edited = change.text !== undefined && change.text !== base.text;
+      return {
+        ...base,
+        ...(change.text !== undefined ? { text: change.text } : {}),
+        editedAt: edited ? ctx.now : base.editedAt,
+        updatedAt: ctx.now,
+        deletedAt: deletedAt(change.deleted, base.deletedAt),
+      };
     }
     case "category": {
       const base = current as Category | null;

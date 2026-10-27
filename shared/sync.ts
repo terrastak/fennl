@@ -17,6 +17,7 @@ import {
   type RecipeIssue,
   type Recipe,
   type RecipeMade,
+  type RecipeNote,
   type RecipeOpinion,
   type PhotoRole,
   type RecipePhoto,
@@ -109,6 +110,23 @@ export interface MadeChange extends ChangeBase {
   deleted?: boolean;
 }
 
+/**
+ * A note on a recipe (U7): added (with its words), its words changed, or removed (deleted). Only
+ * the person who wrote it can change or remove it.
+ */
+export interface NoteChange extends ChangeBase {
+  kind: "note";
+  id: string;
+  recipeId: string;
+  text?: string;
+  deleted?: boolean;
+  /**
+   * When it was written, for a note carried from elsewhere (an export, a duplicate merged away);
+   * only used when it's added, and never later than the change. Otherwise, when it's added.
+   */
+  writtenAt?: string;
+}
+
 export type CategoryFields = Pick<Category, "name" | "parentId" | "sortOrder">;
 export const CATEGORY_FIELDS = ["name", "parentId", "sortOrder"] as const;
 
@@ -158,7 +176,13 @@ export interface PhotoChange extends ChangeBase {
 }
 
 export type SyncChange =
-  RecipeChange | OpinionChange | MadeChange | CategoryChange | RecipeCategoryChange | PhotoChange;
+  | RecipeChange
+  | OpinionChange
+  | MadeChange
+  | NoteChange
+  | CategoryChange
+  | RecipeCategoryChange
+  | PhotoChange;
 
 export interface PushRequest {
   deviceId: string;
@@ -221,6 +245,8 @@ export interface PullResponse {
   recipes: Recipe[];
   opinions: RecipeOpinion[];
   made: RecipeMade[];
+  /** Notes added in Fennl (U7). */
+  notes: RecipeNote[];
   categories: Category[];
   recipeCategories: RecipeCategory[];
   /** Photos on recipes (phase D2). */
@@ -421,6 +447,40 @@ function checkMade(change: Fields, issues: RecipeIssue[]): MadeChange | null {
   };
 }
 
+function checkNote(change: Fields, issues: RecipeIssue[]): NoteChange | null {
+  if (!isId(change.id)) issues.push({ path: "id", problem: "invalid" });
+  if (!isId(change.recipeId)) issues.push({ path: "recipeId", problem: "invalid" });
+  if (change.text !== undefined) {
+    if (typeof change.text !== "string" || !change.text.trim()) {
+      issues.push({ path: "text", problem: "invalid" });
+    } else if (change.text.length > RECIPE_RULES.notesLength) {
+      issues.push({ path: "text", problem: "too_long" });
+    }
+  }
+  if (change.deleted !== undefined && typeof change.deleted !== "boolean") {
+    issues.push({ path: "deleted", problem: "invalid" });
+  }
+  if (
+    change.writtenAt !== undefined &&
+    (typeof change.writtenAt !== "string" || Number.isNaN(Date.parse(change.writtenAt)))
+  ) {
+    issues.push({ path: "writtenAt", problem: "invalid" });
+  }
+  if (change.text === undefined && change.deleted === undefined) {
+    issues.push({ path: "text", problem: "missing" });
+  }
+  if (issues.length > 0) return null;
+  return {
+    kind: "note",
+    id: change.id as string,
+    recipeId: change.recipeId as string,
+    ...(change.text !== undefined ? { text: change.text as string } : {}),
+    ...(change.deleted !== undefined ? { deleted: change.deleted as boolean } : {}),
+    ...(change.writtenAt !== undefined ? { writtenAt: change.writtenAt as string } : {}),
+    changedAt: change.changedAt as number,
+  };
+}
+
 function checkCategory(change: Fields, issues: RecipeIssue[]): CategoryChange | null {
   if (!isId(change.id)) issues.push({ path: "id", problem: "invalid" });
   const keys = fieldKeys(change.fields, CATEGORY_FIELDS, issues);
@@ -566,6 +626,7 @@ export function checkChange(value: unknown): Checked<SyncChange> {
     recipe: checkRecipe,
     opinion: checkOpinion,
     made: checkMade,
+    note: checkNote,
     category: checkCategory,
     recipeCategory: checkRecipeCategory,
     photo: checkPhoto,

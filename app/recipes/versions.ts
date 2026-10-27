@@ -76,21 +76,14 @@ export function versionDifferences(
         before: theirs.rating ? `${theirs.rating} of 5` : "None",
       });
     }
-    if ((mine?.note ?? "") !== theirs.note) {
-      found.push({
-        key: "note",
-        name: "Your note",
-        now: mine?.note || "None",
-        before: theirs.note || "None",
-      });
-    }
   }
   return found;
 }
 
 /**
  * The changes that put the earlier version back: every field that differs, as it was (its lines
- * with the ids they had), and the person's own stars and note when the version kept them.
+ * with the ids they had), and the person's own stars when the version kept them. (Notes aren't
+ * part of it: an update from Paprika adds its note as a new one, U7, so the earlier ones stay.)
  */
 export function restoreChanges(
   recipeId: string,
@@ -113,9 +106,8 @@ export function restoreChanges(
   }
   const theirs = version.snapshot.opinion;
   if (theirs && theirs.userId === me) {
-    const opinion: { rating?: number | null; note?: string } = {};
+    const opinion: { rating?: number | null } = {};
     if ((mine?.rating ?? null) !== theirs.rating) opinion.rating = theirs.rating;
-    if ((mine?.note ?? "") !== theirs.note) opinion.note = theirs.note;
     if (Object.keys(opinion).length > 0) {
       changes.push({ kind: "opinion", recipeId, fields: opinion, changedAt: at });
     }

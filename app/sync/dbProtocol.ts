@@ -4,6 +4,7 @@ import type {
   Recipe,
   RecipeImport,
   RecipeMade,
+  RecipeNote,
   RecipeOpinion,
   RecipePhoto,
 } from "../../shared/recipe";
@@ -87,10 +88,12 @@ export interface Member {
 export interface RecipeDetail {
   recipe: Recipe;
   waiting: boolean;
-  /** Each person's rating, favorite and note (only those not removed). */
+  /** Each person's rating and favorite (only those not removed). */
   opinions: RecipeOpinion[];
   /** "Made it" records, newest first (only those not taken back). */
   made: RecipeMade[];
+  /** Notes added in Fennl, oldest first (U7; only those not removed). */
+  notes: RecipeNote[];
   categories: string[];
   /** The household, the signed-in person first. */
   members: Member[];
@@ -105,8 +108,10 @@ export interface PrintedRecipe {
   recipe: Recipe;
   /** The recipe whose ingredient links to this one, when it's printed because of that. */
   linkedFrom: string | null;
-  /** Each person's rating and signed note (only those not removed). */
+  /** Each person's rating (only those not removed). */
   opinions: RecipeOpinion[];
+  /** Notes added in Fennl, oldest first (U7). */
+  notes: RecipeNote[];
   categories: string[];
   cover: RecipePhoto | null;
   /** The titles of the working recipes its ingredients link to, by ID (phase F3). */

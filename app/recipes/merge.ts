@@ -358,7 +358,7 @@ export function planMerge(input: MergeInput): MergePlan {
     );
   }
 
-  // 3c. The person's own rating, favorite and note, where the kept recipe has none.
+  // 3c. The person's own rating and favorite, where the kept recipe has none.
   const opinionOf = (detail: RecipeDetail): RecipeOpinion | undefined =>
     detail.opinions.find((o) => o.userId === me);
   const theirs = opinionOf(other);
@@ -377,18 +377,34 @@ export function planMerge(input: MergeInput): MergePlan {
       back.favorite = false;
       said.push("favorite");
     }
-    if (theirs.note.trim() !== "" && (mineHere?.note ?? "").trim() === "") {
-      carry.note = theirs.note;
-      back.note = mineHere?.note ?? "";
-      said.push("note");
-    }
     if (said.length > 0) {
       changes.push({ kind: "opinion", recipeId: keeper.recipe.id, fields: carry, changedAt: now });
       undo.push({ kind: "opinion", recipeId: keeper.recipe.id, fields: back, changedAt: now });
       willDo.push(`Keep your ${said.join(", ")} from the other recipe.`);
     }
   }
-  const theirsOnly = other.opinions.filter((o) => o.userId !== me).length;
+  // 3d. The person's own notes (U7), copied with their dates, unless the kept recipe has them.
+  const kept = new Set(keeper.notes.filter((n) => n.userId === me).map((n) => n.text.trim()));
+  const myNotes = other.notes.filter((n) => n.userId === me && !kept.has(n.text.trim()));
+  for (const note of myNotes) {
+    const id = newId();
+    changes.push({
+      kind: "note",
+      id,
+      recipeId: keeper.recipe.id,
+      text: note.text,
+      writtenAt: note.writtenAt,
+      changedAt: now,
+    });
+    undo.push({ kind: "note", id, recipeId: keeper.recipe.id, deleted: true, changedAt: now });
+  }
+  if (myNotes.length > 0) {
+    const which = myNotes.length === 1 ? "note" : `${myNotes.length} notes`;
+    willDo.push(`Keep your ${which} from the other recipe.`);
+  }
+  const theirsOnly =
+    other.opinions.filter((o) => o.userId !== me).length +
+    other.notes.filter((n) => n.userId !== me).length;
   if (theirsOnly > 0) {
     cannot.push(
       `${count(theirsOnly, "other person's rating or note", "other people's ratings or notes")} can't move; they stay with the other recipe in Trash.`,

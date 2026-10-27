@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { RECIPE_SCHEMA_VERSION } from "../shared/recipe";
 import { addRecipe, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
@@ -94,7 +95,7 @@ test("A recipe page shows the whole recipe, and Made it is remembered", async ({
   await expect(page.getByText("420 kcal")).toBeVisible();
 });
 
-test("A rating, favorite and note made on another device show on the recipe", async ({
+test("Notes: the recipe's own first, then each one added, signed and dated", async ({
   page,
   context,
   baseURL,
@@ -105,21 +106,24 @@ test("A rating, favorite and note made on another device show on the recipe", as
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
   await expect(page.getByText("A favorite", { exact: true })).toHaveCount(0);
 
-  // Sent the way another of this person's devices would. (A partner's show above, signed, once
-  // households can share: phase G1.)
+  // A rating, favorite and note sent the way another of this person's devices would. (A
+  // partner's notes show the same way, signed with their name, once households can share: G1.)
   const recipeId = page.url().split("/").pop()!;
   const deviceId = await page.evaluate(() => localStorage.getItem("fennl:device-id"));
   const res = await context.request.post("/api/sync/push", {
     headers: { origin: baseURL! },
     data: {
       deviceId,
-      schemaVersion: 1,
+      schemaVersion: RECIPE_SCHEMA_VERSION,
       sentAt: Date.now(),
       changes: [
+        { kind: "opinion", recipeId, fields: { rating: 4, favorite: true }, changedAt: Date.now() },
         {
-          kind: "opinion",
+          kind: "note",
+          id: crypto.randomUUID(),
           recipeId,
-          fields: { rating: 4, favorite: true, note: "Add a little more zest." },
+          text: "Add a little more zest.",
+          writtenAt: "2026-10-20T12:00:00.000Z",
           changedAt: Date.now(),
         },
       ],
@@ -130,44 +134,92 @@ test("A rating, favorite and note made on another device show on the recipe", as
   await page.reload();
   await expect(page.getByRole("radio", { name: "4 stars" })).toBeChecked();
   await expect(page.getByLabel("A favorite of mine")).toBeChecked();
-  // Your note, saved, as text signed with your name (owner's choices 2026-10-26).
-  const mine = page.locator("figure").filter({ hasText: "Add a little more zest." });
-  await expect(mine.locator("figcaption")).toContainText("June");
-  // Not shown twice: your own aren't in the household's ratings and signed notes.
-  await expect(page.getByText(/out of 5 stars from/)).toHaveCount(0);
-  await expect(page.locator("figcaption")).toHaveCount(1);
+  const notes = page.getByRole("region", { name: "Notes" }).getByRole("listitem");
+  await expect(notes).toHaveCount(2);
+  await expect(notes.nth(0)).toContainText("Wrapped well, it keeps at room temperature");
+  await expect(notes.nth(0)).toContainText("From The Fennl kitchen");
+  await expect(notes.nth(1)).toContainText("Add a little more zest.");
+  await expect(notes.nth(1)).toContainText(/June\s*Oct 20, 2026/);
   await noAccessibilityProblems(page);
 
-  // Edit: Cancel leaves it; Save changes it.
-  await page.getByRole("button", { name: "Edit your note" }).click();
+  // Editing: Escape leaves it as it was; Done changes it.
+  await notes
+    .nth(1)
+    .getByRole("button", { name: /Edit your note/ })
+    .click();
   const box = page.getByLabel("Your note");
   await expect(box).toHaveValue("Add a little more zest.");
   await box.fill("Something else");
-  await page.getByRole("button", { name: "Cancel" }).click();
-  await expect(mine).toBeVisible();
-  await page.getByRole("button", { name: "Edit your note" }).click();
+  await page.keyboard.press("Escape");
+  await expect(notes.nth(1)).toContainText("Add a little more zest.");
+  await notes
+    .nth(1)
+    .getByRole("button", { name: /Edit your note/ })
+    .click();
   await box.fill("Add a lot more zest.");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText("Add a lot more zest.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(notes.nth(1)).toContainText("Add a lot more zest.");
+  await expect(notes.nth(1)).toContainText(/Oct 20, 2026 · edited/);
 
-  // "+ Add a note" adds a dated part under it, in the same note.
+  // Adding one: written in a card signed with your name and today's date; Ctrl+Enter adds it,
+  // under the others.
   await page.getByRole("button", { name: "Add a note" }).click();
-  await page.getByLabel("Add to your note").fill("Doubled it for a party.");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  const grown = page.locator("figure blockquote");
-  await expect(grown).toContainText("Add a lot more zest.");
-  await expect(grown).toContainText(/\w{3} \d{1,2}, \d{4}: Doubled it for a party\./);
+  await expect(box).toBeFocused();
+  await expect(box).toHaveAttribute("placeholder", "Write a note…");
+  const card = page.locator("form").filter({ has: box });
+  await expect(card).toContainText("June");
+  await expect(card.getByRole("button", { name: "Add note" })).toBeDisabled();
+  await box.fill("Doubled it for a party.");
+  await noAccessibilityProblems(page);
+  await page.keyboard.press("Control+Enter");
+  await expect(notes).toHaveCount(3);
+  await expect(notes.nth(2)).toContainText("Doubled it for a party.");
   await expect(page.getByRole("button", { name: "Add a note" })).toBeVisible();
+
+  // Leaving with words not saved asks first (owner's choice 2026-10-27).
+  await page.getByRole("button", { name: "Add a note" }).click();
+  await box.fill("Lovely warm.");
+  await page.getByRole("link", { name: "← All recipes" }).click();
+  const leaving = page.getByRole("dialog", { name: "Save the note before leaving?" });
+  await expect(leaving).toBeVisible();
+  await leaving.getByRole("button", { name: "Keep writing" }).click();
+  await expect(box).toHaveValue("Lovely warm.");
+  // Not when the words are back as they were.
+  await box.fill(" ");
+  await page.getByRole("link", { name: "← All recipes" }).click();
+  await expect(leaving).toBeHidden();
+  await expect(recipeCard(page, "Lemon Olive Oil Cake")).toBeVisible();
+  await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
+  await page.getByRole("button", { name: "Add a note" }).click();
+  await box.fill("Lovely warm.");
+  await page.getByRole("link", { name: "← All recipes" }).click();
+  await leaving.getByRole("button", { name: "Save note" }).click();
+  await expect(recipeCard(page, "Lemon Olive Oil Cake")).toBeVisible();
+  await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
+  await expect(notes.nth(3)).toContainText("Lovely warm.");
+
+  // Deleting one, with Undo.
+  await notes
+    .nth(3)
+    .getByRole("button", { name: /Edit your note/ })
+    .click();
+  await page.getByRole("button", { name: "Delete" }).click();
+  await expect(notes).toHaveCount(3);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(notes).toHaveCount(4);
+
+  // Anyone can change the recipe's own note.
+  await notes.nth(0).getByRole("button", { name: "Edit the recipe’s note" }).click();
+  await expect(page.getByLabel("The recipe's note")).toHaveValue(/^Wrapped well/);
+  await page.getByLabel("The recipe's note").fill("Keeps 3 days, wrapped.");
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(notes.nth(0)).toContainText("Keeps 3 days, wrapped.");
+
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.reload();
-  await expect(page.locator("figure blockquote")).toContainText("Doubled it for a party.");
-
-  // Deleting everything removes the note.
-  await page.getByRole("button", { name: "Edit your note" }).click();
-  await page.getByLabel("Your note").fill("");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.locator("figcaption")).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Add a note" })).toBeVisible();
+  await expect(notes).toHaveCount(4);
+  await expect(notes.nth(0)).toContainText("Keeps 3 days, wrapped.");
+  await expect(notes.nth(3)).toContainText("Lovely warm.");
 });
 
 test("Recipes open and close from the keyboard", async ({ page, context, baseURL }) => {

@@ -8,6 +8,7 @@ import {
 } from "../../shared/recipe";
 import { showIngredient, showStep, type ShownLine } from "../../shared/scale";
 import { firstName, sourceLine, stars } from "../recipes/format";
+import { noteDay } from "../recipes/notes";
 import { PhotoImage } from "../photos/PhotoImage";
 import type { PhotoSize } from "../photos/cache";
 import type { PrintSet, PrintedRecipe } from "../sync/dbProtocol";
@@ -105,7 +106,7 @@ function Recipe({
   const card = isCard(options.layout);
   const note = scale.pans ? bakeNote(recipe, scale.pans, scale.factor) : null;
   const rated = item.opinions.filter((o) => o.rating !== null);
-  const signed = item.opinions.filter((o) => o.note.trim());
+  const signed = item.notes.filter((n) => n.text.trim());
   const nutrition = recipe.nutrition;
   const nutrients = nutrition
     ? (Object.keys(NUTRIENTS) as Nutrient[]).filter((k) => nutrition.perServing[k] !== undefined)
@@ -216,17 +217,18 @@ function Recipe({
         </section>
       </div>
 
-      {(options.notes && recipe.notes.trim()) || (options.household && signed.length > 0) ? (
+      {options.notes && (recipe.notes.trim() || signed.length > 0) ? (
         <section className={styles.notes}>
           <h3 className={styles.part}>Notes</h3>
-          {options.notes && recipe.notes.trim() ? <p>{recipe.notes}</p> : null}
-          {options.household
-            ? signed.map((o) => (
-                <p key={o.userId} className={styles.signed}>
-                  {o.note} <span className={styles.signature}>{name(o.userId)}</span>
-                </p>
-              ))
-            : null}
+          {recipe.notes.trim() ? <p>{recipe.notes}</p> : null}
+          {signed.map((n) => (
+            <p key={n.id} className={styles.signed}>
+              {n.text}{" "}
+              <span className={styles.signature}>
+                {name(n.userId)}, {noteDay(new Date(n.writtenAt))}
+              </span>
+            </p>
+          ))}
         </section>
       ) : null}
 

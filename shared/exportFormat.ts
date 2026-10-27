@@ -5,6 +5,7 @@ import {
   type PhotoRole,
   isRating,
   recipeIssues,
+  RECIPE_RULES,
   type RecipeContent,
   type RecipeImport,
 } from "./recipe";
@@ -21,8 +22,8 @@ import { isDay, type SyncChange } from "./sync";
  */
 
 export const EXPORT_FORMAT = "fennl-export";
-/** 2: photos (phase D3). */
-export const EXPORT_VERSION = 2;
+/** 2: photos (phase D3). 3: notes as signed entries (U7). */
+export const EXPORT_VERSION = 3;
 
 export interface ExportPerson {
   userId: string;
@@ -33,7 +34,18 @@ export interface ExportOpinion {
   userId: string;
   rating: number | null;
   favorite: boolean;
-  note: string;
+  /** A person's own note, before notes became entries (versions 1 and 2). */
+  note?: string;
+}
+
+/** A note added in Fennl, signed and dated (version 3). */
+export interface ExportNote {
+  /** Who wrote it (one of `people`). */
+  userId: string;
+  text: string;
+  writtenAt: string;
+  /** When its words were last changed, if they were. */
+  editedAt: string | null;
 }
 
 /** A photo on a recipe (version 2). */
@@ -61,8 +73,10 @@ export interface ExportRecipe extends RecipeContent {
   import: RecipeImport | null;
   /** Category paths ("Desserts › Cakes"), sorted. */
   categories: string[];
-  /** Each person's rating, favorite and note, when they gave one. */
+  /** Each person's rating and favorite, when they gave one. */
   opinions: ExportOpinion[];
+  /** Notes added in Fennl, oldest first (version 3; absent before). */
+  signedNotes?: ExportNote[];
   /** "Made it" days, newest first. */
   made: { userId: string; madeOn: string }[];
   /** Its photos in order, the gallery first (version 2; absent before). */
@@ -167,15 +181,32 @@ export function importChanges(
       }
     }
     const mine = (r.opinions ?? []).find((o) => o.userId === me);
-    if (mine && (mine.rating !== null || mine.favorite || mine.note)) {
+    if (mine && (mine.rating !== null || mine.favorite)) {
       changes.push({
         kind: "opinion",
         recipeId,
         fields: {
           rating: isRating(mine.rating) ? mine.rating : null,
           favorite: Boolean(mine.favorite),
-          note: typeof mine.note === "string" ? mine.note : "",
         },
+        changedAt,
+      });
+    }
+    // Notes: the exporter's own, with their dates, and an earlier file's note (versions 1 and
+    // 2) as one note.
+    const notes: { text: unknown; writtenAt?: unknown }[] = [
+      ...(typeof mine?.note === "string" ? [{ text: mine.note }] : []),
+      ...(r.signedNotes ?? []).filter((n) => n.userId === me),
+    ];
+    for (const note of notes) {
+      if (typeof note.text !== "string" || !note.text.trim()) continue;
+      if (note.text.length > RECIPE_RULES.notesLength) continue;
+      changes.push({
+        kind: "note",
+        id: newId(),
+        recipeId,
+        text: note.text.trim(),
+        ...(typeof note.writtenAt === "string" ? { writtenAt: note.writtenAt } : {}),
         changedAt,
       });
     }

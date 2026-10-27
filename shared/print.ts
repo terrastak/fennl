@@ -20,9 +20,9 @@ export interface PrintOptions {
   layout: PrintLayout;
   /** The cover photo (never on recipe cards: there's no room). */
   photo: boolean;
-  /** The recipe's own notes. */
+  /** Notes: the recipe's own, and those added in Fennl, signed (U7). */
   notes: boolean;
-  /** The household's stars and signed notes. */
+  /** The household's stars. */
   household: boolean;
   /** Nutrition per serving, when the recipe has some and it isn't hidden in Settings (F4). */
   nutrition: boolean;

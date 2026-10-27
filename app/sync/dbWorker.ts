@@ -7,6 +7,7 @@ import {
   type Recipe,
   type RecipeCategory,
   type RecipeMade,
+  type RecipeNote,
   type RecipeOpinion,
   type RecipePhoto,
 } from "../../shared/recipe";
@@ -129,8 +130,15 @@ function recompute(kind: RecordKind, key: string, ctx: ApplyContext) {
   const value = withPending(server, pending, ctx);
   if (!server && !value) {
     if (kind === "recipe") unindexRecords(d, "key = ?", [key]);
+    const note =
+      kind === "note"
+        ? (d.selectValue(
+            "select json_extract(coalesce(data, server_data), '$.recipeId') from record where kind = 'note' and key = ?",
+            [key],
+          ) as string | undefined)
+        : undefined;
     d.exec({ sql: "delete from record where kind = ? and key = ?", bind: [kind, key] });
-    if (kind === "opinion") indexRecipe(d, key.split("|")[0] ?? "");
+    if (note) indexRecipe(d, note);
     return;
   }
   const owner = ownerOfRecord(kind, (value ?? server) as RecordValue, ctx);
@@ -142,9 +150,9 @@ function recompute(kind: RecordKind, key: string, ctx: ApplyContext) {
   });
   // Deleted for good (phase C9): what belonged to it goes from this copy too.
   if (kind === "recipe" && (value as Recipe | null)?.expungedAt) dropRelated(d, key);
-  // Keep search up to date (phase C8): a recipe's own words, and its signed notes.
+  // Keep search up to date (phase C8): a recipe's own words, and the notes added to it (U7).
   if (kind === "recipe") indexRecipe(d, key);
-  if (kind === "opinion") indexRecipe(d, key.split("|")[0] ?? "");
+  if (kind === "note") indexRecipe(d, ((value ?? server) as RecipeNote).recipeId);
 }
 
 /** Ratings, notes, "made it" days and category links of a recipe deleted for good. */
@@ -155,7 +163,7 @@ function dropRelated(d: Database, recipeId: string) {
     bind: [recipeId],
   });
   d.exec({
-    sql: `delete from record where kind in ('made', 'photo')
+    sql: `delete from record where kind in ('made', 'note', 'photo')
           and json_extract(coalesce(data, server_data), '$.recipeId') = ?`,
     bind: [recipeId],
   });
@@ -449,6 +457,13 @@ function recipeLinks(): Record<string, string[]> {
   return links;
 }
 
+/** The notes added to a recipe (U7), oldest first. */
+function notesOf(recipeId: string): RecipeNote[] {
+  return values<RecipeNote>("note", "and json_extract(data, '$.recipeId') = ?", [recipeId])
+    .filter((n) => !n.deletedAt)
+    .sort((a, b) => a.writtenAt.localeCompare(b.writtenAt) || a.id.localeCompare(b.id));
+}
+
 function getRecipe(id: string): RecipeDetail | null {
   const d = database();
   const recipe = recipeById(id);
@@ -465,6 +480,7 @@ function getRecipe(id: string): RecipeDetail | null {
     made: values<RecipeMade>("made")
       .filter((m) => m.recipeId === id && !m.deletedAt)
       .sort((a, b) => b.madeOn.localeCompare(a.madeOn) || b.updatedAt.localeCompare(a.updatedAt)),
+    notes: notesOf(id),
     categories: recipeCategories(id).get(id) ?? [],
     members: members(),
     photos: livePhotos(id),
@@ -500,6 +516,12 @@ function printRecipes(ids: string[], withLinked: boolean): PrintSet {
     if (opinion.deletedAt) continue;
     opinions.set(opinion.recipeId, [...(opinions.get(opinion.recipeId) ?? []), opinion]);
   }
+  const notes = new Map<string, RecipeNote[]>();
+  for (const note of values<RecipeNote>("note")
+    .filter((n) => !n.deletedAt)
+    .sort((a, b) => a.writtenAt.localeCompare(b.writtenAt) || a.id.localeCompare(b.id))) {
+    notes.set(note.recipeId, [...(notes.get(note.recipeId) ?? []), note]);
+  }
   return {
     members: members(),
     recipes: order.flatMap(({ id, linkedFrom }) => {
@@ -510,6 +532,7 @@ function printRecipes(ids: string[], withLinked: boolean): PrintSet {
           recipe,
           linkedFrom,
           opinions: opinions.get(id) ?? [],
+          notes: notes.get(id) ?? [],
           categories: categories.get(id) ?? [],
           cover: cover.get(id) ?? null,
           links: Object.fromEntries(

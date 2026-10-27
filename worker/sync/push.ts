@@ -11,6 +11,7 @@ import type {
   CategoryChange,
   ChangeResult,
   MadeChange,
+  NoteChange,
   OpinionChange,
   PhotoChange,
   RecipeCategoryChange,
@@ -298,6 +299,68 @@ function madeStatement(
       from recipe r where r.id = ${recipeId} and r.owner_user_id in ${members(p, caller)}
         and r.expunged_at is null
       on conflict (id) do nothing
+      returning id`,
+    params: p.values,
+  };
+}
+
+/**
+ * A note entry (U7): added by the caller, or its words changed or removed, last change wins field
+ * by field like a recipe's. Only the person who wrote it can change or remove it; a change to
+ * someone else's entry changes nothing.
+ */
+function noteStatement(
+  caller: PushCaller,
+  change: NoteChange,
+  time: number,
+  now: number,
+  k: number,
+): Statement {
+  const p = new Params();
+  const t = p.add(time);
+  const fields: Field[] = [];
+  if (change.text !== undefined) {
+    fields.push({ column: "text", key: "text", value: p.add(change.text) });
+  }
+  if (change.deleted !== undefined) {
+    fields.push({
+      column: "deleted_at",
+      key: "deleted",
+      value: p.add(change.deleted ? time : null),
+    });
+  }
+  const lww = lastChangeWins(fields, t, "recipe_note");
+  const at = p.add(now);
+  const who = p.add(caller.userId);
+  const visible = members(p, caller);
+  // A note carried from elsewhere keeps its date, never one after the change.
+  const from = change.writtenAt ? Date.parse(change.writtenAt) : NaN;
+  const written = Number.isFinite(from) ? `min(${p.add(from)}, ${t})` : t;
+  const textNewer = `${t} > coalesce(json_extract(recipe_note.field_times, '$.text'), 0)
+    and recipe_note.text is not excluded.text`;
+  const set = [
+    ...lww.set,
+    ...(change.text !== undefined
+      ? [`edited_at = case when ${textNewer} then ${t} else recipe_note.edited_at end`]
+      : []),
+    lww.fieldTimes,
+    `updated_at = ${at}`,
+    `server_seq = ${seq(k)}`,
+  ];
+  return {
+    sql: `insert into recipe_note (id, recipe_id, user_id, owner_user_id, text, written_at,
+        edited_at, field_times, updated_at, deleted_at, server_seq)
+      select ${p.add(change.id)}, r.id, ${who}, r.owner_user_id,
+        ${change.text !== undefined ? fields[0]?.value : "''"}, ${written}, null,
+        ${fieldTimesObject(
+          fields.map((f) => f.key),
+          t,
+        )}, ${at}, ${change.deleted ? t : "null"}, ${seq(k)}
+      from recipe r where r.id = ${p.add(change.recipeId)} and r.owner_user_id in ${visible}
+        and r.expunged_at is null
+      on conflict (id) do update set ${set.join(", ")}
+      where recipe_note.user_id = ${who} and recipe_note.owner_user_id in ${visible}
+        and ${lww.newer}
       returning id`,
     params: p.values,
   };
@@ -654,7 +717,9 @@ async function plan(
   const photoIds = new Set<string>();
   for (const change of changes) {
     if (change.kind === "recipe") recipeIds.add(change.id);
-    if (change.kind === "opinion" || change.kind === "made") recipeIds.add(change.recipeId);
+    if (change.kind === "opinion" || change.kind === "made" || change.kind === "note") {
+      recipeIds.add(change.recipeId);
+    }
     if (change.kind === "category") {
       categoryIds.add(change.id);
       if (change.fields.parentId) categoryIds.add(change.fields.parentId);
@@ -790,6 +855,12 @@ async function plan(
         if (turnedAway) return overLimit(turnedAway);
         if (!inHousehold(recipeOwner.get(change.recipeId))) return rejected("not_found");
         return { build: (k) => madeStatement(caller, change, time, now, k) };
+      }
+      case "note": {
+        const turnedAway = refused.get(change.recipeId);
+        if (turnedAway) return overLimit(turnedAway);
+        if (!inHousehold(recipeOwner.get(change.recipeId))) return rejected("not_found");
+        return { build: (k) => noteStatement(caller, change, time, now, k) };
       }
       case "category": {
         if (change.create && !categoryOwner.has(change.id)) {

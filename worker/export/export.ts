@@ -18,6 +18,7 @@ import {
   recipe,
   recipeCategory,
   recipeMade,
+  recipeNote,
   recipeOpinion,
   recipePhoto,
 } from "../db/schema";
@@ -109,7 +110,7 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
     .all();
   if (rows.length === 0) return [];
   const ids = rows.map((r) => r.id);
-  const [links, opinions, made, photos] = await Promise.all([
+  const [links, opinions, made, notes, photos] = await Promise.all([
     db
       .select({ recipeId: recipeCategory.recipeId, categoryId: recipeCategory.categoryId })
       .from(recipeCategory)
@@ -124,6 +125,12 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
       .select()
       .from(recipeMade)
       .where(and(inArray(recipeMade.recipeId, ids), isNull(recipeMade.deletedAt)))
+      .all(),
+    db
+      .select()
+      .from(recipeNote)
+      .where(and(inArray(recipeNote.recipeId, ids), isNull(recipeNote.deletedAt)))
+      .orderBy(asc(recipeNote.writtenAt))
       .all(),
     db
       .select({
@@ -191,8 +198,16 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
         ),
       ].sort((a, b) => a.localeCompare(b)),
       opinions: opinions
-        .filter((o) => o.recipeId === r.id && (o.rating !== null || o.favorite || o.note))
-        .map((o) => ({ userId: o.userId, rating: o.rating, favorite: o.favorite, note: o.note })),
+        .filter((o) => o.recipeId === r.id && (o.rating !== null || o.favorite))
+        .map((o) => ({ userId: o.userId, rating: o.rating, favorite: o.favorite })),
+      signedNotes: notes
+        .filter((n) => n.recipeId === r.id && n.text.trim())
+        .map((n) => ({
+          userId: n.userId,
+          text: n.text,
+          writtenAt: n.writtenAt.toISOString(),
+          editedAt: n.editedAt?.toISOString() ?? null,
+        })),
       made: made
         .filter((m) => m.recipeId === r.id)
         .map((m) => ({ userId: m.userId, madeOn: m.madeOn }))

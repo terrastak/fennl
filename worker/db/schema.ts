@@ -427,6 +427,40 @@ export const recipeMade = sqliteTable(
 );
 
 /**
+ * A note added to a recipe in Fennl (shared/recipe.ts RecipeNote; U7): one entry, signed and dated
+ * by whoever wrote it. Only its writer changes or removes it (worker/sync/push.ts).
+ */
+export const recipeNote = sqliteTable(
+  "recipe_note",
+  {
+    id: text("id").primaryKey(),
+    recipeId: text("recipe_id")
+      .notNull()
+      .references(() => recipe.id, { onDelete: "cascade" }),
+    /** Who wrote it. */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The recipe's owner (copied from the recipe; never changes). */
+    ownerUserId: text("owner_user_id").notNull(),
+    text: text("text").notNull(),
+    /** When it was added (the change's time on the server's clock). */
+    writtenAt: integer("written_at", { mode: "timestamp_ms" }).notNull(),
+    /** When its words last changed after that, or null. */
+    editedAt: integer("edited_at", { mode: "timestamp_ms" }),
+    /** When each field (text, deleted) last changed, for "last change wins". */
+    fieldTimes: text("field_times").notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [
+    index("recipe_note_owner_seq_idx").on(table.ownerUserId, table.serverSeq),
+    index("recipe_note_recipe_idx").on(table.recipeId),
+  ],
+);
+
+/**
  * A category, owned by one person (shared/recipe.ts Category). parent_id points at another of
  * the same person's categories; it isn't a database reference, so a parent and child created
  * together can arrive in either order.

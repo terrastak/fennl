@@ -21,8 +21,8 @@ import styles from "./printPage.module.css";
 
 const SWITCH_NAMES: { key: Exclude<keyof PrintOptions, "layout">; label: string }[] = [
   { key: "photo", label: "Cover photo" },
-  { key: "notes", label: "The recipe's notes" },
-  { key: "household", label: "Stars and signed notes" },
+  { key: "notes", label: "Notes" },
+  { key: "household", label: "Everyone's stars" },
   { key: "nutrition", label: "Nutrition" },
   { key: "qr", label: "QR code to open it in Fennl" },
   { key: "linked", label: "Linked recipes, each on its own page" },

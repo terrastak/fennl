@@ -1,6 +1,6 @@
 import sqlite3InitModule, { type Database } from "@sqlite.org/sqlite-wasm";
 import { beforeAll, describe, expect, it } from "vitest";
-import { emptyRecipeContent, type Recipe, type RecipeOpinion } from "../../shared/recipe";
+import { emptyRecipeContent, type Recipe, type RecipeNote } from "../../shared/recipe";
 import { MIGRATIONS } from "./schema";
 import {
   indexRecipe,
@@ -62,19 +62,20 @@ function put(db: Database, r: Recipe) {
 }
 
 function note(db: Database, recipeId: string, text: string) {
-  const opinion: RecipeOpinion = {
+  const added: RecipeNote = {
+    id: `${recipeId.slice(0, 30)}aaaaaa`,
     recipeId,
     userId: "sarah",
-    rating: null,
-    favorite: false,
-    note: text,
+    text,
+    writtenAt: "2026-10-08T00:00:00Z",
+    editedAt: null,
     updatedAt: "2026-10-08T00:00:00Z",
     deletedAt: null,
     serverSeq: 1,
   };
   db.exec({
-    sql: "insert into record (kind, key, owner_user_id, data) values ('opinion', ?, 'brian', ?)",
-    bind: [`${recipeId}|sarah`, JSON.stringify(opinion)],
+    sql: "insert into record (kind, key, owner_user_id, data) values ('note', ?, 'brian', ?)",
+    bind: [added.id, JSON.stringify(added)],
   });
   indexRecipe(db, recipeId);
 }

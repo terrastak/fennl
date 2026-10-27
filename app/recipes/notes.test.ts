@@ -1,29 +1,49 @@
 import { describe, expect, it } from "vitest";
-import { RECIPE_RULES } from "../../shared/recipe";
-import { addToNote, noteDay, roomInNote } from "./notes";
+import { emptyRecipeContent, type RecipeSource } from "../../shared/recipe";
+import { noteChanged, noteDate, noteDay, noteFrom } from "./notes";
 
-const day = new Date(2026, 9, 26, 12);
+const at = (day: string, hour = 12) => new Date(`${day}T${String(hour).padStart(2, "0")}:00:00`);
 
-describe("a note that grows a part at a time", () => {
-  it("dates the first part", () => {
-    expect(addToNote("", "  Used less sugar. ", day)).toBe(`${noteDay(day)}: Used less sugar.`);
+describe("dating a note", () => {
+  it("shows the day it was written", () => {
+    const writtenAt = at("2026-10-26").toISOString();
+    expect(noteDate({ writtenAt, editedAt: null })).toBe(noteDay(at("2026-10-26")));
   });
 
-  it("adds each later part as a new dated paragraph", () => {
-    const first = addToNote("", "Used less sugar.", day);
-    expect(addToNote(first, "Even better with walnuts.", day)).toBe(
-      `${first}\n\n${noteDay(day)}: Even better with walnuts.`,
+  it("says when it was edited, only on a later day", () => {
+    const writtenAt = at("2026-10-26", 9).toISOString();
+    expect(noteDate({ writtenAt, editedAt: at("2026-10-26", 18).toISOString() })).toBe(
+      noteDay(at("2026-10-26")),
     );
-    // A note written before parts were dated keeps its words.
-    expect(addToNote("Mom's, with extra raisins.\n", "Halved it.", day)).toBe(
-      `Mom's, with extra raisins.\n\n${noteDay(day)}: Halved it.`,
-    );
+    const later = noteDate({ writtenAt, editedAt: at("2026-10-28").toISOString() });
+    expect(later.startsWith(`${noteDay(at("2026-10-26"))} · edited `)).toBe(true);
+    expect(later).not.toContain("2026 · edited Oct 28, 2026");
+    const nextYear = noteDate({ writtenAt, editedAt: at("2027-01-03").toISOString() });
+    expect(nextYear.endsWith(noteDay(at("2027-01-03")))).toBe(true);
+  });
+});
+
+describe("where the recipe's own note came from", () => {
+  const source = (over: Partial<RecipeSource>): RecipeSource => ({
+    ...emptyRecipeContent().source,
+    ...over,
   });
 
-  it("knows how much room is left", () => {
-    const prefix = `${noteDay(day)}: `.length;
-    expect(roomInNote("", day)).toBe(RECIPE_RULES.notesLength - prefix);
-    expect(roomInNote("abc", day)).toBe(RECIPE_RULES.notesLength - 3 - 2 - prefix);
-    expect(roomInNote("x".repeat(RECIPE_RULES.notesLength), day)).toBe(0);
+  it("names the recipe's source", () => {
+    expect(noteFrom(source({ kind: "person", name: "Grandma Barbara" }))).toBe(
+      "From Grandma Barbara",
+    );
+    expect(
+      noteFrom(source({ kind: "cookbook", name: "Modern Classics", author: "Donna Hay" })),
+    ).toBe("From Donna Hay, Modern Classics");
+    expect(noteFrom(source({ kind: "person", name: "" }))).toBe("From the recipe");
+  });
+});
+
+describe("a note being written", () => {
+  it("has changed only when its words have", () => {
+    expect(noteChanged("Less sugar. ", "Less sugar.")).toBe(false);
+    expect(noteChanged("", "")).toBe(false);
+    expect(noteChanged("Less salt.", "Less sugar.")).toBe(true);
   });
 });
