@@ -12,25 +12,6 @@ interface Sentinel {
   addEventListener(type: "release", listener: () => void): void;
 }
 
-const KEY = "fennl:cook-screen-on";
-
-/** Whether the person wants the screen kept on (yes unless they turned it off). */
-export function wantedOn(): boolean {
-  try {
-    return localStorage.getItem(KEY) !== "0";
-  } catch {
-    return true;
-  }
-}
-
-export function setWantedOn(on: boolean): void {
-  try {
-    localStorage.setItem(KEY, on ? "1" : "0");
-  } catch {
-    // Kept for this visit only.
-  }
-}
-
 export function useWakeLock(wanted: boolean): WakeState {
   const supported = typeof navigator !== "undefined" && "wakeLock" in navigator;
   // What the browser last said, while the screen is wanted on.

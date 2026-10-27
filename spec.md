@@ -1245,6 +1245,7 @@ Import quality is the core of the product, so this stage starts by building a wa
 
 ### F5. Cook mode
 - **Goal**: Comfortable cooking from a phone or tablet.
+- **Changed in U8 (owner's choices 2026-10-27)**: the check-offs and "Clear all checks" are gone, the screen-on switch too, and wide screens show the ingredients beside two steps; see U8.
 - **Steps**:
   1. Big-text, one-step-at-a-time view.
   1b. **The screen never sleeps or turns off while cook mode is open (owner's request, 2026-10-23).** Cook mode asks the browser to keep the screen on (the Screen Wake Lock API) as it opens, asks again every time you come back to it (the browser lets go whenever you switch to another app or tab), and lets go when you leave cook mode. A small "Screen stays on" note shows it's working, with a switch to turn it off. If the device refuses (Low Power Mode, a low battery, or a browser without it), cook mode says so plainly and suggests the phone's own Auto-Lock setting, never failing silently. Checked 2026-10-23 on MDN ("Screen Wake Lock API"): works in current Chrome, Edge, Firefox and Safari (iPhone from iOS 16.4 in a browser tab); in an app added to the iPhone Home Screen it was broken until a fix that one source dates to iOS 18.4 and another table doesn't confirm (**Unverified**), so F5 is tested on a real iPhone both in Safari and from the Home Screen before it's done.
@@ -1365,6 +1366,20 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   5. **Existing notes carry over**: each person's note becomes notes of theirs, a U6 dated part ("Oct 26, 2026: …") becoming its own note dated that day (migration `0038`).
 - **How it's built**: notes are a synced table of their own (`recipe_note`, migration `0037`; `kind: "note"` changes, `shared/sync.ts`), so two people adding notes at once never overwrite each other and who wrote each one is kept by Fennl, not by the words. `recipe_opinion.note` is kept but no longer shown or written. The device copy downloads everything again once (`RECIPE_SCHEMA_VERSION` 3). Search, printing (the **Notes** switch now covers every note, signed and dated; the other is **Everyone's stars**), the export (version 3, `signedNotes`), merging duplicates (your notes are copied with their dates) and Paprika (its notes come as a note of yours; an update adds changed notes as a new one, never replacing yours) all use the new notes. A note brought from elsewhere (an export, a merged duplicate) keeps the day it was written.
 - **You check**: on a laptop and a phone: add a note, change it, delete it and Undo; edit the recipe's own note; start a note and tap All recipes (and the back button) to see the question; check that your old notes came over with their dates.
+
+### U8. A simpler cook mode (owner's choices 2026-10-27)
+- **Found in use**: cook mode asked for taps nobody would make ("Done with this step" boxes, "Clear all checks", ticking ingredients) and did little on a computer that the recipe page doesn't.
+- **Owner's choices**:
+  1. **Keep Start cooking on computers too** (1a), in the same simple view.
+  2. **On a phone (or a tablet held upright): "You'll need" first** (2a), then **one step per screen**: one tap on **Next step** (or a swipe) moves on, a small **‹** goes back, and a thin line shows how far along you are.
+  3. **On a computer or a tablet on its side: the ingredients always in the left column** (cooks look back for quantities), **beside two steps** so they can read ahead, in large type. **Next · Steps 3–4 ›** and **‹ Back · Steps 1–2** move two steps at a time (mockup approved 2026-10-27).
+  4. **Nothing to tick off**: no crossing out ingredients, no "Done with this step", no "Clear all checks".
+  5. Each step says which ingredients it **uses**, in one short line above it (the words before the first comma; the whole line is in "You'll need"), with the recipe page's amounts (scaled, converted).
+  6. **Timers**: tap a time in a step; running timers stay at the top on every screen. The question about alerts while in another app comes with the first timer.
+  7. **The screen just stays on**; there's no switch, and a message shows only when the device refuses (with the Auto-Lock tip).
+  8. **The last button is "Done · I made it today"**: finishing and recording "last made" in one tap, with "Close without marking it made" under it. Cooking a linked recipe first, it's "Done · Back to <the recipe>".
+  9. **Where you are is kept on the device for the day**: leaving and coming back returns to the same step; finishing starts the next time from the beginning (`app/cook/place.ts`).
+- **You check**: on a phone, cook a real recipe (Next, the ‹ button, a swipe, a timer, Done); on a laptop and an iPad on its side, the three columns and Next/Back by two; turn the iPad between upright and sideways mid-recipe.
 
 ## Stage G: Premium sharing and history
 
@@ -1700,5 +1715,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U4 | Done 2026-10-25 (merged as #101) |
 | U5 | Done 2026-10-26 (merged as #102) |
 | U6 | Done 2026-10-26 (merged as #103; live) |
-| U7 | Built 2026-10-27, waiting for review |
+| U7 | Done 2026-10-27 (merged as #104; live) |
+| U8 | Built 2026-10-27, waiting for review |
 | All others | Not started |
