@@ -1355,6 +1355,17 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   4. When the note reaches its length limit, "+ Add a note" gives way to "Your note is full. Edit it to make room."
 - **You check**: on a laptop and a phone: add a note and Save; Cancel one; add a second part and see the dates; Edit and delete.
 
+### U7. One Notes section: the recipe's note, then each note signed and dated (owner's choices 2026-10-27)
+- **Found in use**: the recipe's own note and each person's note were two different things, which people won't understand.
+- **Owner's choices**:
+  1. **One Notes section.** The recipe's own note comes first, labelled with where the recipe came from ("From Donna Hay", "From Grandma Barbara", or "From the recipe"); anyone can edit it (`recipe.notes`, unchanged).
+  2. **Each note added in Fennl is its own note**, signed automatically with its writer's name (in the hand font) and the day it was written, **oldest first**. Only its writer can change or delete it; a note changed on a later day says so ("Oct 26, 2026 · edited Oct 28"). Deleting one offers **Undo**.
+  3. **Written in a card that looks like the note will** (mockup A): grey "Write a note…", no heading; the signature line inside it shows your name and today's date, with a quiet **Cancel** and a small **Add note** (**Done** when changing one) on the right. Escape cancels, Ctrl or ⌘ with Enter adds it, and clicking away while nothing has changed closes it.
+  4. **Leaving the page with a note not saved asks first** ("Save the note before leaving?": Save note, Don't save, Keep writing), for links in Fennl and the browser's back button; closing or reloading the tab gets the browser's own question. It doesn't ask when the words are back as they were (spaces at either end don't count).
+  5. **Existing notes carry over**: each person's note becomes notes of theirs, a U6 dated part ("Oct 26, 2026: …") becoming its own note dated that day (migration `0038`).
+- **How it's built**: notes are a synced table of their own (`recipe_note`, migration `0037`; `kind: "note"` changes, `shared/sync.ts`), so two people adding notes at once never overwrite each other and who wrote each one is kept by Fennl, not by the words. `recipe_opinion.note` is kept but no longer shown or written. The device copy downloads everything again once (`RECIPE_SCHEMA_VERSION` 3). Search, printing (the **Notes** switch now covers every note, signed and dated; the other is **Everyone's stars**), the export (version 3, `signedNotes`), merging duplicates (your notes are copied with their dates) and Paprika (its notes come as a note of yours; an update adds changed notes as a new one, never replacing yours) all use the new notes. A note brought from elsewhere (an export, a merged duplicate) keeps the day it was written.
+- **You check**: on a laptop and a phone: add a note, change it, delete it and Undo; edit the recipe's own note; start a note and tap All recipes (and the back button) to see the question; check that your old notes came over with their dates.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1688,5 +1699,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U3 | Done 2026-10-25 (merged as #100) |
 | U4 | Done 2026-10-25 (merged as #101) |
 | U5 | Done 2026-10-26 (merged as #102) |
-| U6 | Built 2026-10-26, waiting for review |
+| U6 | Done 2026-10-26 (merged as #103; live) |
+| U7 | Built 2026-10-27, waiting for review |
 | All others | Not started |

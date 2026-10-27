@@ -97,6 +97,24 @@ describe("checking a change", () => {
     expect(
       checkChange({ kind: "made", id: id(), recipeId, madeOn: "2026-02-30", changedAt: now }).ok,
     ).toBe(false);
+    // A note entry (U7): words when added or changed, or removed; never empty words.
+    const noteId = id();
+    expect(
+      checkChange({ kind: "note", id: noteId, recipeId, text: "Less sugar.", changedAt: now }),
+    ).toEqual({
+      ok: true,
+      value: { kind: "note", id: noteId, recipeId, text: "Less sugar.", changedAt: now },
+    });
+    expect(
+      checkChange({ kind: "note", id: noteId, recipeId, deleted: true, changedAt: now }).ok,
+    ).toBe(true);
+    expect(checkChange({ kind: "note", id: noteId, recipeId, text: "  ", changedAt: now })).toEqual(
+      { ok: false, issues: [{ path: "text", problem: "invalid" }] },
+    );
+    expect(checkChange({ kind: "note", id: noteId, recipeId, changedAt: now })).toEqual({
+      ok: false,
+      issues: [{ path: "text", problem: "missing" }],
+    });
     const categoryId = id();
     expect(
       checkChange({

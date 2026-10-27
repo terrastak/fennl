@@ -84,6 +84,7 @@ function comparable(file: ExportFile) {
           owner: name(r.ownerUserId),
           opinions: r.opinions.map((o) => ({ ...o, userId: name(o.userId) })),
           made: r.made.map((m) => ({ ...m, userId: name(m.userId) })),
+          signedNotes: r.signedNotes?.map((n) => ({ ...n, userId: name(n.userId) })),
         };
       })
       .sort((a, b) => a.title.localeCompare(b.title)),
@@ -163,9 +164,10 @@ describe("exporting the library", () => {
       {
         kind: "opinion",
         recipeId: cake,
-        fields: { rating: 5, favorite: true, note: "Mom's favorite" },
+        fields: { rating: 5, favorite: true },
         changedAt: now,
       },
+      { kind: "note", id: id(), recipeId: cake, text: "Mom's favorite", changedAt: now },
       { kind: "made", id: id(), recipeId: cake, madeOn: "2026-10-01", changedAt: now },
       { kind: "recipe", id: trashed, fields: {}, deleted: true, changedAt: now },
     ]);
@@ -179,7 +181,9 @@ describe("exporting the library", () => {
     const cakePage = strFromU8(first.files[pages.find((p) => p.includes("lemon"))!]!);
     expect(cakePage).toContain("<h1>Lemon &lt;Olive&gt; Oil Cake</h1>");
     expect(cakePage).toContain("<h3>For the cake:</h3>");
-    expect(cakePage).toContain("Mom's favorite");
+    expect(cakePage).toMatch(
+      /Mom's favorite<\/p><p class="muted">— June, [A-Z][a-z]{2} \d+, \d{4}/,
+    );
     expect(first.file.recipes.map((r) => r.title).sort()).toEqual([
       "Green Chile Stew",
       "Lemon <Olive> Oil Cake",

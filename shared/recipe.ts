@@ -10,8 +10,9 @@ import type { RecipeScale } from "./scale";
  *   has its own ID, so links, cook mode and (later) line-by-line merging can refer to it.
  * - People edit ingredients and directions as one text box each; shared/recipeLines.ts turns the
  *   text into lines and back, keeping IDs stable across edits.
- * - What belongs to one person (rating, favorite, their signed note) is a RecipeOpinion, one per
- *   person per recipe. "Made it" dates are RecipeMade rows, shared by the household.
+ * - What belongs to one person (rating, favorite) is a RecipeOpinion, one per person per recipe.
+ *   "Made it" dates are RecipeMade rows, shared by the household. Notes added in Fennl are
+ *   RecipeNote rows, each signed and dated by whoever wrote it (U7).
  * - Photos and categories are their own records, linked to the recipe (see the types below).
  *
  * Dates are ISO strings. IDs are UUIDs made by the client (CLAUDE.md, "Data model rules").
@@ -21,7 +22,7 @@ import type { RecipeScale } from "./scale";
  * The version of this shape. The sync protocol carries it, so the server can refuse an app
  * that's too old (CLAUDE.md, "Data model rules"). Raise it when the shape changes.
  */
-export const RECIPE_SCHEMA_VERSION = 2;
+export const RECIPE_SCHEMA_VERSION = 3;
 
 // ---------------------------------------------------------------------------------------------
 // Ingredients and directions
@@ -180,7 +181,7 @@ export interface RecipeContent {
   times: RecipeTimes;
   servings: RecipeServings;
   source: RecipeSource;
-  /** Notes that came with the recipe. People's own notes are signed RecipeOpinion notes. */
+  /** Notes that came with the recipe. Notes added in Fennl are RecipeNote entries (U7). */
   notes: string;
   difficulty: Difficulty | null;
   /** Free-text difficulty from an import that isn't easy/medium/hard. */
@@ -248,7 +249,10 @@ export interface RecipeOpinion extends SyncColumns {
   /** 1 to 5 stars, or null for not rated. */
   rating: number | null;
   favorite: boolean;
-  /** Their own note, shown signed with their name under the recipe's notes. */
+  /**
+   * Their own note, from before notes were entries (U6). Kept, but no longer shown or written:
+   * the migration to RecipeNote entries (U7) carried every one over.
+   */
   note: string;
 }
 
@@ -260,6 +264,23 @@ export interface RecipeMade extends SyncColumns {
   userId: string;
   /** The day, in the person's own calendar ("2026-10-03"). */
   madeOn: string;
+}
+
+/**
+ * A note added to a recipe in Fennl (U7, owner's choices 2026-10-27): one entry, signed and dated
+ * by whoever wrote it, shown in the recipe's Notes after the notes that came with the recipe.
+ * Only its writer can change or remove it.
+ */
+export interface RecipeNote extends SyncColumns {
+  id: string;
+  recipeId: string;
+  /** Who wrote it. */
+  userId: string;
+  text: string;
+  /** When it was added. */
+  writtenAt: string;
+  /** When its words last changed after that, or null if they never have. */
+  editedAt: string | null;
 }
 
 /**

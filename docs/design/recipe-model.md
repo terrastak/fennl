@@ -13,7 +13,7 @@ Phase C1, agreed with the owner on 2026-10-07. This is the plain-English version
 | **Times** | Prep, cook and total, as minutes, plus words when minutes aren't enough ("plus overnight rest"). |
 | **Servings and yield** | A number of servings (8), which scaling uses, and a yield in words ("2 loaves", "about 24 cookies"). |
 | **Source** | What kind (website, cookbook, person, other), its name, link, author, and cookbook page. A person's name ("Aunt June") is shown handwritten. |
-| **Notes** | One Notes section: notes that came with the recipe first, then each person's own note, signed with their name. |
+| **Notes** | One Notes section: the recipe's own note first ("From Donna Hay"), then each note added in Fennl, signed with its writer's name and the day, oldest first (U7). |
 | **Rating and favorite** | Each person's own: 1 to 5 stars, and a favorite heart. |
 | **Difficulty** | Easy, medium or hard (other wording from an import is kept as written). |
 | **Nutrition** | Per serving: calories, fat, saturated fat, carbs, fiber, sugar, protein, sodium, cholesterol. Each value remembers where it came from, and imported nutrition text is kept too. |
@@ -33,7 +33,7 @@ Phase C1, agreed with the owner on 2026-10-07. This is the plain-English version
 ## In a household
 
 - Recipes are shared; each still has one owner, the person who added it ("Added by Brian").
-- **Ratings, favorites and personal notes belong to each person**, and everyone in the household sees them when there's something to see: "★★★★ Brian · ★★★ Sarah", "Brian's favorite", signed notes. Nothing shows when nobody has rated or noted.
+- **Ratings, favorites and notes added in Fennl belong to each person**, and everyone in the household sees them when there's something to see: "★★★★ Brian · ★★★ Sarah", "Brian's favorite", notes signed and dated. Nothing shows when nobody has rated or noted. Each note is its own record (U7): anyone can add one, only its writer changes or deletes it.
 - "Last made" is shared, with who made it.
 - When two people edit the same recipe at the same time, the later change wins **part by part**: your title change and your partner's notes change both stay. If you both edit the same ingredient list at once, the later save wins for the whole list (version history can bring the other back). Every line has its own ID, so line-by-line merging can come later without changing any recipe.
 
@@ -42,7 +42,7 @@ Phase C1, agreed with the owner on 2026-10-07. This is the plain-English version
 Every field Paprika 3 exports has a place (checked against a real export on 2026-10-07; details in `docs/research/2026-10-07-paprika-export.md`):
 
 - Name, description, ingredients, directions, servings, times, difficulty, rating, source, link, photo, categories, and the date created all map across.
-- Paprika's notes come in as **your signed notes** (most Paprika notes are personal).
+- Paprika's notes come in as **a note of yours** (most Paprika notes are personal).
 - Free-text times ("6 hr 20 min"), servings ("Serves 8 to 10") and nutrition are read into numbers where possible; the original wording is always kept.
 - Paprika's ID and fingerprint are kept, so importing again updates recipes instead of duplicating them, and only the ones changed in Paprika.
 - Not in Paprika's export: favorites, pinned recipes, Trash. Favorites need marking again in Fennl.

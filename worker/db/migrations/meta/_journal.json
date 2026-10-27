@@ -260,6 +260,20 @@
       "when": 1792796286546,
       "tag": "0036_print_options",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "6",
+      "when": 1793061893692,
+      "tag": "0037_recipe_notes",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "6",
+      "when": 1793061929153,
+      "tag": "0038_carry_over_notes",
+      "breakpoints": true
     }
   ]
 }

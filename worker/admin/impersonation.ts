@@ -77,6 +77,8 @@ function describePush(text: string): string[] {
         return `recipe ${short(change.recipeId)} opinion: ${fields(change.fields)}`;
       case "made":
         return `recipe ${short(change.recipeId)} made it${change.deleted ? " (taken back)" : ""}`;
+      case "note":
+        return `recipe ${short(change.recipeId)} note ${short(change.id)} ${change.deleted ? "removed" : "written"}`;
       case "category":
         return `category ${short(change.id)} ${change.create ? "created" : change.deleted ? "deleted" : "changed"}`;
       case "recipeCategory":

@@ -1,10 +1,13 @@
 import {
   useEffect,
+  useEffectEvent,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
   useSyncExternalStore,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import {
   CATEGORY_SEPARATOR,
@@ -21,11 +24,11 @@ import { showIngredient, showStep } from "../../shared/scale";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
-import { navigate } from "../navigation";
+import { guardLeaving, navigate } from "../navigation";
 import { Link } from "../router";
 import type { Member, RecipeDetail } from "../sync/dbProtocol";
 import { RecipeCategories } from "../categories/RecipeCategories";
-import { addToNote, roomInNote } from "./notes";
+import { noteChanged, noteDate, noteDay, noteFrom } from "./notes";
 import { Gallery, Originals } from "../photos/Gallery";
 import { usePainting } from "../photos/painting";
 import { canEdit } from "../sync/status";
@@ -51,10 +54,10 @@ import {
 } from "./format";
 import styles from "./recipes.module.css";
 
-// A recipe, laid out for reading (phase C5). Everyone's ratings, favorites and signed notes show
-// only when someone has given one (CLAUDE.md, "Recipe ownership in households"), and "Last made"
-// is shared by the household, with a "Made it" button. Your own rating, favorite and note are
-// set in "Yours" (phase C6), and "Edit recipe" opens the editor.
+// A recipe, laid out for reading (phase C5). Everyone's ratings and favorites show only when
+// someone has given one (CLAUDE.md, "Recipe ownership in households"), and "Last made" is shared
+// by the household, with a "Made it" button. Notes are one section (U7): the recipe's own, then
+// each note added in Fennl, signed and dated. "Edit recipe" opens the editor.
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -554,185 +557,391 @@ function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   );
 }
 
-/** The recipe's notes, then the household's signed notes (yours is in "Yours", below). */
-function Notes({ detail, name, me }: Props & { me: string }) {
-  const signed = detail.opinions.filter((o) => o.userId !== me && o.note.trim());
-  if (!detail.recipe.notes.trim() && signed.length === 0) return null;
-  return (
-    <section className={styles.section} aria-labelledby="notes-title">
-      <h2 id="notes-title">Notes</h2>
-      {detail.recipe.notes.trim() ? <p className={styles.notes}>{detail.recipe.notes}</p> : null}
-      {signed.map((o) => (
-        <figure key={o.userId} className={styles.signed}>
-          <blockquote>
-            <p>{o.note}</p>
-          </blockquote>
-          <figcaption className={styles.signature}>{name(o.userId)}</figcaption>
-        </figure>
-      ))}
-    </section>
-  );
-}
-
 const RATINGS = [1, 2, 3, 4, 5];
 
 function saveOpinion(recipeId: string, fields: OpinionChange["fields"]): Promise<boolean> {
   return save({ kind: "opinion", recipeId, fields, changedAt: Date.now() });
 }
 
-/**
- * Your signed note (CLAUDE.md, "Recipe ownership in households"); your stars and heart are by the
- * title. Owner's choices 2026-10-26: written with Save and Cancel, shown as text once saved (Edit
- * changes or deletes it), and "+ Add a note" under it adds a new dated part.
- */
-function YourNote({
-  detail,
-  me,
-  myName,
-  shared,
-  editable,
-}: {
-  detail: RecipeDetail;
-  me: string;
-  myName: string;
-  shared: boolean;
-  editable: boolean;
-}) {
-  const recipeId = detail.recipe.id;
-  const note = (detail.opinions.find((o) => o.userId === me)?.note ?? "").trim();
-  const [writing, setWriting] = useState<"add" | "edit" | null>(null);
-  const [failed, setFailed] = useState(false);
-  const room = roomInNote(note, new Date());
+/** A note added in Fennl (U7): added, its words changed, or deleted (or put back). */
+function saveNote(
+  recipeId: string,
+  note: { id: string; text?: string; deleted?: boolean },
+): Promise<boolean> {
+  return save({ kind: "note", recipeId, ...note, changedAt: Date.now() });
+}
 
-  const save = async (next: string) => {
-    const ok = await saveOpinion(recipeId, { note: next });
+/** The recipe's own note, which anyone in the household can change. */
+function saveRecipeNote(recipeId: string, notes: string): Promise<boolean> {
+  return save({ kind: "recipe", id: recipeId, fields: { notes }, changedAt: Date.now() });
+}
+
+/** What's being written in the Notes section: a new note, a change to one, or the recipe's own. */
+type Writing =
+  | { kind: "add"; initial: ""; text: string }
+  | { kind: "note"; id: string; initial: string; text: string }
+  | { kind: "recipe"; initial: string; text: string };
+
+/**
+ * Notes (U7, owner's choices 2026-10-27): one section. The recipe's own note first, labelled with
+ * where the recipe came from, which anyone can edit; then the notes added in Fennl, oldest first,
+ * each signed with its writer's name and day, which only its writer can change or delete. Notes
+ * are written in a card that looks like the note will (mockup A), with its Cancel and Add note in
+ * the signature line. Leaving the page with changed words asks whether to save them.
+ */
+function Notes({
+  detail,
+  name,
+  shared,
+  me,
+  editable,
+  readOnly = false,
+}: Props & { me: string; editable: boolean; readOnly?: boolean }) {
+  const { recipe } = detail;
+  const notes = detail.notes.filter((n) => n.text.trim());
+  const [writing, setWriting] = useState<Writing | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [removed, setRemoved] = useState<string | null>(null);
+  const [leavingTo, setLeavingTo] = useState<string | null>(null);
+  const leave = useRef<HTMLDialogElement>(null);
+  const changed = writing !== null && noteChanged(writing.text, writing.initial);
+
+  const commit = async (w: Writing): Promise<boolean> => {
+    const text = w.text.trim();
+    let ok = true;
+    if (noteChanged(w.text, w.initial)) {
+      setSaving(true);
+      ok =
+        w.kind === "recipe"
+          ? await saveRecipeNote(recipe.id, text)
+          : w.kind === "add"
+            ? await saveNote(recipe.id, { id: crypto.randomUUID(), text })
+            : text
+              ? await saveNote(recipe.id, { id: w.id, text })
+              : await remove(w.id);
+      setSaving(false);
+    }
     setFailed(!ok);
     if (ok) setWriting(null);
+    return ok;
   };
 
-  return (
-    <div className={styles.section}>
-      {note && writing !== "edit" ? (
-        <figure className={styles.signed}>
-          <blockquote>
-            <p>{note}</p>
-          </blockquote>
-          <figcaption className={styles.ownSignature}>
-            <span className={styles.signature}>{myName}</span>
-            <button
-              type="button"
-              className={styles.textButton}
-              disabled={!editable || writing !== null}
-              onClick={() => setWriting("edit")}
-            >
-              Edit<span className="visually-hidden"> your note</span>
-            </button>
-          </figcaption>
-        </figure>
-      ) : null}
-      {writing ? (
-        <NoteForm
-          key={writing}
-          label={writing === "edit" || !note ? "Your note" : "Add to your note"}
-          initial={writing === "edit" ? note : ""}
-          maxLength={writing === "edit" ? RECIPE_RULES.notesLength : room}
-          hint={
-            writing === "edit"
+  const remove = async (id: string): Promise<boolean> => {
+    const ok = await saveNote(recipe.id, { id, deleted: true });
+    if (ok) setRemoved(id);
+    return ok;
+  };
+
+  const undoRemove = async (id: string) => {
+    const ok = await saveNote(recipe.id, { id, deleted: false });
+    setFailed(!ok);
+    if (ok) setRemoved(null);
+  };
+
+  // Ask before leaving with words not saved (owner's choice 2026-10-27); not when they're as they
+  // were.
+  useEffect(() => {
+    if (!changed) return;
+    return guardLeaving((to) => {
+      setLeavingTo(to);
+      leave.current?.showModal();
+    });
+  }, [changed]);
+
+  const go = (to: string) => {
+    leave.current?.close();
+    setLeavingTo(null);
+    navigate(to, { force: true });
+  };
+
+  if (readOnly && !recipe.notes.trim() && notes.length === 0) return null;
+  const start = (w: Writing) => {
+    setFailed(false);
+    setRemoved(null);
+    setWriting(w);
+  };
+  const box = (signature: ReactNode, label: string) =>
+    writing ? (
+      <NoteBox
+        writing={writing}
+        label={label}
+        signature={signature}
+        hint={
+          writing.kind === "recipe"
+            ? "The recipe's own note, for everyone. Delete everything to remove it."
+            : writing.kind === "note"
               ? "Delete everything to remove your note."
               : shared
-                ? `Signed ${myName}, with today's date, and shown to your household.`
-                : `Signed ${myName}, with today's date.`
-          }
-          editable={editable}
-          onSave={(text) =>
-            save(writing === "edit" ? text.trim() : addToNote(note, text, new Date()))
-          }
-          onCancel={() => {
-            setFailed(false);
-            setWriting(null);
-          }}
-        />
-      ) : room > 0 ? (
+                ? `Signed ${name(me)}, with today's date, and shown to your household.`
+                : `Signed ${name(me)}, with today's date.`
+        }
+        editable={editable}
+        saving={saving}
+        onChange={(text) => setWriting({ ...writing, text })}
+        onSave={() => void commit(writing)}
+        onCancel={() => setWriting(null)}
+        onDelete={writing.kind === "note" ? () => void commit({ ...writing, text: "" }) : null}
+      />
+    ) : null;
+  const signedBy = (userId: string, date: string) => (
+    <span className={styles.noteBy}>
+      <span className={styles.signature}>{name(userId)}</span>
+      <span>{date}</span>
+    </span>
+  );
+
+  return (
+    <section className={styles.section} aria-labelledby="notes-title">
+      <h2 id="notes-title">Notes</h2>
+      {recipe.notes.trim() || notes.length > 0 ? (
+        <ul className={styles.noteList}>
+          {recipe.notes.trim() || writing?.kind === "recipe" ? (
+            <li className={styles.noteEntry}>
+              {writing?.kind === "recipe" ? (
+                box(
+                  <span className={styles.noteSource}>{noteFrom(recipe.source)}</span>,
+                  "The recipe's note",
+                )
+              ) : (
+                <>
+                  <p className={styles.notes}>{recipe.notes}</p>
+                  <p className={styles.noteLine}>
+                    <span className={styles.noteSource}>{noteFrom(recipe.source)}</span>
+                    {readOnly ? null : (
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        disabled={!editable || writing !== null}
+                        onClick={() =>
+                          start({ kind: "recipe", initial: recipe.notes, text: recipe.notes })
+                        }
+                      >
+                        Edit<span className="visually-hidden"> the recipe&rsquo;s note</span>
+                      </button>
+                    )}
+                  </p>
+                </>
+              )}
+            </li>
+          ) : null}
+          {notes.map((note) => (
+            <li key={note.id} className={styles.noteEntry}>
+              {writing?.kind === "note" && writing.id === note.id ? (
+                box(signedBy(note.userId, noteDate(note)), "Your note")
+              ) : (
+                <>
+                  <p className={styles.notes}>{note.text}</p>
+                  <p className={styles.noteLine}>
+                    {signedBy(note.userId, noteDate(note))}
+                    {!readOnly && note.userId === me ? (
+                      <button
+                        type="button"
+                        className={styles.textButton}
+                        disabled={!editable || writing !== null}
+                        onClick={() =>
+                          start({ kind: "note", id: note.id, initial: note.text, text: note.text })
+                        }
+                      >
+                        Edit
+                        <span className="visually-hidden">
+                          {" "}
+                          your note from {noteDay(new Date(note.writtenAt))}
+                        </span>
+                      </button>
+                    ) : null}
+                  </p>
+                </>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {readOnly ? null : writing?.kind === "add" ? (
+        box(signedBy(me, noteDay(new Date())), "Your note")
+      ) : (
         <button
           type="button"
           className={styles.moreButton}
-          disabled={!editable}
-          onClick={() => setWriting("add")}
+          disabled={!editable || writing !== null}
+          onClick={() => start({ kind: "add", initial: "", text: "" })}
         >
           <span aria-hidden="true" className={styles.plus}>
             +
           </span>
           Add a note
         </button>
-      ) : (
-        <p className={styles.hint}>Your note is full. Edit it to make room.</p>
       )}
+      <p role="status" className={styles.hint}>
+        {removed ? (
+          <>
+            Note deleted.{" "}
+            <button
+              type="button"
+              className={styles.textButton}
+              disabled={!editable}
+              onClick={() => void undoRemove(removed)}
+            >
+              Undo
+            </button>
+          </>
+        ) : null}
+      </p>
       {failed ? (
         <p role="alert" className={styles.error}>
-          Couldn&rsquo;t save your note just now. Please try again.
+          Couldn&rsquo;t save the note just now. Please try again.
         </p>
       ) : null}
-    </div>
+      <dialog
+        ref={leave}
+        className={styles.adjust}
+        aria-labelledby="leave-note-title"
+        onClose={() => setLeavingTo(null)}
+      >
+        <h2 id="leave-note-title" className={styles.adjustTitle}>
+          Save the note before leaving?
+        </h2>
+        <p>What you&rsquo;ve written hasn&rsquo;t been saved yet.</p>
+        <div className={styles.leaveButtons}>
+          <button
+            type="button"
+            className={styles.primary}
+            disabled={saving}
+            onClick={() =>
+              void (async () => {
+                const to = leavingTo;
+                if (writing && (await commit(writing)) && to) go(to);
+                else leave.current?.close();
+              })()
+            }
+          >
+            Save note
+          </button>
+          <button
+            type="button"
+            className={styles.secondary}
+            disabled={saving}
+            onClick={() => leavingTo && go(leavingTo)}
+          >
+            Don&rsquo;t save
+          </button>
+          <button
+            type="button"
+            className={styles.textButton}
+            onClick={() => leave.current?.close()}
+          >
+            Keep writing
+          </button>
+        </div>
+      </dialog>
+    </section>
   );
 }
 
-/** Writing a note: nothing is kept until Save; Cancel leaves it as it was. */
-function NoteForm({
+/**
+ * The card a note is written in (mockup A): the words, then its signature line with a quiet
+ * Cancel and a small "Add note" (or "Done") beside it. Escape cancels; Ctrl or ⌘ with Enter adds
+ * it. Clicking away from it while nothing has changed closes it.
+ */
+function NoteBox({
+  writing,
   label,
-  initial,
-  maxLength,
+  signature,
   hint,
   editable,
+  saving,
+  onChange,
   onSave,
   onCancel,
+  onDelete,
 }: {
+  writing: Writing;
   label: string;
-  initial: string;
-  maxLength: number;
+  signature: ReactNode;
   hint: string;
   editable: boolean;
-  onSave: (text: string) => Promise<void>;
+  saving: boolean;
+  onChange: (text: string) => void;
+  onSave: () => void;
   onCancel: () => void;
+  onDelete: (() => void) | null;
 }) {
-  const [text, setText] = useState(initial);
-  const [saving, setSaving] = useState(false);
-  const unchanged = text.trim() === initial.trim();
-  const submit = async (event: FormEvent) => {
+  const hintId = useId();
+  const changed = noteChanged(writing.text, writing.initial);
+  // A new note needs words; a change can empty it (which removes it).
+  const canSave = editable && !saving && (writing.kind !== "add" || writing.text.trim() !== "");
+  const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (saving || (unchanged && initial)) return onCancel();
-    if (!text.trim() && !initial) return onCancel();
-    setSaving(true);
-    await onSave(text);
-    setSaving(false);
+    if (!changed) return onCancel();
+    if (canSave) onSave();
   };
+  // Clicking or tapping away while nothing has changed closes it.
+  const form = useRef<HTMLFormElement>(null);
+  const away = useEffectEvent(() => {
+    if (!changed && !saving) onCancel();
+  });
+  useEffect(() => {
+    const down = (event: PointerEvent) => {
+      if (!form.current?.contains(event.target as Node)) away();
+    };
+    document.addEventListener("pointerdown", down);
+    return () => document.removeEventListener("pointerdown", down);
+  }, []);
   return (
-    <form className={styles.ownNote} onSubmit={(event) => void submit(event)}>
-      <label htmlFor="own-note">{label}</label>
+    <form
+      ref={form}
+      className={styles.composer}
+      onSubmit={submit}
+      onBlur={(event) => {
+        // Tabbing away (a click away is noticed above, as Safari doesn't focus buttons).
+        const to = event.relatedTarget as Node | null;
+        if (to && !event.currentTarget.contains(to) && !changed && !saving) onCancel();
+      }}
+    >
       <textarea
-        id="own-note"
-        className={styles.input}
+        className={styles.composerText}
+        aria-label={label}
+        aria-describedby={hintId}
+        placeholder="Write a note…"
         rows={3}
-        value={text}
+        value={writing.text}
+        maxLength={RECIPE_RULES.notesLength}
         disabled={!editable || saving}
-        maxLength={maxLength}
         autoFocus
-        aria-describedby="own-note-hint"
-        onChange={(e) => setText(e.target.value)}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.preventDefault();
+            onCancel();
+          } else if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+            event.preventDefault();
+            event.currentTarget.form?.requestSubmit();
+          }
+        }}
       />
-      <p id="own-note-hint" className={styles.hint}>
+      <span id={hintId} className="visually-hidden">
         {hint}
-      </p>
-      <div className={styles.noteButtons}>
-        <button
-          type="submit"
-          className={styles.primary}
-          disabled={!editable || saving || (!text.trim() && !initial)}
-        >
-          {saving ? "Saving…" : "Save"}
-        </button>
-        <button type="button" className={styles.secondary} disabled={saving} onClick={onCancel}>
-          Cancel
-        </button>
+      </span>
+      <div className={styles.composerLine}>
+        {signature}
+        <span className={styles.composerButtons}>
+          {onDelete ? (
+            <button
+              type="button"
+              className={styles.quietButton}
+              disabled={!editable || saving}
+              onClick={onDelete}
+            >
+              Delete
+            </button>
+          ) : null}
+          <button type="button" className={styles.quietButton} disabled={saving} onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit" className={styles.pill} disabled={!canSave}>
+            {saving ? "Saving…" : writing.kind === "add" ? "Add note" : "Done"}
+          </button>
+        </span>
       </div>
     </form>
   );
@@ -838,8 +1047,15 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
         <Ingredients recipe={recipe} scaling={AS_WRITTEN} linked={detail.linked} />
         <Method recipe={recipe} scaling={AS_WRITTEN} />
       </div>
-      {/* Everyone's signed notes, yours included: there's no "Yours" to edit here. */}
-      <Notes detail={detail} name={name} shared={members.length > 1} me="" />
+      {/* Everyone's notes, to read: nothing changes in Trash. */}
+      <Notes
+        detail={detail}
+        name={name}
+        shared={members.length > 1}
+        me=""
+        editable={false}
+        readOnly
+      />
       <Nutrition recipe={recipe} />
       <div className={styles.section}>
         <Originals
@@ -1045,8 +1261,7 @@ export function RecipePage({ id }: { id: string }) {
         <Method recipe={recipe} scaling={scaling} />
       </div>
 
-      <Notes detail={detail} name={name} shared={shared} me={me} />
-      <YourNote detail={detail} me={me} myName={name(me)} shared={shared} editable={editable} />
+      <Notes detail={detail} name={name} shared={shared} me={me} editable={editable} />
       <Nutrition recipe={recipe} />
       <div className={styles.section}>
         <Originals

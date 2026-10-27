@@ -68,6 +68,12 @@ export async function expungeRecipes(db: Database, recipeIds: string[], now = Da
           where ${theirs}`,
         params: [now, ...ids],
       },
+      // Notes added in Fennl (U7): their words wiped with the recipe's.
+      {
+        sql: `update recipe_note set text = '', deleted_at = coalesce(deleted_at, ?1),
+          updated_at = ?1 where ${theirs}`,
+        params: [now, ...ids],
+      },
       {
         sql: `update recipe_category set deleted_at = coalesce(deleted_at, ?1), updated_at = ?1
           where ${theirs}`,

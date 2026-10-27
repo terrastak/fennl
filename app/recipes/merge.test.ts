@@ -4,6 +4,7 @@ import {
   type Category,
   type Recipe,
   type RecipeMade,
+  type RecipeNote,
   type RecipeOpinion,
   type RecipePhoto,
 } from "../../shared/recipe";
@@ -54,6 +55,7 @@ function detail(r: Recipe, extra: Partial<RecipeDetail> = {}): RecipeDetail {
     waiting: false,
     opinions: [],
     made: [],
+    notes: [],
     categories: [],
     members: [{ userId: ME, name: "Brian" }],
     photos: [],
@@ -78,6 +80,19 @@ const opinion = (r: Recipe, over: Partial<RecipeOpinion> = {}): RecipeOpinion =>
   rating: null,
   favorite: false,
   note: "",
+  updatedAt: "x",
+  deletedAt: null,
+  serverSeq: 1,
+  ...over,
+});
+
+const note = (r: Recipe, over: Partial<RecipeNote> = {}): RecipeNote => ({
+  id: uid("dddddddd"),
+  recipeId: r.id,
+  userId: ME,
+  text: "",
+  writtenAt: "2026-01-02T12:00:00.000Z",
+  editedAt: null,
   updatedAt: "x",
   deletedAt: null,
   serverSeq: 1,
@@ -381,20 +396,45 @@ describe("the merge", () => {
     expect(p.cannot.join(" ")).toContain("1 “made it” day by other people can't move");
   });
 
-  it("carries the person's own rating, favorite and note only where the kept recipe has none", () => {
+  it("carries the person's own rating and favorite only where the kept recipe has none", () => {
     const keeper = recipe();
     const other = recipe();
-    const k = detail(keeper, { opinions: [opinion(keeper, { rating: 3, note: "" })] });
-    const o = detail(other, {
-      opinions: [opinion(other, { rating: 5, favorite: true, note: "Great with cream" })],
-    });
+    const k = detail(keeper, { opinions: [opinion(keeper, { rating: 3 })] });
+    const o = detail(other, { opinions: [opinion(other, { rating: 5, favorite: true })] });
     const p = plan(k, o);
     const [carry] = ofKind(p.changes, "opinion");
-    // Their 3 stars stay; the favorite and note come over.
-    expect(carry?.fields).toEqual({ favorite: true, note: "Great with cream" });
+    // Their 3 stars stay; the favorite comes over.
+    expect(carry?.fields).toEqual({ favorite: true });
     const [back] = ofKind(p.undo, "opinion");
-    expect(back?.fields).toEqual({ favorite: false, note: "" });
-    expect(p.willDo).toContain("Keep your favorite, note from the other recipe.");
+    expect(back?.fields).toEqual({ favorite: false });
+    expect(p.willDo).toContain("Keep your favorite from the other recipe.");
+  });
+
+  it("copies the person's own notes with their dates, unless the kept recipe has them", () => {
+    const keeper = recipe();
+    const other = recipe();
+    const k = detail(keeper, { notes: [note(keeper, { text: "Less sugar." })] });
+    const o = detail(other, {
+      notes: [
+        note(other, { text: "Less sugar." }),
+        note(other, { text: "Great with cream", writtenAt: "2026-03-04T12:00:00.000Z" }),
+        note(other, { userId: "sarah", text: "Too sweet" }),
+      ],
+    });
+    const p = plan(k, o);
+    const carried = ofKind(p.changes, "note");
+    expect(carried).toEqual([
+      expect.objectContaining({
+        recipeId: keeper.id,
+        text: "Great with cream",
+        writtenAt: "2026-03-04T12:00:00.000Z",
+      }),
+    ]);
+    expect(ofKind(p.undo, "note")).toEqual([
+      expect.objectContaining({ id: carried[0]?.id, deleted: true }),
+    ]);
+    expect(p.willDo).toContain("Keep your note from the other recipe.");
+    expect(p.cannot.join(" ")).toContain("1 other person's rating or note can't move");
   });
 
   it("leaves other people's ratings and notes, and says so", () => {

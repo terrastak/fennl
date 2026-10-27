@@ -87,8 +87,8 @@ test("Search finds changes straight away, and works with the filters", async ({
   await page.getByRole("radio", { name: "5 stars" }).check({ force: true });
   await page.getByRole("button", { name: "Add a note" }).click();
   await page.getByLabel("Your note").fill("Grandma used Meyer lemons");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByText(/: Grandma used Meyer lemons$/)).toBeVisible();
+  await page.getByRole("button", { name: "Add note" }).click();
+  await expect(page.getByText("Grandma used Meyer lemons", { exact: true })).toBeVisible();
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: "All recipes" }).click();
   await searchBox(page).fill("meyer");
