@@ -1378,7 +1378,7 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   6. **Timers**: tap a time in a step; running timers stay at the top on every screen. The question about alerts while in another app comes with the first timer.
   7. **The screen just stays on**; there's no switch, and a message shows only when the device refuses (with the Auto-Lock tip).
   8. **The last button is "Done · I made it today"**: finishing and recording "last made" in one tap, with "Close without marking it made" under it. Cooking a linked recipe first, it's "Done · Back to <the recipe>".
-  9. **Where you are is kept on the device for the day**: leaving and coming back returns to the same step; finishing starts the next time from the beginning (`app/cook/place.ts`).
+  9. **Where you are is kept on the device**: leaving and coming back returns to the same step, for 12 hours from the last move (not to midnight, so cooking late doesn't lose its place); finishing starts the next time from the beginning (`app/cook/place.ts`).
 - **You check**: on a phone, cook a real recipe (Next, the ‹ button, a swipe, a timer, Done); on a laptop and an iPad on its side, the three columns and Next/Back by two; turn the iPad between upright and sideways mid-recipe.
 
 ## Stage G: Premium sharing and history

@@ -30,7 +30,10 @@ test("On a computer: the ingredients beside two steps, two steps at a time", asy
   baseURL,
 }, info) => {
   test.skip(info.project.name !== "desktop", "The wide layout");
-  await page.clock.install();
+  // Just before midnight, so the timers below run past it: where you are mustn't be lost then.
+  const late = new Date();
+  late.setHours(23, 58, 30, 0);
+  await page.clock.install({ time: late });
   await useOwnAccount(context, baseURL!);
   await startCooking(page);
 
@@ -67,7 +70,7 @@ test("On a computer: the ingredients beside two steps, two steps at a time", asy
   await timers.getByRole("button", { name: "Dismiss" }).click();
   await expect(timers.getByRole("listitem")).toHaveCount(1);
 
-  // Where you are is kept on this device for the day.
+  // Where you are is kept on this device (even past midnight).
   await page.reload();
   await expect(page.getByRole("heading", { level: 1, name: "Step 5 of 5" })).toBeVisible();
   await page.keyboard.press("ArrowLeft");

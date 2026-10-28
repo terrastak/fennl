@@ -37,7 +37,7 @@ import styles from "./cook.module.css";
 // Back move two steps at a time. Each step says which ingredients it uses (scaled and converted
 // as the recipe page shows them), times in it start timers that stay at the top, the screen is
 // kept on, and the last step's button is "Done · I made it today". Where someone is is kept on
-// the device for the day. A linked recipe can be cooked first and comes back here.
+// the device for 12 hours. A linked recipe can be cooked first and comes back here.
 
 /** A step with the section heading it sits under ("For the sauce:"), if any. */
 interface CookStep {
@@ -100,7 +100,7 @@ export function CookMode({ id }: { id: string }) {
   const scaling = useScaling(recipe);
   const day = localDay();
   const wide = useWide();
-  const [place, setPlace] = usePlace(id, day);
+  const [place, setPlace] = usePlace(id);
   const wake = useWakeLock(true);
   const heading = useRef<HTMLHeadingElement>(null);
   const swipe = useRef<{ x: number; y: number } | null>(null);
