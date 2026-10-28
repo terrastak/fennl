@@ -274,6 +274,13 @@
       "when": 1793061929153,
       "tag": "0038_carry_over_notes",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "6",
+      "when": 1793229505290,
+      "tag": "0039_timer_alerts",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,13 @@
 import { useEffect, useSyncExternalStore } from "react";
+import { alertsOn, alertsTurnedOff, cancelAlert, scheduleAlert } from "./timerAlerts";
 
 // Cook mode's timers (phase F5): several at once, kept on this device (so a reload or opening a
 // linked recipe doesn't lose them) and counted from when they end, so a phone that slept or a
 // tab in the background still shows the right time when it comes back. A finished timer rings
 // (a short tone and a buzz where the device can), and, when Fennl isn't on screen and the person
-// allowed it, shows a notification. A countdown on the lock screen isn't possible from a web
-// app (spec.md F5 item 4b).
+// allowed it, shows a notification. With timer alerts on (U8, ./timerAlerts.ts), the server
+// also sends this browser an alert when each timer ends, so it rings with the phone locked. A
+// countdown on the lock screen isn't possible from a web app (spec.md F5 item 4b).
 
 export interface Timer {
   id: string;
@@ -17,6 +19,13 @@ export interface Timer {
   endsAt: number;
   /** Rung, and waiting to be dismissed. */
   done: boolean;
+  /** The page it was started on, which its alert opens. */
+  path?: string;
+  /**
+   * With timer alerts on: "set" once the server will alert this browser when it ends,
+   * "not-set" when it couldn't be asked (no connection).
+   */
+  alert?: "set" | "not-set";
 }
 
 const KEY = "fennl:cook-timers";
@@ -55,21 +64,23 @@ export function startTimer(label: string, seconds: number, recipeTitle: string):
   } catch {
     audio = null;
   }
-  set([
-    ...timers,
-    {
-      id: crypto.randomUUID(),
-      label,
-      recipeTitle,
-      seconds,
-      endsAt: Date.now() + seconds * 1000,
-      done: false,
-    },
-  ]);
+  const timer: Timer = {
+    id: crypto.randomUUID(),
+    label,
+    recipeTitle,
+    seconds,
+    endsAt: Date.now() + seconds * 1000,
+    done: false,
+    path: location.pathname,
+  };
+  set([...timers, timer]);
+  askForAlert(timer);
 }
 
 export function stopTimer(id: string): void {
+  const timer = timers.find((t) => t.id === id);
   set(timers.filter((t) => t.id !== id));
+  if (timer && !timer.done && alertsOn()) cancelAlert(id);
 }
 
 /** One more minute on a timer, running or rung. */
@@ -86,6 +97,32 @@ export function addMinute(id: string): void {
         : t,
     ),
   );
+  const timer = timers.find((t) => t.id === id);
+  if (timer) askForAlert(timer);
+}
+
+/** With alerts on, asks the server to alert this browser when the timer ends. */
+function askForAlert(timer: Timer): void {
+  if (!alertsOn()) return;
+  void scheduleAlert({ ...timer, path: timer.path ?? location.pathname }).then((ok) => {
+    // Stopped while the server was being asked: take the alert back again, now it's there.
+    if (ok && !timers.some((t) => t.id === timer.id)) cancelAlert(timer.id);
+    // Only if the timer is still the one asked about (not stopped or moved on since).
+    if (timers.some((t) => t.id === timer.id && t.endsAt === timer.endsAt)) {
+      set(
+        timers.map((t) =>
+          t.id === timer.id && t.endsAt === timer.endsAt
+            ? { ...t, alert: ok ? "set" : "not-set" }
+            : t,
+        ),
+      );
+    }
+  });
+}
+
+/** Alerts just turned on: the timers already running get theirs too. */
+export function alertRunningTimers(): void {
+  for (const timer of timers) if (!timer.done) askForAlert(timer);
 }
 
 function ring(timer: Timer): void {
@@ -110,7 +147,7 @@ function ring(timer: Timer): void {
   } catch {
     // No buzz on this device.
   }
-  if (document.visibilityState === "hidden" && notificationsAllowed()) {
+  if (document.visibilityState === "hidden" && notificationsAllowed() && !alertsTurnedOff()) {
     const text = `${timer.label} (${timer.recipeTitle})`;
     void navigator.serviceWorker?.ready
       .then((registration) =>
@@ -164,8 +201,16 @@ export function useTimers(): { timers: Timer[]; now: number } {
   useEffect(() => {
     check();
     const back = () => check();
+    // Back online: alerts that couldn't be asked for are asked for now.
+    const online = () => {
+      for (const timer of timers) if (!timer.done && timer.alert === "not-set") askForAlert(timer);
+    };
     document.addEventListener("visibilitychange", back);
-    return () => document.removeEventListener("visibilitychange", back);
+    window.addEventListener("online", online);
+    return () => {
+      document.removeEventListener("visibilitychange", back);
+      window.removeEventListener("online", online);
+    };
   }, []);
   return { timers: list, now };
 }

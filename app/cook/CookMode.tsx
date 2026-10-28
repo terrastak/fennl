@@ -12,8 +12,10 @@ import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { useChecks } from "./checks";
+import { turnOnAlerts, useAlertsState, type AlertsState } from "./timerAlerts";
 import {
   addMinute,
+  alertRunningTimers,
   askForNotifications,
   canAskForNotifications,
   startTimer,
@@ -339,7 +341,7 @@ function StepText({
 
 function Timers({ recipeTitle }: { recipeTitle: string }) {
   const { timers, now } = useTimers();
-  const [askable, setAskable] = useState(canAskForNotifications);
+  const alerts = useAlertsState();
   if (timers.length === 0) return null;
   return (
     <section className={styles.timers} aria-label="Timers">
@@ -359,18 +361,78 @@ function Timers({ recipeTitle }: { recipeTitle: string }) {
             <button type="button" className={styles.textButton} onClick={() => stopTimer(timer.id)}>
               {timer.done ? "Dismiss" : "Stop"}
             </button>
+            {alerts === "on" && !timer.done && timer.alert === "not-set" ? (
+              <p className={styles.timerNote}>
+                No alert with the phone locked for this one: Fennl couldn&rsquo;t reach the
+                internet. It still rings while Fennl is on screen.
+              </p>
+            ) : null}
           </li>
         ))}
       </ul>
-      {askable ? (
+      <TimerAlertsOffer state={alerts} />
+    </section>
+  );
+}
+
+/**
+ * Under the timers (U8, owner's choices 2026-10-28): the offer to alert with the phone locked,
+ * or, in an iPhone or iPad's Safari tab, how to get it.
+ */
+function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
+  const [result, setResult] = useState<"blocked" | "failed" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [askable, setAskable] = useState(canAskForNotifications);
+
+  if (state === "off") {
+    return (
+      <>
         <button
           type="button"
           className={styles.textButton}
-          onClick={() => void askForNotifications().then(() => setAskable(false))}
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            setResult(null);
+            void turnOnAlerts().then((outcome) => {
+              setBusy(false);
+              if (outcome === "on") alertRunningTimers();
+              else setResult(outcome);
+            });
+          }}
         >
-          Tell me when a timer finishes while I&rsquo;m in another app
+          Alert me when a timer finishes, even with the phone locked
         </button>
-      ) : null}
-    </section>
-  );
+        {result ? (
+          <p role="alert" className={styles.quiet}>
+            {result === "blocked"
+              ? "Notifications are turned off for Fennl in this browser’s settings. Allow them there to get timer alerts."
+              : "Couldn’t turn on timer alerts. Check your connection and try again."}
+          </p>
+        ) : null}
+      </>
+    );
+  }
+  if (state === "home-screen") {
+    return (
+      <p className={styles.quiet}>
+        For timer alerts with the phone locked, add Fennl to your Home Screen: in Safari, tap Share
+        (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open Fennl from
+        its icon.
+      </p>
+    );
+  }
+  // A browser that can't get alerts from the server can still show one while it runs Fennl.
+  if (state === "unavailable" && askable) {
+    return (
+      <button
+        type="button"
+        className={styles.textButton}
+        onClick={() => void askForNotifications().then(() => setAskable(false))}
+      >
+        Tell me when a timer finishes while I&rsquo;m in another app
+      </button>
+    );
+  }
+  return null;
 }

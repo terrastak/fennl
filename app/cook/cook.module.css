@@ -274,6 +274,13 @@
   flex: 1 1 10rem;
 }
 
+.timerNote {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
 .timerClock {
   font-variant-numeric: tabular-nums;
   font-size: var(--text-2xl);

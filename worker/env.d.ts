@@ -54,6 +54,17 @@ interface FennlEnv {
    * Without it, AI import is unavailable.
    */
   ANTHROPIC_API_KEY?: string;
+  /**
+   * Cook-mode timer alerts waiting for their timer to end (U8, wrangler.jsonc "queues";
+   * worker/push/timerAlerts.ts).
+   */
+  TIMER_ALERTS: Queue<import("./push/timerAlerts").TimerAlertMessage>;
+  /**
+   * Fennl's key for sending push notifications (timer alerts, U8): a P-256 private key as JWK.
+   * CI makes it once for production and keeps it, like BETTER_AUTH_SECRET. Without it, alerts
+   * with the phone locked are unavailable.
+   */
+  PUSH_PRIVATE_KEY?: string;
   /** "fake" only in tests and local development: a stand-in AI with no vendor (worker/ai/fake.ts). */
   AI_PROVIDER?: string;
   /** "true" only in local development and tests: keep emails in memory instead of sending them. */
