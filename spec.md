@@ -1381,6 +1381,17 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   9. **Where you are is kept on the device**: leaving and coming back returns to the same step, for 12 hours from the last move (not to midnight, so cooking late doesn't lose its place); finishing starts the next time from the beginning (`app/cook/place.ts`).
 - **You check**: on a phone, cook a real recipe (Next, the ‹ button, a swipe, a timer, Done); on a laptop and an iPad on its side, the three columns and Next/Back by two; turn the iPad between upright and sideways mid-recipe.
 
+### U9. Timers anywhere, with Pause, and changing their time (owner's choices 2026-10-28)
+- **Found in use**: a timer could only be stopped, not paused, and its time couldn't be changed ("cooking happens, and sometimes it doesn't happen perfectly"); and there was no timer of your own, outside a recipe's step.
+- **Owner's choices**:
+  1. **Pause** beside **Stop** on every running timer; a paused one holds its time, says so, and offers **Resume**.
+  2. **Changing a timer's time, both ways** (mockups 2026-10-28): tap its time and it opens, paused while it's open, with **−5 / −1 / +1 / +5 min** to nudge it and the **hours, minutes and seconds** to tap and type (the number keypad on a phone). **Done** starts it from the new time; **Cancel** (or Escape) lets it carry on as it was; **Stop timer** is there too.
+  3. **Timers anywhere in the app**: a **Timers** window (from the sidebar's Timers button, with how many there are; on a phone the ⏱ in the top bar, showing the soonest one's time, 1a; cook mode's **⏱ Timer**) lists every timer, a recipe step's ("Step 4 · 1½ hours", Green Chile Stew) and your own, and starts a **new timer** with an optional name in one tap (1, 3, 5, 10, 15, 30 min, 1 hr) or **Other…** for any time. On a computer running timers float in the corner of every page, a finished one orange with "Done!".
+  4. **Timers stay on the device they were started on** (2a): simple, and they ring where you are. A reload or another page keeps them.
+  5. **Its own pull request, after cook mode (U8)** (3a).
+- **Built**: `app/timers/` (`timers.ts`: pause, resume, set the time; `Timers.tsx`: the window, the editor, the floating chips; `timersView.ts`), moved from `app/cook/`; the frame's buttons in `app/shell/AppShell.tsx`. As before, an iPhone pauses a web app that isn't on screen, so a timer finishing then alerts when Fennl is opened again.
+- **You check**: on a phone and a computer: start a timer of your own, pause and resume it, change it by nudging and by typing, let one finish on another page, and start one from a step in cook mode and see it on the recipe list.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1716,5 +1727,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U5 | Done 2026-10-26 (merged as #102) |
 | U6 | Done 2026-10-26 (merged as #103; live) |
 | U7 | Done 2026-10-27 (merged as #104; live) |
-| U8 | Built 2026-10-27, waiting for review |
+| U8 | Done 2026-10-28 (merged as #105) |
+| U9 | Built 2026-10-28, waiting for review |
 | All others | Not started |
