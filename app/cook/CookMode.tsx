@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
   type TouchEvent,
 } from "react";
-import { clockText, durationText, stepIngredients, stepTimes } from "../../shared/cook";
+import { durationText, stepIngredients, stepTimes } from "../../shared/cook";
 import { bakeNote, panName } from "../../shared/pans";
 import type { DirectionStep, IngredientLine, Recipe } from "../../shared/recipe";
 import { showIngredient, showStep } from "../../shared/scale";
@@ -19,14 +19,14 @@ import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { usePlace } from "./place";
+import { TimerButtons, TimersDialog } from "../timers/Timers";
+import { openTimers } from "../timers/timersView";
 import {
-  addMinute,
   askForNotifications,
   canAskForNotifications,
   startTimer,
-  stopTimer,
   useTimers,
-} from "./timers";
+} from "../timers/timers";
 import { useWakeLock, type WakeState } from "./wakeLock";
 import styles from "./cook.module.css";
 
@@ -268,7 +268,12 @@ export function CookMode({ id }: { id: string }) {
           </p>
         ) : null}
         <p className={styles.stepText}>
-          <StepText step={shown.step} scaling={scaling} recipeTitle={recipe.title} />
+          <StepText
+            step={shown.step}
+            number={index + 1}
+            scaling={scaling}
+            recipeTitle={recipe.title}
+          />
         </p>
         {note?.stepId === shown.step.id ? <Suggestion text={note.text} /> : null}
       </section>
@@ -307,6 +312,14 @@ export function CookMode({ id }: { id: string }) {
             ).replace(/:.*$/u, "")}
           </p>
         ) : null}
+        <button
+          type="button"
+          className={styles.newTimer}
+          aria-haspopup="dialog"
+          onClick={openTimers}
+        >
+          <span aria-hidden="true">⏱ </span>Timer
+        </button>
         <Link
           href={leaveTo}
           className={styles.leave}
@@ -327,6 +340,7 @@ export function CookMode({ id }: { id: string }) {
       ) : null}
 
       <Timers recipeTitle={recipe.title} />
+      <TimersDialog />
 
       {wide ? (
         <div className={styles.columns}>
@@ -407,10 +421,13 @@ export function CookMode({ id }: { id: string }) {
 /** A step's words, each time in it a button that starts a timer. Amounts scale as on the page. */
 function StepText({
   step,
+  number,
   scaling,
   recipeTitle,
 }: {
   step: DirectionStep;
+  /** The step's number, which names its timers ("Step 4 · 1½ hours"). */
+  number: number;
   scaling: Scaling;
   recipeTitle: string;
 }) {
@@ -429,7 +446,7 @@ function StepText({
         type="button"
         className={styles.timeButton}
         aria-label={`Start a ${durationText(time.seconds)} timer`}
-        onClick={() => startTimer(time.text, time.seconds, recipeTitle)}
+        onClick={() => startTimer(`Step ${number} · ${time.text}`, time.seconds, recipeTitle)}
       >
         <span aria-hidden="true">⏱ </span>
         {time.text}
@@ -444,8 +461,8 @@ function StepText({
 }
 
 /**
- * Running timers, at the top on every screen. The question about alerts in another app comes
- * with the first timer, not before.
+ * Running timers, at the top on every screen, each with Pause and Stop; tapping its time
+ * changes it (U9). The question about alerts in another app comes with the first timer.
  */
 function Timers({ recipeTitle }: { recipeTitle: string }) {
   const { timers, now } = useTimers();
@@ -459,17 +476,9 @@ function Timers({ recipeTitle }: { recipeTitle: string }) {
             <span className={styles.timerLabel}>
               <span aria-hidden="true">⏱ </span>
               {timer.label}
-              {timer.recipeTitle !== recipeTitle ? ` · ${timer.recipeTitle}` : ""}
+              {timer.recipeTitle !== recipeTitle ? ` · ${timer.recipeTitle ?? "your timer"}` : ""}
             </span>
-            <span className={styles.timerClock} role={timer.done ? "alert" : undefined}>
-              {timer.done ? "Done!" : clockText((timer.endsAt - now) / 1000)}
-            </span>
-            <button type="button" className={styles.textButton} onClick={() => addMinute(timer.id)}>
-              +1 min
-            </button>
-            <button type="button" className={styles.textButton} onClick={() => stopTimer(timer.id)}>
-              {timer.done ? "Dismiss" : "Stop"}
-            </button>
+            <TimerButtons timer={timer} now={now} />
           </li>
         ))}
       </ul>

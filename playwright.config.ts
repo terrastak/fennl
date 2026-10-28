@@ -23,6 +23,7 @@ const PHONE_TESTS = [
   "scan",
   "scanCamera",
   "smoke",
+  "timers",
 ].map((name) => `${name}.spec.ts`);
 
 export default defineConfig({
