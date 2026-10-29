@@ -1426,6 +1426,19 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
 - **Built**: every time a method step gives ("simmer for 18 minutes", "25 to 30 minutes") is part of the sentence with a small ⏱ and a thin dashed underline in the muted text colour (an amount Fennl changed keeps its tinted, semibold look, so the two don't read alike); a tap starts a timer named like cook mode's ("Step 1 · 18 minutes", for the recipe), running for the low end of a range. On a scaled recipe, a step whose amounts changed still shows the original and the working when its words are tapped: the step is cut at its times (`stepParts`, `app/timers/stepParts.ts`; `ScaledLine`'s `parts`), since a button can't hold another. Linked recipes shown in a recipe have them too; a recipe in Trash doesn't. `app/timers/TimeLink.tsx`.
 - **You check**: on a phone and a computer, open a recipe with times in its method and see they don't get in the way of reading; tap one and see the timer start (the corner chip on a computer, the ⏱ in the phone's top bar); double the recipe and tap a step's words to see the working still opens.
 
+### U12. Timers as the earlier Fennl had them (owner's choices 2026-10-29)
+- **Asked**: the owner didn't like where the Timers window was going (U9's window, and the one-timer window from #114) and preferred the timers of an earlier, abandoned version of Fennl (`terrastak/fennl_g`, private). Built from its code and the owner's screenshots of it running, in Fennl's own colours and fonts; mockup "Timer window mockup", page "Like old Fennl", 2026-10-29.
+- **Owner's choices**:
+  1. **A Timers panel from the right**, the window's full height (the whole width on a phone), with "Keep cooking" over **Timers**, **Add timer** and **×**. Each timer: its name, where it's from in small orange capitals ("STEP 5 · MOM'S CHOC CHIP COOKIES", "YOUR TIMER", "· PAUSED"), its time, then **View step** (a recipe's timer: back to the recipe at that step), **Pause** or **Resume**, **Adjust time**, **+1 minute** and **Cancel** in red. A finished one says "Finished: Bake", with View step, +1 minute and **Dismiss**. A tap outside, Escape or × closes it.
+  2. **Adjust time** in the same panel: "Time remaining" keeps counting until a number is changed; then the timer holds there ("Timer paused while you adjust it", "The timer was paused at 8:59 while you make changes.") until **Save time** (the new time, running or paused as it was) or **Cancel** (or ×, Escape, a tap outside), which lets it carry on.
+  3. **Add timer**: an optional name ("Pasta water") and hours, minutes and seconds; **Start timer**. U9's one-tap lengths (1, 3, 5, 10, 15, 30 min, 1 hr) stay here as quick picks that fill in the time.
+  4. **Every hours, minutes and seconds box has its own ▲ and ▼**, one hour, minute or second a tap (Fennl's own, since a phone's browser shows none); ↑ and ↓ on a keyboard do the same.
+  5. **A time in a recipe's method keeps U11's quiet dashed underline**, and a tap now asks first, low in the middle of the page: "STEP 5 · MOM'S CHOC CHIP COOKIES", **Start a timer for 9 minutes?**, the timer's name from the step ("Bake"; `timerName`, `shared/cook.ts`), **Choose a duration** with either end of a range ("9 minutes", "11 minutes"), the time to change, "Suggested duration: 9 minutes. Change any field to use your own time.", **Cancel** and **Start timer**. Cook mode's big time buttons still start a timer straight away, named the same way.
+  6. **Timers stay as cards in the lower-right corner** of a wide screen, now with the earlier Fennl's details: a ring for how much is left (grey while paused), the time, where it's from and its name, and round **Pause/Resume** and **Stop** buttons on the card; a finished one turns orange with **Done!**, **+1 min** and **Dismiss**; tapping a card opens the panel. Phones keep the ⏱ in the top bar.
+  7. **Notifications say what finished** (owner's screenshot of the earlier Fennl's): "Timer finished: Bake", then "Step 5 · Mom's Choc Chip Cookies" (or "Your timer"); opening one goes to the recipe at that step. The earlier version's "Device notification" switch on each timer is left out: Settings › Timer notifications decides for every timer.
+- **Built**: `app/timers/Timers.tsx` (the panel, Adjust time, Add timer, the start question, the corner cards; cook mode's timer list keeps `TimerButtons`, whose time opens Adjust time), `app/timers/timersView.ts` (`viewStep`), `app/timers/TimeLink.tsx`, `shared/cook.ts` (`timerName`, a range's `upTo`), steps on the recipe page have ids (`#step-5`), `shared/timerAlerts.ts` (`timerPush`).
+- **You check**: on a computer and a phone, start a timer from a step (try a range), add one of your own with the arrows, pause one from its corner card, adjust a time (it keeps counting until you change a number), View step, and let one finish with Fennl in the background to see the notification's words.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1764,5 +1777,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U8 | Done 2026-10-28 (merged as #105) |
 | U9 | Done 2026-10-28 (merged as #106) |
 | U10 | Done 2026-10-29 (merged as #107 and #108) |
-| U11 | Built 2026-10-29, waiting for review |
+| U11 | Done 2026-10-29 |
+| U12 | Built 2026-10-29, waiting for review |
 | All others | Not started |

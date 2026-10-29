@@ -13,7 +13,7 @@ async function noAccessibilityProblems(page: Page) {
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 }
 
-test("A timer of your own: start, pause, change and dismiss it", async ({
+test("A timer of your own: add, pause, adjust and dismiss it", async ({
   page,
   context,
   baseURL,
@@ -23,17 +23,23 @@ test("A timer of your own: start, pause, change and dismiss it", async ({
   await page.goto("/");
   const phone = info.project.name === "phone";
 
-  // The sidebar's Timers (a phone's ⏱ in the top bar) opens the Timers window.
+  // The sidebar's Timers (a phone's ⏱ in the top bar) opens the Timers panel.
   await page.getByRole("button", { name: /^Timers/ }).click();
   const timers = page.getByRole("dialog", { name: "Timers" });
-  await expect(timers.getByText("No timers running.")).toBeVisible();
-  await timers.getByLabel("Name (optional)").fill("Pasta");
-  await timers.getByRole("button", { name: "10 min timer" }).click();
+  await expect(timers).toContainText("No timers running.");
+  await timers.getByRole("button", { name: "Add timer" }).click();
+  const add = page.getByRole("dialog", { name: "Add timer" });
+  await add.getByLabel("Timer name").fill("Pasta");
+  await expect(add.getByRole("button", { name: "Start timer" })).toBeDisabled();
+  await add.getByRole("button", { name: "10 min" }).click();
+  await add.getByRole("button", { name: "One more minute" }).click();
+  await expect(add.getByLabel("Minutes")).toHaveValue("11");
+  await add.getByRole("button", { name: "One less minute" }).click();
+  await noAccessibilityProblems(page);
+  await add.getByRole("button", { name: "Start timer" }).click();
   const pasta = timers.getByRole("listitem").filter({ hasText: "Pasta" });
   await expect(pasta).toContainText("Your timer");
-  await expect(
-    pasta.getByRole("button", { name: /^Change Pasta: (10:00|9:5\d) left/ }),
-  ).toBeVisible();
+  await expect(pasta).toContainText(/10:00|9:5\d/);
   await noAccessibilityProblems(page);
 
   // Paused, it holds still. (The clock runs on while the test clicks, so times may be a second
@@ -42,87 +48,84 @@ test("A timer of your own: start, pause, change and dismiss it", async ({
   await pasta.getByRole("button", { name: "Pause Pasta" }).click();
   await expect(pasta).toContainText("paused");
   await page.clock.fastForward("05:00");
-  await expect(
-    pasta.getByRole("button", { name: /^Change Pasta: (9:00|8:5\d) left, paused/ }),
-  ).toBeVisible();
+  await expect(pasta).toContainText(/9:00|8:5\d/);
   await pasta.getByRole("button", { name: "Resume Pasta" }).click();
 
-  // Opened, it keeps running (owner's choice 2026-10-29), with Pause and Resume.
-  await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
-  const editor = page.getByRole("dialog", { name: "Pasta" });
-  await expect(editor).toContainText("Running");
-  await expect(editor.getByLabel("min")).toHaveValue(/^0[89]$/);
+  // Adjust time: it keeps counting until a number changes, then holds there until Save time.
+  await pasta.getByRole("button", { name: "Adjust time for Pasta" }).click();
+  const adjust = page.getByRole("dialog", { name: "Adjust time" });
+  await expect(adjust).toContainText("Time remaining");
+  await expect(adjust.getByLabel("Minutes")).toHaveValue(/^[89]$/);
   await page.clock.fastForward("01:00");
-  await expect(editor.getByLabel("min")).toHaveValue(/^0[78]$/);
-  await editor.getByRole("button", { name: "Pause" }).click();
-  await expect(editor).toContainText("Paused");
-  await editor.getByRole("button", { name: "Resume" }).click();
-  await expect(editor).toContainText("Running");
-
-  // Changed: nudged and typed. Nothing changes until Start at the new time, which runs it.
-  await editor.getByRole("button", { name: "+5 min" }).click();
-  await expect(editor.getByLabel("min")).toHaveValue(/^1[23]$/);
-  await editor.getByLabel("min").fill("20");
-  await editor.getByLabel("sec").fill("30");
-  await expect(editor).toContainText(/The timer is still running: [78]:\d\d left\./);
+  await expect(adjust.getByLabel("Minutes")).toHaveValue(/^[78]$/);
+  await adjust.getByRole("button", { name: "One more minute" }).click();
+  await expect(adjust).toContainText("Timer paused while you adjust it");
+  await adjust.getByLabel("Minutes").fill("20");
+  await adjust.getByLabel("Seconds").fill("30");
   await noAccessibilityProblems(page);
-  await editor.getByRole("button", { name: "Start at 20:30" }).click();
-  await expect(
-    pasta.getByRole("button", { name: /^Change Pasta: 20:(30|2\d) left/ }),
-  ).toBeVisible();
-  // Discard change, Escape or a tap outside the window lets it carry on as it was.
-  await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
-  await editor.getByLabel("min").fill("2");
-  await editor.getByRole("button", { name: "Discard change" }).click();
-  await expect(pasta.getByRole("button", { name: /^Change Pasta: 20:[0-3]\d left/ })).toBeVisible();
-  await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
-  await editor.getByLabel("min").fill("2");
-  await page.mouse.click(5, 5);
+  await adjust.getByRole("button", { name: "Save time" }).click();
+  await expect(pasta).toContainText(/20:(30|2\d)/);
+  await expect(pasta).not.toContainText("paused");
+
+  // Cancel, Escape or a tap outside lets it carry on as it was.
+  await pasta.getByRole("button", { name: "Adjust time for Pasta" }).click();
+  await adjust.getByLabel("Minutes").fill("2");
+  await adjust.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(pasta).toContainText(/20:[0-3]\d/);
+  await expect(pasta).not.toContainText("paused");
+  await pasta.getByRole("button", { name: "Adjust time for Pasta" }).click();
+  await adjust.getByLabel("Minutes").fill("2");
+  // On a phone the panel takes the whole width: Escape (or ×) instead.
+  if (phone) await adjust.getByRole("button", { name: "Cancel time adjustment" }).click();
+  else await page.mouse.click(5, 5);
+  if (phone) await timers.getByRole("button", { name: "Close timers" }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: /^Timers/ }).click();
-  await expect(pasta.getByRole("button", { name: /^Change Pasta: 20:[0-3]\d left/ })).toBeVisible();
-  await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
+  await expect(pasta).toContainText(/20:[0-3]\d/);
+  await expect(pasta).not.toContainText("paused");
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 
-  // On a computer, running timers float in the corner of every page.
+  // On a computer, timers show as cards in the corner of every page, with Pause and Stop.
+  const corner = page.getByRole("region", { name: "Running timers" });
   if (!phone) {
-    const floating = page.getByRole("region", { name: "Running timers" });
-    await expect(floating).toContainText(/Pasta · 20:[0-3]\d/);
+    await expect(corner).toContainText(/20:[0-3]\dYour timerPasta/);
+    await corner.getByRole("button", { name: "Pause Pasta" }).click();
+    await expect(corner).toContainText("paused");
+    await corner.getByRole("button", { name: "Resume Pasta" }).click();
   }
 
-  // A timer of any length: "Other…".
+  // A timer of any length, typed.
   await page.getByRole("button", { name: /^Timers/ }).click();
-  await timers.getByRole("button", { name: "Other…" }).click();
-  const fresh = page.getByRole("dialog", { name: "New timer" });
-  await fresh.getByLabel("min").fill("0");
-  await fresh.getByLabel("sec").fill("45");
-  await fresh.getByRole("button", { name: "Start" }).click();
-  const quick = timers.getByRole("listitem").filter({ hasText: /^Timer/ });
+  await timers.getByRole("button", { name: "Add timer" }).click();
+  await add.getByLabel("Seconds").fill("45");
+  await add.getByRole("button", { name: "Start timer" }).click();
+  const quick = timers.getByRole("listitem").filter({ hasText: /^(Finished: )?Timer/ });
   await expect(quick).toContainText(/0:4\d/);
   await page.clock.fastForward("00:50");
-  await expect(quick).toContainText("Done!");
+  await expect(quick).toContainText("Finished: Timer");
   if (!phone) {
-    // A finished one floating in the corner opens the list, where it's dismissed.
-    await timers.getByRole("button", { name: "Close" }).click();
-    await page
-      .getByRole("region", { name: "Running timers" })
-      .getByRole("button", { name: /Timer · Done!/ })
-      .click();
-    await expect(timers.getByRole("heading", { name: "Timers" })).toBeVisible();
+    // A finished one in the corner is dismissed there.
+    await timers.getByRole("button", { name: "Close timers" }).click();
+    await expect(corner).toContainText("Done!");
+    await corner.getByRole("button", { name: "Dismiss Timer" }).click();
+    await expect(corner.getByText("Done!")).toHaveCount(0);
+  } else {
+    await quick.getByRole("button", { name: "Dismiss Timer" }).click();
+    await expect(quick).toHaveCount(0);
   }
-  await quick.getByRole("button", { name: "Dismiss Timer" }).click();
-  await expect(quick).toHaveCount(0);
-  await expect(timers.getByRole("listitem")).toHaveCount(1);
 
   // Kept on this device through a reload.
   await page.reload();
   await page.getByRole("button", { name: /^Timers, 1 timer/ }).click();
   await expect(timers.getByRole("listitem").filter({ hasText: "Pasta" })).toBeVisible();
+  await timers.getByRole("button", { name: "Cancel Pasta" }).click();
+  await expect(timers).toContainText("No timers running.");
 });
 
-// U11 (owner's request 2026-10-29): a time in the recipe page's method starts a timer, quietly
-// marked; on a scaled recipe a step's words still show the original and the working.
+// U11 (owner's request 2026-10-29): a time in the recipe page's method, quietly marked, asks
+// before it starts a timer named from its step (owner's choice 2026-10-29), with either end of a
+// range; on a scaled recipe a step's words still show the original and the working.
 test("A time in a recipe's method starts a timer", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
@@ -132,7 +135,9 @@ test("A time in a recipe's method starts a timer", async ({ page, context, baseU
   await page.getByRole("textbox", { name: "Ingredients" }).fill("1 cup rice");
   await page
     .getByRole("textbox", { name: "Method" })
-    .fill("Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.");
+    .fill(
+      "Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.\nToast the crust for 9-11 minutes.",
+    );
   await expect(page.getByText("All changes saved")).toBeVisible();
   await page.getByRole("button", { name: "Done" }).first().click();
 
@@ -146,10 +151,29 @@ test("A time in a recipe's method starts a timer", async ({ page, context, baseU
   await expect(method).toContainText("Original: Add 2 cups water and simmer for 18 minutes");
   await noAccessibilityProblems(page);
 
-  await method.getByRole("button", { name: "Start a 18 minutes timer" }).click();
+  // It asks first, naming the timer from the step.
+  await method.getByRole("button", { name: "Start a 5 minutes timer" }).click();
+  const start = page.getByRole("dialog", { name: "Start a timer for 5 minutes?" });
+  await expect(start).toContainText("Step 1 · Rice");
+  await expect(start).toContainText("Rest");
+  await noAccessibilityProblems(page);
+  await start.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  // A range offers either end.
+  await method.getByRole("button", { name: "Start a 9 minutes timer" }).click();
+  const range = page.getByRole("dialog", { name: "Start a timer for 9 minutes?" });
+  await range.getByLabel("11 minutes").check();
+  await expect(page.getByRole("dialog", { name: "Start a timer for 11 minutes?" })).toBeVisible();
+  await page.getByRole("button", { name: "Start timer" }).click();
+
   await page.getByRole("button", { name: /^Timers/ }).click();
   const timers = page.getByRole("dialog", { name: "Timers" });
-  const rice = timers.getByRole("listitem").filter({ hasText: "Step 1 · 18 minutes" });
-  await expect(rice).toContainText("Rice");
-  await expect(rice).toContainText(/1[78]:\d\d/);
+  const crust = timers.getByRole("listitem").filter({ hasText: "Toast the crust" });
+  await expect(crust).toContainText("Step 2 · Rice");
+  await expect(crust).toContainText(/1[01]:\d\d/);
+  // View step goes back to the recipe, at that step.
+  await crust.getByRole("button", { name: "View step for Toast the crust" }).click();
+  await expect(page).toHaveURL(/#step-2$/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
 });

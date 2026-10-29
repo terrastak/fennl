@@ -536,6 +536,12 @@ function Method({
   timers?: boolean;
 }) {
   const groups = sections(recipe.directions);
+  // Opened at a step (a timer's View step or its notification): that step in view.
+  useEffect(() => {
+    if (/^#step-\d+$/.test(window.location.hash)) {
+      document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center" });
+    }
+  }, []);
   // Fennl's bake-time suggestion for another pan (phase F2), under the step that gives the time.
   const note = scaling.pans ? bakeNote(recipe, scaling.pans, scaling.factor) : null;
   // Numbering carries on across sections: each list starts after the steps before it.
@@ -552,7 +558,7 @@ function Method({
           {group.items.length > 0 ? (
             <ol className={styles.steps} start={starts[i]}>
               {group.items.map((step, j) => (
-                <li key={step.id}>
+                <li key={step.id} id={`step-${(starts[i] ?? 1) + j}`}>
                   <ScaledLine
                     text={step.text}
                     line={showStep(step.text, scaling)}
@@ -565,6 +571,7 @@ function Method({
                     renderTime={(time) => (
                       <TimeLink
                         time={time}
+                        stepText={step.text}
                         number={(starts[i] ?? 1) + j}
                         recipeTitle={recipe.title}
                       />

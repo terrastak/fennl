@@ -1,54 +1,111 @@
-/* Timers (U9): the Timers window, the timer buttons wherever they show, and the floating chips. */
+/* Timers (U9, laid out as the earlier Fennl had them, owner's choices 2026-10-29): the Timers
+   panel from the right, a step's "Start a timer?", cook mode's timer buttons and the corner
+   cards. */
 
-/* A sheet from the bottom on a phone, a small window in the corner on a computer. */
+/* The panel: from the right, the window's full height; the whole width on a phone. */
 .dialog {
-  width: min(100vw, 26rem);
+  width: min(100vw, 31rem);
   max-width: 100vw;
-  max-height: 90dvh;
-  margin: auto auto 0;
-  padding: var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--color-border);
   background: var(--color-surface);
   box-shadow: var(--shadow-lg);
   color: var(--color-text);
   overflow-y: auto;
 }
 
-.dialog::backdrop {
-  background: rgb(0 0 0 / 0.3);
+.dialog::backdrop,
+.startDialog::backdrop {
+  background: rgb(0 0 0 / 0.35);
 }
 
-@media (min-width: 600px) {
-  .dialog {
-    margin: auto var(--space-6) var(--space-16) auto;
-    border-radius: var(--radius-xl);
-  }
+/* A step's "Start a timer?": low in the middle of the page. */
+.startDialog {
+  width: min(calc(100vw - 2 * var(--space-4)), 34rem);
+  max-height: calc(100dvh - 2 * var(--space-4));
+  margin: auto auto var(--space-4);
+  padding: var(--space-6);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+  overflow-y: auto;
 }
 
 .panel {
-  display: grid;
-  gap: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 
-.head {
+.panelHead {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+}
+
+/* Small capitals over a title, and where a timer is from. */
+.eyebrow {
+  margin: 0;
+  color: var(--color-warm-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+}
+
+.headButtons {
+  display: flex;
+  flex: none;
+  align-items: center;
   gap: var(--space-2);
 }
 
-.title {
-  margin: 0;
+.close {
+  width: var(--tap-target);
+  height: var(--tap-target);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
   font-size: var(--text-xl);
+  cursor: pointer;
 }
 
-.from {
-  display: block;
+.close:hover {
+  background: var(--color-bg);
+}
+
+.panelBody {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-5) var(--space-6);
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-6) 0;
   color: var(--color-text-muted);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-medium);
 }
 
 .hint {
@@ -65,34 +122,363 @@
 
 .row,
 .rowDone {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-3);
-  padding: var(--space-2) 0;
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5) 0;
   border-bottom: 1px solid var(--color-border-soft);
 }
 
 .rowDone {
-  padding: var(--space-2) var(--space-3);
-  border: 0;
-  border-radius: var(--radius-md);
+  margin: var(--space-3) 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-warm);
+  border-radius: var(--radius-lg);
   background: var(--color-warm-soft);
-  color: var(--color-warm-text);
 }
 
-.name {
-  flex: 1 1 8rem;
+.rowTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.rowTop > div {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.rowName {
+  overflow-wrap: anywhere;
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
 }
 
+.rowTime,
+.rowTimePaused {
+  flex: none;
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.rowTimePaused {
+  color: var(--color-text-muted);
+}
+
+.rowButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.pill,
+.chip {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.pill:hover,
+.chip:hover {
+  border-color: var(--color-accent);
+}
+
+.chip[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.cancel {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-danger);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.cancel:hover {
+  text-decoration: underline;
+}
+
 .note {
-  flex-basis: 100%;
   margin: 0;
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
+.primary,
+.secondary {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.primary:hover {
+  background: var(--color-accent-hover);
+}
+
+.primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.secondary {
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.secondary:hover {
+  border-color: var(--color-accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* Hours, minutes and seconds, each with its own ▲ and ▼. */
+.duration {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.duration legend,
+.range legend {
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.fields {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.field label {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.numberBox {
+  position: relative;
+  display: flex;
+}
+
+.number {
+  width: 100%;
+  min-width: 0;
+  height: 3.25rem;
+  padding: 0 2.5rem 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.number:focus {
+  border-color: var(--color-accent);
+  outline: 3px solid var(--color-accent-soft);
+}
+
+.arrows {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  bottom: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.arrows button {
+  display: grid;
+  flex: 1;
+  width: 2rem;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.arrows button:hover {
+  background: var(--color-accent-soft);
+}
+
+.arrows button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.arrows svg {
+  width: 0.65rem;
+  height: 0.4rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.fieldHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.adjustName {
+  overflow-wrap: anywhere;
+  padding-top: var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+/* Time remaining (or held while it's changed). */
+.status,
+.statusHeld {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-lg);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.statusHeld {
+  border-color: var(--color-warm);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.statusTime {
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.nameLabel {
+  padding-top: var(--space-3);
+  font-weight: var(--weight-semibold);
+}
+
+.nameLabel small {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}
+
+.nameInput {
+  min-height: var(--tap-target);
+  margin-top: calc(-1 * var(--space-2));
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A step's "Start a timer?" */
+.start {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.startTitle {
+  margin: calc(-1 * var(--space-3)) 0 0;
+  font-size: var(--text-2xl);
+  line-height: var(--leading-tight);
+}
+
+.startName {
+  margin: calc(-1 * var(--space-2)) 0 0;
+  color: var(--color-text-muted);
+}
+
+.range {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
+.range label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--tap-target);
+}
+
+.range input {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  accent-color: var(--color-accent);
+}
+
+/* Cook mode's timer buttons, and the notifications offer under the timers. */
 .buttons {
   display: inline-flex;
   flex-wrap: wrap;
@@ -100,7 +486,7 @@
   gap: var(--space-1);
 }
 
-/* The time: tap it to change it (a dotted underline says so). */
+/* The time: tap it to adjust it (a dotted underline says so). */
 .clock {
   min-height: var(--tap-target);
   padding: 0 var(--space-2);
@@ -135,6 +521,7 @@
   font: inherit;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+  text-align: left;
   cursor: pointer;
 }
 
@@ -147,220 +534,17 @@
   text-decoration: underline;
 }
 
-.new {
-  display: grid;
-  gap: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px dashed var(--color-border);
-}
-
-.newTitle {
-  margin: 0;
-  font-size: var(--text-md);
-}
-
-.nameInput {
-  min-height: var(--tap-target);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font: inherit;
-}
-
-.presets,
-.nudges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.nudges {
-  justify-content: center;
-}
-
-.chip {
-  min-height: var(--tap-target);
-  padding: 0 var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.chip:hover {
-  border-color: var(--color-accent);
-}
-
-/* Hours, minutes and seconds, big enough to tap and type. */
-.hms {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-}
-
-.field {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-1);
-}
-
-.field label {
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
-.number {
-  width: 4.5rem;
-  height: 4rem;
-  border: 2px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-bg);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-semibold);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-}
-
-.number:focus {
-  border-color: var(--color-accent);
-  outline: 3px solid var(--color-accent-soft);
-}
-
-/* A timer's time changed but not used yet. */
-.numberChanged {
-  border-color: var(--color-accent);
-  background: var(--color-accent-soft);
-}
-
-.hmsPaused .number {
-  color: var(--color-text-muted);
-}
-
-/* Running, Paused or Done, beside a timer's name. */
-.status,
-.statusQuiet {
-  flex: none;
-  align-self: flex-start;
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-}
-
-.status {
-  background: var(--color-accent-soft);
-  color: var(--color-accent);
-}
-
-.statusQuiet {
-  background: var(--color-bg);
-  color: var(--color-text-muted);
-}
-
-/* What a changed time does (and doesn't do) until it's started. */
-.notice {
-  margin: 0;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  background: var(--color-bg);
-  font-size: var(--text-sm);
-  text-align: center;
-}
-
-.notice strong {
-  font-weight: var(--weight-semibold);
-}
-
-.colon {
-  padding-bottom: var(--space-3);
-  font-size: var(--text-3xl);
-  font-weight: var(--weight-semibold);
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.pair {
-  display: flex;
-  gap: var(--space-2);
-  margin-left: auto;
-}
-
-.primary {
-  min-height: var(--tap-target);
-  padding: 0 var(--space-5);
-  border: 0;
-  border-radius: var(--radius-lg);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font: inherit;
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.primary:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-/* Close, Discard change, Cancel: beside the main button, plainer. */
-.secondary {
-  min-height: var(--tap-target);
-  padding: 0 var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-lg);
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  cursor: pointer;
-}
-
-.secondary:hover {
-  border-color: var(--color-accent);
-}
-
-/* Ends a timer: on its own at the left, in the scheme's warning colour. */
-.stop {
-  min-height: var(--tap-target);
-  padding: 0 var(--space-2);
-  border: 0;
-  background: none;
-  color: var(--color-danger);
-  font: inherit;
-  cursor: pointer;
-}
-
-.stop:hover {
-  text-decoration: underline;
-}
-
-/* Running timers in the corner of every page, on wide screens. */
+/* Timers as cards in the corner of every page, on wide screens. */
 .floating {
   position: fixed;
   right: var(--space-6);
   bottom: var(--space-5);
   z-index: 20;
   display: none;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
   gap: var(--space-2);
-  max-width: min(36rem, calc(100vw - var(--sidebar-width) - 3rem));
+  width: min(22rem, calc(100vw - var(--sidebar-width) - 3rem));
 }
 
 @media (min-width: 900px) {
@@ -369,25 +553,185 @@
   }
 }
 
-.float,
-.floatDone {
-  min-height: var(--tap-target);
-  padding: 0 var(--space-4);
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-soft-text);
+.card,
+.cardDone {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
   box-shadow: var(--shadow-md);
+}
+
+.cardDone {
+  border: 2px solid var(--color-warm);
+  background: var(--color-warm-soft);
+}
+
+.cardMain {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
   font: inherit;
-  font-weight: var(--weight-semibold);
-  font-variant-numeric: tabular-nums;
+  text-align: left;
   cursor: pointer;
 }
 
-.floatDone {
-  outline: 2px solid var(--color-warm);
-  background: var(--color-warm-soft);
+.ring {
+  flex: none;
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+.ringTrack {
+  stroke: var(--color-accent-soft);
+}
+
+.cardDone .ringTrack {
+  stroke: var(--color-warm);
+  opacity: 0.35;
+}
+
+.ringLeft {
+  stroke: var(--color-accent);
+}
+
+.ringPaused {
+  stroke: var(--color-text-muted);
+}
+
+.cardText {
+  display: grid;
+  min-width: 0;
+}
+
+.cardTime,
+.cardTimePaused {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: var(--leading-tight);
+}
+
+.cardTimePaused {
+  color: var(--color-text-muted);
+}
+
+.cardTimePaused small {
+  font-size: var(--text-xs);
+}
+
+.cardDone .cardTime {
   color: var(--color-warm-text);
+}
+
+.cardFrom {
+  overflow: hidden;
+  color: var(--color-warm-text);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.05em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cardName {
+  overflow: hidden;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.round {
+  display: grid;
+  flex: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.round:hover {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.round svg {
+  width: 0.65rem;
+  height: 0.65rem;
+}
+
+.playIcon {
+  fill: var(--color-accent);
+}
+
+.pauseIcon {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+}
+
+.stopIcon {
+  fill: var(--color-danger);
+}
+
+.cardPill,
+.cardDismiss {
+  flex: none;
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.cardPill {
+  border: 1px solid var(--color-warm);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.cardDismiss {
+  border: 0;
+  background: var(--color-warm-text);
+  color: var(--color-on-accent);
+}
+
+.more {
+  min-height: 2.25rem;
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  box-shadow: var(--shadow-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
 }
 
 /* A time in a recipe's method (U11): part of the sentence, quietly marked, a tap starts a timer.

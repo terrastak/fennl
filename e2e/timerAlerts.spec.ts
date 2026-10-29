@@ -62,12 +62,15 @@ async function standInPushService(page: Page) {
   );
 }
 
-/** The Timers window, with a timer of one's own running. */
-async function startTimer(page: Page, name: string) {
-  await page.getByRole("button", { name: /^Timers/ }).click();
+/** The Timers panel, with a timer of one's own running. */
+async function startTimer(page: Page, name: string, minutes = "10 min") {
   const timers = page.getByRole("dialog", { name: "Timers" });
-  await timers.getByLabel("Name (optional)").fill(name);
-  await timers.getByRole("button", { name: "10 min timer" }).click();
+  if (!(await timers.isVisible())) await page.getByRole("button", { name: /^Timers/ }).click();
+  await timers.getByRole("button", { name: "Add timer" }).click();
+  const add = page.getByRole("dialog", { name: "Add timer" });
+  await add.getByLabel("Timer name").fill(name);
+  await add.getByRole("button", { name: minutes, exact: true }).click();
+  await add.getByRole("button", { name: "Start timer" }).click();
   await expect(timers.getByRole("listitem").filter({ hasText: name })).toBeVisible();
   return timers;
 }
@@ -108,12 +111,12 @@ test("Turn on timer alerts from the Timers window, and off in Settings", async (
 
   // Stopping it takes the alert back.
   const stopped = timerRequest(page, "DELETE");
-  await pasta.getByRole("button", { name: "Stop Pasta" }).click();
+  await pasta.getByRole("button", { name: "Cancel Pasta" }).click();
   await stopped;
 
   // A new timer asks for its alert straight away.
   const next = timerRequest(page, "PUT");
-  await timers.getByRole("button", { name: "5 min timer", exact: true }).click();
+  await startTimer(page, "Rice", "5 min");
   expect((await (await next).response())?.status()).toBe(200);
 
   // On a computer, the window says the browser must keep running, and links to Settings.

@@ -324,8 +324,8 @@ describe("sending the alert", () => {
     expect(headers.authorization).toMatch(/^vapid t=.+, k=B/);
     const push = (await decrypt(init!.body as Uint8Array<ArrayBuffer>, keys)) as TimerPush;
     expect(push).toEqual({
-      title: "Timer done",
-      body: "Bake 25 minutes (Banana bread)",
+      title: "Timer finished: Bake 25 minutes",
+      body: "Banana bread",
       tag: id,
       path: "/recipes/abc/cook",
     });
