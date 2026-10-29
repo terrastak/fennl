@@ -238,6 +238,51 @@
   outline: 3px solid var(--color-accent-soft);
 }
 
+/* A timer's time changed but not used yet. */
+.numberChanged {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+}
+
+.hmsPaused .number {
+  color: var(--color-text-muted);
+}
+
+/* Running, Paused or Done, beside a timer's name. */
+.status,
+.statusQuiet {
+  flex: none;
+  align-self: flex-start;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.status {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.statusQuiet {
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+}
+
+/* What a changed time does (and doesn't do) until it's started. */
+.notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.notice strong {
+  font-weight: var(--weight-semibold);
+}
+
 .colon {
   padding-bottom: var(--space-3);
   font-size: var(--text-3xl);
@@ -246,12 +291,15 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
 }
 
-.spacer {
-  flex: 1;
+.pair {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 
 .primary {
@@ -269,6 +317,37 @@
 .primary:disabled {
   cursor: not-allowed;
   opacity: 0.5;
+}
+
+/* Close, Discard change, Cancel: beside the main button, plainer. */
+.secondary {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.secondary:hover {
+  border-color: var(--color-accent);
+}
+
+/* Ends a timer: on its own at the left, in the scheme's warning colour. */
+.stop {
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  color: var(--color-danger);
+  font: inherit;
+  cursor: pointer;
+}
+
+.stop:hover {
+  text-decoration: underline;
 }
 
 /* Running timers in the corner of every page, on wide screens. */
