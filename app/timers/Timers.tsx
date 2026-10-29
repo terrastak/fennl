@@ -19,7 +19,14 @@ import {
   type Timer,
 } from "./timers";
 import styles from "./timers.module.css";
-import { openTimers, showView, useView, viewStep, type StartOffer } from "./timersView";
+import {
+  listenForShowStep,
+  openTimers,
+  showView,
+  useView,
+  viewStep,
+  type StartOffer,
+} from "./timersView";
 
 // Timers anywhere in the app (U9), laid out as the earlier Fennl had them (owner's choices
 // 2026-10-29, from its screenshots): a Timers panel from the right (the whole width on a phone),
@@ -36,6 +43,9 @@ export function TimersDialog() {
   const dialog = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const { timers, now } = useTimers();
+
+  // A timer's notification, clicked: its step, wherever Fennl is.
+  useEffect(() => listenForShowStep(), []);
 
   useEffect(() => {
     const element = dialog.current;

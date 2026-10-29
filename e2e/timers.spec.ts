@@ -183,4 +183,19 @@ test("A time in a recipe's method starts a timer", async ({ page, context, baseU
   // The step is marked for a moment, so the eye lands on it.
   await expect(page.locator("#step-2")).toHaveAttribute("data-flash", "");
   await expect(page.locator("#step-2")).not.toHaveAttribute("data-flash", "", { timeout: 5000 });
+
+  // A timer's notification clicked while Fennl is open elsewhere: the service worker brings the
+  // window forward and says which step to show (stood in for here).
+  const recipe = new URL(page.url()).pathname;
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: /^Timers/ })).toBeVisible();
+  await page.evaluate(
+    (path) =>
+      navigator.serviceWorker.dispatchEvent(
+        new MessageEvent("message", { data: { type: "fennl:show-step", path } }),
+      ),
+    `${recipe}#step-1`,
+  );
+  await expect(page).toHaveURL(/#step-1$/);
+  await expect(page.locator("#step-1")).toHaveAttribute("data-flash", "");
 });
