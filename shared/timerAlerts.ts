@@ -4,7 +4,7 @@
  * it at that moment, so it rings with the screen off or Fennl closed. Shared by the Worker
  * (worker/push/) and the app (app/cook/timerAlerts.ts).
  */
-import { isDeviceId } from "./devices";
+import { deviceLabel, isDeviceId } from "./devices";
 
 /** The longest label or recipe title kept with an alert; longer ones are cut. */
 export const ALERT_TEXT_MAX = 200;
@@ -141,4 +141,33 @@ export function timerPush(
     tag: id,
     path: timer.path,
   };
+}
+
+/**
+ * What a browser needs for timer alerts to arrive (U10, owner's request 2026-10-29: people should
+ * know, notably that some browsers must stay running). From the user agent; `touch` is whether
+ * the device has a touch screen, since an iPad's Safari can say it's a Mac.
+ * - "phone": iPhone, iPad, Android: alerts arrive with the phone locked and Fennl closed.
+ * - "mac-safari": the Mac receives them itself, even with Safari quit.
+ * - "browser-running": a computer's Chrome, Edge, Firefox...: only while the browser runs.
+ */
+export interface AlertNeeds {
+  kind: "phone" | "mac-safari" | "browser-running";
+  /** "Chrome", "Edge", "Firefox"... */
+  browser: string;
+  system: "mac" | "windows" | "other";
+}
+
+export function alertNeeds(userAgent: string, touch: boolean): AlertNeeds {
+  const label = deviceLabel(userAgent);
+  const browser = label.split(" on ")[0] ?? "Your browser";
+  const named = browser === "A browser" ? "your browser" : browser;
+  if (/ on (iPhone|iPad|Android)$/.test(label) || (/ on Mac$/.test(label) && touch)) {
+    return { kind: "phone", browser: named, system: "other" };
+  }
+  const system = / on Mac$/.test(label) ? "mac" : / on Windows$/.test(label) ? "windows" : "other";
+  if (system === "mac" && browser === "Safari") {
+    return { kind: "mac-safari", browser: named, system };
+  }
+  return { kind: "browser-running", browser: named, system };
 }

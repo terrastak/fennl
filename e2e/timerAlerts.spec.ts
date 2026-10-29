@@ -115,12 +115,20 @@ test("Turn on timer alerts from the Timers window, and off in Settings", async (
   const next = timerRequest(page, "PUT");
   await timers.getByRole("button", { name: "5 min timer", exact: true }).click();
   expect((await (await next).response())?.status()).toBe(200);
-  await timers.getByRole("button", { name: "Close" }).click();
+
+  // On a computer, the window says the browser must keep running, and links to Settings.
+  await expect(timers).toContainText(
+    "Alerts arrive only while Chrome is running. More in Settings › Timer alerts.",
+  );
+  await timers.getByRole("link", { name: "Settings › Timer alerts" }).click();
+  await expect(page).toHaveURL(/\/settings#timer-alerts$/);
+  await expect(timers).toBeHidden();
 
   // Settings shows it's on for this browser, and turns it off.
-  await page.goto("/settings");
   const section = page.getByRole("region", { name: "Timer alerts" });
   await expect(section).toContainText("On for this browser.");
+  // What this browser needs: a computer's Chrome only while it runs.
+  await expect(section).toContainText("Alerts arrive only while Chrome is running.");
   await section.getByRole("button", { name: "Turn off" }).click();
   await expect(section).toContainText("Off for this browser.");
   await section.getByRole("button", { name: "Turn on" }).click();
