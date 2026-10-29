@@ -1404,6 +1404,7 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   - Apple ends a site's alerts if a push shows nothing, so every push shows a notification. When Fennl is on screen it has already rung (U9's timers ring on every page): elsewhere the notification is taken away again straight after; through Apple's service it stays.
   - Nothing to set up by hand (the Cloudflare API token needs **Queues Edit**, `docs/setup/a1-cloudflare-and-github.md`; Fennl's already had it, checked on U10's first CI run 2026-10-29): CI creates the queue (`fennl-timer-alerts`) and the push key (`PUSH_PRIVATE_KEY`, made once for production and kept, like `BETTER_AUTH_SECRET`). Queue messages go to the deployed Worker, so pull-request previews can't send alerts: try it on the real app after merging.
   - Tables `push_subscription` (one per person per browser) and `timer_alert` (removed a day after the timer ends), migration `0039`; `worker/push/` (Web Push written with the Worker's own WebCrypto and checked against RFC 8291's worked example, no new library), `shared/timerAlerts.ts`, `app/timers/timerAlerts.ts`, `app/offline/sw.js`. Never while an admin acts as someone.
+- **What each browser needs, said in Settings (owner's request 2026-10-29)**: **Settings › Timer alerts** says, for the browser it's read on, what an alert needs to arrive (`alertNeeds`, `shared/timerAlerts.ts`): a phone or tablet gets them with the screen locked or Fennl closed; Safari on a Mac even when Safari is quit (the Mac itself receives them); any other computer browser (Chrome, Edge, Firefox) only while it's running, with Fennl's tab closed or not, and on Windows closing its last window usually quits it, so one window stays open (it can be minimized). Every device needs to be awake and connected (an alert that can't arrive within 10 minutes is dropped), and Do Not Disturb or a Focus can silence one. Checked 2026-10-29 on WebKit's "Meet Web Push", Apple's WWDC 2022 session 10098 and web.dev's "Why doesn't push work when the browser is closed?".
 - **You check**, after it's live:
   1. On the iPhone, open Fennl from its Home Screen icon (add it if it isn't there). Open the Timers window (⏱ in the top bar), start a 1-minute timer, tap **Alert me when a timer finishes, even with the phone locked** and allow notifications.
   2. Lock the phone and wait: a "Timer done" alert should show on the lock screen (and the Watch) when it ends. Tap it: Fennl opens.
@@ -1748,5 +1749,5 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U7 | Done 2026-10-27 (merged as #104; live) |
 | U8 | Done 2026-10-28 (merged as #105) |
 | U9 | Done 2026-10-28 (merged as #106) |
-| U10 | Built 2026-10-28, waiting for review (CI green, preview built; the token already had Queues access) |
+| U10 | Done 2026-10-29 (merged as #107); what each browser needs said in Settings, waiting for review |
 | All others | Not started |
