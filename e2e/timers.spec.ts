@@ -47,22 +47,41 @@ test("A timer of your own: start, pause, change and dismiss it", async ({
   ).toBeVisible();
   await pasta.getByRole("button", { name: "Resume Pasta" }).click();
 
-  // Changed: nudged and typed; it pauses while open, and Done starts it from the new time.
+  // Opened, it keeps running (owner's choice 2026-10-29), with Pause and Resume.
   await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
   const editor = page.getByRole("dialog", { name: "Pasta" });
+  await expect(editor).toContainText("Running");
   await expect(editor.getByLabel("min")).toHaveValue(/^0[89]$/);
+  await page.clock.fastForward("01:00");
+  await expect(editor.getByLabel("min")).toHaveValue(/^0[78]$/);
+  await editor.getByRole("button", { name: "Pause" }).click();
+  await expect(editor).toContainText("Paused");
+  await editor.getByRole("button", { name: "Resume" }).click();
+  await expect(editor).toContainText("Running");
+
+  // Changed: nudged and typed. Nothing changes until Start at the new time, which runs it.
   await editor.getByRole("button", { name: "+5 min" }).click();
-  await expect(editor.getByLabel("min")).toHaveValue(/^1[34]$/);
+  await expect(editor.getByLabel("min")).toHaveValue(/^1[23]$/);
   await editor.getByLabel("min").fill("20");
   await editor.getByLabel("sec").fill("30");
+  await expect(editor).toContainText(/The timer is still running: [78]:\d\d left\./);
   await noAccessibilityProblems(page);
-  await editor.getByRole("button", { name: "Done" }).click();
+  await editor.getByRole("button", { name: "Start at 20:30" }).click();
   await expect(
     pasta.getByRole("button", { name: /^Change Pasta: 20:(30|2\d) left/ }),
   ).toBeVisible();
-  // Cancel (or Escape) lets it carry on as it was.
+  // Discard change, Escape or a tap outside the window lets it carry on as it was.
   await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
   await editor.getByLabel("min").fill("2");
+  await editor.getByRole("button", { name: "Discard change" }).click();
+  await expect(pasta.getByRole("button", { name: /^Change Pasta: 20:[0-3]\d left/ })).toBeVisible();
+  await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
+  await editor.getByLabel("min").fill("2");
+  await page.mouse.click(5, 5);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: /^Timers/ }).click();
+  await expect(pasta.getByRole("button", { name: /^Change Pasta: 20:[0-3]\d left/ })).toBeVisible();
+  await pasta.getByRole("button", { name: /^Change Pasta/ }).click();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
 

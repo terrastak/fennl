@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { clockText } from "../../shared/cook";
 import { alertNeeds } from "../../shared/timerAlerts";
 import { Link } from "../router";
@@ -24,7 +24,7 @@ import { openTimer, openTimers, showView, useView } from "./timersView";
 // sidebar's Timers button (the ⏱ in a phone's top bar), a floating chip, or cook mode: every
 // timer with Pause and Stop, and a new timer of your own in one tap. Tapping a timer changes its
 // time: nudged with −5 / −1 / +1 / +5 minutes, or typed as hours, minutes and seconds. The timer
-// pauses while it's being changed.
+// keeps running while it's open (owner's choice 2026-10-29), and a tap outside the window closes it.
 
 /** What a timer is from: its recipe, or "Your timer". */
 const fromText = (timer: Timer) => timer.recipeTitle ?? "Your timer";
@@ -47,12 +47,33 @@ export function TimersDialog() {
   const back = () =>
     showView(current?.kind === "edit" && current.fromList ? { kind: "list" } : null);
 
+  // A tap or click outside the window (on the dimmed page) closes it, like Escape: pressed and
+  // let go outside, so a drag that starts in a number and ends outside doesn't.
+  const pressedOutside = useRef(false);
+  const outside = (event: PointerEvent<HTMLDialogElement>) => {
+    if (event.target !== event.currentTarget) return false;
+    const box = event.currentTarget.getBoundingClientRect();
+    return (
+      event.clientX < box.left ||
+      event.clientX > box.right ||
+      event.clientY < box.top ||
+      event.clientY > box.bottom
+    );
+  };
+
   return (
     <dialog
       ref={dialog}
       className={styles.dialog}
       aria-labelledby={titleId}
       onClose={() => showView(null)}
+      onPointerDown={(event) => {
+        pressedOutside.current = outside(event);
+      }}
+      onPointerUp={(event) => {
+        if (pressedOutside.current && outside(event)) showView(null);
+        pressedOutside.current = false;
+      }}
     >
       {current?.kind === "edit" && editing ? (
         <TimerEditor key={editing.id} timer={editing} titleId={titleId} onDone={back} />
@@ -298,9 +319,10 @@ const NUDGES = [-5, -1, 1, 5];
 const LONGEST = 24 * 60 * 60 - 1;
 
 /**
- * Changing a timer's time (or setting a new one's): nudged a few minutes either way, or typed.
- * A running timer pauses while it's open; Done starts it from the new time, Cancel (or Escape)
- * lets it carry on as it was.
+ * One timer's window (owner's choices 2026-10-29), or a new timer's. An open timer keeps running,
+ * its numbers counting down, with Pause or Resume. Changing the time (nudged or typed) touches
+ * nothing until Start at the new time, which also starts it running; Discard change, a tap
+ * outside or Escape leaves the timer as it was. Stop timer ends it.
  */
 function TimerEditor({
   timer,
@@ -312,29 +334,20 @@ function TimerEditor({
   onDone: () => void;
 }) {
   const { now } = useTimers();
-  const [total, setTotal] = useState(() =>
-    timer && !timer.done ? Math.round(timeLeft(timer, now) / 1000) : timer ? 60 : 5 * 60,
-  );
+  const left = timer ? Math.ceil(timeLeft(timer, now) / 1000) : 5 * 60;
+  // The time being typed or nudged; null while the numbers show the timer as it runs.
+  const [draft, setDraft] = useState<number | null>(timer ? null : left);
+  // Whether the person has changed the numbers (a number only focused stays as it was).
+  const [changed, setChanged] = useState(!timer);
   const [name, setName] = useState("");
-  const kept = useRef(false);
   const fieldId = useId();
+  const total = draft ?? left;
+  const paused = timer !== null && !timer.done && timer.pausedLeft !== null;
 
-  // Paused while it's being changed, and carrying on as it was unless the change is kept.
-  const wasRunning = useRef(false);
-  const id = timer?.id;
-  const pauseHere = useEffectEvent(() => {
-    if (timer && !timer.done && timer.pausedLeft === null) {
-      wasRunning.current = true;
-      pauseTimer(timer.id);
-    }
-  });
-  useEffect(() => {
-    pauseHere();
-    return () => {
-      if (id && wasRunning.current && !kept.current) resumeTimer(id);
-    };
-  }, [id]);
-
+  const change = (seconds: number) => {
+    setDraft(Math.max(0, Math.min(LONGEST, seconds)));
+    setChanged(true);
+  };
   const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
@@ -346,11 +359,10 @@ function TimerEditor({
     const h = part === "h" ? value : hours;
     const m = part === "m" ? value : minutes;
     const s = part === "s" ? value : seconds;
-    setTotal(h * 3600 + m * 60 + s);
+    change(h * 3600 + m * 60 + s);
   };
-  const done = () => {
+  const start = () => {
     if (total <= 0) return;
-    kept.current = true;
     if (timer) setTimeLeft(timer.id, total);
     else startTimer(name.trim() || "Timer", total, null);
     onDone();
@@ -361,15 +373,22 @@ function TimerEditor({
       <label htmlFor={`${fieldId}-${part}`}>{label}</label>
       <input
         id={`${fieldId}-${part}`}
-        className={styles.number}
+        className={timer && changed ? `${styles.number} ${styles.numberChanged}` : styles.number}
         inputMode="numeric"
         pattern="[0-9]*"
         maxLength={2}
         value={part === "h" ? String(value) : String(value).padStart(2, "0")}
-        onFocus={(event) => event.currentTarget.select()}
+        // Held still while it's being typed in, so the next second doesn't overwrite it.
+        onFocus={(event) => {
+          event.currentTarget.select();
+          setDraft(total);
+        }}
+        onBlur={() => {
+          if (!changed) setDraft(null);
+        }}
         onChange={(event) => setPart(part, event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") done();
+          if (event.key === "Enter") start();
         }}
       />
     </span>
@@ -378,10 +397,17 @@ function TimerEditor({
   return (
     <div className={styles.panel}>
       <div className={styles.head}>
-        <h2 id={titleId} className={styles.title}>
-          {timer ? timer.label : "New timer"}
-        </h2>
-        {timer ? <span className={styles.from}>{fromText(timer)}</span> : null}
+        <div>
+          <h2 id={titleId} className={styles.title}>
+            {timer ? timer.label : "New timer"}
+          </h2>
+          {timer ? <span className={styles.from}>{fromText(timer)}</span> : null}
+        </div>
+        {timer ? (
+          <span className={paused || timer.done ? styles.statusQuiet : styles.status}>
+            {timer.done ? "Done" : paused ? "Paused" : "Running"}
+          </span>
+        ) : null}
       </div>
       {timer ? null : (
         <input
@@ -393,7 +419,11 @@ function TimerEditor({
           onChange={(event) => setName(event.target.value)}
         />
       )}
-      <div className={styles.hms} role="group" aria-label="Time left">
+      <div
+        className={paused && !changed ? `${styles.hms} ${styles.hmsPaused}` : styles.hms}
+        role="group"
+        aria-label="Time left"
+      >
         {field("h", "hr", hours)}
         <span className={styles.colon} aria-hidden="true">
           :
@@ -404,14 +434,31 @@ function TimerEditor({
         </span>
         {field("s", "sec", seconds)}
       </div>
-      <p className={styles.hint}>Tap a number to type it.</p>
+      {timer && changed ? (
+        <p className={styles.notice}>
+          {timer.done ? (
+            "The timer has finished."
+          ) : (
+            <>
+              The timer is still {paused ? "paused" : "running"}:{" "}
+              <strong>{clockText(left)} left</strong>.
+            </>
+          )}{" "}
+          The new time is used only if you tap <strong>Start at {clockText(total)}</strong>.
+        </p>
+      ) : (
+        <p className={styles.hint}>
+          {timer && !timer.done ? (paused ? "Paused. " : "Counting down. ") : ""}Tap a number to
+          type it.
+        </p>
+      )}
       <div className={styles.nudges}>
         {NUDGES.map((n) => (
           <button
             key={n}
             type="button"
             className={styles.chip}
-            onClick={() => setTotal((t) => Math.max(0, Math.min(LONGEST, t + n * 60)))}
+            onClick={() => change(total + n * 60)}
           >
             {n > 0 ? `+${n}` : `−${-n}`} min
           </button>
@@ -421,9 +468,8 @@ function TimerEditor({
         {timer ? (
           <button
             type="button"
-            className={styles.quiet}
+            className={styles.stop}
             onClick={() => {
-              kept.current = true;
               stopTimer(timer.id);
               onDone();
             }}
@@ -431,13 +477,25 @@ function TimerEditor({
             Stop timer
           </button>
         ) : null}
-        <span className={styles.spacer} />
-        <button type="button" className={styles.quiet} onClick={onDone}>
-          Cancel
-        </button>
-        <button type="button" className={styles.primary} disabled={total <= 0} onClick={done}>
-          {timer ? "Done" : "Start"}
-        </button>
+        {/* Kept together: when they don't fit beside Stop timer, both go on the next line. */}
+        <span className={styles.pair}>
+          <button type="button" className={styles.secondary} onClick={onDone}>
+            {!timer ? "Cancel" : changed ? "Discard change" : "Close"}
+          </button>
+          {!timer || changed || timer.done ? (
+            <button type="button" className={styles.primary} disabled={total <= 0} onClick={start}>
+              {timer ? `Start at ${clockText(total)}` : "Start"}
+            </button>
+          ) : paused ? (
+            <button type="button" className={styles.primary} onClick={() => resumeTimer(timer.id)}>
+              Resume
+            </button>
+          ) : (
+            <button type="button" className={styles.primary} onClick={() => pauseTimer(timer.id)}>
+              Pause
+            </button>
+          )}
+        </span>
       </div>
     </div>
   );
