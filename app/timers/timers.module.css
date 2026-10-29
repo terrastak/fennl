@@ -310,3 +310,29 @@
   background: var(--color-warm-soft);
   color: var(--color-warm-text);
 }
+
+/* A time in a recipe's method (U11): part of the sentence, quietly marked, a tap starts a timer.
+   A plain dashed underline, unlike an amount Fennl changed (tinted and semibold). */
+.timeLink {
+  display: inline;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  text-decoration: underline dashed;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  text-decoration-color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.timeLink:hover {
+  text-decoration-color: var(--color-accent);
+}
+
+.timeIcon {
+  margin-right: 0.15em;
+  font-size: 0.85em;
+}

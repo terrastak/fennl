@@ -1413,6 +1413,11 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   4. In Safari (a tab, not the Home Screen icon), start a timer and open the Timers window: it should say how to add Fennl to the Home Screen. Tell me if the steps it gives don't match your Safari.
   5. On the laptop, turn it on in **Settings › Timer alerts**, start a timer and switch to another window.
 
+### U11. Timers from the recipe page's method (owner's request 2026-10-29)
+- **Asked**: timers on the recipe page, not only in cook mode: the time in a step with a dashed underline and the timer icon, not a large button. "My goal is to not make it more prominent than it needs to be or get in the way of reading the whole recipe."
+- **Built**: every time a method step gives ("simmer for 18 minutes", "25 to 30 minutes") is part of the sentence with a small ⏱ and a thin dashed underline in the muted text colour (an amount Fennl changed keeps its tinted, semibold look, so the two don't read alike); a tap starts a timer named like cook mode's ("Step 1 · 18 minutes", for the recipe), running for the low end of a range. On a scaled recipe, a step whose amounts changed still shows the original and the working when its words are tapped: the step is cut at its times (`stepParts`, `app/timers/stepParts.ts`; `ScaledLine`'s `parts`), since a button can't hold another. Linked recipes shown in a recipe have them too; a recipe in Trash doesn't. `app/timers/TimeLink.tsx`.
+- **You check**: on a phone and a computer, open a recipe with times in its method and see they don't get in the way of reading; tap one and see the timer start (the corner chip on a computer, the ⏱ in the phone's top bar); double the recipe and tap a step's words to see the working still opens.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1750,5 +1755,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U7 | Done 2026-10-27 (merged as #104; live) |
 | U8 | Done 2026-10-28 (merged as #105) |
 | U9 | Done 2026-10-28 (merged as #106) |
-| U10 | Done 2026-10-29 (merged as #107); what each browser needs said in Settings, waiting for review |
+| U10 | Done 2026-10-29 (merged as #107 and #108) |
+| U11 | Built 2026-10-29, waiting for review |
 | All others | Not started |

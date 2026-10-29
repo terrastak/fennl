@@ -38,6 +38,8 @@ import { EarlierVersion } from "./EarlierVersion";
 import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
 import { SubRecipe } from "./SubRecipe";
+import { stepParts } from "../timers/stepParts";
+import { TimeLink } from "../timers/TimeLink";
 import { ScaleStatus, ScaledLine, ServingsBar, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
@@ -520,7 +522,19 @@ function Ingredients({
   );
 }
 
-function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
+/**
+ * The method. `timers`: times in its steps start a timer (U11, owner's request 2026-10-29); not
+ * for a recipe in Trash.
+ */
+function Method({
+  recipe,
+  scaling,
+  timers = false,
+}: {
+  recipe: Recipe;
+  scaling: Scaling;
+  timers?: boolean;
+}) {
   const groups = sections(recipe.directions);
   // Fennl's bake-time suggestion for another pan (phase F2), under the step that gives the time.
   const note = scaling.pans ? bakeNote(recipe, scaling.pans, scaling.factor) : null;
@@ -537,7 +551,7 @@ function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
           {group.heading ? <h3 className={styles.subheading}>{group.heading}</h3> : null}
           {group.items.length > 0 ? (
             <ol className={styles.steps} start={starts[i]}>
-              {group.items.map((step) => (
+              {group.items.map((step, j) => (
                 <li key={step.id}>
                   <ScaledLine
                     text={step.text}
@@ -545,6 +559,16 @@ function Method({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
                     scaling={scaling}
                     lineId={step.id}
                     canHold={false}
+                    parts={
+                      timers ? stepParts(step.text, (words) => showStep(words, scaling)) : null
+                    }
+                    renderTime={(time) => (
+                      <TimeLink
+                        time={time}
+                        number={(starts[i] ?? 1) + j}
+                        recipeTitle={recipe.title}
+                      />
+                    )}
                   />
                   {note?.stepId === step.id ? <Suggestion text={note.text} /> : null}
                 </li>
@@ -1258,7 +1282,7 @@ export function RecipePage({ id }: { id: string }) {
 
       <div className={styles.columns}>
         <Ingredients recipe={recipe} scaling={scaling} linked={detail.linked} adjustable />
-        <Method recipe={recipe} scaling={scaling} />
+        <Method recipe={recipe} scaling={scaling} timers />
       </div>
 
       <Notes detail={detail} name={name} shared={shared} me={me} editable={editable} />

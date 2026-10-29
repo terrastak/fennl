@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // U9 (owner's choices 2026-10-28): timers anywhere in the app, of your own or from a recipe's
@@ -99,4 +100,37 @@ test("A timer of your own: start, pause, change and dismiss it", async ({
   await page.reload();
   await page.getByRole("button", { name: /^Timers, 1 timer/ }).click();
   await expect(timers.getByRole("listitem").filter({ hasText: "Pasta" })).toBeVisible();
+});
+
+// U11 (owner's request 2026-10-29): a time in the recipe page's method starts a timer, quietly
+// marked; on a scaled recipe a step's words still show the original and the working.
+test("A time in a recipe's method starts a timer", async ({ page, context, baseURL }) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add recipe" }).click();
+  await page.getByLabel("Title", { exact: true }).fill("Rice");
+  await page.getByLabel("Serves").fill("4");
+  await page.getByRole("textbox", { name: "Ingredients" }).fill("1 cup rice");
+  await page
+    .getByRole("textbox", { name: "Method" })
+    .fill("Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.");
+  await expect(page.getByText("All changes saved")).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).first().click();
+
+  // Doubled: the amount changes, the times don't, and the words still open the working.
+  await quickScale(page, "2×");
+  const method = page.getByRole("region", { name: "Method" });
+  await expect(method).toContainText(
+    "Add 4 cups water and simmer for ⏱18 minutes, then rest ⏱5 minutes.",
+  );
+  await method.getByRole("button", { name: /^Add 4 cups/ }).click();
+  await expect(method).toContainText("Original: Add 2 cups water and simmer for 18 minutes");
+  await noAccessibilityProblems(page);
+
+  await method.getByRole("button", { name: "Start a 18 minutes timer" }).click();
+  await page.getByRole("button", { name: /^Timers/ }).click();
+  const timers = page.getByRole("dialog", { name: "Timers" });
+  const rice = timers.getByRole("listitem").filter({ hasText: "Step 1 · 18 minutes" });
+  await expect(rice).toContainText("Rice");
+  await expect(rice).toContainText(/1[78]:\d\d/);
 });

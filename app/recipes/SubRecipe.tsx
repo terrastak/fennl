@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
 import { showIngredient, showStep, type UnitSystem } from "../../shared/scale";
+import { stepParts } from "../timers/stepParts";
+import { TimeLink } from "../timers/TimeLink";
 import { linkView, type LinkedRecipe } from "../../shared/subRecipes";
 import { Link } from "../router";
 import { servingsText } from "./format";
@@ -104,9 +106,25 @@ export function SubRecipe({
               <ol className={styles.steps}>
                 {recipe.directions
                   .filter((step) => !step.heading)
-                  .map((step) => (
+                  .map((step, i) => (
                     <li key={step.id}>
-                      <ShownText line={showStep(step.text, { factor: 1, units })} />
+                      {/* Times start timers here too (U11), named for the linked recipe. */}
+                      {(
+                        stepParts(step.text, (words) => showStep(words, { factor: 1, units })) ?? [
+                          { line: showStep(step.text, { factor: 1, units }) },
+                        ]
+                      ).map((part, k) =>
+                        "time" in part ? (
+                          <TimeLink
+                            key={k}
+                            time={part.time}
+                            number={i + 1}
+                            recipeTitle={recipe.title}
+                          />
+                        ) : (
+                          <ShownText key={k} line={part.line} />
+                        ),
+                      )}
                     </li>
                   ))}
               </ol>
