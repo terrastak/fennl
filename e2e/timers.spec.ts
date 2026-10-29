@@ -82,6 +82,15 @@ test("A timer of your own: start, pause, change and dismiss it", async ({
   await expect(quick).toContainText(/0:4\d/);
   await page.clock.fastForward("00:50");
   await expect(quick).toContainText("Done!");
+  if (!phone) {
+    // A finished one floating in the corner opens the list, where it's dismissed.
+    await timers.getByRole("button", { name: "Close" }).click();
+    await page
+      .getByRole("region", { name: "Running timers" })
+      .getByRole("button", { name: /Timer · Done!/ })
+      .click();
+    await expect(timers.getByRole("heading", { name: "Timers" })).toBeVisible();
+  }
   await quick.getByRole("button", { name: "Dismiss Timer" }).click();
   await expect(quick).toHaveCount(0);
   await expect(timers.getByRole("listitem")).toHaveCount(1);
