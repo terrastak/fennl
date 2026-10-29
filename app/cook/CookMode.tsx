@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
   type TouchEvent,
 } from "react";
-import { durationText, stepIngredients, stepTimes } from "../../shared/cook";
+import { durationText, stepIngredients, stepTimes, timerName } from "../../shared/cook";
 import { bakeNote, panName } from "../../shared/pans";
 import type { DirectionStep, IngredientLine, Recipe } from "../../shared/recipe";
 import { showIngredient, showStep } from "../../shared/scale";
@@ -24,6 +24,7 @@ import { openTimers } from "../timers/timersView";
 import {
   askForNotifications,
   canAskForNotifications,
+  fromText,
   startTimer,
   useTimers,
 } from "../timers/timers";
@@ -426,7 +427,7 @@ function StepText({
   recipeTitle,
 }: {
   step: DirectionStep;
-  /** The step's number, which names its timers ("Step 4 · 1½ hours"). */
+  /** The step's number, which its timers carry ("Step 4 · Green Chile Stew"). */
   number: number;
   scaling: Scaling;
   recipeTitle: string;
@@ -446,7 +447,11 @@ function StepText({
         type="button"
         className={styles.timeButton}
         aria-label={`Start a ${durationText(time.seconds)} timer`}
-        onClick={() => startTimer(`Step ${number} · ${time.text}`, time.seconds, recipeTitle)}
+        onClick={() =>
+          startTimer(timerName(step.text, time, times), time.seconds, recipeTitle, {
+            step: number,
+          })
+        }
       >
         <span aria-hidden="true">⏱ </span>
         {time.text}
@@ -476,7 +481,11 @@ function Timers({ recipeTitle }: { recipeTitle: string }) {
             <span className={styles.timerLabel}>
               <span aria-hidden="true">⏱ </span>
               {timer.label}
-              {timer.recipeTitle !== recipeTitle ? ` · ${timer.recipeTitle ?? "your timer"}` : ""}
+              {timer.recipeTitle !== recipeTitle
+                ? ` · ${fromText(timer)}`
+                : timer.step
+                  ? ` · Step ${timer.step}`
+                  : ""}
             </span>
             <TimerButtons timer={timer} now={now} />
           </li>

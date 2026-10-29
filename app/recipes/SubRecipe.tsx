@@ -118,8 +118,10 @@ export function SubRecipe({
                           <TimeLink
                             key={k}
                             time={part.time}
+                            stepText={step.text}
                             number={i + 1}
                             recipeTitle={recipe.title}
+                            atStep={false}
                           />
                         ) : (
                           <ShownText key={k} line={part.line} />

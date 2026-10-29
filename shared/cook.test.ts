@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { clockText, durationText, stepIngredients, stepTimes } from "./cook";
+import { clockText, durationText, stepIngredients, stepTimes, timerName } from "./cook";
 import type { DirectionStep, IngredientLine } from "./recipe";
 
 // Phase F5: cook mode.
@@ -81,6 +81,27 @@ describe("the times a step gives", () => {
       ["2 minutes", 120],
       ["1 minute", 60],
     ]);
+  });
+
+  it("knows a range's other end, for a timer of either", () => {
+    expect(stepTimes("Bake for 9-11 minutes.")[0]).toMatchObject({ seconds: 540, upTo: 660 });
+    expect(stepTimes("Bake 25 to 30 minutes.")[0]).toMatchObject({ seconds: 1500, upTo: 1800 });
+    expect(stepTimes("Simmer for 1 hour 15 minutes.")[0]?.upTo).toBeUndefined();
+  });
+
+  it("names a timer from its step, as the earlier Fennl did", () => {
+    const name = (text: string, i = 0) => timerName(text, stepTimes(text)[i]!);
+    expect(name("Bake for 9-11 minutes.")).toBe("Bake");
+    expect(name("Bake 25 to 30 minutes or until golden.")).toBe("Bake until golden");
+    expect(name("Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.")).toBe(
+      "Add 2 cups water and simmer",
+    );
+    expect(name("Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.", 1)).toBe(
+      "Rest",
+    );
+    expect(name("Preheat the oven. Bake about 25 minutes.")).toBe("Bake");
+    expect(name("Let rise until doubled, about 1 hour.")).toBe("Let rise until doubled");
+    expect(name("15 minutes")).toBe("15 minutes");
   });
 
   it("ignores what isn't a time", () => {

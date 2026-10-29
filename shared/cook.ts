@@ -122,6 +122,8 @@ export interface StepTime {
   text: string;
   /** The timer's length, in seconds: the low end of a range ("check at 25"). */
   seconds: number;
+  /** A range's high end, in seconds ("25 to 30 minutes": 30 minutes); absent for one time. */
+  upTo?: number;
 }
 
 /** Every time a step gives ("bake 25 to 30 minutes", "1 hour 15 minutes"). */
@@ -134,14 +136,49 @@ export function stepTimes(text: string): StepTime[] {
     const more = value(m[4]);
     if (more !== null && m[5]) seconds += more * SECONDS(m[5]);
     if (seconds < 1 || seconds > 48 * 3600) continue;
+    const high = value(m[2]);
+    const upTo =
+      high !== null && high > low
+        ? high * SECONDS(m[3]) + (seconds - low * SECONDS(m[3]))
+        : undefined;
     times.push({
       start: m.index,
       end: m.index + m[0].length,
       text: m[0],
       seconds: Math.round(seconds),
+      ...(upTo ? { upTo: Math.round(upTo) } : {}),
     });
   }
   return times;
+}
+
+/**
+ * A timer's name from its step (owner's choice 2026-10-29, as the earlier Fennl named them):
+ * what the step does around the time, "Bake" for "Bake for 9-11 minutes.", "Bake until golden"
+ * for "Bake 25 minutes or until golden", "Rest" for "…, then rest 5 minutes".
+ */
+export function timerName(stepText: string, time: StepTime, times = stepTimes(stepText)): string {
+  const tidy = (words: string) =>
+    words
+      .replace(/^\s*(?:--+|[–—,:;])+\s*/u, "")
+      .replace(/\s*(?:--+|[–—,:;])+\s*$/u, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  // Only this sentence, and only after a time before it in the step.
+  const earlier = times.filter((t) => t.end <= time.start).at(-1);
+  let before = stepText.slice(earlier?.end ?? 0, time.start);
+  before = before.slice(Math.max(...[".", "!", "?", ";"].map((c) => before.lastIndexOf(c))) + 1);
+  before = tidy(
+    before
+      .replace(/^[\s,]*(?:(?:and|then)\s+)*/iu, "")
+      .replace(/(?:,?\s*(?:for|about|approximately|around|up to|another|a further))+\s*$/iu, ""),
+  );
+  const after = tidy(stepText.slice(time.end));
+  const until = /^(?:or\s+)?((?:until|when|once)\b[^.!?,;]*)/iu.exec(after)?.[1];
+  let name = until ? tidy(`${before} ${until}`) : before;
+  if (!name) name = tidy(after.split(/[.!?](?:\s|$)/u, 1)[0] ?? "") || tidy(stepText) || "Timer";
+  name = name.charAt(0).toUpperCase() + name.slice(1);
+  return name.length > 60 ? `${name.slice(0, 57).trimEnd()}…` : name;
 }
 
 /** A timer's time left, as a clock: "24:59", "1:05:00". */

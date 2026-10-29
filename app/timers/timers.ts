@@ -13,10 +13,12 @@ import { alertsOn, alertsTurnedOff, cancelAlert, scheduleAlert } from "./timerAl
 
 export interface Timer {
   id: string;
-  /** What it's for: "Bake 25 to 30 minutes", or the name someone gave it. */
+  /** What it's for: named from its step ("Bake"), or the name someone gave it. */
   label: string;
   /** The recipe whose step started it; null for a timer of the person's own. */
   recipeTitle: string | null;
+  /** The number of the step that started it (timers started before 2026-10-29 have none). */
+  step?: number;
   seconds: number;
   /** When it ends, in milliseconds since 1970 (while it runs). */
   endsAt: number;
@@ -24,7 +26,7 @@ export interface Timer {
   pausedLeft: number | null;
   /** Rung, and waiting to be dismissed. */
   done: boolean;
-  /** The page it was started on, which its alert opens. */
+  /** The page it was started on (at its step, on the recipe page), which its alert opens. */
   path?: string;
   /**
    * With timer alerts on: "set" once the server will alert this browser when it ends,
@@ -100,17 +102,29 @@ export function timeLeft(timer: Timer, now: number): number {
   return Math.max(0, timer.pausedLeft ?? timer.endsAt - now);
 }
 
-export function startTimer(label: string, seconds: number, recipeTitle: string | null): void {
+/** Where a timer is from, as its card and its alert say: "Step 5 · Banana bread", "Your timer". */
+export function fromText(timer: Pick<Timer, "recipeTitle" | "step">): string {
+  if (!timer.recipeTitle) return "Your timer";
+  return timer.step ? `Step ${timer.step} · ${timer.recipeTitle}` : timer.recipeTitle;
+}
+
+export function startTimer(
+  label: string,
+  seconds: number,
+  recipeTitle: string | null,
+  from: { step?: number; path?: string } = {},
+): void {
   allowSound();
   const timer: Timer = {
     id: crypto.randomUUID(),
     label,
     recipeTitle,
+    ...(from.step ? { step: from.step } : {}),
     seconds,
     endsAt: Date.now() + seconds * 1000,
     pausedLeft: null,
     done: false,
-    path: here(),
+    path: from.path ?? here(),
   };
   set([...timers, timer]);
   askForAlert(timer);
@@ -139,17 +153,19 @@ export function resumeTimer(id: string): void {
   alertFor(id);
 }
 
-/** Sets how long a timer has left, and starts it from there. */
-export function setTimeLeft(id: string, seconds: number): void {
+/** Sets how long a timer has left: running from there, or paused at it. */
+export function setTimeLeft(id: string, seconds: number, running = true): void {
   allowSound();
+  const before = timers.find((t) => t.id === id);
   change(id, (t, now) => ({
     ...t,
     seconds,
     endsAt: now + seconds * 1000,
-    pausedLeft: null,
+    pausedLeft: running ? null : seconds * 1000,
     done: false,
   }));
-  alertFor(id);
+  if (running) alertFor(id);
+  else if (before && !before.done && before.pausedLeft === null && alertsOn()) cancelAlert(id);
 }
 
 /** One more minute on a timer, running, paused or rung. */
@@ -176,7 +192,8 @@ function askForAlert(timer: Timer): void {
   if (!alertsOn() || timer.done || timer.pausedLeft !== null) return;
   void scheduleAlert({
     ...timer,
-    recipeTitle: timer.recipeTitle ?? "",
+    // Said under the alert's title: "Step 5 · Banana bread" (a timer of one's own: nothing).
+    recipeTitle: timer.recipeTitle ? fromText(timer) : "",
     path: timer.path ?? here(),
   }).then((ok) => {
     const current = timers.find((t) => t.id === timer.id);
@@ -222,14 +239,13 @@ function ring(timer: Timer): void {
     // No buzz on this device.
   }
   if (document.visibilityState === "hidden" && notificationsAllowed() && !alertsTurnedOff()) {
-    const text = timer.recipeTitle ? `${timer.label} (${timer.recipeTitle})` : timer.label;
+    const title = `Timer finished: ${timer.label}`;
+    const body = fromText(timer);
     void navigator.serviceWorker?.ready
-      .then((registration) =>
-        registration.showNotification("Timer done", { body: text, tag: timer.id }),
-      )
+      .then((registration) => registration.showNotification(title, { body, tag: timer.id }))
       .catch(() => {
         try {
-          new Notification("Timer done", { body: text, tag: timer.id });
+          new Notification(title, { body, tag: timer.id });
         } catch {
           // Not shown.
         }

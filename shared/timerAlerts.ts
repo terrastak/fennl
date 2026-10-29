@@ -141,14 +141,18 @@ export function cleanTimerAlert(body: unknown, now = Date.now()): TimerAlertBody
   };
 }
 
-/** What the alert says: "Bake 25 to 30 minutes (Banana bread)". */
+/**
+ * What the alert says (owner's choice 2026-10-29, as the earlier Fennl's did): "Timer finished:
+ * Bake", then where it's from, "Step 5 · Banana bread" (the app sends that as `recipeTitle`), or
+ * "Your timer".
+ */
 export function timerPush(
   id: string,
   timer: { label: string; recipeTitle: string; path: string },
 ): TimerPush {
   return {
-    title: "Timer done",
-    body: timer.recipeTitle ? `${timer.label} (${timer.recipeTitle})` : timer.label,
+    title: `Timer finished: ${timer.label}`,
+    body: timer.recipeTitle || "Your timer",
     tag: id,
     path: timer.path,
   };

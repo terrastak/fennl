@@ -37,14 +37,18 @@ describe("a timer to alert about", () => {
     expect(cleanTimerAlert({ ...timer, path: "//evil.example/" }, now)).toBeNull();
   });
 
-  it("says what the timer was for, and for which recipe", () => {
-    expect(timerPush("t1", { label: "Simmer 10 minutes", recipeTitle: "Dal", path: "/" })).toEqual({
-      title: "Timer done",
-      body: "Simmer 10 minutes (Dal)",
+  it("says which timer finished, and where it's from", () => {
+    expect(
+      timerPush("t1", { label: "Simmer", recipeTitle: "Step 2 · Dal", path: "/recipes/r#step-2" }),
+    ).toEqual({
+      title: "Timer finished: Simmer",
+      body: "Step 2 · Dal",
       tag: "t1",
-      path: "/",
+      path: "/recipes/r#step-2",
     });
-    expect(timerPush("t1", { label: "Rest", recipeTitle: "", path: "/" }).body).toBe("Rest");
+    expect(timerPush("t1", { label: "Pasta water", recipeTitle: "", path: "/" }).body).toBe(
+      "Your timer",
+    );
   });
 });
 
