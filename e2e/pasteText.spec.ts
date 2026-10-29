@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { premium, syncStatus } from "./recipes";
-import { useOwnAccount } from "./support";
+import { showFolded, useOwnAccount } from "./support";
 
 // Phase E15: recipe text pasted into the Import page. Clearly laid out text is read without the
 // AI (so Free can use it); anything else is read by the AI (the local test server's stand-in) on
@@ -44,8 +44,10 @@ test("Free: laid out text is read without AI, reviewed beside the pasted text, a
   await expect(page.getByRole("textbox", { name: "Ingredients" })).toHaveValue(/3 ripe bananas/);
 
   const source = page.getByRole("region", { name: "The pasted text" });
-  const show = source.getByRole("button", { name: "Show the pasted text" });
-  if (await show.isVisible()) await show.click();
+  await showFolded(
+    source.getByRole("button", { name: "Show the pasted text" }),
+    source.getByLabel("The text you pasted"),
+  );
   await expect(source.getByLabel("The text you pasted")).toContainText("Serves 8");
   await expect(source).toContainText("only until you save the recipe or discard it");
   // "Read again" is for AI reads only.

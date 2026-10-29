@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
 import { premium, syncStatus } from "./recipes";
-import { useOwnAccount } from "./support";
+import { showFolded, useOwnAccount } from "./support";
 
 // Phase E18: a recipe saved as a document. The file is read on the device; its text goes the
 // way pasted text does (Fennl's own rules when clearly laid out, free; the AI otherwise, here the
@@ -38,8 +38,10 @@ test("Premium: a Word file is read, shown beside the draft, and its photo offere
   await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/, { timeout: 60_000 });
 
   const source = page.getByRole("region", { name: "The document" });
-  const show = source.getByRole("button", { name: "Show the document" });
-  if (await show.isVisible()) await show.click();
+  await showFolded(
+    source.getByRole("button", { name: "Show the document" }),
+    source.getByLabel("The text of Cranberry Oatmeal Chocolate Christmas Cookies.docx"),
+  );
   await expect(
     source.getByLabel("The text of Cranberry Oatmeal Chocolate Christmas Cookies.docx"),
   ).toContainText("1 stick + 6T butter, softened");
