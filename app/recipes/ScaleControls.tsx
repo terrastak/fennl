@@ -1,4 +1,5 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import { Fragment, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import type { StepTime } from "../../shared/cook";
 import type { Recipe } from "../../shared/recipe";
 import { namesAPan } from "../../shared/pans";
 import { servingsFacts } from "../../shared/recipeText";
@@ -10,6 +11,7 @@ import {
   type ShownLine,
   type UnitSystem,
 } from "../../shared/scale";
+import type { StepPart } from "../timers/stepParts";
 import { PanControls } from "./PanControls";
 import { SHOWN_IN, lineText, type Scaling } from "./scaling";
 import styles from "./recipes.module.css";
@@ -386,7 +388,9 @@ export function ShownText({ line }: { line: ShownLine }) {
 
 /**
  * A line that can be tapped to show the original and the working, and, for an ingredient on a
- * scaled recipe, kept at its written amount.
+ * scaled recipe, kept at its written amount. A method step with times comes in `parts` (U11):
+ * its words, and its times drawn by `renderTime` (a timer link); a tap on the words still
+ * shows the working, since a button can't hold another.
  */
 export function ScaledLine({
   text,
@@ -394,18 +398,41 @@ export function ScaledLine({
   scaling,
   lineId,
   canHold,
+  parts,
+  renderTime,
 }: {
   text: string;
   line: ShownLine;
   scaling: Scaling;
   lineId: string;
   canHold: boolean;
+  parts?: StepPart[] | null;
+  renderTime?: (time: StepTime) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const id = useId();
   const held = scaling.held.has(lineId);
   const marked = line.pieces.some((p) => p.unchanged);
-  if (!line.changed && !marked && !held) return <ShownText line={line} />;
+  /** The line's words (each wrapped by `words`) and its times, in order. */
+  const body = (words: (shown: ReactNode, key: number, said: string) => ReactNode) =>
+    parts && renderTime
+      ? parts.map((part, i) =>
+          "time" in part ? (
+            <Fragment key={i}>{renderTime(part.time)}</Fragment>
+          ) : (
+            words(<ShownText line={part.line} />, i, lineText(part.line))
+          ),
+        )
+      : words(<ShownText line={line} />, 0, lineText(line));
+  if (!line.changed && !marked && !held) {
+    return (
+      <>
+        {body((shown, key) => (
+          <Fragment key={key}>{shown}</Fragment>
+        ))}
+      </>
+    );
+  }
 
   const how = [
     scaling.factor === 1 ? "" : factorName(scaling.factor),
@@ -414,16 +441,23 @@ export function ScaledLine({
   const named = how.join(", ");
   return (
     <>
-      <button
-        type="button"
-        className={styles.lineButton}
-        aria-expanded={open}
-        aria-controls={`${id}-working`}
-        onClick={() => setOpen(!open)}
-      >
-        <ShownText line={line} />
-        {held ? <span className={styles.heldTag}> · kept as written</span> : null}
-      </button>
+      {body((shown, key, said) => (
+        // A button drops the spaces at its ends, so those between words and a time go outside.
+        <Fragment key={key}>
+          {parts && /^\s/.test(said) ? " " : null}
+          <button
+            type="button"
+            className={styles.lineButton}
+            aria-expanded={open}
+            aria-controls={`${id}-working`}
+            onClick={() => setOpen(!open)}
+          >
+            {shown}
+            {held && !parts ? <span className={styles.heldTag}> · kept as written</span> : null}
+          </button>
+          {parts && /\s$/.test(said) ? " " : null}
+        </Fragment>
+      ))}
       <div id={`${id}-working`} className={styles.working} hidden={!open}>
         <p>Original: {text}</p>
         {line.changed ? (
