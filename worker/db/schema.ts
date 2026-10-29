@@ -842,3 +842,60 @@ export const aiOutcome = sqliteTable(
   },
   (table) => [index("ai_outcome_decided_idx").on(table.decidedAt)],
 );
+
+/**
+ * Browsers that asked for timer alerts with the phone locked (U10, owner's choices 2026-10-28;
+ * worker/push/). One per person per browser (device id, as in the device registry): the address
+ * the browser's push service gave it and the keys that encrypt what's sent there. Not synced
+ * records: the person's own, gone with the account or when they turn alerts off.
+ */
+export const pushSubscription = sqliteTable(
+  "push_subscription",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    deviceId: text("device_id").notNull(),
+    /** The push service's address for this browser (Apple, Google, Mozilla or Microsoft). */
+    endpoint: text("endpoint").notNull(),
+    /** The browser's public key and secret for encrypting (base64url). */
+    p256dh: text("p256dh").notNull(),
+    auth: text("auth").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.deviceId] }),
+    index("push_subscription_endpoint_idx").on(table.endpoint),
+  ],
+);
+
+/**
+ * Timers that alert the browser that started them when they finish (U10;
+ * worker/push/timerAlerts.ts). The id is the timer's own, made on the device. A delayed queue
+ * message wakes the Worker at `ends_at`; +1 min moves `ends_at` (the earlier message then finds
+ * it changed and does nothing), Stop sets `cancelled_at`. Removed a day after they end.
+ */
+export const timerAlert = sqliteTable(
+  "timer_alert",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    deviceId: text("device_id").notNull(),
+    /** What it's for ("Bake 25 to 30 minutes") and the recipe, shown in the alert. */
+    label: text("label").notNull(),
+    recipeTitle: text("recipe_title").notNull(),
+    /** The page the timer was started on, which the alert opens. */
+    path: text("path").notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+    sentAt: integer("sent_at", { mode: "timestamp_ms" }),
+    cancelledAt: integer("cancelled_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.id] }),
+    index("timer_alert_ends_idx").on(table.endsAt),
+  ],
+);

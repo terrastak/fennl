@@ -1,7 +1,9 @@
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { clockText } from "../../shared/cook";
+import { turnOnAlerts, useAlertsState, type AlertsState } from "./timerAlerts";
 import {
   addMinute,
+  alertRunningTimers,
   askForNotifications,
   canAskForNotifications,
   pauseTimer,
@@ -70,7 +72,7 @@ const PRESETS = [1, 3, 5, 10, 15, 30, 60];
 
 function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; titleId: string }) {
   const [name, setName] = useState("");
-  const [askable, setAskable] = useState(canAskForNotifications);
+  const alerts = useAlertsState();
   const nameId = useId();
   const start = (minutes: number) => {
     startTimer(name.trim() || "Timer", minutes * 60, null);
@@ -98,21 +100,22 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
                 </span>
               </span>
               <TimerButtons timer={timer} now={now} fromList />
+              {alerts === "on" &&
+              !timer.done &&
+              timer.pausedLeft === null &&
+              timer.alert === "not-set" ? (
+                <p className={styles.note}>
+                  No alert with the phone locked for this one: Fennl couldn&rsquo;t reach the
+                  internet. It still rings while Fennl is on screen.
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
       ) : (
         <p className={styles.hint}>No timers running.</p>
       )}
-      {timers.length > 0 && askable ? (
-        <button
-          type="button"
-          className={styles.quiet}
-          onClick={() => void askForNotifications().then(() => setAskable(false))}
-        >
-          Tell me when a timer finishes while I&rsquo;m in another app
-        </button>
-      ) : null}
+      {timers.length > 0 ? <TimerAlertsOffer state={alerts} /> : null}
       <section className={styles.new} aria-labelledby={`${titleId}-new`}>
         <h3 id={`${titleId}-new`} className={styles.newTitle}>
           New timer
@@ -147,6 +150,68 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
       </section>
     </div>
   );
+}
+
+/**
+ * Under the timers (U10, owner's choices 2026-10-28): the offer to alert with the phone locked,
+ * or, in an iPhone or iPad's Safari tab, how to get it. A browser that can't take alerts from the
+ * server can still show one while it runs Fennl.
+ */
+function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
+  const [result, setResult] = useState<"blocked" | "failed" | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [askable, setAskable] = useState(canAskForNotifications);
+
+  if (state === "off") {
+    return (
+      <>
+        <button
+          type="button"
+          className={styles.quiet}
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            setResult(null);
+            void turnOnAlerts().then((outcome) => {
+              setBusy(false);
+              if (outcome === "on") alertRunningTimers();
+              else setResult(outcome);
+            });
+          }}
+        >
+          Alert me when a timer finishes, even with the phone locked
+        </button>
+        {result ? (
+          <p role="alert" className={styles.hint}>
+            {result === "blocked"
+              ? "Notifications are turned off for Fennl in this browser’s settings. Allow them there to get timer alerts."
+              : "Couldn’t turn on timer alerts. Check your connection and try again."}
+          </p>
+        ) : null}
+      </>
+    );
+  }
+  if (state === "home-screen") {
+    return (
+      <p className={styles.hint}>
+        For timer alerts with the phone locked, add Fennl to your Home Screen: in Safari, tap Share
+        (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open Fennl from
+        its icon.
+      </p>
+    );
+  }
+  if (state === "unavailable" && askable) {
+    return (
+      <button
+        type="button"
+        className={styles.quiet}
+        onClick={() => void askForNotifications().then(() => setAskable(false))}
+      >
+        Tell me when a timer finishes while I&rsquo;m in another app
+      </button>
+    );
+  }
+  return null;
 }
 
 /**

@@ -47,6 +47,12 @@ import { removeOldOutcomes } from "./ai/outcomes";
 import { importRoutes } from "./import/routes";
 import { versionRoutes } from "./versions/routes";
 import { arrangeRoutes } from "./images/arrange";
+import { pushRoutes } from "./push/routes";
+import {
+  deliverTimerAlerts,
+  removeOldTimerAlerts,
+  type TimerAlertMessage,
+} from "./push/timerAlerts";
 
 // Every request reaches this Worker first (run_worker_first in wrangler.jsonc). It answers /api/*,
 // keeps the admin area to its own address, and hands everything else to the built files.
@@ -202,6 +208,9 @@ app.route("/", savedSearchRoutes);
 app.route("/", duplicateRoutes);
 app.route("/", versionRoutes);
 app.route("/", arrangeRoutes);
+
+// Timers that alert the phone with the screen locked (U10).
+app.route("/", pushRoutes);
 
 // The caller's household, for the Account page.
 app.get("/api/household", requireHousehold, async (c) => {
@@ -376,7 +385,8 @@ app.notFound((c) => {
 /**
  * Scheduled work (wrangler.jsonc "triggers"). Every hour: remove accounts whose email was never
  * verified (worker/account/purge.ts), delete for good recipes in Trash for more than 30 days
- * (worker/sync/trash.ts), and remove import drafts nobody reviewed (worker/import/jobs.ts).
+ * (worker/sync/trash.ts), remove import drafts nobody reviewed (worker/import/jobs.ts) and
+ * timer alerts a day after they ended (worker/push/timerAlerts.ts).
  */
 async function scheduled(controller: ScheduledController, env: Env) {
   const db = database(env.DB);
@@ -391,6 +401,8 @@ async function scheduled(controller: ScheduledController, env: Env) {
   if (drafts > 0) console.log(`Removed ${drafts} import draft(s) never reviewed`);
   const outcomes = await removeOldOutcomes(db);
   if (outcomes > 0) console.log(`Removed ${outcomes} AI import outcome(s) over two years old`);
+  const alerts = await removeOldTimerAlerts(db);
+  if (alerts > 0) console.log(`Removed ${alerts} finished timer alert(s)`);
   const importPhotos = await removeImportPhotos(db, env.IMAGES);
   if (importPhotos > 0) console.log(`Removed ${importPhotos} photo(s) kept for finished imports`);
 
@@ -414,4 +426,9 @@ async function scheduled(controller: ScheduledController, env: Env) {
   }
 }
 
-export default { fetch: app.fetch, scheduled } satisfies ExportedHandler<Env>;
+export default {
+  fetch: app.fetch,
+  scheduled,
+  // The TIMER_ALERTS queue (U10): a timer's alert, delivered when it ends.
+  queue: deliverTimerAlerts,
+} satisfies ExportedHandler<Env, TimerAlertMessage>;

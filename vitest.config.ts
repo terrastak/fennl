@@ -42,6 +42,9 @@ export default defineConfig({
                 ACCESS_DEV_BYPASS: "true",
                 ADMIN_ALERT_EMAIL: "owner@example.com",
                 AI_PROVIDER: "fake",
+                // The local development push key (.dev.vars.example), for timer alerts (U10).
+                PUSH_PRIVATE_KEY:
+                  '{"kty":"EC","x":"H8kX46jxo62ovZPcnLW1_efgiORXlUVVDWkD-XXLpoU","y":"IH07xqLY666avOEBMlb08fgTU5nvTLlWXBlayMCbGpU","crv":"P-256","d":"fOcwc7gEDDmjVYHyE-8_jO2hxZF_Ntu9wE5T1yp-X_c"}',
               },
             },
           })),

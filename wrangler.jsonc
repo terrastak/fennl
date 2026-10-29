@@ -59,6 +59,20 @@
       "bucket_name": "fennl-images",
     },
   ],
+  // TIMER_ALERTS: timers that alert the phone with the screen locked (U10,
+  // worker/push/). Starting a timer sends a message delayed until it ends; this Worker's queue
+  // handler then sends the push. CI creates the queue. Waits at most a second to gather a batch.
+  "queues": {
+    "producers": [{ "binding": "TIMER_ALERTS", "queue": "fennl-timer-alerts" }],
+    "consumers": [
+      {
+        "queue": "fennl-timer-alerts",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 3,
+      },
+    ],
+  },
   "workers_dev": false,
   "preview_urls": false,
   "env": {
@@ -84,6 +98,19 @@
           "bucket_name": "fennl-images-preview",
         },
       ],
+      // Queue messages go to the preview Worker's deployed version, not a pull request's
+      // preview link, so timer alerts can only be tried on the real app.
+      "queues": {
+        "producers": [{ "binding": "TIMER_ALERTS", "queue": "fennl-timer-alerts-preview" }],
+        "consumers": [
+          {
+            "queue": "fennl-timer-alerts-preview",
+            "max_batch_size": 10,
+            "max_batch_timeout": 1,
+            "max_retries": 3,
+          },
+        ],
+      },
     },
   },
 }

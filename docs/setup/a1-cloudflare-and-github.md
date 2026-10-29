@@ -30,14 +30,25 @@ Checked against Cloudflare's docs on 2026-10-01. If a screen looks different fro
 1. Click your profile icon (top right) then **My Profile**, then **API Tokens** in the left menu.
 2. Click **Create Token**.
 3. Next to the **Edit Cloudflare Workers** template, click **Use template**.
-4. The template already includes Workers, KV, R2, and route permissions. **Add one more row** for the database:
-   - Click **+ Add more** under Permissions.
-   - Choose **Account**, then **D1**, then **Edit**.
+4. The template already includes Workers, KV, R2, and route permissions. **Add two more rows**, for the database and for timer alerts' queue:
+   - Click **+ Add more** under Permissions, then choose **Account**, then **D1**, then **Edit**.
+   - Click **+ Add more** again, then choose **Account**, then **Queues**, then **Edit**.
 5. Under **Account Resources**, choose **Include** and select **your account** (not "All accounts").
 6. Under **Zone Resources**, choose **Include**, **Specific zone**, **fennl.app**.
 7. Leave **Client IP Address Filtering** empty. Optionally set **TTL** (an expiry date). If you set one, put a reminder in your calendar to replace the token before it expires.
 8. Click **Continue to summary**, check that it lists your account and `fennl.app`, then **Create Token**.
 9. **Copy the token now.** Cloudflare shows it only once. Don't paste it into chat, email, or any file. If you lose it, just delete it and make a new one.
+
+### Adding Queues to a token made before 2026-10-28
+
+Timer alerts (U10) need a queue, which CI creates, so a token made before then needs one more permission. Steps from Cloudflare's "Create API token" page (checked 2026-10-28), which says a token can be edited after it's made but doesn't show the screen, so tell Claude what you see if it differs:
+
+1. Click your profile icon (top right) then **My Profile**, then **API Tokens** in the left menu.
+2. Find Fennl's token in the list, open the **⋯** menu at the end of its row and choose **Edit**.
+3. Under Permissions, click **+ Add more**, then choose **Account**, then **Queues**, then **Edit**.
+4. Click **Continue to summary**, check it lists **Queues: Edit** with the others, then save.
+
+If Cloudflare shows a new token value after saving, put it in GitHub as `CLOUDFLARE_API_TOKEN` (Step 4); otherwise nothing changes there.
 
 ## Step 4: Store the settings in GitHub
 

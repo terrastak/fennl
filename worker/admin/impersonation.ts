@@ -37,6 +37,8 @@ const REFUSED = [
   "/api/devices/takeover",
   // A key for the Chrome extension would outlive the session (phase E5).
   "/api/extension/links",
+  // Timer alerts go to the person's own browsers (U10); an admin's isn't one.
+  "/api/push/subscription",
 ];
 
 /** Writes that change nothing while acting as someone, so aren't worth a log entry. */

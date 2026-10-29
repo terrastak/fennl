@@ -14,6 +14,8 @@
 // - The API, the admin area and the storage test are never kept or answered from here.
 // - A new build's worker takes over straight away and removes the old files. An open page then
 //   offers to reload (app/sync/version.ts).
+// - Timer alerts (U10, app/timers/timerAlerts.ts): a push from the server is shown as a
+//   notification, and tapping it brings Fennl back.
 
 const CACHE = `fennl-app-${BUILD}`;
 const PAGE = "/";
@@ -64,5 +66,62 @@ self.addEventListener("fetch", (event) => {
     caches
       .match(request, { cacheName: CACHE, ignoreVary: true })
       .then((kept) => kept ?? fetch(request)),
+  );
+});
+
+// A timer alert from the server (U10). Every push must show a notification (browsers stop
+// delivering them otherwise). When Fennl is on screen the timer has rung there already (timers
+// ring on every page, U9), so the notification is taken away again straight after, except
+// through Apple's push service: Apple ends the subscription of a site whose pushes show
+// nothing, and doesn't say whether one taken away counts, so there it stays.
+self.addEventListener("push", (event) => {
+  let alert = null;
+  try {
+    alert = event.data ? event.data.json() : null;
+  } catch {
+    alert = null;
+  }
+  const title = (alert && alert.title) || "Fennl";
+  const path = (alert && typeof alert.path === "string" && alert.path) || "/";
+  event.waitUntil(
+    (async () => {
+      await self.registration.showNotification(title, {
+        body: (alert && alert.body) || "",
+        tag: (alert && alert.tag) || undefined,
+        data: { path },
+      });
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const ringing = windows.some(
+        (client) =>
+          client.visibilityState === "visible" &&
+          !new URL(client.url).pathname.startsWith("/admin"),
+      );
+      const subscription = await self.registration.pushManager.getSubscription();
+      const apple = Boolean(
+        subscription && /\.push\.apple\.com$/.test(new URL(subscription.endpoint).hostname),
+      );
+      if (ringing && !apple && alert && alert.tag) {
+        const shown = await self.registration.getNotifications({ tag: alert.tag });
+        for (const notification of shown) notification.close();
+      }
+    })(),
+  );
+});
+
+// Tapping an alert: back to Fennl, where the timers show on every page; opened on the page that
+// started the timer when Fennl isn't open.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const path = (event.notification.data && event.notification.data.path) || "/";
+  const url = new URL(path, self.location.origin);
+  if (url.origin !== self.location.origin) return;
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const open =
+        windows.find((client) => new URL(client.url).pathname === url.pathname) ?? windows[0];
+      if (open) return open.focus();
+      return self.clients.openWindow(url.href);
+    })(),
   );
 });

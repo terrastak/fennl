@@ -22,6 +22,8 @@
 # Worker secrets are written to a temporary file and uploaded with each version (--secrets-file).
 # BETTER_AUTH_SECRET is generated here, never stored in GitHub: production creates it once and
 # keeps it; previews get a new one on every push (preview sign-ins don't need to survive pushes).
+# PUSH_PRIVATE_KEY (timer alerts, U10) is made the same way. Timer alerts also need the queue CI
+# creates, so the API token needs the Queues Edit permission.
 name: CI
 
 on:
@@ -254,6 +256,20 @@ jobs:
           else
             npx wrangler r2 bucket lifecycle add "$bucket" abort-incomplete-uploads --abort-multipart-days 1 --force
           fi
+      - name: Create the timer alerts queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Timer alerts (U10, worker/push/). The name comes from the built config.
+          queue=$(node -p 'require("./dist/fennl/wrangler.json").queues.producers.find((q) => q.binding === "TIMER_ALERTS").queue')
+          if npx wrangler queues info "$queue" > /dev/null 2>&1; then
+            echo "Queue $queue exists."
+          elif npx wrangler queues create "$queue"; then
+            echo "Created queue $queue."
+          else
+            echo "::error::Couldn't create the queue $queue. The CLOUDFLARE_API_TOKEN needs the Queues Edit permission (docs/setup/a1-cloudflare-and-github.md, Step 3)."
+            exit 1
+          fi
       - name: Prepare preview secrets
         shell: bash
         run: |
@@ -262,7 +278,7 @@ jobs:
           # links change with every pull request, so previews offer email and password only.
           node scripts/worker-secrets.mjs "$RUNNER_TEMP/secrets.json" \
             RESEND_API_KEY EMAIL_FROM ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL \
-            ANTHROPIC_API_KEY --new-auth-secret
+            ANTHROPIC_API_KEY --new-auth-secret --new-push-key
           if [ -z "${RESEND_API_KEY:-}" ] || [ -z "${EMAIL_FROM:-}" ]; then
             echo "::warning::RESEND_API_KEY or EMAIL_FROM isn't set, so this preview can't send sign-up emails (docs/setup/b2-email-and-sign-in.md)."
           fi
@@ -429,6 +445,20 @@ jobs:
           else
             npx wrangler r2 bucket lifecycle add "$bucket" abort-incomplete-uploads --abort-multipart-days 1 --force
           fi
+      - name: Create the timer alerts queue
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Timer alerts (U10, worker/push/). The name comes from the built config.
+          queue=$(node -p 'require("./dist/fennl/wrangler.json").queues.producers.find((q) => q.binding === "TIMER_ALERTS").queue')
+          if npx wrangler queues info "$queue" > /dev/null 2>&1; then
+            echo "Queue $queue exists."
+          elif npx wrangler queues create "$queue"; then
+            echo "Created queue $queue."
+          else
+            echo "::error::Couldn't create the queue $queue. The CLOUDFLARE_API_TOKEN needs the Queues Edit permission (docs/setup/a1-cloudflare-and-github.md, Step 3)."
+            exit 1
+          fi
       - name: Prepare production secrets
         shell: bash
         run: |
@@ -445,6 +475,11 @@ jobs:
           if ! jq -e 'any(.[]; .name == "BETTER_AUTH_SECRET")' <<< "$existing" > /dev/null; then
             echo "Creating BETTER_AUTH_SECRET for production."
             extra+=(--new-auth-secret)
+          fi
+          # Likewise the push key for timer alerts (U10): every browser's alerts depend on it.
+          if ! jq -e 'any(.[]; .name == "PUSH_PRIVATE_KEY")' <<< "$existing" > /dev/null; then
+            echo "Creating PUSH_PRIVATE_KEY for production."
+            extra+=(--new-push-key)
           fi
           node scripts/worker-secrets.mjs "$RUNNER_TEMP/secrets.json" \
             RESEND_API_KEY EMAIL_FROM GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET \
