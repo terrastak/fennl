@@ -5,6 +5,7 @@ import {
   cleanTimerAlert,
   isTimerId,
   MAX_WAITING_ALERTS,
+  TEST_PUSH,
 } from "../../shared/timerAlerts";
 import { isDeviceId } from "../../shared/devices";
 import type { Database } from "../db/client";
@@ -12,7 +13,7 @@ import { device, pushSubscription, timerAlert } from "../db/schema";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
 import { scheduleTimerAlert } from "./timerAlerts";
-import { pushKey } from "./webPush";
+import { pushKey, sendPush } from "./webPush";
 
 // Timer alerts with the phone locked (U10, owner's choices 2026-10-28). Every plan. A browser
 // subscribes once (Settings › Timer alerts, or the Timers window), then each timer tells the
@@ -25,6 +26,8 @@ export const pushRoutes = new Hono<SessionEnv>();
 
 /** Changes per person per minute: starting, +1 min and stopping timers, with room to spare. */
 const CHANGES_PER_MINUTE = 120;
+/** Test alerts per person per minute. */
+const TESTS_PER_MINUTE = 5;
 
 pushRoutes.use("/api/push/*", requireHousehold);
 
@@ -123,6 +126,55 @@ pushRoutes.get("/api/push/subscription", async (c) => {
     )
     .get();
   return c.json({ endpoint: row?.endpoint ?? null });
+});
+
+/**
+ * Settings › Timer alerts › Send a test alert (owner's request 2026-10-29): an alert to this
+ * browser now, through its push service like a timer's, so the person can see that nothing on
+ * the computer or phone holds alerts back.
+ */
+pushRoutes.post("/api/push/test", async (c) => {
+  const signedIn = c.var.signedIn;
+  if (signedIn.impersonating) return c.json({ error: "not_while_impersonating" }, 403);
+  const body = await c.req.json<{ deviceId?: unknown }>().catch(() => null);
+  const deviceId = body?.deviceId;
+  if (!isDeviceId(deviceId)) return c.json({ error: "invalid_request" }, 400);
+  const { db, userId } = signedIn;
+  if (
+    !(await withinRateLimit(db, `push-test:${userId}`, { max: TESTS_PER_MINUTE, windowMs: 60_000 }))
+  ) {
+    return c.json({ error: "rate_limited" }, 429);
+  }
+  const browser = await db
+    .select()
+    .from(pushSubscription)
+    .where(and(eq(pushSubscription.userId, userId), eq(pushSubscription.deviceId, deviceId)))
+    .get();
+  const key = await pushKey(c.env.PUSH_PRIVATE_KEY);
+  if (!browser || !key) return c.json({ error: "not_subscribed" }, 409);
+  const origin = new URL(c.req.url).origin;
+  const result = await sendPush(
+    browser,
+    TEST_PUSH,
+    key,
+    origin.startsWith("https:") ? origin : "mailto:dev@localhost",
+    { ttlSeconds: 60 },
+  );
+  if (result === "gone") {
+    // The browser's subscription has ended: it's turned on again from Settings.
+    await db
+      .delete(pushSubscription)
+      .where(
+        and(
+          eq(pushSubscription.userId, userId),
+          eq(pushSubscription.deviceId, browser.deviceId),
+          eq(pushSubscription.endpoint, browser.endpoint),
+        ),
+      );
+    return c.json({ error: "not_subscribed" }, 409);
+  }
+  if (result === "failed") return c.json({ error: "push_service_unavailable" }, 503);
+  return c.json({ ok: true });
 });
 
 /** A timer started, or given another minute: alert this browser when it ends. */

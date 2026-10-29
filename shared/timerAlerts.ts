@@ -43,7 +43,18 @@ export interface TimerPush {
   /** The timer's id: the alert replaces one already shown for the same timer. */
   tag: string;
   path: string;
+  /** A test from Settings: shown even with Fennl on screen, where a timer's has rung already. */
+  test?: boolean;
 }
+
+/** What Settings › Timer alerts › Send a test alert sends (owner's request 2026-10-29). */
+export const TEST_PUSH: TimerPush = {
+  title: "Fennl test alert",
+  body: "Timer alerts work on this browser.",
+  tag: "fennl-test",
+  path: "/settings#timer-alerts",
+  test: true,
+};
 
 /**
  * The push services browsers use (Apple, Google for Chrome, Edge's Microsoft one, Mozilla).

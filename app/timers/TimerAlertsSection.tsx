@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { alertNeeds, type AlertNeeds } from "../../shared/timerAlerts";
 import styles from "../pages/SettingsPage.module.css";
 import recipeStyles from "../recipes/recipes.module.css";
-import { turnOffAlerts, turnOnAlerts, useAlertsState } from "./timerAlerts";
+import { sendTestAlert, turnOffAlerts, turnOnAlerts, useAlertsState } from "./timerAlerts";
 
 /**
  * Settings › Timer alerts (U10, owner's choices 2026-10-28): whether this browser gets an alert
  * when a timer finishes, even with the phone locked, and a way to turn it on or off.
  * It's per browser: each phone, tablet or computer is turned on by itself. What this browser
  * needs for an alert to arrive is said too (owner's request 2026-10-29), above all a computer's
- * browser that must stay running.
+ * browser that must stay running. Send a test alert (owner's request 2026-10-29) shows that
+ * nothing on the device holds alerts back.
  */
 export function TimerAlertsSection() {
   const state = useAlertsState();
@@ -21,6 +22,7 @@ export function TimerAlertsSection() {
   }, [state]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
+  const [tested, setTested] = useState(false);
 
   const turnOn = () => {
     setBusy(true);
@@ -40,7 +42,21 @@ export function TimerAlertsSection() {
   const turnOff = () => {
     setBusy(true);
     setProblem(null);
+    setTested(false);
     void turnOffAlerts().finally(() => setBusy(false));
+  };
+
+  const test = () => {
+    setBusy(true);
+    setProblem(null);
+    setTested(false);
+    void sendTestAlert().then((outcome) => {
+      setBusy(false);
+      if (outcome === "sent") setTested(true);
+      else if (outcome === "off") {
+        setProblem("This browser no longer gets timer alerts. Turn them on again to test them.");
+      } else setProblem("Couldn’t send a test alert. Check your connection and try again.");
+    });
   };
 
   return (
@@ -54,14 +70,20 @@ export function TimerAlertsSection() {
       {state === null ? null : state === "on" ? (
         <>
           <p className={styles.help}>On for this browser.</p>
-          <button
-            type="button"
-            className={recipeStyles.secondary}
-            disabled={busy}
-            onClick={turnOff}
-          >
-            Turn off
-          </button>
+          <div className={styles.buttonRow}>
+            <button type="button" className={recipeStyles.secondary} disabled={busy} onClick={test}>
+              Send a test alert
+            </button>
+            <button
+              type="button"
+              className={recipeStyles.secondary}
+              disabled={busy}
+              onClick={turnOff}
+            >
+              Turn off
+            </button>
+          </div>
+          {tested ? <TestSent /> : null}
         </>
       ) : state === "off" ? (
         <>
@@ -145,5 +167,39 @@ function WhatItNeeds() {
         </li>
       </ul>
     </>
+  );
+}
+
+/** After a test alert: when it should show, and what to check on this device if it doesn't. */
+function TestSent() {
+  const [needs] = useState<AlertNeeds>(() =>
+    alertNeeds(navigator.userAgent, navigator.maxTouchPoints > 1),
+  );
+  const phone = needs.kind === "phone";
+  return (
+    <div role="status" className={styles.help}>
+      <p>
+        Sent. &ldquo;Fennl test alert&rdquo; should appear within a few seconds. If it
+        doesn&rsquo;t, check:
+      </p>
+      <ul>
+        {phone ? (
+          <li>Notifications are allowed for Fennl in the {"device’s"} settings.</li>
+        ) : needs.system === "mac" ? (
+          <li>
+            On the Mac: System Settings › Notifications › {needs.browser}, with notifications
+            allowed.
+          </li>
+        ) : needs.system === "windows" ? (
+          <li>
+            In Windows: Settings › System › Notifications, with notifications on, and on for{" "}
+            {needs.browser}.
+          </li>
+        ) : (
+          <li>Notifications are allowed for {needs.browser} in the computer&rsquo;s settings.</li>
+        )}
+        <li>Do Not Disturb or a Focus isn&rsquo;t on.</li>
+      </ul>
+    </div>
   );
 }

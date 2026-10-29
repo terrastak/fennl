@@ -100,7 +100,8 @@ self.addEventListener("push", (event) => {
       const apple = Boolean(
         subscription && /\.push\.apple\.com$/.test(new URL(subscription.endpoint).hostname),
       );
-      if (ringing && !apple && alert && alert.tag) {
+      // A test from Settings is meant to be seen, on screen or not.
+      if (ringing && !apple && alert && alert.tag && !alert.test) {
         const shown = await self.registration.getNotifications({ tag: alert.tag });
         for (const notification of shown) notification.close();
       }

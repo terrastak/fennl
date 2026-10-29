@@ -188,6 +188,28 @@ export async function turnOffAlerts(): Promise<void> {
 }
 
 /**
+ * Settings › Timer alerts › Send a test alert: the server sends this browser an alert now.
+ * "sent" means the push service took it; whether it shows is up to the device's settings.
+ */
+export async function sendTestAlert(): Promise<"sent" | "off" | "failed"> {
+  try {
+    const res = await fetch("/api/push/test", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ deviceId: deviceId() }),
+    });
+    if (res.status === 409) {
+      // The server no longer has this browser: offer to turn alerts on again.
+      setFlag(null);
+      return "off";
+    }
+    return res.ok ? "sent" : "failed";
+  } catch {
+    return "failed";
+  }
+}
+
+/**
  * Asks the server to alert this browser when a timer ends (started, or given another minute).
  * True once it will; false when it can't (no connection), so the timer can say so.
  */

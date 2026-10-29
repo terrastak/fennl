@@ -129,6 +129,19 @@ test("Turn on timer alerts from the Timers window, and off in Settings", async (
   await expect(section).toContainText("On for this browser.");
   // What this browser needs: a computer's Chrome only while it runs.
   await expect(section).toContainText("Alerts arrive only while Chrome is running.");
+
+  // A test alert. The test browser's push address is made up, so the push service's answer is
+  // stood in for; the server's sending is covered by its own tests.
+  await page.route("**/api/push/test", (route) => route.fulfill({ json: { ok: true } }));
+  const tested = page.waitForRequest("**/api/push/test");
+  await section.getByRole("button", { name: "Send a test alert" }).click();
+  expect((await tested).postDataJSON()).toHaveProperty("deviceId");
+  const sent = section.getByRole("status");
+  await expect(sent).toContainText("“Fennl test alert” should appear within a few seconds.");
+  // What to check on this computer (the test browser says it's Chrome on Windows).
+  await expect(sent).toContainText("Settings › System › Notifications");
+  await expect(sent).toContainText("Do Not Disturb or a Focus isn’t on.");
+
   await section.getByRole("button", { name: "Turn off" }).click();
   await expect(section).toContainText("Off for this browser.");
   await section.getByRole("button", { name: "Turn on" }).click();

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:test";
 import { and, eq } from "drizzle-orm";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import type { TimerPush } from "../../shared/timerAlerts";
+import { TEST_PUSH, type TimerPush } from "../../shared/timerAlerts";
 import { database } from "../db/client";
 import { pushSubscription, timerAlert, user } from "../db/schema";
 import { setUpDatabase, signUpConfirmed, type Visitor } from "../test/visitor";
@@ -404,6 +404,59 @@ describe("sending the alert", () => {
       .where(eq(pushSubscription.userId, other.p.userId))
       .all();
     expect(gone).toEqual([]);
+  });
+});
+
+describe("a test alert from Settings", () => {
+  it("is sent to this browser at once, and says it's a test", async () => {
+    const p = await person();
+    const keys = await browserKeys();
+    await subscribe(p, keys);
+    const fetched = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => new Response(null, { status: 201 }));
+    expect(await call(p.v, "POST", "/api/push/test", { deviceId: p.deviceId })).toEqual({
+      status: 200,
+      body: { ok: true },
+    });
+    const [url, init] = fetched.mock.calls[0]!;
+    expect(url).toBe(endpoint(p));
+    expect((init!.headers as Record<string, string>).ttl).toBe("60");
+    expect(await decrypt(init!.body as Uint8Array<ArrayBuffer>, keys)).toEqual(TEST_PUSH);
+  });
+
+  it("needs this browser turned on, and forgets one whose subscription has ended", async () => {
+    const p = await person();
+    expect(await call(p.v, "POST", "/api/push/test", { deviceId: p.deviceId })).toMatchObject({
+      status: 409,
+      body: { error: "not_subscribed" },
+    });
+    await subscribe(p);
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(null, { status: 410 }),
+    );
+    expect(await call(p.v, "POST", "/api/push/test", { deviceId: p.deviceId })).toMatchObject({
+      status: 409,
+    });
+    const rows = await db()
+      .select()
+      .from(pushSubscription)
+      .where(eq(pushSubscription.userId, p.userId))
+      .all();
+    expect(rows).toEqual([]);
+  });
+
+  it("says when the push service can't take it, and is limited to a few a minute", async () => {
+    const p = await person();
+    await subscribe(p);
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => new Response(null, { status: 503 }),
+    );
+    const statuses = [];
+    for (let i = 0; i < 6; i++) {
+      statuses.push((await call(p.v, "POST", "/api/push/test", { deviceId: p.deviceId })).status);
+    }
+    expect(statuses).toEqual([503, 503, 503, 503, 503, 429]);
   });
 });
 
