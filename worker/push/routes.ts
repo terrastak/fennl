@@ -16,7 +16,7 @@ import { scheduleTimerAlert } from "./timerAlerts";
 import { pushKey, sendPush } from "./webPush";
 
 // Timer alerts with the phone locked (U10, owner's choices 2026-10-28). Every plan. A browser
-// subscribes once (Settings › Timer alerts, or the Timers window), then each timer tells the
+// subscribes once (Settings › Timer notifications, or the Timers window), then each timer tells the
 // server when it ends, and only the browser that started it gets the alert. The person's own
 // rows only; never while an admin acts as someone (it isn't their device).
 
@@ -129,7 +129,7 @@ pushRoutes.get("/api/push/subscription", async (c) => {
 });
 
 /**
- * Settings › Timer alerts › Send a test alert (owner's request 2026-10-29): an alert to this
+ * Settings › Timer notifications › Send a test notification (owner's request 2026-10-29): an alert to this
  * browser now, through its push service like a timer's, so the person can see that nothing on
  * the computer or phone holds alerts back.
  */

@@ -88,7 +88,7 @@ test("Turn on timer alerts from the Timers window, and off in Settings", async (
 
   // Turning on asks the server for an alert for the timer already running.
   const offer = timers.getByRole("button", {
-    name: "Alert me when a timer finishes, even with the phone locked",
+    name: "Notify me when a timer finishes, even when Fennl isn’t on screen",
   });
   const asked = timerRequest(page, "PUT");
   await offer.click();
@@ -118,26 +118,26 @@ test("Turn on timer alerts from the Timers window, and off in Settings", async (
 
   // On a computer, the window says the browser must keep running, and links to Settings.
   await expect(timers).toContainText(
-    "Alerts arrive only while Chrome is running. More in Settings › Timer alerts.",
+    "Notifications arrive only while Chrome is running. More in Settings › Timer notifications.",
   );
-  await timers.getByRole("link", { name: "Settings › Timer alerts" }).click();
-  await expect(page).toHaveURL(/\/settings#timer-alerts$/);
+  await timers.getByRole("link", { name: "Settings › Timer notifications" }).click();
+  await expect(page).toHaveURL(/\/settings#timer-notifications$/);
   await expect(timers).toBeHidden();
 
   // Settings shows it's on for this browser, and turns it off.
-  const section = page.getByRole("region", { name: "Timer alerts" });
+  const section = page.getByRole("region", { name: "Timer notifications" });
   await expect(section).toContainText("On for this browser.");
   // What this browser needs: a computer's Chrome only while it runs.
-  await expect(section).toContainText("Alerts arrive only while Chrome is running.");
+  await expect(section).toContainText("Notifications arrive only while Chrome is running.");
 
-  // A test alert. The test browser's push address is made up, so the push service's answer is
+  // A test notification. The test browser's push address is made up, so the push service's answer is
   // stood in for; the server's sending is covered by its own tests.
   await page.route("**/api/push/test", (route) => route.fulfill({ json: { ok: true } }));
   const tested = page.waitForRequest("**/api/push/test");
-  await section.getByRole("button", { name: "Send a test alert" }).click();
+  await section.getByRole("button", { name: "Send a test notification" }).click();
   expect((await tested).postDataJSON()).toHaveProperty("deviceId");
   const sent = section.getByRole("status");
-  await expect(sent).toContainText("“Fennl test alert” should appear within a few seconds.");
+  await expect(sent).toContainText("“Fennl test notification” should appear within a few seconds.");
   // What to check on this computer (the test browser says it's Chrome on Windows).
   await expect(sent).toContainText("Settings › System › Notifications");
   await expect(sent).toContainText("Do Not Disturb or a Focus isn’t on.");
@@ -162,11 +162,11 @@ test("On an iPhone in a Safari tab, the Timers window says how to get timer aler
   await page.goto("/");
   const timers = await startTimer(page, "Rice");
   await expect(timers).toContainText("add Fennl to your Home Screen");
-  await expect(timers.getByRole("button", { name: /Alert me/ })).toHaveCount(0);
+  await expect(timers.getByRole("button", { name: /Notify me/ })).toHaveCount(0);
   await timers.getByRole("button", { name: "Close" }).click();
 
   await page.goto("/settings");
-  await expect(page.getByRole("region", { name: "Timer alerts" })).toContainText(
-    "alerts need Fennl opened from the Home Screen",
+  await expect(page.getByRole("region", { name: "Timer notifications" })).toContainText(
+    "notifications need Fennl opened from the Home Screen",
   );
 });

@@ -107,8 +107,8 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
               timer.pausedLeft === null &&
               timer.alert === "not-set" ? (
                 <p className={styles.note}>
-                  No alert with the phone locked for this one: Fennl couldn&rsquo;t reach the
-                  internet. It still rings while Fennl is on screen.
+                  No notification for this one: Fennl couldn&rsquo;t reach the internet. It still
+                  rings while Fennl is on screen.
                 </p>
               ) : null}
             </li>
@@ -182,13 +182,16 @@ function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
             });
           }}
         >
-          Alert me when a timer finishes, even with the phone locked
+          Notify me when a timer finishes, even when Fennl isn&rsquo;t on screen
         </button>
+        <p className={styles.hint}>
+          Uses this device&rsquo;s notifications; your browser may ask first.
+        </p>
         {result ? (
           <p role="alert" className={styles.hint}>
             {result === "blocked"
-              ? "Notifications are turned off for Fennl in this browser’s settings. Allow them there to get timer alerts."
-              : "Couldn’t turn on timer alerts. Check your connection and try again."}
+              ? "Notifications are turned off for Fennl in this browser’s settings. Allow them there to get timer notifications."
+              : "Couldn’t turn on timer notifications. Check your connection and try again."}
           </p>
         ) : null}
         <RunningNote />
@@ -199,9 +202,9 @@ function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
   if (state === "home-screen") {
     return (
       <p className={styles.hint}>
-        For timer alerts with the phone locked, add Fennl to your Home Screen: in Safari, tap Share
-        (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open Fennl from
-        its icon.
+        For timer notifications with the phone locked, add Fennl to your Home Screen: in Safari, tap
+        Share (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open Fennl
+        from its icon.
       </p>
     );
   }
@@ -219,15 +222,15 @@ function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
   return null;
 }
 
-/** "Alerts arrive only while Chrome is running", on a computer where that's so. */
+/** "Notifications arrive only while Chrome is running", on a computer where that's so. */
 function RunningNote() {
   const [needs] = useState(() => alertNeeds(navigator.userAgent, navigator.maxTouchPoints > 1));
   if (needs.kind !== "browser-running") return null;
   return (
     <p className={styles.hint}>
-      Alerts arrive only while {needs.browser} is running. More in{" "}
-      <Link href="/settings#timer-alerts" onClick={() => showView(null)}>
-        Settings › Timer alerts
+      Notifications arrive only while {needs.browser} is running. More in{" "}
+      <Link href="/settings#timer-notifications" onClick={() => showView(null)}>
+        Settings › Timer notifications
       </Link>
       .
     </p>

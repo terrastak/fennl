@@ -5,7 +5,8 @@ import recipeStyles from "../recipes/recipes.module.css";
 import { sendTestAlert, turnOffAlerts, turnOnAlerts, useAlertsState } from "./timerAlerts";
 
 /**
- * Settings › Timer alerts (U10, owner's choices 2026-10-28): whether this browser gets an alert
+ * Settings › Timer notifications (U10, owner's choices 2026-10-28; renamed from Timer alerts at
+ * the owner's choice 2026-10-29): whether this browser gets a system notification
  * when a timer finishes, even with the phone locked, and a way to turn it on or off.
  * It's per browser: each phone, tablet or computer is turned on by itself. What this browser
  * needs for an alert to arrive is said too (owner's request 2026-10-29), above all a computer's
@@ -16,8 +17,8 @@ export function TimerAlertsSection() {
   const state = useAlertsState();
   // Opened from the Timers window's link: brought into view once it has its contents.
   useEffect(() => {
-    if (state !== null && window.location.hash === "#timer-alerts") {
-      document.getElementById("timer-alerts")?.scrollIntoView();
+    if (state !== null && window.location.hash === "#timer-notifications") {
+      document.getElementById("timer-notifications")?.scrollIntoView();
     }
   }, [state]);
   const [busy, setBusy] = useState(false);
@@ -34,7 +35,7 @@ export function TimerAlertsSection() {
           "Notifications are turned off for Fennl in this browser’s settings. Allow them there, then try again.",
         );
       } else if (outcome === "failed") {
-        setProblem("Couldn’t turn on timer alerts. Check your connection and try again.");
+        setProblem("Couldn’t turn on timer notifications. Check your connection and try again.");
       }
     });
   };
@@ -54,17 +55,28 @@ export function TimerAlertsSection() {
       setBusy(false);
       if (outcome === "sent") setTested(true);
       else if (outcome === "off") {
-        setProblem("This browser no longer gets timer alerts. Turn them on again to test them.");
-      } else setProblem("Couldn’t send a test alert. Check your connection and try again.");
+        setProblem(
+          "This browser no longer gets timer notifications. Turn them on again to test them.",
+        );
+      } else setProblem("Couldn’t send a test notification. Check your connection and try again.");
     });
   };
 
   return (
-    <section id="timer-alerts" aria-labelledby="timer-alerts-title" className={styles.section}>
-      <h2 id="timer-alerts-title">Timer alerts</h2>
+    <section
+      id="timer-notifications"
+      aria-labelledby="timer-notifications-title"
+      className={styles.section}
+    >
+      <h2 id="timer-notifications-title">Timer notifications</h2>
       <p className={styles.help}>
-        When a timer finishes, the device that started it gets an alert. Each browser is turned on
-        by itself.
+        While Fennl is on screen, a finished timer always rings. Timer notifications use this
+        device&rsquo;s system notifications to reach you when it isn&rsquo;t: with the screen
+        locked, while you&rsquo;re in another app or tab, or with Fennl closed.
+      </p>
+      <p className={styles.help}>
+        The first time you turn this feature on, your browser may ask you for your permission. Only
+        this device is notified.
       </p>
       {state === "on" || state === "off" || state === "blocked" ? <WhatItNeeds /> : null}
       {state === null ? null : state === "on" ? (
@@ -72,7 +84,7 @@ export function TimerAlertsSection() {
           <p className={styles.help}>On for this browser.</p>
           <div className={styles.buttonRow}>
             <button type="button" className={recipeStyles.secondary} disabled={busy} onClick={test}>
-              Send a test alert
+              Send a test notification
             </button>
             <button
               type="button"
@@ -94,18 +106,19 @@ export function TimerAlertsSection() {
         </>
       ) : state === "home-screen" ? (
         <p className={styles.help}>
-          On iPhone and iPad, alerts need Fennl opened from the Home Screen: in Safari, tap Share
-          (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open Fennl
-          from its icon. Then turn alerts on here.
+          On iPhone and iPad, notifications need Fennl opened from the Home Screen: in Safari, tap
+          Share (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open
+          Fennl from its icon. Then turn notifications on here.
         </p>
       ) : state === "blocked" ? (
         <p className={styles.help}>
           Notifications are turned off for Fennl in this browser&rsquo;s settings. Allow them there
-          to get timer alerts.
+          to get timer notifications.
         </p>
       ) : (
         <p className={styles.help}>
-          This browser can&rsquo;t get timer alerts. Timers still ring while Fennl is on screen.
+          This browser can&rsquo;t get timer notifications. Timers still ring while Fennl is on
+          screen.
         </p>
       )}
       {problem ? (
@@ -131,20 +144,20 @@ function WhatItNeeds() {
       <ul className={styles.help}>
         {phone ? (
           <li>
-            Alerts arrive even with the screen locked or Fennl closed, as long as the device has a
-            connection.
+            Notifications arrive even with the screen locked or Fennl closed, as long as the device
+            has a connection.
           </li>
         ) : needs.kind === "mac-safari" ? (
-          <li>Alerts arrive even when Safari is closed, as long as the Mac is connected.</li>
+          <li>Notifications arrive even when Safari is closed, as long as the Mac is connected.</li>
         ) : (
           <>
             <li>
-              Alerts arrive only while {browser} is running. Fennl&rsquo;s tab can be closed, but if{" "}
-              {browser} is quit, they can&rsquo;t arrive.
+              Notifications arrive only while {browser} is running. Fennl&rsquo;s tab can be closed,
+              but if {browser} is quit, they can&rsquo;t arrive.
               {needs.system === "windows"
                 ? ` On Windows, closing ${browser}’s last window usually quits it, so keep one window open (it can be minimized).`
                 : needs.system === "mac"
-                  ? ` On a Mac, closing ${browser}’s windows leaves it running; quitting it (⌘Q) stops alerts.`
+                  ? ` On a Mac, closing ${browser}’s windows leaves it running; quitting it (⌘Q) stops them.`
                   : ""}
             </li>
             <li>The computer needs to be connected.</li>
@@ -152,14 +165,14 @@ function WhatItNeeds() {
         )}
         {phone ? (
           <li>
-            An alert that can&rsquo;t arrive within 10 minutes of the timer ending is dropped.
+            A notification that can&rsquo;t arrive within 10 minutes of the timer ending is dropped.
           </li>
         ) : (
           // Owner's request 2026-10-29: a locked computer shows them; a sleeping one can't.
           <li>
-            If the computer goes to sleep, alerts wait until it wakes; one that can&rsquo;t arrive
-            within 10 minutes of the timer ending is dropped. While cook mode is open, Fennl keeps
-            the screen on, which usually stops the computer going to sleep.
+            If the computer goes to sleep, notifications wait until it wakes; one that can&rsquo;t
+            arrive within 10 minutes of the timer ending is dropped. While cook mode is open, Fennl
+            keeps the screen on, which usually stops the computer going to sleep.
           </li>
         )}
         <li>
@@ -179,7 +192,7 @@ function TestSent() {
   return (
     <div role="status" className={styles.help}>
       <p>
-        Sent. &ldquo;Fennl test alert&rdquo; should appear within a few seconds. If it
+        Sent. &ldquo;Fennl test notification&rdquo; should appear within a few seconds. If it
         doesn&rsquo;t, check:
       </p>
       <ul>
