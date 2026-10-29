@@ -89,6 +89,8 @@ self.addEventListener("push", (event) => {
         body: (alert && alert.body) || "",
         tag: (alert && alert.tag) || undefined,
         data: { path },
+        // Where the browser shows buttons (Chrome; on a Mac under Options), one back to the step.
+        actions: alert && alert.test ? [] : [{ action: "show", title: "Show step" }],
       });
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       const ringing = windows.some(
@@ -109,8 +111,10 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Tapping an alert: back to Fennl, where the timers show on every page; opened on the page that
-// started the timer when Fennl isn't open.
+// Tapping an alert, or its Show step (owner's request 2026-10-29): back to the step that started
+// the timer, marked on the recipe page or its screen in cook mode. A Fennl window already open is
+// brought forward and told where to go (app/timers/timersView.ts, listenForShowStep); otherwise
+// Fennl opens there.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const path = (event.notification.data && event.notification.data.path) || "/";
@@ -118,11 +122,14 @@ self.addEventListener("notificationclick", (event) => {
   if (url.origin !== self.location.origin) return;
   event.waitUntil(
     (async () => {
-      const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      const windows = (
+        await self.clients.matchAll({ type: "window", includeUncontrolled: true })
+      ).filter((client) => !new URL(client.url).pathname.startsWith("/admin"));
       const open =
         windows.find((client) => new URL(client.url).pathname === url.pathname) ?? windows[0];
-      if (open) return open.focus();
-      return self.clients.openWindow(url.href);
+      if (!open) return self.clients.openWindow(url.href);
+      const focused = await open.focus().catch(() => null);
+      (focused ?? open).postMessage({ type: "fennl:show-step", path: url.pathname + url.hash });
     })(),
   );
 });

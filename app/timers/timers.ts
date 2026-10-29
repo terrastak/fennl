@@ -241,8 +241,18 @@ function ring(timer: Timer): void {
   if (document.visibilityState === "hidden" && notificationsAllowed() && !alertsTurnedOff()) {
     const title = `Timer finished: ${timer.label}`;
     const body = fromText(timer);
+    // Clicked (or its Show step): back to the timer's step, as the server's alerts do (sw.js).
+    const data = { path: timer.path ?? "/" };
+    const actions = [{ action: "show", title: "Show step" }];
     void navigator.serviceWorker?.ready
-      .then((registration) => registration.showNotification(title, { body, tag: timer.id }))
+      .then((registration) =>
+        registration.showNotification(title, {
+          body,
+          tag: timer.id,
+          data,
+          actions,
+        } as NotificationOptions),
+      )
       .catch(() => {
         try {
           new Notification(title, { body, tag: timer.id });

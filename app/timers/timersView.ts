@@ -66,22 +66,44 @@ export function markStep(id: string): boolean {
 }
 
 /**
- * Back to the step that started a timer: on the recipe page, scrolled to it and marked; in cook
- * mode, that step's screen (./CookMode.tsx reads the address's #step-N).
+ * Back to a timer's step: on the recipe page, scrolled to it and marked; in cook mode, that
+ * step's screen (./CookMode.tsx reads the address's #step-N).
  */
-export function viewStep(timer: Timer): void {
-  if (!timer.path) return;
+export function goToStep(path: string): void {
   showView(null);
   // Already on that page: no second history entry for it.
-  navigate(timer.path, { replace: timer.path.split("#")[0] === window.location.pathname });
-  const id = timer.path.split("#")[1];
-  if (!id || timer.path.split("#")[0]?.endsWith("/cook")) return;
+  navigate(path, { replace: path.split("#")[0] === window.location.pathname });
+  const id = path.split("#")[1];
+  if (!id || path.split("#")[0]?.endsWith("/cook")) return;
   // The recipe page may still be opening: look for the step for a moment.
   let tries = 0;
   const look = () => {
     if (!markStep(id) && ++tries < 40) setTimeout(look, 50);
   };
   look();
+}
+
+/** A timer's View step. */
+export function viewStep(timer: Timer): void {
+  if (timer.path) goToStep(timer.path);
+}
+
+/**
+ * A timer's notification clicked while Fennl is open (owner's request 2026-10-29): the service
+ * worker brings this window forward and says which step to show. Returns the way to stop.
+ */
+export function listenForShowStep(): () => void {
+  const worker = typeof navigator === "undefined" ? undefined : navigator.serviceWorker;
+  if (!worker) return () => {};
+  const heard = (event: MessageEvent) => {
+    const data = event.data as { type?: unknown; path?: unknown } | null;
+    if (data?.type !== "fennl:show-step" || typeof data.path !== "string") return;
+    // Only a page of Fennl's own.
+    if (!data.path.startsWith("/") || data.path.startsWith("//")) return;
+    goToStep(data.path);
+  };
+  worker.addEventListener("message", heard);
+  return () => worker.removeEventListener("message", heard);
 }
 
 /** The soonest running timer's time, for the phone's top bar. */
