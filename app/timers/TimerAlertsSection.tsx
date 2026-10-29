@@ -113,9 +113,7 @@ function WhatItNeeds() {
             connection.
           </li>
         ) : needs.kind === "mac-safari" ? (
-          <li>
-            Alerts arrive even when Safari is closed, as long as the Mac is awake and connected.
-          </li>
+          <li>Alerts arrive even when Safari is closed, as long as the Mac is connected.</li>
         ) : (
           <>
             <li>
@@ -127,10 +125,21 @@ function WhatItNeeds() {
                   ? ` On a Mac, closing ${browser}’s windows leaves it running; quitting it (⌘Q) stops alerts.`
                   : ""}
             </li>
-            <li>The computer needs to be awake and connected.</li>
+            <li>The computer needs to be connected.</li>
           </>
         )}
-        <li>An alert that can&rsquo;t arrive within 10 minutes of the timer ending is dropped.</li>
+        {phone ? (
+          <li>
+            An alert that can&rsquo;t arrive within 10 minutes of the timer ending is dropped.
+          </li>
+        ) : (
+          // Owner's request 2026-10-29: a locked computer shows them; a sleeping one can't.
+          <li>
+            If the computer goes to sleep, alerts wait until it wakes; one that can&rsquo;t arrive
+            within 10 minutes of the timer ending is dropped. While cook mode is open, Fennl keeps
+            the screen on, which usually stops the computer going to sleep.
+          </li>
+        )}
         <li>
           {`Do Not Disturb or a Focus can silence or hide them, and notifications must be allowed for ${phone ? "Fennl" : browser} in the ${where}’s settings.`}
         </li>
