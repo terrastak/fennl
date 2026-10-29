@@ -9,7 +9,6 @@ import {
 } from "../../shared/appearance";
 import { useAppearance } from "../appearance/appearance";
 import { EmailSection } from "../account/EmailSection";
-import { TimerAlertsSection } from "../timers/TimerAlertsSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { ExportSection } from "../export/ExportSection";
 import { LocalCopySection } from "../sync/LocalCopySection";
@@ -167,8 +166,6 @@ export function SettingsPage() {
       <ExportSection />
 
       <LocalCopySection />
-
-      <TimerAlertsSection />
 
       <section aria-labelledby="about-title" className={styles.section}>
         <h2 id="about-title">About</h2>
