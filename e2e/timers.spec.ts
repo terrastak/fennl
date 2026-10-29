@@ -51,7 +51,8 @@ test("A timer of your own: add, pause, adjust and dismiss it", async ({
   await expect(pasta).toContainText(/9:00|8:5\d/);
   await pasta.getByRole("button", { name: "Resume Pasta" }).click();
 
-  // Adjust time: it keeps counting until a number changes, then holds there until Save time.
+  // Adjust time: the timer keeps running (owner's choice 2026-10-29) until Save time sets the
+  // new time; the numbers follow it until one is changed.
   await pasta.getByRole("button", { name: "Adjust time for Pasta" }).click();
   const adjust = page.getByRole("dialog", { name: "Adjust time" });
   await expect(adjust).toContainText("Time remaining");
@@ -59,9 +60,12 @@ test("A timer of your own: add, pause, adjust and dismiss it", async ({
   await page.clock.fastForward("01:00");
   await expect(adjust.getByLabel("Minutes")).toHaveValue(/^[78]$/);
   await adjust.getByRole("button", { name: "One more minute" }).click();
-  await expect(adjust).toContainText("Timer paused while you adjust it");
   await adjust.getByLabel("Minutes").fill("20");
   await adjust.getByLabel("Seconds").fill("30");
+  await expect(adjust).toContainText("starts again from 20:30");
+  await page.clock.fastForward("00:10");
+  await expect(adjust).toContainText(/Time remaining[78]:\d\d/);
+  await expect(adjust.getByLabel("Minutes")).toHaveValue("20");
   await noAccessibilityProblems(page);
   await adjust.getByRole("button", { name: "Save time" }).click();
   await expect(pasta).toContainText(/20:(30|2\d)/);
