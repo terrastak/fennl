@@ -188,7 +188,7 @@ export async function turnOffAlerts(): Promise<void> {
 }
 
 /**
- * Settings › Timer alerts › Send a test alert: the server sends this browser an alert now.
+ * Settings › Timer notifications › Send a test notification: the server sends this browser an alert now.
  * "sent" means the push service took it; whether it shows is up to the device's settings.
  */
 export async function sendTestAlert(): Promise<"sent" | "off" | "failed"> {
