@@ -25,9 +25,9 @@ import { openTimers, showView, useView, viewStep, type StartOffer } from "./time
 // 2026-10-29, from its screenshots): a Timers panel from the right (the whole width on a phone),
 // opened from the sidebar's Timers button (the ⏱ in a phone's top bar), a corner card or cook
 // mode. Each timer has View step, Pause or Resume, Adjust time, +1 minute and Cancel; Add timer
-// starts one of one's own. Adjust time keeps counting until a number is changed, then holds the
-// timer there until Save time. A time in a recipe's method asks before it starts a timer, with
-// either end of a range to pick. Running timers show as cards in the corner of a wide screen,
+// starts one of one's own. Adjust time leaves the timer running until Save time sets the new
+// time. A time in a recipe's method asks before it starts a timer, with either end of a range to
+// pick. Running timers show as cards in the corner of a wide screen,
 // each with a ring for how much is left and its own Pause and Stop. A tap outside closes it all.
 
 /** The Timers panel, or a step's "Start a timer?". Mounted once on every screen with timers. */
@@ -45,7 +45,7 @@ export function TimersDialog() {
   }, [current]);
 
   const adjusting =
-    current?.kind === "adjust" ? timers.find((t) => t.id === current.id && !t.done) : undefined;
+    current?.kind === "adjust" ? timers.find((t) => t.id === current.id) : undefined;
   // From the list, back to it; opened on its own (cook mode), closed.
   const back = () =>
     showView(current?.kind === "adjust" && !current.fromList ? null : { kind: "list" });
@@ -357,10 +357,10 @@ function DurationFields({
 }
 
 /**
- * Adjust time, as the earlier Fennl had it: the time left keeps counting until a number is
- * changed; then the timer holds there ("paused while you adjust it") until Save time, which
- * sets the new time (running or paused, as it was), or Cancel (a tap outside, Escape, ×), which
- * lets it carry on as it was.
+ * Adjust time (as the earlier Fennl had it; owner's choice 2026-10-29: the timer keeps running
+ * throughout). The time left counts on above; the hours, minutes and seconds follow it until one
+ * is changed, then hold the new time. Save time starts the timer again from there (or holds it
+ * there, if it was paused); Cancel (a tap outside, Escape, ×) leaves it as it is.
  */
 function AdjustTime({
   timer,
@@ -373,38 +373,13 @@ function AdjustTime({
 }) {
   const { now } = useTimers();
   const left = Math.ceil(timeLeft(timer, now) / 1000);
-  // The changed time, and the time left when it was first changed (null: nothing changed yet).
+  // The new time (null: nothing changed yet, so the numbers follow the timer).
   const [draft, setDraft] = useState<number | null>(null);
-  const [heldAt, setHeldAt] = useState<number | null>(null);
-  const [wasRunning] = useState(timer.pausedLeft === null);
-  const saved = useRef(false);
-  const held = heldAt !== null;
-  const id = timer.id;
-
-  // Left without saving: a timer held for the change carries on.
-  const holding = useRef(false);
-  useEffect(
-    () => () => {
-      if (holding.current && !saved.current) resumeTimer(id);
-    },
-    [id],
-  );
-
-  const change = (seconds: number) => {
-    if (!held) {
-      setHeldAt(left);
-      if (wasRunning) {
-        holding.current = true;
-        pauseTimer(timer.id);
-      }
-    }
-    setDraft(Math.max(0, seconds));
-  };
+  const paused = timer.pausedLeft !== null;
   const shown = draft ?? left;
   const save = () => {
     if (shown <= 0) return;
-    saved.current = true;
-    if (held) setTimeLeft(timer.id, shown, wasRunning);
+    if (draft !== null) setTimeLeft(timer.id, draft, !paused);
     onDone();
   };
 
@@ -415,25 +390,21 @@ function AdjustTime({
       </PanelHead>
       <div className={styles.panelBody}>
         <strong className={styles.adjustName}>{timer.label}</strong>
-        <div className={held ? styles.statusHeld : styles.status}>
+        <div className={timer.done ? styles.statusHeld : styles.status}>
           <span role="status">
-            {held
-              ? "Timer paused while you adjust it"
-              : wasRunning
-                ? "Time remaining"
-                : "Timer is paused"}
+            {timer.done ? "Timer finished" : paused ? "Timer is paused" : "Time remaining"}
           </span>
-          <span className={styles.statusTime}>{clockText(heldAt ?? left)}</span>
+          <span className={styles.statusTime}>{clockText(left)}</span>
         </div>
         <DurationFields
           legend="Set remaining time"
           seconds={shown}
-          onChange={change}
+          onChange={(seconds) => setDraft(Math.max(0, seconds))}
           onEnter={save}
           hint={
-            held
-              ? `The timer was paused at ${clockText(heldAt ?? 0)} while you make changes.`
-              : "The timer will keep counting down until you change a field."
+            draft === null
+              ? "Change any field, then Save time to set the timer to it."
+              : `The timer keeps ${paused ? "its time" : "running"} until you tap Save time; then it ${paused ? "is set to" : "starts again from"} ${clockText(draft)}.`
           }
         />
         <div className={styles.actions}>
