@@ -176,4 +176,7 @@ test("A time in a recipe's method starts a timer", async ({ page, context, baseU
   await crust.getByRole("button", { name: "View step for Toast the crust" }).click();
   await expect(page).toHaveURL(/#step-2$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  // The step is marked for a moment, so the eye lands on it.
+  await expect(page.locator("#step-2")).toHaveAttribute("data-flash", "");
+  await expect(page.locator("#step-2")).not.toHaveAttribute("data-flash", "", { timeout: 5000 });
 });

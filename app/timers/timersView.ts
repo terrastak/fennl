@@ -48,19 +48,38 @@ export const openTimers = () => showView({ kind: "list" });
 /** Opens one timer's Adjust time. */
 export const openAdjust = (id: string) => showView({ kind: "adjust", id, fromList: false });
 
-/** Back to a recipe at the step that started a timer (on its page, scrolled to that step). */
+/**
+ * A step brought into view and gently marked (owner's choice 2026-10-29): a pale tint that fades
+ * over about three seconds (`data-flash`, styled with the recipe page's steps), so the eye lands
+ * on it. Returns whether the step was there.
+ */
+export function markStep(id: string): boolean {
+  const step = document.getElementById(id);
+  if (!step) return false;
+  step.scrollIntoView({ block: "center" });
+  step.removeAttribute("data-flash");
+  // Read the layout, so a second View step on the same step starts the fade again.
+  void step.offsetWidth;
+  step.setAttribute("data-flash", "");
+  setTimeout(() => step.removeAttribute("data-flash"), 3200);
+  return true;
+}
+
+/**
+ * Back to the step that started a timer: on the recipe page, scrolled to it and marked; in cook
+ * mode, that step's screen (./CookMode.tsx reads the address's #step-N).
+ */
 export function viewStep(timer: Timer): void {
   if (!timer.path) return;
   showView(null);
-  navigate(timer.path);
+  // Already on that page: no second history entry for it.
+  navigate(timer.path, { replace: timer.path.split("#")[0] === window.location.pathname });
   const id = timer.path.split("#")[1];
-  if (!id) return;
+  if (!id || timer.path.split("#")[0]?.endsWith("/cook")) return;
   // The recipe page may still be opening: look for the step for a moment.
   let tries = 0;
   const look = () => {
-    const step = document.getElementById(id);
-    if (step) step.scrollIntoView({ block: "center" });
-    else if (++tries < 40) setTimeout(look, 50);
+    if (!markStep(id) && ++tries < 40) setTimeout(look, 50);
   };
   look();
 }
