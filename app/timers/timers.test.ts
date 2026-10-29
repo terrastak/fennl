@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addMinute,
+  checkTimers,
   listTimers,
   pauseTimer,
   resumeTimer,
@@ -64,5 +65,45 @@ describe("a timer", () => {
     expect(timeLeft(rung, now() + 120_000)).toBe(0);
     setTimeLeft(only().id, 120);
     expect(only().done).toBe(false);
+  });
+});
+
+describe("a finished timer", () => {
+  // Ringing looks at whether the page is on screen.
+  beforeEach(() => vi.stubGlobal("document", { visibilityState: "visible" }));
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("says Done! until dismissed, for up to an hour", () => {
+    startTimer("Step 3 · 20 minutes", 20 * 60, "Banana bread");
+    vi.advanceTimersByTime(20 * 60_000);
+    checkTimers();
+    expect(only().done).toBe(true);
+    vi.advanceTimersByTime(59 * 60_000);
+    checkTimers();
+    expect(listTimers()).toHaveLength(1);
+  });
+
+  it("clears itself an hour after it ended, never dismissed", () => {
+    startTimer("20 minutes", 20 * 60, "Banana bread");
+    vi.advanceTimersByTime(20 * 60_000);
+    checkTimers();
+    vi.advanceTimersByTime(60 * 60_000);
+    checkTimers();
+    expect(listTimers()).toEqual([]);
+  });
+
+  it("that ended long ago while Fennl was closed is cleared, not rung", () => {
+    startTimer("Rest overnight", 60, null);
+    vi.advanceTimersByTime(3 * 60 * 60_000);
+    checkTimers();
+    expect(listTimers()).toEqual([]);
+  });
+
+  it("isn't one that's paused, however long ago it was paused", () => {
+    startTimer("Proof", 60 * 60, null);
+    pauseTimer(only().id);
+    vi.advanceTimersByTime(5 * 60 * 60_000);
+    checkTimers();
+    expect(listTimers()).toHaveLength(1);
   });
 });

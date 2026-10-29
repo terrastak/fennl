@@ -452,7 +452,8 @@ export function FloatingTimers() {
           key={timer.id}
           type="button"
           className={timer.done ? styles.floatDone : styles.float}
-          onClick={() => openTimer(timer.id)}
+          // A finished one opens the list, where it's dismissed (or given another minute).
+          onClick={() => (timer.done ? openTimers() : openTimer(timer.id))}
         >
           <span aria-hidden="true">⏱ </span>
           {timer.label} ·{" "}

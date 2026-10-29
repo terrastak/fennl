@@ -34,6 +34,11 @@ export interface Timer {
 }
 
 const KEY = "fennl:cook-timers";
+/**
+ * A finished timer clears itself this long after it ended (U10 fix, 2026-10-29): one that rang
+ * and was never dismissed, or that ended while Fennl was closed, doesn't stay on every page.
+ */
+const FORGET_AFTER_MS = 60 * 60_000;
 let timers: Timer[] = load();
 const listeners = new Set<() => void>();
 let audio: AudioContext | null = null;
@@ -47,7 +52,9 @@ function load(): Timer[] {
     const value = text ? (JSON.parse(text) as unknown) : [];
     // Timers saved before pausing existed have no pausedLeft.
     return Array.isArray(value)
-      ? (value as Timer[]).map((t) => ({ ...t, pausedLeft: t.pausedLeft ?? null }))
+      ? (value as Timer[])
+          .map((t) => ({ ...t, pausedLeft: t.pausedLeft ?? null }))
+          .filter((t) => !stale(t, Date.now()))
       : [];
   } catch {
     return [];
@@ -248,11 +255,20 @@ export async function askForNotifications(): Promise<boolean> {
   }
 }
 
-/** Marks timers that have ended, ringing each once. */
-function check(now = Date.now()): void {
-  const ended = timers.filter((t) => !t.done && t.pausedLeft === null && t.endsAt <= now);
-  if (ended.length === 0) return;
-  set(timers.map((t) => (ended.includes(t) ? { ...t, done: true } : t)));
+/** Ended over an hour ago (a paused timer hasn't ended). */
+function stale(timer: Timer, now: number): boolean {
+  return timer.pausedLeft === null && timer.endsAt <= now - FORGET_AFTER_MS;
+}
+
+/**
+ * Marks timers that have ended, ringing each once, and clears those that ended over an hour ago
+ * (without ringing: one that ended that long ago while Fennl was closed is no use now).
+ */
+export function checkTimers(now = Date.now()): void {
+  const kept = timers.filter((t) => !stale(t, now));
+  const ended = kept.filter((t) => !t.done && t.pausedLeft === null && t.endsAt <= now);
+  if (ended.length === 0 && kept.length === timers.length) return;
+  set(kept.map((t) => (ended.includes(t) ? { ...t, done: true } : t)));
   for (const timer of ended) ring(timer);
 }
 
@@ -266,8 +282,8 @@ export function useTimers(): { timers: Timer[]; now: number } {
   const list = useSyncExternalStore(subscribe, () => timers);
   const now = useSyncExternalStore(subscribeClock, () => clock);
   useEffect(() => {
-    check();
-    const back = () => check();
+    checkTimers();
+    const back = () => checkTimers();
     // Back online: alerts that couldn't be asked for are asked for now.
     const online = () => {
       for (const timer of timers) if (timer.alert === "not-set") askForAlert(timer);
@@ -285,10 +301,14 @@ export function useTimers(): { timers: Timer[]; now: number } {
 function subscribeClock(listener: () => void) {
   clockListeners.add(listener);
   ticking ??= setInterval(() => {
-    // Only while a timer runs: pages showing the timers don't redraw every second for nothing.
-    if (!timers.some((t) => !t.done && t.pausedLeft === null)) return;
+    // Redrawn only while a timer runs: pages showing the timers don't redraw every second for
+    // nothing. A finished one is still cleared once it's an hour old.
+    if (!timers.some((t) => !t.done && t.pausedLeft === null)) {
+      if (timers.some((t) => t.done)) checkTimers();
+      return;
+    }
     clock = Date.now();
-    check(clock);
+    checkTimers(clock);
     for (const l of clockListeners) l();
   }, 1000);
   return () => {
