@@ -1,5 +1,7 @@
 import { useEffect, useEffectEvent, useId, useRef, useState } from "react";
 import { clockText } from "../../shared/cook";
+import { alertNeeds } from "../../shared/timerAlerts";
+import { Link } from "../router";
 import { turnOnAlerts, useAlertsState, type AlertsState } from "./timerAlerts";
 import {
   addMinute,
@@ -155,7 +157,8 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
 /**
  * Under the timers (U10, owner's choices 2026-10-28): the offer to alert with the phone locked,
  * or, in an iPhone or iPad's Safari tab, how to get it. A browser that can't take alerts from the
- * server can still show one while it runs Fennl.
+ * server can still show one while it runs Fennl. On a computer whose browser must stay running
+ * for alerts to arrive, a line says so (owner's choice 2026-10-29), pointing to Settings.
  */
 function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
   const [result, setResult] = useState<"blocked" | "failed" | null>(null);
@@ -188,9 +191,11 @@ function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
               : "Couldn’t turn on timer alerts. Check your connection and try again."}
           </p>
         ) : null}
+        <RunningNote />
       </>
     );
   }
+  if (state === "on") return <RunningNote />;
   if (state === "home-screen") {
     return (
       <p className={styles.hint}>
@@ -212,6 +217,21 @@ function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
     );
   }
   return null;
+}
+
+/** "Alerts arrive only while Chrome is running", on a computer where that's so. */
+function RunningNote() {
+  const [needs] = useState(() => alertNeeds(navigator.userAgent, navigator.maxTouchPoints > 1));
+  if (needs.kind !== "browser-running") return null;
+  return (
+    <p className={styles.hint}>
+      Alerts arrive only while {needs.browser} is running. More in{" "}
+      <Link href="/settings#timer-alerts" onClick={() => showView(null)}>
+        Settings › Timer alerts
+      </Link>
+      .
+    </p>
+  );
 }
 
 /**

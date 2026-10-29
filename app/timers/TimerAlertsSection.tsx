@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { alertNeeds, type AlertNeeds } from "../../shared/timerAlerts";
 import styles from "../pages/SettingsPage.module.css";
 import recipeStyles from "../recipes/recipes.module.css";
@@ -13,6 +13,12 @@ import { turnOffAlerts, turnOnAlerts, useAlertsState } from "./timerAlerts";
  */
 export function TimerAlertsSection() {
   const state = useAlertsState();
+  // Opened from the Timers window's link: brought into view once it has its contents.
+  useEffect(() => {
+    if (state !== null && window.location.hash === "#timer-alerts") {
+      document.getElementById("timer-alerts")?.scrollIntoView();
+    }
+  }, [state]);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
@@ -38,7 +44,7 @@ export function TimerAlertsSection() {
   };
 
   return (
-    <section aria-labelledby="timer-alerts-title" className={styles.section}>
+    <section id="timer-alerts" aria-labelledby="timer-alerts-title" className={styles.section}>
       <h2 id="timer-alerts-title">Timer alerts</h2>
       <p className={styles.help}>
         When a timer finishes, the device that started it gets an alert. Each browser is turned on
