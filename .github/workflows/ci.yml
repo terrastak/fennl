@@ -22,7 +22,7 @@
 # Worker secrets are written to a temporary file and uploaded with each version (--secrets-file).
 # BETTER_AUTH_SECRET is generated here, never stored in GitHub: production creates it once and
 # keeps it; previews get a new one on every push (preview sign-ins don't need to survive pushes).
-# PUSH_PRIVATE_KEY (timer alerts, U8) is made the same way. Timer alerts also need the queue CI
+# PUSH_PRIVATE_KEY (timer alerts, U10) is made the same way. Timer alerts also need the queue CI
 # creates, so the API token needs the Queues Edit permission.
 name: CI
 
@@ -260,7 +260,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Cook-mode timer alerts (U8, worker/push/). The name comes from the built config.
+          # Timer alerts (U10, worker/push/). The name comes from the built config.
           queue=$(node -p 'require("./dist/fennl/wrangler.json").queues.producers.find((q) => q.binding === "TIMER_ALERTS").queue')
           if npx wrangler queues info "$queue" > /dev/null 2>&1; then
             echo "Queue $queue exists."
@@ -449,7 +449,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # Cook-mode timer alerts (U8, worker/push/). The name comes from the built config.
+          # Timer alerts (U10, worker/push/). The name comes from the built config.
           queue=$(node -p 'require("./dist/fennl/wrangler.json").queues.producers.find((q) => q.binding === "TIMER_ALERTS").queue')
           if npx wrangler queues info "$queue" > /dev/null 2>&1; then
             echo "Queue $queue exists."
@@ -476,7 +476,7 @@ jobs:
             echo "Creating BETTER_AUTH_SECRET for production."
             extra+=(--new-auth-secret)
           fi
-          # Likewise the push key for timer alerts (U8): every browser's alerts depend on it.
+          # Likewise the push key for timer alerts (U10): every browser's alerts depend on it.
           if ! jq -e 'any(.[]; .name == "PUSH_PRIVATE_KEY")' <<< "$existing" > /dev/null; then
             echo "Creating PUSH_PRIVATE_KEY for production."
             extra+=(--new-push-key)

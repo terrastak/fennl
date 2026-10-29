@@ -4,7 +4,7 @@ import { database, type Database } from "../db/client";
 import { pushSubscription, timerAlert } from "../db/schema";
 import { pushKey, sendPush } from "./webPush";
 
-// Sending timer alerts when they're due (U8). Starting a timer puts a message on the
+// Sending timer alerts when they're due (U10). Starting a timer puts a message on the
 // TIMER_ALERTS queue (wrangler.jsonc), delayed until the timer ends; the queue then hands it to
 // this Worker's queue handler, which sends the push. A message carries the end time it was made
 // for, so one from before a +1 min, or for a timer since stopped, finds nothing to do.

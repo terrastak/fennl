@@ -22,6 +22,6 @@ ADMIN_ALERT_EMAIL=owner@example.com
 # locally, remove this and set ANTHROPIC_API_KEY (docs/setup/e7-ai-import.md).
 AI_PROVIDER=fake
 
-# Timer alerts with the phone locked (U8): a push key for local development only. Real
+# Timer alerts with the phone locked (U10): a push key for local development only. Real
 # deployments get their own from CI.
 PUSH_PRIVATE_KEY={"kty":"EC","x":"H8kX46jxo62ovZPcnLW1_efgiORXlUVVDWkD-XXLpoU","y":"IH07xqLY666avOEBMlb08fgTU5nvTLlWXBlayMCbGpU","crv":"P-256","d":"fOcwc7gEDDmjVYHyE-8_jO2hxZF_Ntu9wE5T1yp-X_c"}

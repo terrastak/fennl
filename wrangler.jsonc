@@ -59,7 +59,7 @@
       "bucket_name": "fennl-images",
     },
   ],
-  // TIMER_ALERTS: cook-mode timers that alert the phone with the screen locked (U8,
+  // TIMER_ALERTS: timers that alert the phone with the screen locked (U10,
   // worker/push/). Starting a timer sends a message delayed until it ends; this Worker's queue
   // handler then sends the push. CI creates the queue. Waits at most a second to gather a batch.
   "queues": {

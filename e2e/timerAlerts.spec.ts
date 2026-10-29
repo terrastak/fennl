@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 import { randomBytes, generateKeyPairSync } from "node:crypto";
-import { recipeCard, syncStatus } from "./recipes";
+import { syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
-// U8: timer alerts with the phone locked. A test browser has no push service and refuses
+// U10: timer alerts with the phone locked. A test browser has no push service and refuses
 // notifications, so both are stood in for (a subscription shaped like a real browser's); the
 // server keeps it and is asked for an alert for each timer. That the alert then arrives on a
 // locked phone is the owner's to check.
@@ -62,60 +62,60 @@ async function standInPushService(page: Page) {
   );
 }
 
-/** Cook mode on the sample pancakes, at the step with timers. */
-async function cookPancakes(page: Page) {
-  await page.goto("/");
-  await page.getByRole("button", { name: /sample recipes to try/ }).click();
-  await expect(recipeCard(page, "Buttermilk Pancakes")).toBeVisible();
-  await expect(syncStatus(page)).toHaveText("Saved to cloud");
-  await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
-  await page.getByRole("link", { name: "Start cooking" }).click();
-  await page.getByRole("button", { name: "Start" }).click();
-  for (let i = 0; i < 4; i++) await page.keyboard.press("ArrowRight");
-  await expect(page.getByRole("heading", { level: 1, name: "Step 5 of 5" })).toBeVisible();
+/** The Timers window, with a timer of one's own running. */
+async function startTimer(page: Page, name: string) {
+  await page.getByRole("button", { name: /^Timers/ }).click();
+  const timers = page.getByRole("dialog", { name: "Timers" });
+  await timers.getByLabel("Name (optional)").fill(name);
+  await timers.getByRole("button", { name: "10 min timer" }).click();
+  await expect(timers.getByRole("listitem").filter({ hasText: name })).toBeVisible();
+  return timers;
 }
 
-test("Turn on timer alerts from cook mode, and off in Settings", async ({
+const timerRequest = (page: Page, method: "PUT" | "DELETE") =>
+  page.waitForRequest((req) => req.method() === method && /\/api\/push\/timers\//.test(req.url()));
+
+test("Turn on timer alerts from the Timers window, and off in Settings", async ({
   page,
   context,
   baseURL,
 }) => {
   await useOwnAccount(context, baseURL!);
   await standInPushService(page);
-  await cookPancakes(page);
+  await page.goto("/");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  const timers = await startTimer(page, "Pasta");
 
-  await page.getByRole("button", { name: "Start a 2 minutes timer" }).click();
-  const timers = page.getByRole("region", { name: "Timers" });
+  // Turning on asks the server for an alert for the timer already running.
   const offer = timers.getByRole("button", {
     name: "Alert me when a timer finishes, even with the phone locked",
   });
-  // Turning on asks the server for an alert for the timer already running.
-  const asked = page.waitForRequest(
-    (req) => req.method() === "PUT" && /\/api\/push\/timers\//.test(req.url()),
-  );
+  const asked = timerRequest(page, "PUT");
   await offer.click();
   const request = await asked;
-  expect(request.postDataJSON()).toMatchObject({
-    label: "2 minutes",
-    recipeTitle: "Buttermilk Pancakes",
-    path: expect.stringMatching(/^\/recipes\/[0-9a-f-]{36}\/cook$/),
-  });
+  expect(request.postDataJSON()).toMatchObject({ label: "Pasta", recipeTitle: "", path: "/" });
   expect((await request.response())?.status()).toBe(200);
   await expect(offer).toBeHidden();
 
-  // Stopping it takes the alert back.
-  const cancelled = page.waitForRequest(
-    (req) => req.method() === "DELETE" && /\/api\/push\/timers\//.test(req.url()),
-  );
-  await timers.getByRole("button", { name: "Stop" }).click();
+  // Paused, it won't alert; resumed, it will again.
+  const pasta = timers.getByRole("listitem").filter({ hasText: "Pasta" });
+  const cancelled = timerRequest(page, "DELETE");
+  await pasta.getByRole("button", { name: "Pause Pasta" }).click();
   await cancelled;
+  const again = timerRequest(page, "PUT");
+  await pasta.getByRole("button", { name: "Resume Pasta" }).click();
+  expect((await (await again).response())?.status()).toBe(200);
+
+  // Stopping it takes the alert back.
+  const stopped = timerRequest(page, "DELETE");
+  await pasta.getByRole("button", { name: "Stop Pasta" }).click();
+  await stopped;
 
   // A new timer asks for its alert straight away.
-  const next = page.waitForRequest(
-    (req) => req.method() === "PUT" && /\/api\/push\/timers\//.test(req.url()),
-  );
-  await page.getByRole("button", { name: "Start a 1 minute timer" }).click();
+  const next = timerRequest(page, "PUT");
+  await timers.getByRole("button", { name: "5 min timer", exact: true }).click();
   expect((await (await next).response())?.status()).toBe(200);
+  await timers.getByRole("button", { name: "Close" }).click();
 
   // Settings shows it's on for this browser, and turns it off.
   await page.goto("/settings");
@@ -127,7 +127,7 @@ test("Turn on timer alerts from cook mode, and off in Settings", async ({
   await expect(section).toContainText("On for this browser.");
 });
 
-test("On an iPhone in a Safari tab, cook mode says how to get timer alerts", async ({
+test("On an iPhone in a Safari tab, the Timers window says how to get timer alerts", async ({
   page,
   context,
   baseURL,
@@ -138,11 +138,11 @@ test("On an iPhone in a Safari tab, cook mode says how to get timer alerts", asy
     Object.defineProperty(navigator, "standalone", { value: false });
     delete (window as { PushManager?: unknown }).PushManager;
   });
-  await cookPancakes(page);
-  await page.getByRole("button", { name: "Start a 2 minutes timer" }).click();
-  const timers = page.getByRole("region", { name: "Timers" });
+  await page.goto("/");
+  const timers = await startTimer(page, "Rice");
   await expect(timers).toContainText("add Fennl to your Home Screen");
   await expect(timers.getByRole("button", { name: /Alert me/ })).toHaveCount(0);
+  await timers.getByRole("button", { name: "Close" }).click();
 
   await page.goto("/settings");
   await expect(page.getByRole("region", { name: "Timer alerts" })).toContainText(

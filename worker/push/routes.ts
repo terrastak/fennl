@@ -14,8 +14,8 @@ import { withinRateLimit } from "../rateLimit";
 import { scheduleTimerAlert } from "./timerAlerts";
 import { pushKey } from "./webPush";
 
-// Timer alerts with the phone locked (U8, owner's choices 2026-10-28). Every plan. A browser
-// subscribes once (Settings › This browser, or cook mode), then each cook-mode timer tells the
+// Timer alerts with the phone locked (U10, owner's choices 2026-10-28). Every plan. A browser
+// subscribes once (Settings › Timer alerts, or the Timers window), then each timer tells the
 // server when it ends, and only the browser that started it gets the alert. The person's own
 // rows only; never while an admin acts as someone (it isn't their device).
 

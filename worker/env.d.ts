@@ -55,12 +55,12 @@ interface FennlEnv {
    */
   ANTHROPIC_API_KEY?: string;
   /**
-   * Cook-mode timer alerts waiting for their timer to end (U8, wrangler.jsonc "queues";
+   * Timer alerts waiting for their timer to end (U10, wrangler.jsonc "queues";
    * worker/push/timerAlerts.ts).
    */
   TIMER_ALERTS: Queue<import("./push/timerAlerts").TimerAlertMessage>;
   /**
-   * Fennl's key for sending push notifications (timer alerts, U8): a P-256 private key as JWK.
+   * Fennl's key for sending push notifications (timer alerts, U10): a P-256 private key as JWK.
    * CI makes it once for production and keeps it, like BETTER_AUTH_SECRET. Without it, alerts
    * with the phone locked are unavailable.
    */

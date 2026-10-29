@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cleanTimerAlert, isPushEndpoint, timerPush } from "./timerAlerts";
 
-// U8: timer alerts with the phone locked.
+// U10: timer alerts with the phone locked.
 
 describe("push addresses", () => {
   it("are only the browsers' own push services", () => {

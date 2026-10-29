@@ -1,5 +1,5 @@
 /**
- * Timer alerts with the phone locked (U8, owner's choices 2026-10-28): a cook-mode timer tells
+ * Timer alerts with the phone locked (U10, owner's choices 2026-10-28): a timer tells
  * the server when it ends, and the server sends a push notification to the browser that started
  * it at that moment, so it rings with the screen off or Fennl closed. Shared by the Worker
  * (worker/push/) and the app (app/cook/timerAlerts.ts).

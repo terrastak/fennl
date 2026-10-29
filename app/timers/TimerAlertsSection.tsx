@@ -4,8 +4,8 @@ import recipeStyles from "../recipes/recipes.module.css";
 import { turnOffAlerts, turnOnAlerts, useAlertsState } from "./timerAlerts";
 
 /**
- * Settings › Timer alerts (U8, owner's choices 2026-10-28): whether this browser gets an alert
- * when a cook-mode timer finishes, even with the phone locked, and a way to turn it on or off.
+ * Settings › Timer alerts (U10, owner's choices 2026-10-28): whether this browser gets an alert
+ * when a timer finishes, even with the phone locked, and a way to turn it on or off.
  * It's per browser: each phone, tablet or computer is turned on by itself.
  */
 export function TimerAlertsSection() {
@@ -38,8 +38,8 @@ export function TimerAlertsSection() {
     <section aria-labelledby="timer-alerts-title" className={styles.section}>
       <h2 id="timer-alerts-title">Timer alerts</h2>
       <p className={styles.help}>
-        When a cook-mode timer finishes, the device that started it gets an alert, even with the
-        screen locked or Fennl closed. Each browser is turned on by itself.
+        When a timer finishes, the device that started it gets an alert, even with the screen locked
+        or Fennl closed. Each browser is turned on by itself.
       </p>
       {state === null ? null : state === "on" ? (
         <>

@@ -14,8 +14,8 @@
 // - The API, the admin area and the storage test are never kept or answered from here.
 // - A new build's worker takes over straight away and removes the old files. An open page then
 //   offers to reload (app/sync/version.ts).
-// - Timer alerts (U8, app/cook/timerAlerts.ts): a push from the server is shown as a
-//   notification, and tapping it opens the cook page that started the timer.
+// - Timer alerts (U10, app/timers/timerAlerts.ts): a push from the server is shown as a
+//   notification, and tapping it brings Fennl back.
 
 const CACHE = `fennl-app-${BUILD}`;
 const PAGE = "/";
@@ -69,11 +69,11 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// A timer alert from the server (U8). Every push must show a notification (browsers stop
-// delivering them otherwise). When the cook page that started the timer is on screen it has
-// rung already, so the notification is taken away again straight after, except through Apple's
-// push service: Apple ends the subscription of a site whose pushes show nothing, and doesn't say
-// whether one taken away counts, so there it stays.
+// A timer alert from the server (U10). Every push must show a notification (browsers stop
+// delivering them otherwise). When Fennl is on screen the timer has rung there already (timers
+// ring on every page, U9), so the notification is taken away again straight after, except
+// through Apple's push service: Apple ends the subscription of a site whose pushes show
+// nothing, and doesn't say whether one taken away counts, so there it stays.
 self.addEventListener("push", (event) => {
   let alert = null;
   try {
@@ -92,7 +92,9 @@ self.addEventListener("push", (event) => {
       });
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       const ringing = windows.some(
-        (client) => client.visibilityState === "visible" && new URL(client.url).pathname === path,
+        (client) =>
+          client.visibilityState === "visible" &&
+          !new URL(client.url).pathname.startsWith("/admin"),
       );
       const subscription = await self.registration.pushManager.getSubscription();
       const apple = Boolean(
@@ -106,7 +108,8 @@ self.addEventListener("push", (event) => {
   );
 });
 
-// Tapping an alert: back to Fennl, on the page that started the timer.
+// Tapping an alert: back to Fennl, where the timers show on every page; opened on the page that
+// started the timer when Fennl isn't open.
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const path = (event.notification.data && event.notification.data.path) || "/";
@@ -115,12 +118,9 @@ self.addEventListener("notificationclick", (event) => {
   event.waitUntil(
     (async () => {
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      const open = windows.find((client) => new URL(client.url).pathname === url.pathname);
+      const open =
+        windows.find((client) => new URL(client.url).pathname === url.pathname) ?? windows[0];
       if (open) return open.focus();
-      if (windows[0]) {
-        await windows[0].focus();
-        return windows[0].navigate(url.href);
-      }
       return self.clients.openWindow(url.href);
     })(),
   );

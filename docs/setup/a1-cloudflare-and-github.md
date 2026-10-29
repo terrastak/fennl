@@ -41,7 +41,7 @@ Checked against Cloudflare's docs on 2026-10-01. If a screen looks different fro
 
 ### Adding Queues to a token made before 2026-10-28
 
-Timer alerts (U8) need a queue, which CI creates, so a token made before then needs one more permission. Steps from Cloudflare's "Create API token" page (checked 2026-10-28), which says a token can be edited after it's made but doesn't show the screen, so tell Claude what you see if it differs:
+Timer alerts (U10) need a queue, which CI creates, so a token made before then needs one more permission. Steps from Cloudflare's "Create API token" page (checked 2026-10-28), which says a token can be edited after it's made but doesn't show the screen, so tell Claude what you see if it differs:
 
 1. Click your profile icon (top right) then **My Profile**, then **API Tokens** in the left menu.
 2. Find Fennl's token in the list, open the **⋯** menu at the end of its row and choose **Edit**.

@@ -7,7 +7,7 @@ import {
   vapidAuthorization,
 } from "./webPush";
 
-// U8: Web Push messages, checked against the worked example in RFC 8291 (Appendix A).
+// U10: Web Push messages, checked against the worked example in RFC 8291 (Appendix A).
 
 const strip = (text: string) => text.replace(/\s+/g, "");
 

@@ -3,6 +3,8 @@ import { ActingBanner } from "../acting/ActingBanner";
 import { Link } from "../router";
 import { SyncNotices } from "../sync/SyncNotices";
 import { SyncStatusLine } from "../sync/SyncStatusLine";
+import { FloatingTimers, TimersDialog } from "../timers/Timers";
+import { openTimers, useSoonest } from "../timers/timersView";
 import styles from "./AppShell.module.css";
 import {
   AccountIcon,
@@ -11,6 +13,7 @@ import {
   RecipesIcon,
   SearchIcon,
   SettingsIcon,
+  TimerIcon,
 } from "./icons";
 import { Logo } from "./Logo";
 import { ShellSearch } from "./ShellSearch";
@@ -106,6 +109,9 @@ export function AppShell({ path, title, children }: AppShellProps) {
             {PRIMARY_NAV.map((item) => (
               <NavLink key={item.href} item={item} path={path} />
             ))}
+            <li>
+              <TimersButton className={styles.navLink} />
+            </li>
           </ul>
           <ul className={`${styles.navList} ${styles.navListBottom}`}>
             <li>
@@ -140,6 +146,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
           <span className="visually-hidden">Search</span>
         </button>
         {searchOpen ? <ShellSearch variant="top" onDone={() => setSearchOpen(false)} /> : null}
+        <TimersButton className={styles.topTimers} compact />
         <Link
           href={feedbackHref(path)}
           className={styles.topBarLink}
@@ -155,6 +162,9 @@ export function AppShell({ path, title, children }: AppShellProps) {
         <SyncNotices />
         {children}
       </main>
+
+      <FloatingTimers />
+      <TimersDialog />
 
       <nav aria-label="Main" className={styles.tabBar}>
         <ul className={styles.tabList}>
@@ -177,6 +187,44 @@ export function AppShell({ path, title, children }: AppShellProps) {
         </ul>
       </nav>
     </div>
+  );
+}
+
+/**
+ * Timers (U9): in the sidebar, with how many there are; in a phone's top bar, the ⏱ with the
+ * soonest one's time left.
+ */
+function TimersButton({
+  className,
+  compact = false,
+}: {
+  className: string | undefined;
+  compact?: boolean;
+}) {
+  const { count, text, ringing } = useSoonest();
+  const label = count > 0 ? `Timers, ${count} ${count === 1 ? "timer" : "timers"}` : "Timers";
+  return (
+    <button
+      type="button"
+      className={ringing ? `${className} ${styles.timersRinging}` : className}
+      aria-haspopup="dialog"
+      aria-label={label}
+      onClick={openTimers}
+    >
+      <TimerIcon />
+      {compact ? (
+        text ? (
+          <span className={styles.timerTime}>{ringing ? "Done!" : text}</span>
+        ) : ringing ? (
+          <span className={styles.timerTime}>Done!</span>
+        ) : null
+      ) : (
+        <>
+          Timers
+          {count > 0 ? <span className={styles.timerCount}>{count}</span> : null}
+        </>
+      )}
+    </button>
   );
 }
 

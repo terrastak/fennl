@@ -209,7 +209,7 @@ app.route("/", duplicateRoutes);
 app.route("/", versionRoutes);
 app.route("/", arrangeRoutes);
 
-// Cook-mode timers that alert the phone with the screen locked (U8).
+// Timers that alert the phone with the screen locked (U10).
 app.route("/", pushRoutes);
 
 // The caller's household, for the Account page.
@@ -429,6 +429,6 @@ async function scheduled(controller: ScheduledController, env: Env) {
 export default {
   fetch: app.fetch,
   scheduled,
-  // The TIMER_ALERTS queue (U8): a timer's alert, delivered when it ends.
+  // The TIMER_ALERTS queue (U10): a timer's alert, delivered when it ends.
   queue: deliverTimerAlerts,
 } satisfies ExportedHandler<Env, TimerAlertMessage>;

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { deviceId } from "../devices/deviceId";
 
-// Timer alerts with the phone locked (U8, owner's choices 2026-10-28). Once alerts are on for
-// this browser, each cook-mode timer tells the server when it ends, and the server sends this
+// Timer alerts with the phone locked (U10, owner's choices 2026-10-28). Once alerts are on for
+// this browser, each running timer tells the server when it ends, and the server sends this
 // browser a push notification then, so it rings with the screen off or Fennl closed. Only the
-// browser that started a timer gets its alert. Turned on from cook mode or Settings › Timer
-// alerts. On iPhone and iPad it works only for Fennl opened from the Home Screen.
+// browser that started a timer gets its alert. Turned on from the Timers window or Settings ›
+// Timer alerts. On iPhone and iPad it works only for Fennl opened from the Home Screen.
 
 /** "on" while this browser gets alerts; "off" once turned off here. */
 const KEY = "fennl:timer-alerts";

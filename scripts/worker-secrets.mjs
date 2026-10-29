@@ -5,7 +5,7 @@
 //   node scripts/worker-secrets.mjs <out.json> NAME [NAME...] [--new-auth-secret] [--new-push-key]
 //
 // --new-auth-secret adds a freshly generated BETTER_AUTH_SECRET.
-// --new-push-key adds a freshly generated PUSH_PRIVATE_KEY (timer alerts, U8): a P-256 key as a
+// --new-push-key adds a freshly generated PUSH_PRIVATE_KEY (timer alerts, U10): a P-256 key as a
 // JWK. Browsers subscribe with its public half, so replacing it ends every subscription.
 import { generateKeyPairSync, randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";

@@ -13,7 +13,7 @@ import {
 } from "./timerAlerts";
 import { ecdhWith, fromBase64Url, toBase64Url } from "./webPush";
 
-// U8: cook-mode timers that alert the browser that started them, with the phone locked.
+// U10: timers that alert the browser that started them, with the phone locked.
 
 const db = () => database(env.DB);
 let counter = 0;

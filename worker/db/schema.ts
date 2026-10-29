@@ -844,7 +844,7 @@ export const aiOutcome = sqliteTable(
 );
 
 /**
- * Browsers that asked for timer alerts with the phone locked (U8, owner's choices 2026-10-28;
+ * Browsers that asked for timer alerts with the phone locked (U10, owner's choices 2026-10-28;
  * worker/push/). One per person per browser (device id, as in the device registry): the address
  * the browser's push service gave it and the keys that encrypt what's sent there. Not synced
  * records: the person's own, gone with the account or when they turn alerts off.
@@ -871,7 +871,7 @@ export const pushSubscription = sqliteTable(
 );
 
 /**
- * Cook-mode timers that alert the browser that started them when they finish (U8;
+ * Timers that alert the browser that started them when they finish (U10;
  * worker/push/timerAlerts.ts). The id is the timer's own, made on the device. A delayed queue
  * message wakes the Worker at `ends_at`; +1 min moves `ends_at` (the earlier message then finds
  * it changed and does nothing), Stop sets `cancelled_at`. Removed a day after they end.
@@ -887,7 +887,7 @@ export const timerAlert = sqliteTable(
     /** What it's for ("Bake 25 to 30 minutes") and the recipe, shown in the alert. */
     label: text("label").notNull(),
     recipeTitle: text("recipe_title").notNull(),
-    /** The page the alert opens (cook mode for the recipe). */
+    /** The page the timer was started on, which the alert opens. */
     path: text("path").notNull(),
     endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),

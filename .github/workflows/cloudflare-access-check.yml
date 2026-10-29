@@ -91,7 +91,7 @@ jobs:
             warn "Token cannot access R2 yet. R2 may need to be switched on in the dashboard; this is only needed in Stage D."
           fi
 
-          # 5b. Queues access, for timer alerts (U8): CI creates the queue.
+          # 5b. Queues access, for timer alerts (U10): CI creates the queue.
           r=$(api "/accounts/$CF_ACCOUNT_ID/queues")
           if succeeded "$r"; then
             ok "Token can access Queues."

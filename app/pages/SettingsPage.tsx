@@ -9,7 +9,7 @@ import {
 } from "../../shared/appearance";
 import { useAppearance } from "../appearance/appearance";
 import { EmailSection } from "../account/EmailSection";
-import { TimerAlertsSection } from "../cook/TimerAlertsSection";
+import { TimerAlertsSection } from "../timers/TimerAlertsSection";
 import { saveAccountScheme } from "../appearance/accountScheme";
 import { ExportSection } from "../export/ExportSection";
 import { LocalCopySection } from "../sync/LocalCopySection";

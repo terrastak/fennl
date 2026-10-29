@@ -1,4 +1,4 @@
-// Sending a Web Push message (U8): the standard every browser's push service takes, done with the
+// Sending a Web Push message (U10): the standard every browser's push service takes, done with the
 // Worker's own WebCrypto, so no library. Two parts:
 //
 // - Fennl says who it is with a signed token (VAPID, RFC 8292), made from the key in the Worker
