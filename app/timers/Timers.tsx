@@ -1,13 +1,9 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { clockText, durationText } from "../../shared/cook";
-import { alertNeeds } from "../../shared/timerAlerts";
-import { Link } from "../router";
-import { turnOnAlerts, useAlertsState, type AlertsState } from "./timerAlerts";
+import { useAlertsState } from "./timerAlerts";
+import { TimerNotifications } from "./TimerNotifications";
 import {
   addMinute,
-  alertRunningTimers,
-  askForNotifications,
-  canAskForNotifications,
   fromText,
   pauseTimer,
   resumeTimer,
@@ -255,7 +251,7 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
             ))}
           </ul>
         )}
-        {timers.length > 0 ? <TimerAlertsOffer state={alerts} /> : null}
+        <TimerNotifications />
       </div>
     </div>
   );
@@ -546,89 +542,6 @@ function StartFromStep({ offer, titleId }: { offer: StartOffer; titleId: string 
         </button>
       </div>
     </div>
-  );
-}
-
-/**
- * Under the timers (U10, owner's choices 2026-10-28): the offer to alert with the phone locked,
- * or, in an iPhone or iPad's Safari tab, how to get it. A browser that can't take alerts from the
- * server can still show one while it runs Fennl. On a computer whose browser must stay running
- * for alerts to arrive, a line says so (owner's choice 2026-10-29), pointing to Settings.
- */
-function TimerAlertsOffer({ state }: { state: AlertsState | null }) {
-  const [result, setResult] = useState<"blocked" | "failed" | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [askable, setAskable] = useState(canAskForNotifications);
-
-  if (state === "off") {
-    return (
-      <>
-        <button
-          type="button"
-          className={styles.quiet}
-          disabled={busy}
-          onClick={() => {
-            setBusy(true);
-            setResult(null);
-            void turnOnAlerts().then((outcome) => {
-              setBusy(false);
-              if (outcome === "on") alertRunningTimers();
-              else setResult(outcome);
-            });
-          }}
-        >
-          Notify me when a timer finishes, even when Fennl isn&rsquo;t on screen
-        </button>
-        <p className={styles.hint}>
-          Uses this device&rsquo;s notifications; your browser may ask first.
-        </p>
-        {result ? (
-          <p role="alert" className={styles.hint}>
-            {result === "blocked"
-              ? "Notifications are turned off for Fennl in this browser’s settings. Allow them there to get timer notifications."
-              : "Couldn’t turn on timer notifications. Check your connection and try again."}
-          </p>
-        ) : null}
-        <RunningNote />
-      </>
-    );
-  }
-  if (state === "on") return <RunningNote />;
-  if (state === "home-screen") {
-    return (
-      <p className={styles.hint}>
-        For timer notifications with the phone locked, add Fennl to your Home Screen: in Safari, tap
-        Share (under &bull;&bull;&bull; beside the address), then Add to Home Screen, and open Fennl
-        from its icon.
-      </p>
-    );
-  }
-  if (state === "unavailable" && askable) {
-    return (
-      <button
-        type="button"
-        className={styles.quiet}
-        onClick={() => void askForNotifications().then(() => setAskable(false))}
-      >
-        Tell me when a timer finishes while I&rsquo;m in another app
-      </button>
-    );
-  }
-  return null;
-}
-
-/** "Notifications arrive only while Chrome is running", on a computer where that's so. */
-function RunningNote() {
-  const [needs] = useState(() => alertNeeds(navigator.userAgent, navigator.maxTouchPoints > 1));
-  if (needs.kind !== "browser-running") return null;
-  return (
-    <p className={styles.hint}>
-      Notifications arrive only while {needs.browser} is running. More in{" "}
-      <Link href="/settings#timer-notifications" onClick={() => showView(null)}>
-        Settings › Timer notifications
-      </Link>
-      .
-    </p>
   );
 }
 

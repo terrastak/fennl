@@ -47,12 +47,12 @@ export interface TimerPush {
   test?: boolean;
 }
 
-/** What Settings › Timer notifications › Send a test notification sends (owner's request 2026-10-29). */
+/** What the Timers panel's Send test notification sends (owner's request 2026-10-29). */
 export const TEST_PUSH: TimerPush = {
   title: "Fennl test notification",
   body: "Timer notifications work on this browser.",
   tag: "fennl-test",
-  path: "/settings#timer-notifications",
+  path: "/",
   test: true,
 };
 

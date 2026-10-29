@@ -181,10 +181,3 @@
   min-height: var(--tap-target);
   font-weight: var(--weight-semibold);
 }
-
-/* Buttons side by side, wrapping on a narrow screen. */
-.buttonRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
