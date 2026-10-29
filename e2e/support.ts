@@ -1,6 +1,11 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { expect, type APIRequestContext, type BrowserContext } from "@playwright/test";
+import {
+  expect,
+  type APIRequestContext,
+  type BrowserContext,
+  type Locator,
+} from "@playwright/test";
 
 /** Browser tests start signed in as this account (made by auth.setup.ts). */
 export const SIGNED_IN_STATE = "e2e/.auth/user.json";
@@ -153,4 +158,15 @@ export function adminEmail(
   const email = admins[key];
   if (!email) throw new Error(`No admin account ${key}: add it in e2e/support.ts (ADMIN_*)`);
   return email;
+}
+
+/**
+ * Opens what a phone folds away behind a "Show the..." button (the import review screen's
+ * original), and does nothing where it's already shown. Waits for the button or the content
+ * first: deciding the moment the page appears skips the button while it's still being drawn.
+ */
+export async function showFolded(show: Locator, content: Locator): Promise<void> {
+  await expect(show.or(content).first()).toBeVisible();
+  if (await show.isVisible()) await show.click();
+  await expect(content.first()).toBeVisible();
 }

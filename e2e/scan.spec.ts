@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { premium, syncStatus } from "./recipes";
-import { useOwnAccount } from "./support";
+import { showFolded, useOwnAccount } from "./support";
 
 // Phase E9: a recipe imported from photos of its pages. The pages are chosen (or photographed
 // with the live camera, page after page), put in order, turned and cropped, then prepared on the
@@ -67,8 +67,10 @@ test("Premium: choose photos, arrange them, read them, and keep them with the re
 
   // The photos beside the draft (folded away under a button on a phone).
   const source = page.getByRole("region", { name: "The photos" });
-  const show = source.getByRole("button", { name: "Show the photos" });
-  if (await show.isVisible()) await show.click();
+  await showFolded(
+    source.getByRole("button", { name: "Show the photos" }),
+    source.getByRole("img", { name: "Photo 1" }),
+  );
   await expect(source.getByRole("img", { name: "Photo 1" })).toBeVisible();
   await expect(source.getByRole("img", { name: "Photo 2" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Not quite right?" })).toContainText(
@@ -105,9 +107,10 @@ test("Premium: screenshots of a post are read as screenshots (phase E11)", async
   await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/, { timeout: 60_000 });
 
   const source = page.getByRole("region", { name: "The screenshots" });
-  const show = source.getByRole("button", { name: "Show the screenshots" });
-  if (await show.isVisible()) await show.click();
-  await expect(source.getByRole("img", { name: "Screenshot 2" })).toBeVisible();
+  await showFolded(
+    source.getByRole("button", { name: "Show the screenshots" }),
+    source.getByRole("img", { name: "Screenshot 2" }),
+  );
   await expectAccessible(page);
 });
 

@@ -1,7 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { premium, syncStatus } from "./recipes";
-import { useOwnAccount } from "./support";
+import { showFolded, useOwnAccount } from "./support";
 
 // Phase E12: recipes imported from a PDF. The PDF is opened on the device; the recipes are found
 // (the local test server's stand-in AI starts a recipe at each text page's first line), checked
@@ -61,8 +61,10 @@ test("Premium: a PDF's recipes are found, checked, and each read into a draft", 
   await expect(page.getByRole("heading", { level: 1, name: "Review the import" })).toBeVisible();
   // Its pages, kept with it.
   const source = page.getByRole("region", { name: "The pages" });
-  const show = source.getByRole("button", { name: "Show the pages" });
-  if (await show.isVisible()) await show.click();
+  await showFolded(
+    source.getByRole("button", { name: "Show the pages" }),
+    source.getByRole("img", { name: "Page 2" }),
+  );
   await expect(source.getByRole("img", { name: "Page 2" })).toBeVisible();
 
   // Both drafts read cleanly, so they can be saved together from the list.

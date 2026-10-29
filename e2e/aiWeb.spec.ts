@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { premium, syncStatus } from "./recipes";
-import { useOwnAccount } from "./support";
+import { showFolded, useOwnAccount } from "./support";
 
 // Phase E8: a web page without recipe data, read by the AI (the local test server's stand-in AI)
 // on Premium, and reviewed like any import, beside a copy of the page. Free is told plainly that
@@ -42,8 +42,10 @@ test("Premium: a page without recipe data is read with AI, then reviewed", async
 
   // The copy of the page, without its menu, beside the draft; and Read again, for the page.
   const source = page.getByRole("region", { name: "The original page" });
-  const showSource = source.getByRole("button", { name: "Show the original page" });
-  if (await showSource.isVisible()) await showSource.click();
+  await showFolded(
+    source.getByRole("button", { name: "Show the original page" }),
+    source.locator('iframe[title^="Recipe card"]'),
+  );
   await expect(
     page.frameLocator('iframe[title^="Recipe card"]').getByText("1/2 cup powdered sugar"),
   ).toBeVisible();
