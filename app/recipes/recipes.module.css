@@ -1020,6 +1020,34 @@ a.source:hover {
 
 .steps li {
   padding-left: var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+/* A step a timer's View step lands on (owner's choice 2026-10-29): a pale tint that fades away. */
+.steps li[data-flash] {
+  animation: step-flash 3s ease-out forwards;
+}
+
+@keyframes step-flash {
+  0%,
+  30% {
+    background: var(--color-accent-soft);
+    box-shadow: 0 0 0 var(--space-2) var(--color-accent-soft);
+  }
+
+  100% {
+    background: transparent;
+    box-shadow: 0 0 0 var(--space-2) transparent;
+  }
+}
+
+/* No fading for people who turned motion off: the tint shows, then goes (removed after 3 s). */
+@media (prefers-reduced-motion: reduce) {
+  .steps li[data-flash] {
+    animation: none;
+    background: var(--color-accent-soft);
+    box-shadow: 0 0 0 var(--space-2) var(--color-accent-soft);
+  }
 }
 
 .steps li::marker {

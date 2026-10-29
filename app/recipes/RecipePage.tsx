@@ -40,6 +40,7 @@ import { Suggestion } from "./PanControls";
 import { SubRecipe } from "./SubRecipe";
 import { stepParts } from "../timers/stepParts";
 import { TimeLink } from "../timers/TimeLink";
+import { markStep } from "../timers/timersView";
 import { ScaleStatus, ScaledLine, ServingsBar, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
 import { noteTrashed } from "./trashNotice";
@@ -536,11 +537,9 @@ function Method({
   timers?: boolean;
 }) {
   const groups = sections(recipe.directions);
-  // Opened at a step (a timer's View step or its notification): that step in view.
+  // Opened at a step (a timer's notification): that step in view, and marked for a moment.
   useEffect(() => {
-    if (/^#step-\d+$/.test(window.location.hash)) {
-      document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "center" });
-    }
+    if (/^#step-\d+$/.test(window.location.hash)) markStep(window.location.hash.slice(1));
   }, []);
   // Fennl's bake-time suggestion for another pan (phase F2), under the step that gives the time.
   const note = scaling.pans ? bakeNote(recipe, scaling.pans, scaling.factor) : null;

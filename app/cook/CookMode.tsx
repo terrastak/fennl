@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useEffectEvent,
   useRef,
   useState,
   useSyncExternalStore,
@@ -10,7 +11,7 @@ import { durationText, stepIngredients, stepTimes, timerName } from "../../share
 import { bakeNote, panName } from "../../shared/pans";
 import type { DirectionStep, IngredientLine, Recipe } from "../../shared/recipe";
 import { showIngredient, showStep } from "../../shared/scale";
-import { navigate, queryParam } from "../navigation";
+import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
 import { localDay } from "../recipes/format";
 import { Suggestion } from "../recipes/PanControls";
 import { ShownText } from "../recipes/ScaleControls";
@@ -110,6 +111,25 @@ export function CookMode({ id }: { id: string }) {
   useEffect(() => {
     if (recipe) document.title = `Cooking: ${recipe.title} · Fennl`;
   }, [recipe]);
+
+  // A timer's View step (or its notification) opens at its step: #step-N in the address, read
+  // when cook mode opens and on every move within it, then taken out of the address.
+  const goToStep = useEffectEvent(() => {
+    const match = /^#step-(\d+)$/.exec(window.location.hash);
+    if (!match) return;
+    setPlace(Number(match[1]) - 1);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  });
+  useEffect(() => {
+    goToStep();
+    const moved = () => goToStep();
+    window.addEventListener(NAVIGATE_EVENT, moved);
+    window.addEventListener("popstate", moved);
+    return () => {
+      window.removeEventListener(NAVIGATE_EVENT, moved);
+      window.removeEventListener("popstate", moved);
+    };
+  }, []);
 
   const steps = recipe ? stepsOf(recipe) : [];
   const total = steps.length;
@@ -450,6 +470,8 @@ function StepText({
         onClick={() =>
           startTimer(timerName(step.text, time, times), time.seconds, recipeTitle, {
             step: number,
+            // View step comes back to this step's screen (read below, in CookMode).
+            path: `${window.location.pathname}#step-${number}`,
           })
         }
       >
