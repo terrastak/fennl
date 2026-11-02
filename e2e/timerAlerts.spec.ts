@@ -121,7 +121,9 @@ test("Timer notifications are turned on and off at the foot of the Timers panel"
 
   // How they work: what this browser needs (a computer's Chrome only while it runs).
   await line.getByText("How they work").click();
-  await expect(line).toContainText("Notifications arrive only while Chrome is running.");
+  await expect(line).toContainText(
+    "Notifications arrive while Chrome is open, even if Fennl’s tab is closed.",
+  );
 
   // A test notification checks itself (owner's choice 2026-10-29). The test browser's push address
   // is made up, so the push service's answer, and the service worker noting its arrival, are
@@ -137,12 +139,10 @@ test("Timer notifications are turned on and off at the foot of the Timers panel"
   const tested = page.waitForRequest("**/api/push/test");
   await line.getByRole("button", { name: "Send test notification" }).click();
   expect((await tested).postDataJSON()).toHaveProperty("deviceId");
-  const checks = line.getByRole("status");
-  await expect(checks).toContainText("It arrived on this device: done");
-  await expect(checks).toContainText("Fennl’s server sent it: done");
-  // Where to find it, and what a web page can't see (the test browser is Chrome on Windows).
-  await expect(checks).toContainText("It’s in the notification panel");
-  await expect(checks).toContainText("Settings › System › Notifications");
+  // One line says how it went, and where to find it (the test browser is Chrome on Windows).
+  await expect(line.getByRole("status")).toContainText(
+    "Test notification arrived. It’s in the notification panel",
+  );
   await expect(line.getByRole("button", { name: "Send another" })).toBeVisible();
 
   await line.getByRole("button", { name: "Turn off" }).click();
@@ -228,9 +228,8 @@ test("A timer's notification that never arrived is said once, in the Timers pane
   await page.getByRole("button", { name: /^Timers/ }).click();
   const timers = page.getByRole("dialog", { name: "Timers" });
   const notice = timers.getByRole("alert");
-  await expect(notice).toContainText("The notification for Bake didn’t arrive on this device.");
-  await notice.getByText("What to check").click();
-  await expect(notice).toContainText("awake (not asleep) when the timer ended");
+  await expect(notice).toContainText("The notification for Bake didn’t arrive.");
+  await expect(notice).toContainText("Keep Chrome open and the computer awake");
   await notice.getByRole("button", { name: "Dismiss" }).click();
   await expect(timers.getByRole("alert")).toHaveCount(0);
 });
