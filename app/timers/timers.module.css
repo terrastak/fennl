@@ -545,38 +545,20 @@
   margin: 0;
 }
 
-/* Send test notification's own checks, ticked as they pass. */
-.selfCheck {
-  display: grid;
-  gap: var(--space-2);
-}
-
-.checks {
-  display: grid;
-  gap: var(--space-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.checks li[data-step="ok"] .mark {
-  color: var(--color-success);
-}
-
-.checks li[data-step="no"] .mark {
-  color: var(--color-warm-text);
-}
-
+/* Send test notification's one-line answer: ✓ in the success colour; a ✗ line is a .problem. */
 .mark {
   display: inline-block;
   width: 1.25em;
   font-weight: var(--weight-semibold);
 }
 
+.tested .mark {
+  color: var(--color-success);
+}
+
 /* A timer's notification that didn't arrive. */
 .missed {
-  display: grid;
-  gap: var(--space-1);
+  margin: 0;
   padding: var(--space-3);
   border: 1px solid var(--color-warm);
   border-radius: var(--radius-md);
