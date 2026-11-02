@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { deviceId } from "../devices/deviceId";
+import { expectNothing } from "./arrivals";
 
 // Timer alerts with the phone locked (U10, owner's choices 2026-10-28). Once alerts are on for
 // this browser, each running timer tells the server when it ends, and the server sends this
@@ -177,6 +178,7 @@ export async function turnOnAlerts(): Promise<"on" | "blocked" | "failed"> {
 
 export async function turnOffAlerts(): Promise<void> {
   setFlag("off");
+  expectNothing();
   try {
     await (await subscription())?.unsubscribe();
   } catch {
@@ -188,8 +190,8 @@ export async function turnOffAlerts(): Promise<void> {
 }
 
 /**
- * Settings › Timer notifications › Send a test notification: the server sends this browser an alert now.
- * "sent" means the push service took it; whether it shows is up to the device's settings.
+ * The Timers panel's Send test notification: the server sends this browser one now. "sent" means
+ * the push service took it; ./arrivals.ts then says whether it reached this device.
  */
 export async function sendTestAlert(): Promise<"sent" | "off" | "failed"> {
   try {
@@ -210,8 +212,16 @@ export async function sendTestAlert(): Promise<"sent" | "off" | "failed"> {
 }
 
 /**
- * Asks the server to alert this browser when a timer ends (started, or given another minute).
- * True once it will; false when it can't (no connection), so the timer can say so.
+ * How asking for a timer's notification went: "set" once the server will send it; "not-set" when
+ * it couldn't be asked (no connection); "gone" when this browser no longer receives Fennl's
+ * notifications (turned on again from the timer); "blocked" when they're refused in the browser.
+ */
+export type AlertOutcome = "set" | "not-set" | "gone" | "blocked";
+
+/**
+ * Asks the server to notify this browser when a timer ends (started, or given another minute),
+ * after quietly checking what can be checked here first (owner's choice 2026-10-29): that
+ * notifications are still allowed, and that the browser still has its subscription.
  */
 export async function scheduleAlert(timer: {
   id: string;
@@ -219,7 +229,20 @@ export async function scheduleAlert(timer: {
   label: string;
   recipeTitle: string;
   path: string;
-}): Promise<boolean> {
+}): Promise<AlertOutcome> {
+  if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
+    if (Notification.permission === "denied") return "blocked";
+    setFlag(null);
+    return "gone";
+  }
+  try {
+    if (canPush() && !(await subscription())) {
+      setFlag(null);
+      return "gone";
+    }
+  } catch {
+    // Can't tell here: the server's answer decides.
+  }
   try {
     const res = await fetch(`/api/push/timers/${encodeURIComponent(timer.id)}`, {
       method: "PUT",
@@ -235,11 +258,11 @@ export async function scheduleAlert(timer: {
     if (res.status === 409) {
       // The server no longer has this browser (its subscription ended): offer to turn on again.
       setFlag(null);
-      return false;
+      return "gone";
     }
-    return res.ok;
+    return res.ok ? "set" : "not-set";
   } catch {
-    return false;
+    return "not-set";
   }
 }
 

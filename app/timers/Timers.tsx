@@ -1,9 +1,10 @@
 import { useEffect, useId, useRef, useState, type PointerEvent } from "react";
 import { clockText, durationText } from "../../shared/cook";
-import { useAlertsState } from "./timerAlerts";
+import { turnOnAlerts, useAlertsState, type AlertsState } from "./timerAlerts";
 import { TimerNotifications } from "./TimerNotifications";
 import {
   addMinute,
+  alertRunningTimers,
   fromText,
   pauseTimer,
   resumeTimer,
@@ -238,14 +239,8 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
                     </>
                   )}
                 </div>
-                {alerts === "on" &&
-                !timer.done &&
-                timer.pausedLeft === null &&
-                timer.alert === "not-set" ? (
-                  <p className={styles.note}>
-                    No notification for this one: Fennl couldn&rsquo;t reach the internet. It still
-                    rings while Fennl is on screen.
-                  </p>
+                {!timer.done && timer.pausedLeft === null ? (
+                  <AlertProblem timer={timer} alerts={alerts} />
                 ) : null}
               </li>
             ))}
@@ -254,6 +249,59 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
         <TimerNotifications />
       </div>
     </div>
+  );
+}
+
+/** A running timer whose notification couldn't be set up (the quiet checks found a problem). */
+const wontNotify = (timer: Timer) =>
+  timer.alert === "not-set" || timer.alert === "gone" || timer.alert === "blocked";
+
+/**
+ * Said under a running timer when its notification couldn't be set up (owner's choice
+ * 2026-10-29: Fennl checks quietly as each timer starts and speaks up only when something's
+ * wrong), with the way to fix it where there is one.
+ */
+function AlertProblem({ timer, alerts }: { timer: Timer; alerts: AlertsState | null }) {
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  if (timer.alert === "not-set" && alerts === "on") {
+    return (
+      <p className={styles.note}>
+        No notification for this one: Fennl couldn&rsquo;t reach the internet. It still rings while
+        Fennl is on screen.
+      </p>
+    );
+  }
+  if (timer.alert === "blocked") {
+    return (
+      <p className={styles.problem}>
+        This timer won&rsquo;t notify: notifications are blocked for Fennl in this browser&rsquo;s
+        settings. Allow them there, then turn them on again below.
+      </p>
+    );
+  }
+  if (timer.alert !== "gone") return null;
+  return (
+    <p className={styles.problem}>
+      This timer won&rsquo;t notify: this browser stopped receiving Fennl&rsquo;s notifications.{" "}
+      <button
+        type="button"
+        className={styles.textLink}
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          setFailed(false);
+          void turnOnAlerts().then((outcome) => {
+            setBusy(false);
+            if (outcome === "on") alertRunningTimers();
+            else setFailed(true);
+          });
+        }}
+      >
+        Turn on again
+      </button>
+      {failed ? " Couldn’t turn them on. Check your connection and try again." : null}
+    </p>
   );
 }
 
@@ -644,6 +692,9 @@ export function FloatingTimers() {
                 </strong>
                 <span className={styles.cardFrom}>{fromText(timer)}</span>
                 <span className={styles.cardName}>{timer.label}</span>
+                {!timer.done && timer.pausedLeft === null && wontNotify(timer) ? (
+                  <span className={styles.cardWarn}>Won&rsquo;t notify · tap for details</span>
+                ) : null}
               </span>
             </button>
             {timer.done ? (
