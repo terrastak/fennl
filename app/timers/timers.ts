@@ -1,5 +1,12 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { alertsOn, alertsTurnedOff, cancelAlert, scheduleAlert } from "./timerAlerts";
+import { checkArrivals, expectArrival } from "./arrivals";
+import {
+  alertsOn,
+  alertsTurnedOff,
+  cancelAlert,
+  scheduleAlert,
+  type AlertOutcome,
+} from "./timerAlerts";
 
 // Timers (phase F5; anywhere in the app since U9, owner's choices 2026-10-28): several at once,
 // started from a time in a recipe's step or on their own, kept on this device only (so a reload
@@ -29,10 +36,10 @@ export interface Timer {
   /** The page it was started on (at its step, on the recipe page), which its alert opens. */
   path?: string;
   /**
-   * With timer alerts on: "set" once the server will alert this browser when it ends,
-   * "not-set" when it couldn't be asked (no connection).
+   * With timer notifications on: "set" once the server will notify this browser when it ends;
+   * otherwise why it won't (./timerAlerts.ts, AlertOutcome), said under the timer.
    */
-  alert?: "set" | "not-set";
+  alert?: AlertOutcome;
 }
 
 const KEY = "fennl:cook-timers";
@@ -195,13 +202,13 @@ function askForAlert(timer: Timer): void {
     // Said under the alert's title: "Step 5 · Banana bread" (a timer of one's own: nothing).
     recipeTitle: timer.recipeTitle ? fromText(timer) : "",
     path: timer.path ?? here(),
-  }).then((ok) => {
+  }).then((outcome) => {
     const current = timers.find((t) => t.id === timer.id);
     // Stopped or paused while the server was being asked: take the alert back, now it's there.
-    if (ok && (!current || current.pausedLeft !== null)) cancelAlert(timer.id);
+    if (outcome === "set" && (!current || current.pausedLeft !== null)) cancelAlert(timer.id);
     // Only if the timer is still the one asked about (not moved on since).
     if (current && current.endsAt === timer.endsAt && current.pausedLeft === null) {
-      set(timers.map((t) => (t === current ? { ...t, alert: ok ? "set" : "not-set" } : t)));
+      set(timers.map((t) => (t === current ? { ...t, alert: outcome } : t)));
     }
   });
 }
@@ -295,7 +302,11 @@ export function checkTimers(now = Date.now()): void {
   const ended = kept.filter((t) => !t.done && t.pausedLeft === null && t.endsAt <= now);
   if (ended.length === 0 && kept.length === timers.length) return;
   set(kept.map((t) => (ended.includes(t) ? { ...t, done: true } : t)));
-  for (const timer of ended) ring(timer);
+  for (const timer of ended) {
+    ring(timer);
+    // Its notification was sent: check it reaches this device (./arrivals.ts).
+    if (timer.alert === "set" && alertsOn()) expectArrival(timer);
+  }
 }
 
 const subscribe = (listener: () => void) => {
@@ -309,16 +320,23 @@ export function useTimers(): { timers: Timer[]; now: number } {
   const now = useSyncExternalStore(subscribeClock, () => clock);
   useEffect(() => {
     checkTimers();
-    const back = () => checkTimers();
+    const back = () => {
+      checkTimers();
+      void checkArrivals();
+    };
     // Back online: alerts that couldn't be asked for are asked for now.
     const online = () => {
       for (const timer of timers) if (timer.alert === "not-set") askForAlert(timer);
     };
     document.addEventListener("visibilitychange", back);
     window.addEventListener("online", online);
+    // Whether timers' notifications reached this device, now and every minute.
+    void checkArrivals();
+    const arrivals = setInterval(() => void checkArrivals(), 60_000);
     return () => {
       document.removeEventListener("visibilitychange", back);
       window.removeEventListener("online", online);
+      clearInterval(arrivals);
     };
   }, []);
   return { timers: list, now };

@@ -123,17 +123,27 @@ test("Timer notifications are turned on and off at the foot of the Timers panel"
   await line.getByText("How they work").click();
   await expect(line).toContainText("Notifications arrive only while Chrome is running.");
 
-  // A test notification. The test browser's push address is made up, so the push service's
-  // answer is stood in for; the server's sending is covered by its own tests.
-  await page.route("**/api/push/test", (route) => route.fulfill({ json: { ok: true } }));
+  // A test notification checks itself (owner's choice 2026-10-29). The test browser's push address
+  // is made up, so the push service's answer, and the service worker noting its arrival, are
+  // stood in for; the server's sending is covered by its own tests.
+  await page.route("**/api/push/test", async (route) => {
+    await page.evaluate(() =>
+      caches
+        .open("fennl-timer-arrivals")
+        .then((c) => c.put("/__arrived/fennl-test", new Response("1"))),
+    );
+    await route.fulfill({ json: { ok: true } });
+  });
   const tested = page.waitForRequest("**/api/push/test");
   await line.getByRole("button", { name: "Send test notification" }).click();
   expect((await tested).postDataJSON()).toHaveProperty("deviceId");
-  const sent = line.getByRole("status");
-  await expect(sent).toContainText("“Fennl test notification” should appear within a few seconds.");
-  // What to check on this computer (the test browser says it's Chrome on Windows).
-  await expect(sent).toContainText("Settings › System › Notifications");
-  await expect(sent).toContainText("Do Not Disturb or a Focus isn’t on.");
+  const checks = line.getByRole("status");
+  await expect(checks).toContainText("It arrived on this device: done");
+  await expect(checks).toContainText("Fennl’s server sent it: done");
+  // Where to find it, and what a web page can't see (the test browser is Chrome on Windows).
+  await expect(checks).toContainText("It’s in the notification panel");
+  await expect(checks).toContainText("Settings › System › Notifications");
+  await expect(line.getByRole("button", { name: "Send another" })).toBeVisible();
 
   await line.getByRole("button", { name: "Turn off" }).click();
   await expect(line).toContainText("Timers won’t use this device’s notifications.");
@@ -167,4 +177,60 @@ test("On an iPhone in a Safari tab, the Timers panel says how to get timer notif
   await expect(line.getByRole("button", { name: "Turn on" })).toHaveCount(0);
   await line.getByText("How", { exact: true }).click();
   await expect(line).toContainText("Add to Home Screen");
+});
+
+test("A timer whose notification can't be set up says so, with the way to fix it", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await standInPushService(page);
+  await page.goto("/");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  const timers = await startTimer(page, "Pasta");
+  const line = timers.getByRole("region", { name: "Timer notifications" });
+  await line.getByRole("button", { name: "Turn on" }).click();
+  await expect(line).toContainText("Timers will use this device’s notifications.");
+
+  // The browser lost its subscription (as when a browser's data is cleared): the next timer's
+  // quiet check finds it, and says so under that timer.
+  await page.evaluate(() => sessionStorage.removeItem("test:push-subscription"));
+  await startTimer(page, "Rice", "5 min");
+  const rice = timers.getByRole("listitem").filter({ hasText: "Rice" });
+  await expect(rice).toContainText(
+    "This timer won’t notify: this browser stopped receiving Fennl’s notifications.",
+  );
+  const asked = page.waitForRequest(
+    (req) => req.method() === "PUT" && /\/api\/push\/timers\//.test(req.url()),
+  );
+  await rice.getByRole("button", { name: "Turn on again" }).click();
+  await asked;
+  await expect(rice).not.toContainText("won’t notify");
+  await expect(line).toContainText("Timers will use this device’s notifications.");
+});
+
+test("A timer's notification that never arrived is said once, in the Timers panel", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  // A timer that ended 20 minutes ago, whose notification this device never noted.
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "fennl:timer-pending",
+      JSON.stringify([{ id: "t-1", label: "Bake", endsAt: Date.now() - 20 * 60_000 }]),
+    ),
+  );
+  await page.reload();
+  await page.getByRole("button", { name: /^Timers/ }).click();
+  const timers = page.getByRole("dialog", { name: "Timers" });
+  const notice = timers.getByRole("alert");
+  await expect(notice).toContainText("The notification for Bake didn’t arrive on this device.");
+  await notice.getByText("What to check").click();
+  await expect(notice).toContainText("awake (not asleep) when the timer ended");
+  await notice.getByRole("button", { name: "Dismiss" }).click();
+  await expect(timers.getByRole("alert")).toHaveCount(0);
 });

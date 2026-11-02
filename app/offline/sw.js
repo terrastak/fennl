@@ -92,6 +92,19 @@ self.addEventListener("push", (event) => {
         // Where the browser shows buttons (Chrome; on a Mac under Options), one back to the step.
         actions: alert && alert.test ? [] : [{ action: "show", title: "Show step" }],
       });
+      // Noted as arrived, so Fennl knows its notifications reach this device (app/timers/
+      // arrivals.ts reads it: the self-checking test, and a timer's notification that never came).
+      if (alert && alert.tag) {
+        try {
+          const arrivals = await caches.open("fennl-timer-arrivals");
+          await arrivals.put(
+            `/__arrived/${encodeURIComponent(alert.tag)}`,
+            new Response(String(Date.now())),
+          );
+        } catch {
+          // Not noted: at worst Fennl says one didn't arrive.
+        }
+      }
       const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
       const ringing = windows.some(
         (client) =>
