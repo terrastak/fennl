@@ -13,6 +13,7 @@ const PHONE_TESTS = [
   "devices",
   "discover",
   "editor",
+  "email",
   "feedback",
   "filters",
   "import",

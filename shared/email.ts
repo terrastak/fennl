@@ -2,12 +2,21 @@
  * Changing an account's email address (phase B7a). Shared by the Worker, the app and the admin
  * console. Dates are ISO strings.
  */
+import type { EmailProblem } from "./emailDelivery";
 
 /** How long the link sent to a new address works. */
 export const EMAIL_CHANGE_HOURS = 24;
 
 /** The longest address accepted (the limit for an email address in practice). */
 const MAX_EMAIL_LENGTH = 254;
+
+/**
+ * What an address must look like: the same check as Better Auth's (zod's `z.email()`), so Fennl
+ * never stores an address Better Auth would then refuse to sign in with or send a link to.
+ * `email.test.ts` checks the two still agree.
+ */
+const EMAIL_PATTERN =
+  /^(?:[A-Za-z0-9_'+-]+\.)*[A-Za-z0-9_'+-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9-]*\.)+[A-Za-z]{2,}$/;
 
 /**
  * An address as Fennl stores it (trimmed, lower case), or null if it doesn't look like one. The
@@ -17,7 +26,7 @@ export function normalizeEmail(input: unknown): string | null {
   if (typeof input !== "string") return null;
   const email = input.trim().toLowerCase();
   if (email.length > MAX_EMAIL_LENGTH) return null;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null;
+  return EMAIL_PATTERN.test(email) ? email : null;
 }
 
 /** The account's email, as Settings shows it. */
@@ -28,6 +37,8 @@ export interface EmailStatus {
   emailVerifiedAt: string | null;
   /** A change waiting for the link sent to the new address. */
   pending: { email: string; expiresAt: string } | null;
+  /** Why emails to this address aren't arriving (phase U14), or null when nothing is known. */
+  problem: EmailProblem | null;
 }
 
 /** What opening the link in the email led to. */

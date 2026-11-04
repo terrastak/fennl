@@ -28,14 +28,16 @@
     "enabled": true,
   },
   // Scheduled work (the "scheduled" handler in worker/index.ts): every hour, at 17 minutes past,
-  // remove accounts whose email was never verified (worker/account/purge.ts) and delete recipes
-  // in Trash for more than 30 days for good (worker/sync/trash.ts).
+  // remove accounts whose email was never verified (worker/account/purge.ts), delete recipes
+  // in Trash for more than 30 days for good (worker/sync/trash.ts) and remove records of emails
+  // sent more than 90 days ago (worker/email/delivery.ts), among other housekeeping.
   "triggers": {
     "crons": ["17 * * * *"],
   },
-  // Secrets (BETTER_AUTH_SECRET, email, Google, Apple) are set by CI and listed with the bindings
-  // in worker/env.d.ts. They're deliberately not declared here: declaring them makes local
-  // development ignore every optional setting in .dev.vars.
+  // Secrets (BETTER_AUTH_SECRET, email, Resend's webhook secret and unblocking key, Google,
+  // Apple) are set by CI and listed with the bindings in worker/env.d.ts. They're deliberately
+  // not declared here: declaring them makes local development ignore every optional setting in
+  // .dev.vars.
   // Production database. Migrations live in worker/db/migrations and are written by Drizzle.
   "d1_databases": [
     {

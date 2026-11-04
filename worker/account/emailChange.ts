@@ -114,7 +114,7 @@ export async function waitingEmailChange(db: Database, userId: string, now = new
     .get();
 }
 
-function isUniqueViolation(error: unknown): boolean {
+export function isUniqueViolation(error: unknown): boolean {
   const text = String((error as { cause?: unknown }).cause ?? error);
   return /UNIQUE constraint failed/i.test(text) || /UNIQUE constraint failed/i.test(String(error));
 }
@@ -157,7 +157,13 @@ export async function completeEmailChange(
     const [changed] = await db.batch([
       db
         .update(user)
-        .set({ email: change.newEmail, emailVerified: true, emailVerifiedAt: now, updatedAt: now })
+        .set({
+          email: change.newEmail,
+          emailVerified: true,
+          emailVerifiedAt: now,
+          emailProblem: null,
+          updatedAt: now,
+        })
         .where(stillOld)
         .returning({ id: user.id }),
       db
@@ -234,6 +240,7 @@ export async function restoreEmail(
           email,
           emailVerified: true,
           emailVerifiedAt: previous.get(email) ?? null,
+          emailProblem: null,
           updatedAt: now,
         })
         .where(and(eq(user.id, person.id), eq(user.email, person.email)))

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { EMAIL_CHANGE_HOURS, type EmailStatus } from "../../shared/email";
+import { useSession } from "../auth/client";
 import { Field, FormError, FormNotice } from "../auth/fields";
+import { NAVIGATE_EVENT } from "../navigation";
 import { verifiedText } from "./verified";
 import styles from "./account.module.css";
 
@@ -19,8 +21,40 @@ async function readStatus(): Promise<EmailStatus> {
   return (await res.json()) as EmailStatus;
 }
 
+/** Emails to the address stopped arriving (phase U14), as said under it. */
+function problemText(problem: EmailStatus["problem"]): string | null {
+  if (problem === "complained") {
+    return "An email to this address was marked as spam, so Fennl has stopped emailing it.";
+  }
+  return problem ? "Emails to this address aren’t arriving." : null;
+}
+
+/**
+ * Scrolls to the section when the address ends in #email (the email notice links here). It waits
+ * a frame, so it comes after the app frame moves focus to the page's heading on a page change
+ * (which would scroll back to the top).
+ */
+function useScrollHere() {
+  useEffect(() => {
+    let frame = 0;
+    const here = () => {
+      if (window.location.hash !== "#email") return;
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => document.getElementById("email")?.scrollIntoView());
+    };
+    here();
+    window.addEventListener(NAVIGATE_EVENT, here);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener(NAVIGATE_EVENT, here);
+    };
+  }, []);
+}
+
 /** Settings › Email: the account's address, and changing it (phase B7a). */
 export function EmailSection() {
+  // Read again when the session's word on the address changes ("This address is right").
+  const sessionProblem = useSession().data?.user.emailProblem ?? null;
   const [status, setStatus] = useState<EmailStatus | null>(null);
   const [failed, setFailed] = useState(false);
   const [newEmail, setNewEmail] = useState("");
@@ -37,6 +71,8 @@ export function EmailSection() {
     }
   }, []);
 
+  useScrollHere();
+
   useEffect(() => {
     let cancelled = false;
     readStatus()
@@ -49,7 +85,7 @@ export function EmailSection() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [sessionProblem]);
 
   const start = async (event: FormEvent) => {
     event.preventDefault();
@@ -82,7 +118,7 @@ export function EmailSection() {
   };
 
   return (
-    <section aria-labelledby="email-title" className={styles.section}>
+    <section aria-labelledby="email-title" className={styles.section} id="email">
       <h2 id="email-title">Email</h2>
       {failed ? (
         <p role="alert" className={styles.help}>
@@ -100,6 +136,12 @@ export function EmailSection() {
             <span className={styles.muted}>
               {verifiedText(status.emailVerified, status.emailVerifiedAt)}
             </span>
+            {problemText(status.problem) ? (
+              <>
+                <br />
+                <span className={styles.problem}>{problemText(status.problem)}</span>
+              </>
+            ) : null}
           </p>
           <FormNotice message={notice} />
           <FormError message={error} />

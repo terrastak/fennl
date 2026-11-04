@@ -9,7 +9,7 @@ export const auth = betterAuth(
     origin: "http://localhost",
     secret: "schema-generation-only-not-a-real-secret",
     db: {} as Database,
-    sendEmail: async () => {},
+    sendEmail: async () => ({ id: null }),
     google: { clientId: "-", clientSecret: "-" },
     apple: { clientId: "-", clientSecret: "-" },
   }),

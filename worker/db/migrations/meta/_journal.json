@@ -281,6 +281,13 @@
       "when": 1793229505290,
       "tag": "0039_timer_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1793769298481,
+      "tag": "0040_email_messages",
+      "breakpoints": true
     }
   ]
 }

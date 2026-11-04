@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { EmailNotice } from "../account/EmailNotice";
 import { ActingBanner } from "../acting/ActingBanner";
 import { Link } from "../router";
 import { SyncNotices } from "../sync/SyncNotices";
@@ -160,6 +161,7 @@ export function AppShell({ path, title, children }: AppShellProps) {
       <main id="main" ref={mainRef} tabIndex={-1} className={styles.main}>
         <ActingBanner />
         <SyncNotices />
+        <EmailNotice />
         {children}
       </main>
 

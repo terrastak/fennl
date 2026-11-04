@@ -13,6 +13,9 @@ export const authClient = createAuthClient({
         hideNutrition: { type: "boolean", required: false },
         printOptions: { type: "string", required: false },
         mustChangePassword: { type: "boolean", required: false },
+        // Emails to the address stopped arriving (phase U14): "bounced", "complained" or
+        // "suppressed", else null.
+        emailProblem: { type: "string", required: false },
       },
     }),
   ],

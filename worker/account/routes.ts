@@ -1,9 +1,11 @@
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { maskEmail, normalizeEmail, type EmailStatus } from "../../shared/email";
+import { isEmailProblem } from "../../shared/emailDelivery";
 import { database } from "../db/client";
 import { session, user } from "../db/schema";
 import { createEmailSender } from "../email/email";
+import { removeSuppression } from "../email/suppressions";
 import { emailChangeEmail, emailChangedNotice } from "../email/templates";
 import { requireHousehold } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
@@ -30,13 +32,16 @@ export function emailChangeLink(origin: string, token: string): string {
 /** Sends the link to the new address. A failed send is logged; the person can ask again. */
 export async function sendEmailChangeLink(
   env: Env,
+  userId: string,
   to: { email: string; name: string },
   link: string,
   bySupport: boolean,
 ) {
-  await createEmailSender(env)(emailChangeEmail(to, link, bySupport)).catch((error: unknown) =>
-    console.error("Email change link not sent", error),
-  );
+  await createEmailSender(env)({
+    ...emailChangeEmail(to, link, bySupport),
+    kind: "email_change",
+    userId,
+  }).catch((error: unknown) => console.error("Email change link not sent", error));
 }
 
 accountRoutes.get("/api/account/email", requireHousehold, async (c) => {
@@ -51,6 +56,7 @@ accountRoutes.get("/api/account/email", requireHousehold, async (c) => {
     pending: waiting?.expiresAt
       ? { email: waiting.newEmail, expiresAt: waiting.expiresAt.toISOString() }
       : null,
+    problem: isEmailProblem(person.emailProblem) ? person.emailProblem : null,
   };
   return c.json(status);
 });
@@ -82,7 +88,7 @@ accountRoutes.post("/api/account/email", requireHousehold, async (c) => {
   // used to find out who has an account. The change can never complete.
   if (!(await emailInUse(db, newEmail, userId))) {
     const link = emailChangeLink(new URL(c.req.url).origin, token);
-    await sendEmailChangeLink(c.env, { email: newEmail, name: person.name }, link, false);
+    await sendEmailChangeLink(c.env, userId, { email: newEmail, name: person.name }, link, false);
   }
   return c.json({ pending: { email: newEmail, expiresAt: expiresAt.toISOString() } });
 });
@@ -108,12 +114,43 @@ accountRoutes.post("/api/account/email/verify", async (c) => {
   const token = typeof body?.token === "string" ? body.token : "";
   const outcome = await completeEmailChange(db, token);
   if (outcome.result === "done") {
-    await createEmailSender(c.env)(
-      emailChangedNotice(
+    await createEmailSender(c.env)({
+      ...emailChangedNotice(
         { email: outcome.oldEmail, name: outcome.name },
         maskEmail(outcome.newEmail),
       ),
-    ).catch((error: unknown) => console.error("Email change notice not sent", error));
+      kind: "email_changed",
+      userId: outcome.userId,
+    }).catch((error: unknown) => console.error("Email change notice not sent", error));
   }
   return c.json({ result: outcome.result });
+});
+
+/**
+ * "This address is right" (phase U14): the notice that emails aren't arriving goes, and the
+ * address comes off Resend's list of addresses it won't send to, so the next email is tried
+ * again; if that one bounces too, the notice comes back. Once a day each. Not while an admin
+ * acts as the person (the admin console has its own Unblock, U15).
+ */
+accountRoutes.post("/api/account/email/address-is-right", requireHousehold, async (c) => {
+  const { db, userId, impersonating } = c.var.signedIn;
+  if (impersonating) return c.json({ error: "not_while_impersonating" }, 403);
+  if (
+    !(await withinRateLimit(db, `email-unblock:${userId}`, {
+      max: 1,
+      windowMs: 24 * 60 * 60_000,
+    }))
+  ) {
+    return c.json({ error: "too_many" }, 429);
+  }
+  const [person] = await db
+    .update(user)
+    .set({ emailProblem: null })
+    .where(eq(user.id, userId))
+    .returning({ email: user.email })
+    .all();
+  if (!person) return c.json({ error: "unauthorized" }, 401);
+  const result = await removeSuppression(c.env, person.email);
+  if (result !== "removed") console.log(`"This address is right": suppression ${result}`);
+  return c.json({ ok: true });
 });

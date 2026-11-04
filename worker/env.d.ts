@@ -40,6 +40,18 @@ interface FennlEnv {
   RESEND_API_KEY?: string;
   /** Sender for account emails, for example `Fennl <hello@mail.example.com>`. */
   EMAIL_FROM?: string;
+  /**
+   * The signing secret of Resend's webhook (`whsec_...`, phase U14): checks that calls to
+   * POST /api/email/events come from Resend. Without it the route answers 404. Production only:
+   * previews get no events.
+   */
+  RESEND_WEBHOOK_SECRET?: string;
+  /**
+   * A second Resend API key, with Full access (phase U14), used ONLY by
+   * worker/email/suppressions.ts to take an address off Resend's suppression list. Never used to
+   * send, never logged. Production only, so a preview can't unblock real addresses.
+   */
+  RESEND_MANAGE_KEY?: string;
   /** "Continue with Google" appears only when both are set. */
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;

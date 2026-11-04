@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process";
+import { createHmac, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import {
   expect,
@@ -42,6 +43,74 @@ export async function linkFromLatestEmail(
     link = `${url.pathname}${url.search}`;
   }).toPass({ timeout: 10_000 });
   return link;
+}
+
+/** The id the local dev outbox gave the newest email to an address (phase U14). */
+export async function latestEmailId(request: APIRequestContext, to: string): Promise<string> {
+  let id = "";
+  await expect(async () => {
+    const res = await request.get(`/api/dev/outbox?to=${encodeURIComponent(to)}`);
+    const emails = (await res.json()) as { id?: string }[];
+    expect(emails[0]?.id).toBeTruthy();
+    id = emails[0]!.id!;
+  }).toPass({ timeout: 10_000 });
+  return id;
+}
+
+/** The local webhook signing secret: from .dev.vars, else the example it's made from. */
+function webhookSecret(): string {
+  for (const file of [".dev.vars", ".dev.vars.example"]) {
+    let text: string;
+    try {
+      text = readFileSync(file, "utf8");
+    } catch {
+      continue;
+    }
+    const match = text.match(/^RESEND_WEBHOOK_SECRET=(.+)$/m);
+    if (match) return match[1]!.trim();
+  }
+  throw new Error("RESEND_WEBHOOK_SECRET is missing from .dev.vars and .dev.vars.example");
+}
+
+/**
+ * Sends an event about an email to Fennl's webhook (POST /api/email/events), signed the way
+ * Resend signs them (Svix: an HMAC-SHA256 of "id.timestamp.body" with the secret after
+ * "whsec_", base64-decoded), as if Resend said what happened to it (phase U14).
+ */
+export async function sendEmailEvent(
+  request: APIRequestContext,
+  type: string,
+  data: Record<string, unknown>,
+): Promise<void> {
+  const body = JSON.stringify({ type, created_at: new Date().toISOString(), data });
+  const id = `msg_${randomUUID()}`;
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  const key = Buffer.from(webhookSecret().replace(/^whsec_/, ""), "base64");
+  const signature = createHmac("sha256", key).update(`${id}.${timestamp}.${body}`).digest("base64");
+  const res = await request.post("/api/email/events", {
+    headers: {
+      "content-type": "application/json",
+      "svix-id": id,
+      "svix-timestamp": timestamp,
+      "svix-signature": `v1,${signature}`,
+    },
+    data: body,
+  });
+  expect(res.ok(), await res.text()).toBe(true);
+}
+
+/** Resend's word that the newest email to an address bounced for good (phase U14). */
+export async function bounceLatestEmail(request: APIRequestContext, to: string): Promise<void> {
+  const emailId = await latestEmailId(request, to);
+  await sendEmailEvent(request, "email.bounced", {
+    email_id: emailId,
+    to: [to],
+    bounce: {
+      type: "Permanent",
+      subType: "General",
+      message: "The recipient's email address doesn't exist.",
+    },
+  });
 }
 
 /** Makes a confirmed account through the API, signed in within this context. */

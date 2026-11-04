@@ -18,6 +18,8 @@
 # in docs/setup/b2-email-and-sign-in.md (RESEND_API_KEY, EMAIL_FROM, GOOGLE_*, APPLE_*), and the
 # admin area settings in docs/setup/b4a-admin-access.md (ADMIN_HOSTNAME, ACCESS_*, ADMIN_ALERT_EMAIL,
 # CF_ACCESS_CLIENT_ID/SECRET), and ANTHROPIC_API_KEY for AI import (docs/setup/e7-ai-import.md).
+# Production also takes RESEND_WEBHOOK_SECRET and RESEND_MANAGE_KEY, for emails that don't arrive
+# (docs/setup/u14-email-delivery.md); previews never get them.
 #
 # Worker secrets are written to a temporary file and uploaded with each version (--secrets-file).
 # BETTER_AUTH_SECRET is generated here, never stored in GitHub: production creates it once and
@@ -276,6 +278,8 @@ jobs:
           set -euo pipefail
           # Google and Apple only accept sign-ins at addresses registered with them, and preview
           # links change with every pull request, so previews offer email and password only.
+          # RESEND_WEBHOOK_SECRET and RESEND_MANAGE_KEY are left out on purpose (U14): previews get
+          # no email events, and must never take a real address off Resend's blocked list.
           node scripts/worker-secrets.mjs "$RUNNER_TEMP/secrets.json" \
             RESEND_API_KEY EMAIL_FROM ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL \
             ANTHROPIC_API_KEY --new-auth-secret --new-push-key
@@ -377,6 +381,12 @@ jobs:
       APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
       APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      # Emails that don't arrive (U14, docs/setup/u14-email-delivery.md): Resend's webhook signing
+      # secret, and the Full access key used only to unblock an address. Production only:
+      # Resend's events go to the beta address alone, and a preview must never unblock a real
+      # address.
+      RESEND_WEBHOOK_SECRET: ${{ secrets.RESEND_WEBHOOK_SECRET }}
+      RESEND_MANAGE_KEY: ${{ secrets.RESEND_MANAGE_KEY }}
     steps:
       - name: Require APP_HOSTNAME and email settings
         run: |
@@ -484,7 +494,8 @@ jobs:
           node scripts/worker-secrets.mjs "$RUNNER_TEMP/secrets.json" \
             RESEND_API_KEY EMAIL_FROM GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET \
             APPLE_CLIENT_ID APPLE_TEAM_ID APPLE_KEY_ID APPLE_PRIVATE_KEY \
-            ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL ANTHROPIC_API_KEY "${extra[@]}"
+            ACCESS_TEAM_DOMAIN ACCESS_AUD ADMIN_ALERT_EMAIL ANTHROPIC_API_KEY \
+            RESEND_WEBHOOK_SECRET RESEND_MANAGE_KEY "${extra[@]}"
       - name: Deploy
         run: npx wrangler deploy --message "main at ${GITHUB_SHA:0:7}" --secrets-file "$RUNNER_TEMP/secrets.json"
       - name: Remove the secrets file

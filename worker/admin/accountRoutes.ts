@@ -132,9 +132,11 @@ adminAccountRoutes.post("/accounts/:id/temporary-password", async (c) => {
   await setMustChangePassword(admin.db, person.id, true);
   const sessionsEnded = signOut ? await signOutEverywhere(admin.db, person.id) : 0;
   // The standard security email still goes out (CLAUDE.md); it never contains the password.
-  await createEmailSender(c.env)(
-    temporaryPasswordEmail(person, `${appOrigin(c.env, c.req.raw)}/sign-in`),
-  ).catch((error: unknown) => console.error("Temporary password notice not sent", error));
+  await createEmailSender(c.env)({
+    ...temporaryPasswordEmail(person, `${appOrigin(c.env, c.req.raw)}/sign-in`),
+    kind: "temporary_password",
+    userId: person.id,
+  }).catch((error: unknown) => console.error("Temporary password notice not sent", error));
   return c.json({ password, sessionsEnded });
 });
 
@@ -180,7 +182,7 @@ adminAccountRoutes.post("/accounts/:id/email", async (c) => {
   );
   const { token } = await startEmailChange(admin.db, person, newEmail, admin.userId);
   const link = emailChangeLink(appOrigin(c.env, c.req.raw), token);
-  await sendEmailChangeLink(c.env, { email: newEmail, name: person.name }, link, true);
+  await sendEmailChangeLink(c.env, person.id, { email: newEmail, name: person.name }, link, true);
   return c.json(await accountDetail(admin.db, person.id));
 });
 

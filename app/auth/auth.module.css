@@ -205,6 +205,8 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   font-size: var(--text-sm);
+  /* Long email addresses wrap on phones. */
+  overflow-wrap: anywhere;
 }
 
 .error {
@@ -252,4 +254,26 @@
   padding: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+}
+
+/* "Did you mean …?" on Check your email, when the sign-up link couldn't be delivered (U14). */
+.suggestion {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-6);
+}
+
+.suggestion p {
+  margin: 0;
+}
+
+.suggestion strong {
+  overflow-wrap: anywhere;
+}
+
+/* "Use <address>": a long address wraps inside the button rather than widening the page. */
+.suggestion .button {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
 }

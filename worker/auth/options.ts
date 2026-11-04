@@ -85,7 +85,11 @@ export function authOptions(settings: AuthSettings) {
           .where(eq(schema.user.id, person.id));
       },
       sendResetPassword: async ({ user, url }) => {
-        await settings.sendEmail(passwordResetEmail(user, url));
+        await settings.sendEmail({
+          ...passwordResetEmail(user, url),
+          kind: "password_reset",
+          userId: user.id,
+        });
       },
     },
     emailVerification: {
@@ -95,7 +99,11 @@ export function authOptions(settings: AuthSettings) {
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60 * 24,
       sendVerificationEmail: async ({ user, url }) => {
-        await settings.sendEmail(verificationEmail(user, url));
+        await settings.sendEmail({
+          ...verificationEmail(user, url),
+          kind: "verification",
+          userId: user.id,
+        });
       },
     },
     socialProviders,
@@ -126,6 +134,11 @@ export function authOptions(settings: AuthSettings) {
         // every way an address gets verified, and by Fennl's own email change
         // (worker/account/emailChange.ts). Null on older accounts: "date not recorded".
         emailVerifiedAt: { type: "date", required: false, input: false },
+        // Why the current address isn't getting Fennl's emails (phase U14, shared/emailDelivery.ts
+        // EmailProblem): "bounced", "complained" or "suppressed", else null. Set by the email
+        // service's events (worker/email/events.ts); cleared when the address changes, when an
+        // email to it is delivered, or by "This address is right".
+        emailProblem: { type: "string", required: false, input: false },
       },
       // Better Auth's own email change is off (the default): Fennl runs its own, which keeps
       // every change so support can restore an earlier address (worker/account/emailChange.ts).

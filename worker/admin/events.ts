@@ -25,13 +25,15 @@ export async function alertOwner(env: Env, subject: string, lines: string[], req
         `Address: ${new URL(request.url).hostname}`,
       ]
     : [];
-  await createEmailSender(env)(
-    adminAlertEmail(env.ADMIN_ALERT_EMAIL, subject, [
+  await createEmailSender(env)({
+    ...adminAlertEmail(env.ADMIN_ALERT_EMAIL, subject, [
       ...lines,
       `Time: ${new Date().toUTCString()}`,
       ...where,
     ]),
-  );
+    kind: "owner_notice",
+    userId: null,
+  });
 }
 
 /**
