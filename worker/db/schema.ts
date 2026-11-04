@@ -899,3 +899,35 @@ export const timerAlert = sqliteTable(
     index("timer_alert_ends_idx").on(table.endsAt),
   ],
 );
+
+/**
+ * Every email sent to an account (U14; worker/email/delivery.ts), and what became of it: the
+ * email service's events (POST /api/email/events) move `status` on. Never the email's words.
+ * No foreign key, so the record of a mistyped sign-up address outlives the account removed 24
+ * hours later (U15 shows it). Removed 90 days after sending by the hourly job.
+ */
+export const emailMessage = sqliteTable(
+  "email_message",
+  {
+    id: text("id").primaryKey(),
+    /** The email service's id for it (Resend's; "dev-..." in the local outbox). */
+    providerId: text("provider_id"),
+    userId: text("user_id").notNull(),
+    /** Which email it was (shared/emailDelivery.ts, EmailKind). */
+    kind: text("kind").notNull(),
+    /** The address it went to, lower case (the account's address may change later). */
+    toAddress: text("to_address").notNull(),
+    sentAt: integer("sent_at", { mode: "timestamp_ms" }).notNull(),
+    /** shared/emailDelivery.ts, EmailDeliveryStatus. */
+    status: text("status").notNull(),
+    /** When the event that set `status` happened, so an older event arriving late is ignored. */
+    statusAt: integer("status_at", { mode: "timestamp_ms" }).notNull(),
+    /** The mail server's reason for a bounce, or why it wasn't sent (at most 500 characters). */
+    detail: text("detail"),
+  },
+  (table) => [
+    uniqueIndex("email_message_provider_idx").on(table.providerId),
+    index("email_message_user_idx").on(table.userId, table.sentAt),
+    index("email_message_sent_idx").on(table.sentAt),
+  ],
+);

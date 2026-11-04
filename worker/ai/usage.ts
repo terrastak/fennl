@@ -186,7 +186,11 @@ export async function checkSpending(
   const send = createEmailSender(env);
   for (const notice of notices) {
     try {
-      await send(ownerNoticeEmail(env.ADMIN_ALERT_EMAIL, notice.subject, notice.lines));
+      await send({
+        ...ownerNoticeEmail(env.ADMIN_ALERT_EMAIL, notice.subject, notice.lines),
+        kind: "owner_notice",
+        userId: null,
+      });
     } catch (error) {
       console.error("Couldn't email the AI cost notice", error);
     }

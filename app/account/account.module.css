@@ -3,6 +3,12 @@
   margin-bottom: var(--space-12);
 }
 
+/* A section a link scrolls to (Settings › Email, from the email notice) stops clear of the
+   phone's top bar. */
+.section[id] {
+  scroll-margin-top: calc(var(--top-bar-height) + var(--space-4));
+}
+
 .section h2 {
   font-size: var(--text-2xl);
   margin-bottom: var(--space-6);
@@ -26,6 +32,13 @@
 .address {
   font-weight: var(--weight-semibold);
   overflow-wrap: anywhere;
+}
+
+/* Emails to the address stopped arriving (phase U14). */
+.problem {
+  color: var(--color-warm-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
 }
 
 .pending {

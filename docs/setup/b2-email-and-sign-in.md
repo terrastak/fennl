@@ -121,7 +121,7 @@ On the B2 preview link, as soon as Step 3 is saved:
 1. Create an account with your own email. The confirmation email should arrive within a minute.
 2. Send test sign-ups to a Gmail, an Outlook and an iCloud address, and check each one landed in the inbox, not spam.
 3. In Gmail, open the email's **⋮** menu › **Show original**. **SPF**, **DKIM** and **DMARC** should all say **PASS**.
-4. During the beta, glance at Resend's **Emails** page now and then. Bounced or complained-about emails show up there.
+4. During the beta, glance at Resend's **Emails** page now and then. Bounced or complained-about emails show up there. Since phase U14, Resend also tells Fennl about them, so the person is told in the app; its setup is in `docs/setup/u14-email-delivery.md`.
 
 After merging, on the beta site: try "Continue with Google" and "Continue with Apple" (once Steps 4 and 5 are done).
 

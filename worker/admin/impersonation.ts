@@ -39,6 +39,8 @@ const REFUSED = [
   "/api/extension/links",
   // Timer alerts go to the person's own browsers (U10); an admin's isn't one.
   "/api/push/subscription",
+  // Taking the person's address off Resend's blocked list (U14); the console has Unblock (U15).
+  "/api/account/email/address-is-right",
 ];
 
 /** Writes that change nothing while acting as someone, so aren't worth a log entry. */

@@ -72,6 +72,8 @@
   --sidebar-width: 15.5rem;
   --content-max: 72rem;
   --tap-target: 2.75rem;
+  /* The phone's top bar (app/shell/AppShell.module.css), which stays at the top as the page scrolls. */
+  --top-bar-height: 3.75rem;
 
   /* Printouts (phase F6): dark ink on white paper in every scheme and mode, since a page
      printed from dark mode must not come out dark, and grey that a printer can still draw. */

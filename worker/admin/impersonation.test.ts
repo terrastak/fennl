@@ -225,6 +225,7 @@ describe("acting as someone", () => {
       ["/api/auth/update-user", { name: "Not June" }],
       ["/api/devices/takeover", { deviceId: id() }],
       ["/api/extension/links", {}],
+      ["/api/account/email/address-is-right", {}],
     ] as const;
     for (const [path, body] of refused) {
       const res = await admin.request(path, { body });

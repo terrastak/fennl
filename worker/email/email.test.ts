@@ -8,6 +8,7 @@ afterEach(() => {
 });
 
 const baseEnv = { DEV_EMAIL_OUTBOX: undefined } as unknown as Env;
+const about = { kind: "verification", userId: null } as const;
 
 describe("email templates", () => {
   it("have a plain-text and an HTML version, each with the link", () => {
@@ -43,7 +44,15 @@ describe("sending email", () => {
       RESEND_API_KEY: "re_test",
       EMAIL_FROM: "Fennl <hello@mail.example.com>",
     });
-    await send({ to: "a@example.com", subject: "Hi", text: "Hello", html: "<p>Hello</p>" });
+    const sent = await send({
+      to: "a@example.com",
+      subject: "Hi",
+      text: "Hello",
+      html: "<p>Hello</p>",
+      ...about,
+    });
+    // Resend's id for the email, which its events name (U14); kind and person stay with Fennl.
+    expect(sent).toEqual({ id: "1" });
 
     expect(fetchSpy).toHaveBeenCalledOnce();
     const [url, init] = fetchSpy.mock.calls[0]!;
@@ -63,9 +72,13 @@ describe("sending email", () => {
       new Response('{"message":"domain not verified"}', { status: 403 }),
     );
     const send = createEmailSender({ ...baseEnv, RESEND_API_KEY: "re_secret", EMAIL_FROM: "x" });
-    const error = await send({ to: "a@example.com", subject: "s", text: "t", html: "h" }).catch(
-      (e: unknown) => e as Error,
-    );
+    const error = await send({
+      to: "a@example.com",
+      subject: "s",
+      text: "t",
+      html: "h",
+      ...about,
+    }).catch((e: unknown) => e as Error);
     expect(error).toBeInstanceOf(Error);
     expect(String(error)).toContain("domain not verified");
     expect(String(error)).not.toContain("re_secret");
@@ -73,14 +86,14 @@ describe("sending email", () => {
 
   it("keeps emails in the dev outbox only when asked to", async () => {
     const send = createEmailSender({ ...baseEnv, DEV_EMAIL_OUTBOX: "true" });
-    await send({ to: "Outbox@Example.com", subject: "s", text: "t", html: "h" });
+    await send({ to: "Outbox@Example.com", subject: "s", text: "t", html: "h", ...about });
     expect(devOutbox.list("outbox@example.com")[0]?.subject).toBe("s");
   });
 
   it("fails clearly when nothing is configured", async () => {
     const send = createEmailSender(baseEnv);
-    await expect(send({ to: "a@example.com", subject: "s", text: "t", html: "h" })).rejects.toThrow(
-      EmailNotConfiguredError,
-    );
+    await expect(
+      send({ to: "a@example.com", subject: "s", text: "t", html: "h", ...about }),
+    ).rejects.toThrow(EmailNotConfiguredError);
   });
 });

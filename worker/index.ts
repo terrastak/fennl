@@ -6,6 +6,7 @@ import { isUnitSystem } from "../shared/scale";
 import { healthStatus } from "../shared/health";
 import { removeUnverifiedAccounts } from "./account/purge";
 import { accountRoutes } from "./account/routes";
+import { signUpRoutes, withSignUpProof } from "./account/signUpRoutes";
 import { adminAiRoutes } from "./ai/adminRoutes";
 import { aiRoutes } from "./ai/routes";
 import { adminAccountRoutes } from "./admin/accountRoutes";
@@ -22,7 +23,9 @@ import { adminFeedbackRoutes, feedbackRoutes } from "./feedback/routes";
 import { database, databaseStatus } from "./db/client";
 import { passkey, user } from "./db/schema";
 import { createEmailSender } from "./email/email";
+import { removeOldEmailMessages } from "./email/delivery";
 import { devOutbox } from "./email/outbox";
+import { emailRoutes } from "./email/routes";
 import { householdEntitlements } from "./entitlements/entitlements";
 import { householdSummary } from "./household/household";
 import { photoGracePeriods } from "./images/grace";
@@ -154,7 +157,12 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   ) {
     return c.json({ error: "not_while_impersonating" }, 403);
   }
+  // "Check your email" needs the proof given with a sign-up or an unverified sign-in (U14).
+  const url = new URL(c.req.url);
+  const signUpOrIn = path === "/api/auth/sign-up/email" || path === "/api/auth/sign-in/email";
+  const copy = path === "/api/auth/sign-in/email" ? c.req.raw.clone() : null;
   const response = await auth.handler(c.req.raw);
+  if (signUpOrIn) return withSignUpProof(c.env, url, copy, response);
   // An admin acting as someone never shows in that person's own list of sessions.
   if (path === "/api/auth/list-sessions" && response.ok) {
     const sessions = (await response.json()) as { impersonatedBy?: string | null }[];
@@ -179,6 +187,12 @@ app.get("/api/sign-in-methods", async (c) =>
 
 // Invite and promo codes: at sign-up and from the Account page.
 app.route("/", codeRoutes);
+
+// "Check your email": whether the sign-up link arrived, and fixing a mistyped address (U14).
+app.route("/", signUpRoutes);
+
+// What happened to the emails Fennl sent, from Resend's webhook (U14). No session: signed.
+app.route("/", emailRoutes);
 
 // The browsers each household uses, and the device limit (phase B6).
 app.route("/", deviceRoutes);
@@ -358,7 +372,17 @@ app.get("/api/dev/outbox", (c) => {
   if (c.env.DEV_EMAIL_OUTBOX !== "true" || c.env.RESEND_API_KEY) {
     return c.json({ error: "not_found" }, 404);
   }
-  return c.json(devOutbox.list(c.req.query("to")));
+  return c.json(
+    devOutbox.list(c.req.query("to")).map(({ id, kind, userId, to, subject, text, sentAt }) => ({
+      id,
+      kind,
+      userId,
+      to,
+      subject,
+      text,
+      sentAt,
+    })),
+  );
 });
 
 // Local browser tests only: setting up codes, limits and switches (worker/dev/testSetup.ts).
@@ -385,8 +409,9 @@ app.notFound((c) => {
 /**
  * Scheduled work (wrangler.jsonc "triggers"). Every hour: remove accounts whose email was never
  * verified (worker/account/purge.ts), delete for good recipes in Trash for more than 30 days
- * (worker/sync/trash.ts), remove import drafts nobody reviewed (worker/import/jobs.ts) and
- * timer alerts a day after they ended (worker/push/timerAlerts.ts).
+ * (worker/sync/trash.ts), remove import drafts nobody reviewed (worker/import/jobs.ts), timer
+ * alerts a day after they ended (worker/push/timerAlerts.ts) and records of emails sent more
+ * than 90 days ago (worker/email/delivery.ts).
  */
 async function scheduled(controller: ScheduledController, env: Env) {
   const db = database(env.DB);
@@ -403,6 +428,8 @@ async function scheduled(controller: ScheduledController, env: Env) {
   if (outcomes > 0) console.log(`Removed ${outcomes} AI import outcome(s) over two years old`);
   const alerts = await removeOldTimerAlerts(db);
   if (alerts > 0) console.log(`Removed ${alerts} finished timer alert(s)`);
+  const emails = await removeOldEmailMessages(db);
+  if (emails > 0) console.log(`Removed the records of ${emails} email(s) over 90 days old`);
   const importPhotos = await removeImportPhotos(db, env.IMAGES);
   if (importPhotos > 0) console.log(`Removed ${importPhotos} photo(s) kept for finished imports`);
 

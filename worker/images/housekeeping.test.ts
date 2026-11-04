@@ -371,6 +371,7 @@ describe("the 90-day photo grace period", () => {
     const sent: EmailMessage[] = [];
     const send = async (m: EmailMessage) => {
       sent.push(m);
+      return { id: null };
     };
     const mine = () => sent.filter((m) => m.to.startsWith("june-"));
     const open = () =>
@@ -441,6 +442,7 @@ describe("the 90-day photo grace period", () => {
     const sent: EmailMessage[] = [];
     await photoGracePeriods(db(), async (m) => {
       sent.push(m);
+      return { id: null };
     });
     expect(sent.filter((m) => m.to.startsWith("june-"))).toEqual([]);
     const rows = await db()

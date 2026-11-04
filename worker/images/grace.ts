@@ -120,7 +120,7 @@ export async function photoGracePeriods(
 
   const email = async (
     userId: string,
-    message: (to: { email: string; name: string }) => Promise<void>,
+    message: (to: { email: string; name: string }) => Promise<unknown>,
   ) => {
     const to = await d1
       .prepare("select email, name from user where id = ?1")
@@ -161,7 +161,13 @@ export async function photoGracePeriods(
           .all();
         if (started.results.length > 0) {
           report.started += 1;
-          await email(userId, (to) => send(photoGraceStartedEmail(to, new Date(deleteAfter))));
+          await email(userId, (to) =>
+            send({
+              ...photoGraceStartedEmail(to, new Date(deleteAfter)),
+              kind: "photo_grace_started",
+              userId,
+            }),
+          );
         }
         continue;
       }
@@ -193,7 +199,11 @@ export async function photoGracePeriods(
       if (marked.results.length > 0) {
         report.reminded += 1;
         await email(userId, (to) =>
-          send(photoGraceReminderEmail(to, new Date(grace.deleteAfter), daysLeft)),
+          send({
+            ...photoGraceReminderEmail(to, new Date(grace.deleteAfter), daysLeft),
+            kind: "photo_grace_reminder",
+            userId,
+          }),
         );
       }
     } catch (error) {

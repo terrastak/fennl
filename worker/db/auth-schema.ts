@@ -26,6 +26,7 @@ export const user = sqliteTable("user", {
     mode: "boolean",
   }).default(false),
   emailVerifiedAt: integer("email_verified_at", { mode: "timestamp_ms" }),
+  emailProblem: text("email_problem"),
 });
 
 export const session = sqliteTable(

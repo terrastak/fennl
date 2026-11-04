@@ -1,4 +1,4 @@
-import type { EmailMessage } from "./email";
+import type { EmailContent } from "./email";
 
 function escapeHtml(value: string): string {
   return value.replace(
@@ -33,7 +33,7 @@ function greeting(name: string): string {
   return first ? `Hi ${first},` : "Hi,";
 }
 
-export function verificationEmail(to: { email: string; name: string }, url: string): EmailMessage {
+export function verificationEmail(to: { email: string; name: string }, url: string): EmailContent {
   const lines = [
     greeting(to.name),
     "Please verify your email address to finish setting up your Fennl account. The link works for 24 hours.",
@@ -47,7 +47,7 @@ export function verificationEmail(to: { email: string; name: string }, url: stri
   };
 }
 
-export function passwordResetEmail(to: { email: string; name: string }, url: string): EmailMessage {
+export function passwordResetEmail(to: { email: string; name: string }, url: string): EmailContent {
   const lines = [
     greeting(to.name),
     "Someone asked to reset the password for your Fennl account. The link works for 1 hour.",
@@ -62,14 +62,14 @@ export function passwordResetEmail(to: { email: string; name: string }, url: str
 }
 
 /** A short security notice to the owner. Plain, with no links to click. */
-export function adminAlertEmail(to: string, subject: string, lines: string[]): EmailMessage {
+export function adminAlertEmail(to: string, subject: string, lines: string[]): EmailContent {
   const closing =
     "If this wasn't you, change the admin account's password and remove its passkeys right away.";
   return ownerNoticeEmail(to, subject, [...lines, closing]);
 }
 
 /** A plain notice to the owner (ADMIN_ALERT_EMAIL), such as the AI's monthly cost (phase E7). */
-export function ownerNoticeEmail(to: string, subject: string, paragraphs: string[]): EmailMessage {
+export function ownerNoticeEmail(to: string, subject: string, paragraphs: string[]): EmailContent {
   return {
     to,
     subject,
@@ -93,7 +93,7 @@ ${paragraphs.map((p) => `<p style="margin:0 0 8px">${escapeHtml(p)}</p>`).join("
 export function temporaryPasswordEmail(
   to: { email: string; name: string },
   signInUrl: string,
-): EmailMessage {
+): EmailContent {
   const lines = [
     greeting(to.name),
     "Fennl support has set a temporary password on your account, as you asked. When you next sign in with it, you'll choose a new password of your own.",
@@ -115,7 +115,7 @@ export function emailChangeEmail(
   to: { email: string; name: string },
   url: string,
   bySupport: boolean,
-): EmailMessage {
+): EmailContent {
   const lines = [
     greeting(to.name),
     bySupport
@@ -138,7 +138,7 @@ export function emailChangeEmail(
 export function emailChangedNotice(
   to: { email: string; name: string },
   maskedNewEmail: string,
-): EmailMessage {
+): EmailContent {
   const lines = [
     greeting(to.name),
     `The email address for your Fennl account was just changed to ${maskedNewEmail}. From now on, sign in with the new address.`,
@@ -167,7 +167,7 @@ function longDate(when: Date): string {
 export function photoGraceStartedEmail(
   to: { email: string; name: string },
   deleteAfter: Date,
-): EmailMessage {
+): EmailContent {
   const date = longDate(deleteAfter);
   const lines = [
     greeting(to.name),
@@ -188,7 +188,7 @@ export function photoGraceReminderEmail(
   to: { email: string; name: string },
   deleteAfter: Date,
   daysLeft: number,
-): EmailMessage {
+): EmailContent {
   const date = longDate(deleteAfter);
   const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
   const lines = [
