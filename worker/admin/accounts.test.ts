@@ -79,6 +79,25 @@ describe("the account tools", () => {
     expect((await call("/api/admin/accounts?q=%25%25")).body).toEqual([]);
   });
 
+  it("find an account by a whole long email address, or part of one", async () => {
+    // Over D1's 50-byte limit on a LIKE pattern, which once made this search answer 500.
+    const address = `rosalind.featherstonehaugh.${++counter}.a-very-long-address-indeed@example.com`;
+    expect(address.length).toBeGreaterThan(60);
+    await signUpConfirmed(address, "Rosalind Featherstonehaugh");
+    const whole = await call(`/api/admin/accounts?q=${encodeURIComponent(address.toUpperCase())}`);
+    expect(whole.status).toBe(200);
+    expect((whole.body as AccountMatch[])[0]?.email).toBe(address);
+    const part = await call(`/api/admin/accounts?q=${encodeURIComponent(address.slice(3, 58))}`);
+    expect((part.body as AccountMatch[]).map((m) => m.email)).toContain(address);
+  });
+
+  it("answer an empty list for a long query that matches nothing", async () => {
+    const res = await call(`/api/admin/accounts?q=${"nobody-has-this-address-".repeat(5)}`);
+    expect(res).toEqual({ status: 200, body: [] });
+    const tooLong = await call(`/api/admin/accounts?q=${"x".repeat(300)}`);
+    expect(tooLong).toEqual({ status: 200, body: [] });
+  });
+
   it("show an account's page, and record that it was looked at", async () => {
     const address = email("detail");
     const v = await signUpConfirmed(address, "Rosa Lee");

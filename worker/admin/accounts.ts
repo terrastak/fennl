@@ -35,16 +35,18 @@ import { householdPhotos, householdUsage, usageWithLimits } from "../limits/usag
 
 const PERSONAL_PREFIX = "personal-";
 
-/** "%" and "_" mean something in LIKE; a search for them should find them literally. */
-function likePattern(query: string): string {
-  return `%${query.replace(/[\\%_]/g, (ch) => `\\${ch}`)}%`;
-}
+/** The longest query searched: an email address can be at most 254 characters. */
+const MAX_QUERY_LENGTH = 254;
 
-/** Accounts whose email or name contains the query (at least 2 characters), newest first. */
+/**
+ * Accounts whose email or name contains the query (2 to 254 characters), newest first, with an
+ * account whose whole email is the query ahead of the rest. It matches with instr rather than
+ * LIKE: D1 refuses a LIKE pattern over 50 bytes, which made a whole email address answer 500,
+ * and instr takes "%" and "_" literally with no escaping.
+ */
 export async function searchAccounts(db: Database, query: string): Promise<AccountMatch[]> {
   const q = query.trim().toLowerCase();
-  if (q.length < 2) return [];
-  const pattern = likePattern(q);
+  if (q.length < 2 || q.length > MAX_QUERY_LENGTH) return [];
   const rows = await db
     .select({
       id: user.id,
@@ -56,12 +58,9 @@ export async function searchAccounts(db: Database, query: string): Promise<Accou
     })
     .from(user)
     .where(
-      or(
-        sql`lower(${user.email}) like ${pattern} escape '\\'`,
-        sql`lower(${user.name}) like ${pattern} escape '\\'`,
-      ),
+      or(sql`instr(lower(${user.email}), ${q}) > 0`, sql`instr(lower(${user.name}), ${q}) > 0`),
     )
-    .orderBy(desc(user.createdAt))
+    .orderBy(desc(sql`lower(${user.email}) = ${q}`), desc(user.createdAt))
     .limit(25)
     .all();
   return rows.map((row) => ({
