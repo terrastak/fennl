@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { premium, recipeCard, signInElsewhere, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
-// Phase C13b: saved searches on the recipe list. The four sample recipes are:
+// Phase C13b: saved searches on the recipe list (a quick filter since U13). The four sample recipes are:
 //   Green Chile Stew (125 min), Buttermilk Pancakes (30), Black Bean Tacos with Lime Crema (30),
 //   Lemon Olive Oil Cake (60).
 
@@ -17,16 +17,13 @@ async function addSamples(page: Page) {
 const titles = (page: Page) =>
   page.getByRole("region", { name: /^\d+ recipes?$/ }).locator("[id^=card-title-]");
 const saved = (page: Page) => page.getByRole("region", { name: "Saved searches" });
-const chooser = (page: Page) => saved(page).getByRole("combobox", { name: /^Saved searches/ });
-const timeBox = (page: Page) =>
-  page.getByRole("region", { name: "More filters" }).getByRole("combobox", { name: /^Time/ });
-
-/** Opens the filters panel, unless a saved search already opened it. */
-async function openFilters(page: Page) {
-  const toggle = page.getByRole("button", { name: /^More filters/ });
-  if ((await toggle.getAttribute("aria-expanded")) !== "true") await toggle.click();
-  await expect(page.getByRole("region", { name: "More filters" })).toBeVisible();
-}
+/** The ★ Saved searches chip among the quick filters (U13). */
+const chooser = (page: Page) =>
+  page
+    .getByRole("group", { name: "Quick filters" })
+    .getByRole("combobox", { name: "Saved searches" });
+/** The quick Time filter. */
+const timeBox = (page: Page) => page.getByRole("combobox", { name: "Time", exact: true });
 
 /** Saves what the list shows under a name. */
 async function saveAs(page: Page, name: string) {
@@ -47,20 +44,19 @@ test("Save a search, use it again, update it, rename it and remove it", async ({
   // Nothing to save until the list is narrowed.
   await expect(saved(page).getByRole("button", { name: "Save this search" })).toHaveCount(0);
 
-  await openFilters(page);
   await timeBox(page).selectOption("30");
   await expect(titles(page)).toHaveCount(2);
   await saveAs(page, "Quick dinners");
   await expect(chooser(page)).toHaveValue(/.+/);
 
   // Back to everything; the saved search brings its filters back.
-  await page.getByRole("button", { name: "Show all recipes" }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect(titles(page)).toHaveCount(4);
   await expect(chooser(page)).toHaveValue("");
   await chooser(page).selectOption({ label: "Quick dinners" });
   await expect(titles(page)).toHaveCount(2);
   await expect(page).toHaveURL(/time=30/);
-  await expect(page.getByRole("button", { name: "Remove filter: Up to 30 minutes" })).toBeVisible();
+  await expect(timeBox(page)).toHaveValue("30");
 
   // It is a rule, not a list: it follows the recipes. A reload still has it.
   await page.reload();
@@ -68,12 +64,11 @@ test("Save a search, use it again, update it, rename it and remove it", async ({
 
   // Change the filters; the saved search can be updated to match.
   await chooser(page).selectOption({ label: "Quick dinners" });
-  await openFilters(page);
   await timeBox(page).selectOption("60");
   await expect(titles(page)).toHaveCount(3);
   await saved(page).getByRole("button", { name: "Update “Quick dinners”" }).click();
   await expect(saved(page).getByText("Updated “Quick dinners”.")).toBeVisible();
-  await page.getByRole("button", { name: "Show all recipes" }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
   await chooser(page).selectOption({ label: "Quick dinners" });
   await expect(titles(page)).toHaveCount(3);
 
@@ -95,14 +90,13 @@ test("Save a search, use it again, update it, rename it and remove it", async ({
   await expect(saved(page).getByText("Removed “Under an hour”.")).toBeVisible();
   await expect(chooser(page)).toHaveCount(0);
   // The recipes are all still there.
-  await page.getByRole("button", { name: "Show all recipes" }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect(titles(page)).toHaveCount(4);
 });
 
 test("A name can't be used twice, and says why", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
-  await openFilters(page);
   await timeBox(page).selectOption("30");
   await saveAs(page, "Quick");
 
@@ -133,7 +127,6 @@ test("Premium: saved searches are on another device, and show with no connection
   const email = await useOwnAccount(context, baseURL!);
   await premium(context, baseURL!);
   await addSamples(page);
-  await openFilters(page);
   await timeBox(page).selectOption("30");
   await saveAs(page, "Quick dinners");
 
@@ -141,7 +134,7 @@ test("Premium: saved searches are on another device, and show with no connection
   const phone = await signInElsewhere(browser, baseURL!, email);
   await expect(chooser(phone).getByRole("option", { name: "Quick dinners" })).toBeAttached();
   await chooser(phone).selectOption({ label: "Quick dinners" });
-  await phone.getByRole("button", { name: /^More filters/ }).waitFor();
+  await expect(timeBox(phone)).toHaveValue("30");
   await expect(phone).toHaveURL(/time=30/);
   await phone.context().close();
 
@@ -170,7 +163,6 @@ test("Another person's saved searches are never shown", async ({
 }) => {
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
-  await openFilters(page);
   await timeBox(page).selectOption("30");
   await saveAs(page, "Mine only");
 

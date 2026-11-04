@@ -3,7 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { emptyRecipeContent } from "../shared/recipe";
 import { directionsFromText, ingredientsFromText } from "../shared/recipeLines";
-import { editorStatus, premium, recipeCard, syncStatus, quickScale } from "./recipes";
+import { editorStatus, premium, recipeCard, syncStatus, quickScale, fromListMenu } from "./recipes";
 import { signUpConfirmed, useFreshAddress, useOwnAccount } from "./support";
 
 // Phase F6: printing. Chrome makes real PDFs here, which are read back to check nothing is cut
@@ -208,7 +208,8 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
 
   // Narrowed by a search: Print these.
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("lemon");
-  await page.getByRole("button", { name: "Print these" }).click();
+  await expect(page.getByText("Showing 2 of 4")).toBeVisible();
+  await fromListMenu(page, "Print these");
   await expect(page.getByRole("heading", { level: 1, name: "Print: 2 recipes" })).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(2);
   // A contents page only when asked for.
@@ -224,8 +225,8 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
 
   // Ticked one by one in Select.
-  await page.getByRole("button", { name: "Show all recipes" }).click();
-  await page.getByRole("button", { name: "Select", exact: true }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
+  await fromListMenu(page, "Select recipes");
   await page.getByRole("checkbox", { name: TACOS }).check();
   await page.getByRole("checkbox", { name: "Green Chile Stew" }).check();
   await page.getByRole("button", { name: "Print these recipes" }).click();
@@ -267,6 +268,7 @@ test("A booklet of 200 recipes is ready quickly", async ({ page, context, baseUR
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("booklet");
   await expect(page.getByText(/Showing 200 of 200/)).toBeVisible();
 
+  await page.getByRole("button", { name: "More actions" }).click();
   const started = Date.now();
   await page.getByRole("button", { name: "Print these" }).click();
   await expect(page.getByRole("article")).toHaveCount(200);

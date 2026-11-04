@@ -295,6 +295,20 @@ export const MADE_LABELS: Record<Exclude<MadeFilter, "">, string> = {
   old: "Not made in the last 90 days",
 };
 
+export const RATING_LABELS: Record<Exclude<RatingFilter, "">, string> = {
+  favorite: "My favorites",
+  "5": "5 stars",
+  "4": "4 stars and up",
+  "3": "3 stars and up",
+  none: "Not rated yet",
+};
+
+/** A time as a short choice: "15 min", "1 hr", "1½ hr". */
+export const shortMinutes = (minutes: number): string =>
+  minutes < 60
+    ? `${minutes} min`
+    : `${Math.floor(minutes / 60)}${minutes % 60 === 30 ? "½" : ""} hr`;
+
 export const minutesLabel = (minutes: number): string =>
   minutes % 60 === 0 && minutes >= 60
     ? `${minutes / 60} ${minutes === 60 ? "hour" : "hours"}`

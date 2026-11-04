@@ -7,8 +7,9 @@ import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
-import { FilterPanel } from "../recipes/FilterPanel";
-import { SavedSearches } from "../recipes/SavedSearches";
+import { FiltersPanel } from "../recipes/FiltersPanel";
+import { ListMenu } from "../recipes/ListMenu";
+import { useSavedSearchControls } from "../recipes/savedSearchControls";
 import {
   activeFilterCount,
   applyFilters,
@@ -18,14 +19,17 @@ import {
   ingredientWords,
   NO_FILTERS,
   pickSurprise,
+  RATING_LABELS,
+  shortMinutes,
+  TIME_CHOICES,
   UNFILED,
   type RatingFilter,
   type RecipeFilters,
 } from "../recipes/filters";
-import categoryStyles from "../categories/categories.module.css";
 import { minutesText } from "../recipes/format";
 import { Highlight } from "../recipes/Highlight";
 import { forgetTrashed, recentlyTrashed } from "../recipes/trashNotice";
+import listStyles from "../recipes/list.module.css";
 import styles from "../recipes/recipes.module.css";
 import { SAMPLE_COUNT, sampleRecipeChanges } from "../recipes/samples";
 import { Link } from "../router";
@@ -50,7 +54,9 @@ import { PageHeader } from "./PageHeader";
 // (phase C6) on a new recipe. Phase C7 adds the category filter and Select, for filing many
 // recipes at once. Phase C8 adds search (app/sync/search.ts) and the rating filter. Phase C13a
 // adds "More filters" (app/recipes/filters.ts). The search and filters are kept in the address
-// (?q=, ?category=, ?rating=, and the others filtersToParams writes).
+// (?q=, ?category=, ?rating=, and the others filtersToParams writes). U13 (owner's choices
+// 2026-11-04) lays it out as one search bar with a Filters button, a row of quick filters, and a
+// ⋯ menu for the rest.
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -224,14 +230,11 @@ function EmptyState({
   );
 }
 
-const RATINGS: { value: RatingFilter; label: string }[] = [
-  { value: "", label: "Any rating" },
-  { value: "favorite", label: "My favorites" },
-  { value: "5", label: "5 stars" },
-  { value: "4", label: "4 stars and up" },
-  { value: "3", label: "3 stars and up" },
-  { value: "none", label: "Not rated yet" },
-];
+/** The Rating chip's choices; favorites have their own chip (U13). */
+const RATINGS = (["5", "4", "3", "none"] as const).map((value) => ({
+  value,
+  label: RATING_LABELS[value],
+}));
 
 /** Today as a day ("2026-10-20") in this person's own calendar, as "made it" days are. */
 function today(): string {
@@ -269,8 +272,7 @@ export function RecipesPage() {
   const [filters, setFilters] = useState<RecipeFilters>(() =>
     filtersFromParams(new URLSearchParams(window.location.search)),
   );
-  const moreCount = filterChips(filters, (key) => key).length;
-  const [showMore, setShowMore] = useState(() => moreCount > 0);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [query, setQuery] = useState(() => queryParam("q") ?? "");
   const [limit, setLimit] = useState(PAGE);
   const search = useSearch(query);
@@ -327,7 +329,6 @@ export function RecipesPage() {
     setQuery(q);
     setFilters(next);
     remember(q, next);
-    if (filterChips(next, (key) => key).length > 0) setShowMore(true);
   };
 
   const typeQuery = (value: string) => {
@@ -399,148 +400,244 @@ export function RecipesPage() {
   // Printing several at once (phase F6), coming back to the list as it was.
   const print = (ids: string[]) => printRecipes(ids, `/${window.location.search}`);
 
+  const quickChips = chips.filter((chip) => chip.id !== "time");
+  const busy = (searching && !search) || found.pending;
+  const saved = useSavedSearchControls({
+    query,
+    filters,
+    narrowing,
+    currentText: filtersToParams(query, filters, (key) => tree?.byKey.get(key)?.path).toString(),
+    onApply: applySearch,
+  });
+
   return (
     <>
-      <PageHeader title="Your recipes" note={greetingFor(new Date())} />
-      {list.length > 0 ? (
-        <form role="search" className={styles.search} onSubmit={(e) => e.preventDefault()}>
-          <label htmlFor="recipe-search" className={styles.searchLabel}>
-            Search recipes
-          </label>
-          <input
-            id="recipe-search"
-            type="search"
-            className={styles.searchInput}
-            value={query}
-            placeholder="A title, an ingredient, a word in the notes…"
-            autoComplete="off"
-            enterKeyHint="search"
-            onChange={(e) => typeQuery(e.target.value)}
-          />
-        </form>
-      ) : null}
-      {list.length > 0 ? (
-        <SavedSearches
-          query={query}
-          filters={filters}
-          narrowing={narrowing}
-          currentText={filtersToParams(
-            query,
-            filters,
-            (key) => tree?.byKey.get(key)?.path,
-          ).toString()}
-          onApply={applySearch}
-        />
-      ) : null}
-      {list.length > 0 ? (
-        <div className={styles.toolbar}>
-          <div className={styles.toolbarStart}>
+      <div className={listStyles.head}>
+        <PageHeader title="Your recipes" note={greetingFor(new Date())} />
+        {list.length > 0 ? (
+          <div className={listStyles.headActions}>
             <button
               type="button"
-              className={styles.primary}
+              className={`${styles.primary} ${listStyles.add}`}
               onClick={add}
               disabled={!editable}
               aria-disabled={addBlocked ? true : undefined}
               aria-describedby={addBlocked ? "add-blocked" : undefined}
             >
-              Add recipe
+              <span aria-hidden="true">+</span>
+              <span className={listStyles.addText}>Add recipe</span>
             </button>
-            <button
-              type="button"
-              className={styles.secondary}
-              aria-pressed={selecting}
-              onClick={() => (selecting ? stopSelecting() : setSelecting(true))}
-            >
-              {selecting ? "Done selecting" : "Select"}
-            </button>
-            <button
-              type="button"
-              className={styles.secondary}
-              disabled={shown.length === 0}
-              onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
-            >
-              Surprise me
-            </button>
+            <ListMenu
+              selecting={selecting}
+              onSelect={() => (selecting ? stopSelecting() : setSelecting(true))}
+              onSurprise={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
+              onPrint={() => print(shown.map((recipe) => recipe.id))}
+              canSurprise={shown.length > 0}
+              canPrint={shown.length > 0 && !busy}
+            />
           </div>
-          <div className={styles.toolbarEnd}>
-            {hasCategories || filters.category ? (
-              <label className={styles.sort}>
-                Category
-                <select
-                  className={styles.select}
-                  value={filters.category}
-                  onChange={(e) => changeFilters({ ...filters, category: e.target.value })}
+        ) : null}
+      </div>
+
+      {list.length > 0 ? (
+        <>
+          <form role="search" className={listStyles.searchBar} onSubmit={(e) => e.preventDefault()}>
+            <svg
+              className={listStyles.searchIcon}
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            <label htmlFor="recipe-search" className="visually-hidden">
+              Search recipes
+            </label>
+            <input
+              id="recipe-search"
+              type="search"
+              className={listStyles.searchField}
+              value={query}
+              placeholder="Search titles, ingredients, notes…"
+              autoComplete="off"
+              enterKeyHint="search"
+              onChange={(e) => typeQuery(e.target.value)}
+            />
+            <button
+              type="button"
+              className={listStyles.filtersButton}
+              aria-haspopup="dialog"
+              onClick={() => setPanelOpen(true)}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <path d="M4 6h16M7 12h10M10 18h4" />
+              </svg>
+              <span className={listStyles.filtersText}>Filters</span>
+              {filtering > 0 ? (
+                <span className={listStyles.count}>
+                  {filtering}
+                  <span className="visually-hidden"> on</span>
+                </span>
+              ) : null}
+            </button>
+          </form>
+
+          <div className={listStyles.quick}>
+            <div className={listStyles.chips} role="group" aria-label="Quick filters">
+              {hasCategories || filters.category ? (
+                <span
+                  className={
+                    filters.category
+                      ? `${listStyles.chipSelect} ${listStyles.on}`
+                      : listStyles.chipSelect
+                  }
                 >
-                  <option value="">All recipes</option>
-                  {tree?.nodes.map((node) => (
-                    <option key={node.key} value={node.key}>
-                      {node.path} ({node.count})
-                    </option>
-                  ))}
-                  {filters.category &&
-                  filters.category !== UNFILED &&
-                  !tree?.byKey.has(filters.category) ? (
-                    <option value={filters.category}>{filterName}</option>
-                  ) : null}
-                  <option value={UNFILED}>Not in a category</option>
-                </select>
-              </label>
-            ) : null}
-            <label className={styles.sort}>
-              Rating
-              <select
-                className={styles.select}
-                value={filters.rating}
-                onChange={(e) =>
-                  changeFilters({ ...filters, rating: e.target.value as RatingFilter })
+                  <select
+                    aria-label="Category"
+                    value={filters.category}
+                    onChange={(e) => changeFilters({ ...filters, category: e.target.value })}
+                  >
+                    <option value="">Category</option>
+                    {tree?.nodes.map((node) => (
+                      <option key={node.key} value={node.key}>
+                        {node.path} ({node.count})
+                      </option>
+                    ))}
+                    {filters.category &&
+                    filters.category !== UNFILED &&
+                    !tree?.byKey.has(filters.category) ? (
+                      <option value={filters.category}>{filterName}</option>
+                    ) : null}
+                    <option value={UNFILED}>Not in a category</option>
+                  </select>
+                </span>
+              ) : null}
+              <span
+                className={
+                  filters.rating && filters.rating !== "favorite"
+                    ? `${listStyles.chipSelect} ${listStyles.on}`
+                    : listStyles.chipSelect
                 }
               >
-                {RATINGS.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className={styles.secondary}
-              aria-expanded={showMore}
-              aria-controls="more-filters"
-              onClick={() => setShowMore(!showMore)}
-            >
-              {moreCount > 0 ? `More filters (${moreCount})` : "More filters"}
-            </button>
-            {list.length > 1 ? (
-              <label className={styles.sort}>
-                Sort by
                 <select
-                  className={styles.select}
-                  value={sortBy}
-                  onChange={(e) => chooseSort(e.target.value as SortBy)}
+                  aria-label="Rating"
+                  value={filters.rating === "favorite" ? "" : filters.rating}
+                  onChange={(e) =>
+                    changeFilters({ ...filters, rating: e.target.value as RatingFilter })
+                  }
                 >
-                  {SORTS.map((s) => (
-                    <option key={s.value} value={s.value}>
-                      {s.label}
+                  <option value="">Rating</option>
+                  {RATINGS.map((r) => (
+                    <option key={r.value} value={r.value}>
+                      {r.label}
                     </option>
                   ))}
                 </select>
-              </label>
-            ) : null}
-            <Link href="/categories" className={styles.toolbarLink}>
-              Categories
-            </Link>
-            <Link href="/duplicates" className={styles.toolbarLink}>
-              Find duplicates
-            </Link>
-            <Link href="/trash" className={styles.toolbarLink}>
-              Trash
-            </Link>
+              </span>
+              <span
+                className={
+                  filters.maxMinutes !== null
+                    ? `${listStyles.chipSelect} ${listStyles.on}`
+                    : listStyles.chipSelect
+                }
+              >
+                <select
+                  aria-label="Time"
+                  value={filters.maxMinutes ?? ""}
+                  onChange={(e) =>
+                    changeFilters({
+                      ...filters,
+                      maxMinutes: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                >
+                  <option value="">Time</option>
+                  {TIME_CHOICES.map((minutes) => (
+                    <option key={minutes} value={minutes}>
+                      Up to {shortMinutes(minutes)}
+                    </option>
+                  ))}
+                </select>
+              </span>
+              <button
+                type="button"
+                className={listStyles.chipToggle}
+                aria-pressed={filters.rating === "favorite"}
+                onClick={() =>
+                  changeFilters({
+                    ...filters,
+                    rating: filters.rating === "favorite" ? "" : "favorite",
+                  })
+                }
+              >
+                <span aria-hidden="true">♥ </span>Favorites
+              </button>
+              {saved.chip}
+              {quickChips.length > 0 ? (
+                <ul className={listStyles.onChips} aria-label="Filters on">
+                  {quickChips.map((chip) => (
+                    <li key={chip.id} className={listStyles.onChip}>
+                      {chip.label}
+                      <button
+                        type="button"
+                        aria-label={`Remove filter: ${chip.label}`}
+                        onClick={() => changeFilters(chip.remove(filters))}
+                      >
+                        <span aria-hidden="true">✕</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {narrowing ? (
+                <button type="button" className={listStyles.clear} onClick={clearAll}>
+                  Clear all
+                </button>
+              ) : null}
+            </div>
+            <div className={listStyles.end}>
+              {narrowing ? null : (
+                <span className={listStyles.total}>
+                  {list.length} {list.length === 1 ? "recipe" : "recipes"}
+                </span>
+              )}
+              {list.length > 1 ? (
+                <span className={listStyles.sortChip}>
+                  <select
+                    aria-label="Sort by"
+                    value={sortBy}
+                    onChange={(e) => chooseSort(e.target.value as SortBy)}
+                  >
+                    {SORTS.map((s) => (
+                      <option key={s.value} value={s.value}>
+                        {s.label}
+                      </option>
+                    ))}
+                  </select>
+                </span>
+              ) : null}
+            </div>
           </div>
-        </div>
+          {saved.actions}
+        </>
       ) : null}
 
-      {/* Right under the toolbar, where the button is, so it is seen on a phone too. */}
+      {/* Right under the filters, where the list starts, so it is seen on a phone too. */}
       <div aria-live="polite">
         {surpriseRecipe ? (
           <section className={styles.surprise} aria-label="A suggestion">
@@ -584,27 +681,15 @@ export function RecipesPage() {
         ) : null}
       </div>
 
-      {list.length > 0 && showMore ? (
-        <div id="more-filters">
-          <FilterPanel filters={filters} tree={tree} onChange={changeFilters} />
-        </div>
-      ) : null}
-      {list.length > 0 && chips.length > 0 ? (
-        <ul className={styles.activeFilters} aria-label="Filters on">
-          {chips.map((chip) => (
-            <li key={chip.id} className={categoryStyles.chip}>
-              {chip.label}
-              <button
-                type="button"
-                className={categoryStyles.chipRemove}
-                aria-label={`Remove filter: ${chip.label}`}
-                onClick={() => changeFilters(chip.remove(filters))}
-              >
-                ×
-              </button>
-            </li>
-          ))}
-        </ul>
+      {list.length > 0 ? (
+        <FiltersPanel
+          open={panelOpen}
+          onClose={() => setPanelOpen(false)}
+          filters={filters}
+          tree={tree}
+          shown={busy ? null : shown.length}
+          onChange={changeFilters}
+        />
       ) : null}
 
       {list.length > 0 ? <UsageNote id="add-blocked" ref={limitNote} /> : null}
@@ -627,6 +712,9 @@ export function RecipesPage() {
               {chosen.length === shown.length && shown.length > 0
                 ? "Select none"
                 : "Select all shown"}
+            </button>
+            <button type="button" className={styles.secondary} onClick={stopSelecting}>
+              Done selecting
             </button>
           </div>
           <BulkFile tree={tree} selected={chosen} editable={editable} run={run} />
@@ -653,7 +741,7 @@ export function RecipesPage() {
             <span aria-live="polite">
               {!narrowing
                 ? ""
-                : (searching && !search) || found.pending
+                : busy
                   ? "Searching…"
                   : shown.length === 0
                     ? filters.category === UNFILED && !searching && filtering === 1
@@ -665,21 +753,7 @@ export function RecipesPage() {
                           : ""
                       }.`}
               {unknownNote(found.unknown, filters)}
-            </span>{" "}
-            {narrowing ? (
-              <button type="button" className={styles.textButton} onClick={clearAll}>
-                Show all recipes
-              </button>
-            ) : null}
-            {narrowing && !selecting && shown.length > 0 && !found.pending ? (
-              <button
-                type="button"
-                className={styles.textButton}
-                onClick={() => print(shown.map((recipe) => recipe.id))}
-              >
-                {shown.length === 1 ? "Print it" : "Print these"}
-              </button>
-            ) : null}
+            </span>
           </p>
           <ul className={styles.grid}>
             {shown.slice(0, limit).map((recipe) => (

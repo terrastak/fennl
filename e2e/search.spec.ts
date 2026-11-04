@@ -69,7 +69,7 @@ test("Search by an ingredient, a word in the notes, and part of a title", async 
   await page.reload();
   await expect(searchBox(page)).toHaveValue("nana");
   await expect(titles(page)).toHaveText(["Green Chile Stew"]);
-  await page.getByRole("button", { name: "Show all recipes" }).click();
+  await page.getByRole("button", { name: "Clear all" }).click();
   await expect(titles(page)).toHaveCount(4);
   await expect(searchBox(page)).toHaveValue("");
 });
@@ -97,13 +97,15 @@ test("Search finds changes straight away, and works with the filters", async ({
   // With the rating filter: only recipes you rated.
   await searchBox(page).fill("lemon");
   await expect(titles(page)).toHaveCount(2);
-  await page.getByLabel("Rating").selectOption({ label: "4 stars and up" });
+  await page.getByRole("combobox", { name: "Rating" }).selectOption({ label: "4 stars and up" });
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake"]);
   await expect(page).toHaveURL(/rating=4/);
 
   // With a category.
-  await page.getByLabel("Rating").selectOption({ label: "Any rating" });
-  await page.getByLabel("Category").selectOption({ label: "Breakfast (1)" });
+  await page.getByRole("combobox", { name: "Rating" }).selectOption({ label: "Rating" });
+  await page
+    .getByRole("combobox", { name: "Category", exact: true })
+    .selectOption({ label: "Breakfast (1)" });
   await expect(titles(page)).toHaveText(["Buttermilk Pancakes"]);
 });
 
