@@ -169,8 +169,7 @@ test("an admin fixes a finding with its button, then extends Premium with the pa
     browser,
     baseURL!,
     "Rosa",
-    // (Under 48 characters: the account search can't take a longer one yet.)
-    `rosalind.featherstonehaugh.${Date.now().toString(36)}@example.com`,
+    `rosalind.featherstonehaugh.${Date.now()}${Math.random().toString(36).slice(2, 8)}@example.com`,
   );
   await signInAdmin(page, context, testInfo, "extends");
 
