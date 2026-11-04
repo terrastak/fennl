@@ -4,7 +4,7 @@ import { showIngredient, showStepPart, type ShownLine, type ShowOptions } from "
 import { amountLine, ingredientName, type StepUse } from "../../shared/stepIngredients";
 
 /**
- * The ingredients a step uses (U14), in words, for cook mode's "Uses" line and the recipe
+ * The ingredients a step uses (U16), in words, for cook mode's "Uses" line and the recipe
  * page's list under each step. Every amount goes through showIngredient or showStepPart, so it's
  * scaled, converted and highlighted exactly as the recipe page shows the line or the step.
  */

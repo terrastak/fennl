@@ -7,7 +7,7 @@ import {
 import type { DirectionStep, IngredientLine } from "./recipe";
 
 /**
- * The ingredients each step of the method uses (U14, owner's choices 2026-11-04), worked out
+ * The ingredients each step of the method uses (U16, owner's choices 2026-11-04), worked out
  * from the recipe as written: nothing is stored, and the recipe's words never change. Cook mode
  * shows them above each step and the recipe page under it.
  *

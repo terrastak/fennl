@@ -4,7 +4,7 @@ import type { ShownLine, ShowOptions } from "../../shared/scale";
 import { stepIngredients } from "../../shared/stepIngredients";
 import { shownUses } from "./stepUses";
 
-// U14: the ingredients under each step, in words, scaled and converted as the page shows them.
+// U16: the ingredients under each step, in words, scaled and converted as the page shows them.
 
 const text = (line: ShownLine) => line.pieces.map((p) => p.text).join("");
 const changed = (line: ShownLine) =>

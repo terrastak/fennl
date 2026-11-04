@@ -669,7 +669,7 @@ export function showStep(text: string, options: ShowOptions): ShownLine {
 
 /**
  * Part of a step (`text.slice(start, end)`) as the whole step shows it: "1 teaspoon of the jam"
- * in "… into each ball" stays a teaspoon, as it does in the step (U14).
+ * in "… into each ball" stays a teaspoon, as it does in the step (U16).
  */
 export function showStepPart(
   text: string,

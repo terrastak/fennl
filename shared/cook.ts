@@ -1,6 +1,6 @@
 // Cook mode (phase F5): the times a step gives, so tapping "bake 25 minutes" starts a 25-minute
 // timer. Nothing here is stored: it's worked out on display from the recipe as written. The
-// ingredients each step uses are in shared/stepIngredients.ts (U14).
+// ingredients each step uses are in shared/stepIngredients.ts (U16).
 
 const NUMBER = String.raw`(\d+(?:\s+\d\/\d|\s*[½¼¾⅓⅔])?|\d*[½¼¾⅓⅔]|\d+\/\d|an?|one|two|three|four|five|six|ten|fifteen|twenty|thirty|forty|forty-five|sixty|ninety)`;
 const UNIT = String.raw`(seconds?|secs?|minutes?|mins?|hours?|hrs?)\b`;

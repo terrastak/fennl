@@ -175,7 +175,7 @@ describe("scaling a step", () => {
     );
   });
 
-  it("shows part of a step as the whole step shows it (U14)", () => {
+  it("shows part of a step as the whole step shows it (U16)", () => {
     const doubled = { factor: 2, units: "written" } as const;
     const step = "Add 1/2 cup sugar, then press 1 teaspoon of the jam into each ball.";
     // The jam is one ball's share, so it stays a teaspoon, as it does in the step.

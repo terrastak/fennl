@@ -22,7 +22,7 @@ The step-by-step build plan is in `spec.md`. Work happens one approved phase at 
 | Images | Cloudflare R2, gated behind paid tier | Decided |
 | Auth | Better Auth (self-hosted in the Worker; D1 via Drizzle; organization plugin for households) | Decided |
 | Sign-in methods | Email and password (confirmed email required), Google, Apple. Settings in `worker/auth/options.ts` | Decided (B2) |
-| Email sending | Resend, only through the one `SendEmail` function in `worker/email/` | Decided (B2) |
+| Email sending | Resend, only through the one `SendEmail` function in `worker/email/`. Compared with Cloudflare's email sending 2026-11-04: staying on Resend for the beta (Cloudflare's is still in beta); revisit before public launch. Bounces reach Fennl from U14 (`spec.md`) | Decided (B2) |
 | Workers plan | Workers Paid ($5/month): password hashing needs about 90 ms of CPU, the free plan allows 10 ms per request, and 30-day database backups need it | Decided (switched 2026-10-03) |
 | Database access and migrations | Drizzle (schema in `worker/db/schema.ts`, migrations in `worker/db/migrations`, applied by Wrangler) | Decided (B1) |
 | Billing | Stripe Billing + Stripe Tax, via Better Auth's Stripe plugin | Decided |

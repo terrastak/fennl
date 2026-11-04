@@ -127,7 +127,7 @@ test("On a phone: what you'll need, then one step per screen", async ({
   await expect(page.getByRole("heading", { level: 1, name: "You’ll need" })).toBeFocused();
 });
 
-test("Each step's ingredients: the rest worked out, the mixture's step, and doubts in words (U14)", async ({
+test("Each step's ingredients: the rest worked out, the mixture's step, and doubts in words (U16)", async ({
   page,
   context,
   baseURL,

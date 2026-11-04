@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { directionsFromText, ingredientsFromText } from "./recipeLines";
 import { amountLine, ingredientName, stepIngredients, type StepUse } from "./stepIngredients";
 
-// U14 (owner's choices 2026-11-04): the ingredients each step uses. Each step's rows are written
+// U16 (owner's choices 2026-11-04): the ingredients each step uses. Each step's rows are written
 // as `rows` writes them: the whole line as it's listed; "written 3/4 cup sugar | <line>" for the
 // step's own amount; "remaining ¼ cup sugar | <line>" and "part 1 tbsp butter | <line>" for an
 // amount Fennl worked out; "small a little of the butter | <line>" for the step's own words;

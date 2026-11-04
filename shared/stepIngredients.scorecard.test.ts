@@ -6,7 +6,7 @@ import { bytesSource, paprikaEntries, readPaprikaEntry } from "./paprikaFile";
 import type { DirectionStep, IngredientLine } from "./recipe";
 import { amountLine, stepIngredients, type StepUse } from "./stepIngredients";
 
-// U14: the ingredients under each step, scored on recipes from the owner's library (the text-only
+// U16: the ingredients under each step, scored on recipes from the owner's library (the text-only
 // copy in test_recipes/). Every answer in stepIngredients.scorecard.json was checked by hand
 // against the recipe. A wrong ingredient is worse than a missing one (the cook adds it to the
 // bowl), so any wrong row fails; a missed one is only counted.

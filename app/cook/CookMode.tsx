@@ -142,7 +142,7 @@ export function CookMode({ id }: { id: string }) {
   const loaded = recipe !== null;
   useEffect(() => heading.current?.focus(), [first, wide, loaded]);
 
-  // The ingredients each step uses (U14), as the recipe page will show them under each step:
+  // The ingredients each step uses (U16), as the recipe page will show them under each step:
   // worked out again only when the recipe changes, not on every swipe.
   const ingredients = recipe?.ingredients;
   const directions = recipe?.directions;
