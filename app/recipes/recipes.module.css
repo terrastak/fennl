@@ -2176,7 +2176,8 @@ button.stepNumber:focus-visible::after {
   display: grid;
   gap: var(--space-1);
   margin: var(--space-2) 0 0;
-  padding-left: var(--space-4);
+  /* The bullets sit a little in from the step's words (owner's request 2026-11-04). */
+  padding-left: var(--space-8);
   font-size: var(--text-sm);
   line-height: var(--leading-snug);
   list-style: disc;
