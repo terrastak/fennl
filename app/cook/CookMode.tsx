@@ -12,13 +12,13 @@ import { durationText, stepTimes, timerName } from "../../shared/cook";
 import { bakeNote, panName } from "../../shared/pans";
 import type { DirectionStep, IngredientLine, Recipe } from "../../shared/recipe";
 import { showIngredient, showStep } from "../../shared/scale";
-import { stepIngredients, type StepUse } from "../../shared/stepIngredients";
+import type { StepUse } from "../../shared/stepIngredients";
 import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
 import { localDay } from "../recipes/format";
 import { Suggestion } from "../recipes/PanControls";
 import { ShownText } from "../recipes/ScaleControls";
 import { scaleNote, useScaling, type Scaling } from "../recipes/scaling";
-import { shownUses } from "../recipes/stepUses";
+import { shownUses, usesByStep } from "../recipes/stepUses";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
@@ -147,16 +147,13 @@ export function CookMode({ id }: { id: string }) {
   const ingredients = recipe?.ingredients;
   const directions = recipe?.directions;
   const linked = detail ? detail.linked : undefined;
-  const uses = useMemo(() => {
-    if (!ingredients || !directions) return new Map<string, StepUse[]>();
-    const linkedTitles = new Map(
-      ingredients.flatMap((line) => {
-        const found = line.linkedRecipeId ? linked?.[line.linkedRecipeId] : undefined;
-        return found?.status === "ok" && found.title ? [[line.id, found.title] as const] : [];
-      }),
-    );
-    return stepIngredients(ingredients, directions, { linkedTitles });
-  }, [ingredients, directions, linked]);
+  const uses = useMemo(
+    () =>
+      ingredients && directions
+        ? usesByStep(ingredients, directions, linked)
+        : new Map<string, StepUse[]>(),
+    [ingredients, directions, linked],
+  );
 
   if (detail === undefined) {
     return (

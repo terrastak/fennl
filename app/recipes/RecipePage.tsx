@@ -3,6 +3,7 @@ import {
   useEffectEvent,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -37,6 +38,8 @@ import { PrintCopy } from "../print/PrintCopy";
 import { EarlierVersion } from "./EarlierVersion";
 import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
+import { StepNumber, StepUsesList } from "./StepIngredients";
+import { allOpen, toggled, usesByStep } from "./stepUses";
 import { SubRecipe } from "./SubRecipe";
 import { stepParts } from "../timers/stepParts";
 import { TimeLink } from "../timers/TimeLink";
@@ -530,17 +533,32 @@ function Ingredients({
 function Method({
   recipe,
   scaling,
+  linked,
   timers = false,
 }: {
   recipe: Recipe;
   scaling: Scaling;
+  linked: RecipeDetail["linked"];
   timers?: boolean;
 }) {
   const groups = sections(recipe.directions);
+  const listIds = useId();
   // Opened at a step (a timer's notification): that step in view, and marked for a moment.
   useEffect(() => {
     if (/^#step-\d+$/.test(window.location.hash)) markStep(window.location.hash.slice(1));
   }, []);
+  // The ingredients each step uses (U16), worked out again only when the recipe changes.
+  const { ingredients, directions } = recipe;
+  const uses = useMemo(
+    () => usesByStep(ingredients, directions, linked),
+    [ingredients, directions, linked],
+  );
+  const withUses = directions
+    .filter((step) => !step.heading && (uses.get(step.id)?.length ?? 0) > 0)
+    .map((step) => step.id);
+  // All closed when the recipe opens (owner's choice 2026-11-04), and not remembered.
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const everyOpen = allOpen(withUses, open);
   // Fennl's bake-time suggestion for another pan (phase F2), under the step that gives the time.
   const note = scaling.pans ? bakeNote(recipe, scaling.pans, scaling.factor) : null;
   // Numbering carries on across sections: each list starts after the steps before it.
@@ -549,36 +567,76 @@ function Method({
   );
   return (
     <section className={styles.method} aria-labelledby="method-title">
-      <h2 id="method-title">Method</h2>
+      <div className={styles.methodHead}>
+        <h2 id="method-title">Method</h2>
+        {withUses.length > 0 ? (
+          <button
+            type="button"
+            className={styles.allUses}
+            onClick={() => setOpen(everyOpen ? new Set() : new Set(withUses))}
+          >
+            {everyOpen ? "Hide all ingredients" : "Show all ingredients"}
+          </button>
+        ) : null}
+      </div>
+      {withUses.length > 0 ? (
+        <p className={styles.stepHint}>Tap a step’s number to see the ingredients it uses.</p>
+      ) : null}
       {recipe.directions.length === 0 ? <p className={styles.hint}>None written yet.</p> : null}
       {groups.map((group, i) => (
         <div key={group.key} className={styles.group}>
           {group.heading ? <h3 className={styles.subheading}>{group.heading}</h3> : null}
           {group.items.length > 0 ? (
             <ol className={styles.steps} start={starts[i]}>
-              {group.items.map((step, j) => (
-                <li key={step.id} id={`step-${(starts[i] ?? 1) + j}`}>
-                  <ScaledLine
-                    text={step.text}
-                    line={showStep(step.text, scaling)}
-                    scaling={scaling}
-                    lineId={step.id}
-                    canHold={false}
-                    parts={
-                      timers ? stepParts(step.text, (words) => showStep(words, scaling)) : null
-                    }
-                    renderTime={(time) => (
-                      <TimeLink
-                        time={time}
-                        stepText={step.text}
-                        number={(starts[i] ?? 1) + j}
-                        recipeTitle={recipe.title}
+              {group.items.map((step, j) => {
+                const number = (starts[i] ?? 1) + j;
+                const used = uses.get(step.id) ?? [];
+                const listId = `${listIds}-uses-${number}`;
+                const isOpen = open.has(step.id);
+                return (
+                  <li key={step.id} id={`step-${number}`}>
+                    <StepNumber
+                      number={number}
+                      listId={used.length > 0 ? listId : undefined}
+                      open={isOpen}
+                      onToggle={() => setOpen((now) => toggled(now, step.id))}
+                    />
+                    <div className={styles.stepBody}>
+                      <ScaledLine
+                        text={step.text}
+                        line={showStep(step.text, scaling)}
+                        scaling={scaling}
+                        lineId={step.id}
+                        canHold={false}
+                        parts={
+                          timers ? stepParts(step.text, (words) => showStep(words, scaling)) : null
+                        }
+                        renderTime={(time) => (
+                          <TimeLink
+                            time={time}
+                            stepText={step.text}
+                            number={number}
+                            recipeTitle={recipe.title}
+                          />
+                        )}
                       />
-                    )}
-                  />
-                  {note?.stepId === step.id ? <Suggestion text={note.text} /> : null}
-                </li>
-              ))}
+                      {used.length > 0 ? (
+                        <StepUsesList
+                          id={listId}
+                          open={isOpen}
+                          uses={used}
+                          step={step}
+                          lines={ingredients}
+                          steps={directions}
+                          scaling={scaling}
+                          stepAnchor={(n) => `step-${n}`}
+                        />
+                      ) : null}
+                      {note?.stepId === step.id ? <Suggestion text={note.text} /> : null}
+                    </div>
+                  </li>
+                );
+              })}
             </ol>
           ) : null}
         </div>
@@ -1075,7 +1133,7 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
       ) : null}
       <div className={styles.columns}>
         <Ingredients recipe={recipe} scaling={AS_WRITTEN} linked={detail.linked} />
-        <Method recipe={recipe} scaling={AS_WRITTEN} />
+        <Method recipe={recipe} scaling={AS_WRITTEN} linked={detail.linked} />
       </div>
       {/* Everyone's notes, to read: nothing changes in Trash. */}
       <Notes
@@ -1288,7 +1346,7 @@ export function RecipePage({ id }: { id: string }) {
 
       <div className={styles.columns}>
         <Ingredients recipe={recipe} scaling={scaling} linked={detail.linked} adjustable />
-        <Method recipe={recipe} scaling={scaling} timers />
+        <Method recipe={recipe} scaling={scaling} linked={detail.linked} timers />
       </div>
 
       <Notes detail={detail} name={name} shared={shared} me={me} editable={editable} />
