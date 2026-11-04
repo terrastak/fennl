@@ -400,6 +400,12 @@ const OLD_CASES: [
     [["1 tsp vanilla extract"]],
   ],
   [
+    "synonym: cocoa for cocoa powder, never for cocoa butter",
+    ["1 cup flour", "⅓ cup unsweetened cocoa powder", "2 oz cocoa butter"],
+    ["Whisk the flour, cocoa and salt together.", "Melt the cocoa butter."],
+    [["1 cup flour", "⅓ cup unsweetened cocoa powder"], ["2 oz cocoa butter"]],
+  ],
+  [
     '"the nuts" are every listed nut',
     ["1 cup pecans", "1 cup walnuts"],
     ["Fold in the nuts."],

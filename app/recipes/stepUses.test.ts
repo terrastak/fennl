@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { directionsFromText, ingredientsFromText } from "../../shared/recipeLines";
 import type { ShownLine, ShowOptions } from "../../shared/scale";
 import { stepIngredients } from "../../shared/stepIngredients";
-import { shownUses } from "./stepUses";
+import { preparation, shownUses } from "./stepUses";
 
 // U16: the ingredients under each step, in words, scaled and converted as the page shows them.
 
@@ -101,7 +101,7 @@ describe("a step's ingredients in words", () => {
     );
     expect(second?.[0]?.unsure).toEqual({
       short: "not sure how much",
-      long: "Not sure how much: the recipe doesn't say",
+      long: "Not sure how much: the recipe doesn’t say",
     });
     const [cheese] = shown(
       "1 cup shredded cheddar cheese\n1/2 cup grated Parmesan cheese",
@@ -214,5 +214,53 @@ describe("a step's ingredients add up at every scale (reviewers' cases, 2026-11-
         "Whisk the flour and salt.\nAdd half the flour mixture, then the milk, then the rest of the flour mixture.",
       )[1],
     ).toEqual(["half the flour mixture", "1 cup milk", "the rest of the flour mixture"]);
+  });
+});
+
+describe("a share keeps how it's prepared on the recipe page (mockup 2026-11-04)", () => {
+  const BUTTER = [
+    "1/2 cup butter, melted, divided\n1 cup flour",
+    "Stir 1/4 cup of the butter into the flour.\nBrush with the remaining butter.",
+  ] as const;
+
+  it("on the page: the preparation, never 'divided'", () => {
+    const rows = shown(...BUTTER).map((step) => step.map((u) => text(u.line)));
+    expect(rows[0]).toEqual(["1/4 cup butter, melted", "1 cup flour"]);
+    expect(rows[1]).toEqual(["the remaining ¼ cup butter, melted"]);
+  });
+
+  it("in cook mode's short mentions: the amount and name only, as before", () => {
+    const rows = shown(...BUTTER, { short: true }).map((step) => step.map((u) => text(u.line)));
+    expect(rows).toEqual([["1/4 cup butter", "1 cup flour"], ["the remaining ¼ cup butter"]]);
+  });
+
+  it("never 'divided', however the line goes on", () => {
+    const rows = shown(
+      "1 cup sugar, divided equally\n3 eggs",
+      "Beat the eggs with ½ cup of the sugar.\nSprinkle with the remaining sugar.",
+    ).map((step) => step.map((u) => text(u.line)));
+    expect(rows[0]).toContain("½ cup sugar");
+    expect(rows[1]).toEqual(["the remaining ½ cup sugar"]);
+  });
+
+  it("not twice when the step says it", () => {
+    const rows = shown(
+      "1/2 cup butter, melted, divided",
+      "Stir in 1/3 cup of the melted butter.",
+    ).map((step) => step.map((u) => text(u.line)));
+    expect(rows[0]?.[0]).not.toMatch(/melted.*melted/u);
+  });
+
+  it("leaves out the parts that aren't the share's", () => {
+    expect(preparation("1 cup butter, softened, divided")).toBe(", softened");
+    expect(preparation("2 cups sugar (divided)")).toBe("");
+    expect(preparation("1/2 cup butter, melted, plus 1 tbsp for the pan")).toBe(", melted");
+    expect(preparation("1 cup sugar, divided, or to taste")).toBe("");
+    expect(preparation("1 cup sugar")).toBe("");
+    expect(preparation("1 cup sugar, divided equally")).toBe("");
+    expect(preparation("2 cups flour, sifted, divided in half")).toBe(", sifted");
+    expect(preparation("1 cup cream, divided into two")).toBe("");
+    expect(preparation("1 cup cream, whipped, divided between two bowls")).toBe(", whipped");
+    expect(preparation("1 cup sugar, divided use")).toBe("");
   });
 });

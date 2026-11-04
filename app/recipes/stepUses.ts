@@ -1,7 +1,13 @@
 import { readIngredient } from "../../shared/ingredients";
 import type { DirectionStep, IngredientLine } from "../../shared/recipe";
+import type { LinkedRecipe } from "../../shared/subRecipes";
 import { showIngredient, showStepPart, type ShownLine, type ShowOptions } from "../../shared/scale";
-import { amountLine, ingredientName, type StepUse } from "../../shared/stepIngredients";
+import {
+  amountLine,
+  ingredientName,
+  stepIngredients,
+  type StepUse,
+} from "../../shared/stepIngredients";
 
 /**
  * The ingredients a step uses (U16), in words, for cook mode's "Uses" line and the recipe
@@ -52,6 +58,51 @@ export function shortLine(text: string): string {
   return text;
 }
 
+/**
+ * What each step uses, by step ID, with linked recipes found by their titles ("the slaw" for a
+ * line linked to Coleslaw). Cook mode and the recipe page call it once per recipe change.
+ */
+export function usesByStep(
+  ingredients: readonly IngredientLine[],
+  directions: readonly DirectionStep[],
+  linked?: Readonly<Record<string, LinkedRecipe>>,
+): Map<string, StepUse[]> {
+  const linkedTitles = new Map(
+    ingredients.flatMap((line) => {
+      const found = line.linkedRecipeId ? linked?.[line.linkedRecipeId] : undefined;
+      return found?.status === "ok" && found.title ? [[line.id, found.title] as const] : [];
+    }),
+  );
+  return stepIngredients(ingredients, directions, { linkedTitles });
+}
+
+/**
+ * How a line's ingredient is prepared, for a share of it on the recipe page: ", melted" for
+ * "½ cup butter, melted, divided". "Divided" is the whole line's, not the share's, and a part
+ * with an amount ("plus 2 tablespoons for the pan") or another choice ("or to taste") isn't
+ * the share's either.
+ */
+export function preparation(text: string, named = ""): string {
+  const rest = text.slice(shortLine(text).length);
+  if (!rest.startsWith(", ")) return "";
+  const kept = rest
+    .slice(2)
+    .split(/,\s+/u)
+    .map((part) => part.replace(/\s*\(\s*divided\s*\)\s*/giu, " ").trim())
+    .filter(
+      (part) =>
+        part &&
+        // "divided", "divided equally", "divided between two bowls": the whole line's, not the share's.
+        !/^divided\b/iu.test(part) &&
+        !/^(?:separated|split)$/iu.test(part) &&
+        !/^(?:plus|or|and|for|to)\b/iu.test(part) &&
+        !/[\p{N}½¼¾⅓⅔⅛⅜⅝⅞()]/u.test(part) &&
+        // Not when the step already says it: "⅓ cup of the melted butter".
+        !named.toLowerCase().includes(part.toLowerCase()),
+    );
+  return kept.length > 0 ? `, ${kept.join(", ")}` : "";
+}
+
 const plain = (text: string): ShownLine => ({ pieces: [{ text }], changed: false });
 
 /** Words before a shown line: "the remaining " + "¼ cup sugar". */
@@ -88,6 +139,10 @@ export function shownUses(uses: readonly StepUse[], context: StepUsesContext): S
   const ingredient = (id: string, words: string) => showIngredient(words, scaling, held(id));
   const method = steps.filter((s) => !s.heading);
   const scaled = scaling.factor !== 1;
+  // A share keeps how it's prepared on the recipe page ("⅓ cup butter, melted"), not in cook
+  // mode's short mentions.
+  const prepared = (id: string, named?: string) =>
+    context.short ? "" : preparation(text(id), named);
 
   const seen = new Set<string>();
   const shown: ShownUse[] = [];
@@ -103,7 +158,8 @@ export function shownUses(uses: readonly StepUse[], context: StepUsesContext): S
       case "written": {
         // The step's own amount, shown exactly as the step shows it.
         const amount = showStepPart(step.text, use.start, use.end, scaling);
-        const line = { ...amount, pieces: [...amount.pieces, { text: ` ${use.name}` }] };
+        const name = ` ${use.name}${prepared(use.lineId, use.name)}`;
+        const line = { ...amount, pieces: [...amount.pieces, { text: name }] };
         row = {
           key,
           line: use.remaining ? after("the remaining ", line) : line,
@@ -129,7 +185,7 @@ export function shownUses(uses: readonly StepUse[], context: StepUsesContext): S
           key,
           line: apart
             ? plain(`the remaining ${ingredientName(text(use.lineId))}`)
-            : after("the remaining ", ingredient(use.lineId, words)),
+            : after("the remaining ", ingredient(use.lineId, words + prepared(use.lineId))),
           unsure: null,
           from: null,
         };
@@ -138,7 +194,10 @@ export function shownUses(uses: readonly StepUse[], context: StepUsesContext): S
       case "part":
         row = {
           key,
-          line: ingredient(use.lineId, amountLine(text(use.lineId), use.value, use.unit)),
+          line: ingredient(
+            use.lineId,
+            amountLine(text(use.lineId), use.value, use.unit) + prepared(use.lineId),
+          ),
           unsure: null,
           from: null,
         };
@@ -166,7 +225,7 @@ export function shownUses(uses: readonly StepUse[], context: StepUsesContext): S
           line: shownLine,
           unsure: {
             short: "not sure how much",
-            long: "Not sure how much: the recipe doesn't say",
+            long: "Not sure how much: the recipe doesn’t say",
           },
           from: null,
         };
@@ -204,4 +263,17 @@ export function shownUses(uses: readonly StepUse[], context: StepUsesContext): S
     shown.push(context.capital ? { ...row, line: capitalised(row.line) } : row);
   });
   return shown;
+}
+
+/** Whether every step with ingredients is open, for "Show all" or "Hide all". */
+export function allOpen(withUses: readonly string[], open: ReadonlySet<string>): boolean {
+  return withUses.length > 0 && withUses.every((id) => open.has(id));
+}
+
+/** `open` with `id` opened or closed. */
+export function toggled(open: ReadonlySet<string>, id: string): ReadonlySet<string> {
+  const next = new Set(open);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
 }

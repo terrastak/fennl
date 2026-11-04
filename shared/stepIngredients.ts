@@ -339,6 +339,7 @@ const SYNONYMS = [
   ["bell pepper", "capsicum", "sweet pepper"],
   ["ground beef", "minced beef", "beef mince"],
   ["vanilla", "vanilla extract", "vanilla essence"],
+  ["cocoa", "cocoa powder"],
   ["slaw", "coleslaw"],
   ["shrimp", "prawn"],
   ["cornstarch", "corn starch", "cornflour"],
