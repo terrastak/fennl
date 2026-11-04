@@ -1448,6 +1448,17 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
 - **Built**: `app/timers/Timers.tsx` (the panel, Adjust time, Add timer, the start question, the corner cards; cook mode's timer list keeps `TimerButtons`, whose time opens Adjust time), `app/timers/timersView.ts` (`viewStep`), `app/timers/TimeLink.tsx`, `shared/cook.ts` (`timerName`, a range's `upTo`), steps on the recipe page have ids (`#step-5`), `shared/timerAlerts.ts` (`timerPush`).
 - **You check**: on a computer and a phone, start a timer from a step (try a range), add one of your own with the arrows, pause one from its corner card, adjust a time (it keeps counting until you change a number), View step, and let one finish with Fennl in the background to see the notification's words.
 
+### U13. The recipe list's search and filters, redesigned (owner's choices 2026-11-04)
+- **Asked**: "The search and filtering system doesn't look professional / easy to use." The list's top had a row of controls (search, Category, Rating, Sort, More filters, Surprise me, Select, Print these, links to Categories, Find duplicates and Trash) and a filters panel of drop-downs that opened in the page and pushed the list down. Three mockups shown 2026-11-04; the owner chose **A** ("A, keep those quick filters, Surprise me in the menu").
+- **Owner's choices**:
+  1. **The title with + Add recipe and ⋯ beside it.** On a phone the button is just "+" (still read out as Add recipe). **⋯** (More actions) holds what's used less often: **Select recipes**, **Surprise me**, **Print these**, then **Categories**, **Find duplicates** and **Trash**. Choosing one, Escape or a tap elsewhere closes it.
+  2. **One search bar, with Filters inside it** on the right, saying how many filters are on ("Filters 2"); on a phone, just its icon and the number.
+  3. **A row of quick filters under it**: **Category**, **Rating**, **Time**, **♥ Favorites** and **★ Saved searches** (once there is one), each a chip, filled in the accent colour when on. Filters set in the panel show beside them as filled chips with ✕, then **Clear all** (which clears the search too). The number of recipes and the order (**Sort**, a quieter word with an arrow) sit on the right. On a phone the chips scroll sideways in one line rather than taking several.
+  4. **The Filters panel** slides in from the right on a computer and up from the bottom on a phone, over a dimmed list: **Categories** (also in, not in, all or any), **Ingredients** (with, without), **Total time, up to**, **Rating**, **Last made** and **Serves at least** as one-tap choices, and **More** (Source, Has a photo, Has nutrition). The list behind follows each choice at once; the foot has **Clear filters** and **Show 12 recipes** (closes it). A tap outside, Escape or ✕ closes it too. It no longer opens by itself when the page loads with filters on: the Filters button's number and the chips show them.
+  5. **Saving a search** stays under the quick filters while the list is narrowed: **Save this search**, or **Update**, **Rename** and **Remove** for the saved search in use.
+- **Built**: `app/pages/RecipesPage.tsx`, `app/recipes/list.module.css`, `app/recipes/FiltersPanel.tsx` (was `FilterPanel.tsx`), `app/recipes/ListMenu.tsx`, `app/recipes/savedSearchControls.tsx` (was `SavedSearches.tsx`; the chip and the save actions). The filters themselves, the address they're kept in and saved searches are unchanged (`app/recipes/filters.ts`).
+- **You check**: on the laptop and the phone, search, try each quick filter, open Filters and narrow by a few things (watch the number on Show recipes), take one off with its ✕, Clear all, and open each thing in ⋯. On the phone, scroll the chips sideways and see that nothing else moves sideways.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -1554,7 +1565,7 @@ These follow the beta and are approved one at a time, like every phase. The desi
 - **You check**: Build "under 30 minutes, 4 stars and up, in Dinners", save it, open it on your phone; add a recipe that matches and see it appear.
 - **Done when**: Filter logic is tested for every filter and for all/any/none; the search-speed test still passes at 10,000 recipes with filters on; saved searches sync and survive a restore from Trash; offline works on Premium.
 
-- **Built, C13a (2026-10-20)** (`app/recipes/filters.ts`, `app/recipes/FilterPanel.tsx`, the recipe list):
+- **Built, C13a (2026-10-20)** (`app/recipes/filters.ts`, `app/recipes/FilterPanel.tsx`, the recipe list; the list's top and the panel redesigned in U13):
   - **More filters** button on the list (with a count) opens a panel; what is narrowing the list also shows as chips with an × under the toolbar, so nothing is forgotten when the panel is closed.
   - **Filters**: time (up to 15 minutes to 2 hours, from the total time, else prep plus cook when both are written), serves (2 or more to 12 or more), last made (never; in the last 30 days; not in the last 90 days or never), has a photo, has nutrition, source (part of the name), **also in** more categories (all of / any of), **not in** categories, and ingredients **with** and **without** (words matched as the start of an ingredient word, on the device by the full-text index, so "mushroom" finds "mushrooms"). The category and rating boxes in the toolbar are unchanged and still work in old addresses.
   - **Kept in the address** like search and the category: `?time=30&serves=4&also=…&notin=…&any=1&made=old&photo=1&nutrition=1&source=…&with=…&without=…`; a reload or a shared link keeps them, and the panel opens by itself when any are set. "Show all recipes" clears everything.
@@ -1786,6 +1797,7 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U8 | Done 2026-10-28 (merged as #105) |
 | U9 | Done 2026-10-28 (merged as #106) |
 | U10 | Done 2026-10-29 (merged as #107 and #108) |
-| U11 | Done 2026-10-29 |
-| U12 | Built 2026-10-29, waiting for review |
+| U11 | Done 2026-10-29 (merged as #111) |
+| U12 | Done 2026-11-02 (merged as #115, then #116 to #121) |
+| U13 | Built 2026-11-04, waiting for review |
 | All others | Not started |

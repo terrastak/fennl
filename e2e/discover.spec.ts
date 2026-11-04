@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus } from "./recipes";
+import { editorStatus, recipeCard, syncStatus, fromListMenu } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C13c: search from any screen, "Surprise me", and category suggestions in the editor.
@@ -88,9 +88,8 @@ test("Surprise me suggests a recipe from what the list shows", async ({
 }) => {
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
-  const surprise = page.getByRole("button", { name: "Surprise me" });
-
-  await surprise.click();
+  // In the list's ⋯ menu (U13).
+  await fromListMenu(page, "Surprise me");
   await expect(suggestion(page)).toBeVisible();
   const first = (await suggestion(page).locator("p").nth(1).textContent()) ?? "";
   expect([
@@ -110,7 +109,7 @@ test("Surprise me suggests a recipe from what the list shows", async ({
   // It can be opened, or dismissed.
   await suggestion(page).getByRole("button", { name: "Not now" }).click();
   await expect(suggestion(page)).toHaveCount(0);
-  await surprise.click();
+  await fromListMenu(page, "Surprise me");
   const chosen = (await suggestion(page).locator("p").nth(1).textContent()) ?? "";
   await suggestion(page).getByRole("link", { name: "Open" }).click();
   await expect(page.getByRole("heading", { level: 1, name: chosen })).toBeVisible();
@@ -121,13 +120,9 @@ test("Surprise me follows the filters and search", async ({ page, context, baseU
   await addSamples(page);
 
   // Only the two 30-minute recipes can come up.
-  await page.getByRole("button", { name: /^More filters/ }).click();
-  await page
-    .getByRole("region", { name: "More filters" })
-    .getByRole("combobox", { name: /^Time/ })
-    .selectOption("30");
+  await page.getByRole("combobox", { name: "Time", exact: true }).selectOption("30");
   await expect(titles(page)).toHaveCount(2);
-  await page.getByRole("button", { name: "Surprise me" }).click();
+  await fromListMenu(page, "Surprise me");
   for (let i = 0; i < 6; i++) {
     await expect(suggestion(page).locator("p").nth(1)).toHaveText(
       /^(Black Bean Tacos with Lime Crema|Buttermilk Pancakes)$/,
@@ -141,6 +136,7 @@ test("Surprise me follows the filters and search", async ({ page, context, baseU
 
   // With nothing to pick from the button is off.
   await listSearch(page).fill("nothing like this");
+  await page.getByRole("button", { name: "More actions" }).click();
   await expect(page.getByRole("button", { name: "Surprise me" })).toBeDisabled();
   await noAccessibilityProblems(page);
 });

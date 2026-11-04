@@ -1,16 +1,19 @@
-import { useId, useRef, useState, type FormEvent } from "react";
+import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { MAX_SAVED_NAME_LENGTH } from "../../shared/savedSearch";
 import { parseSearch, searchKey, type RecipeFilters } from "./filters";
 import { problemText, useSavedSearches, type Outcome } from "./savedSearches";
+import listStyles from "./list.module.css";
 import styles from "./recipes.module.css";
 
 // Saved searches on the recipe list (phase C13b): choose one to see its recipes, save what the
 // list is showing under a name, and rename, update or remove one. A saved search is a rule, so
-// the list it shows stays current as recipes change.
+// the list it shows stays current as recipes change. Since U13 the list shows them in two
+// places: a "Saved searches" chip among the quick filters, and a line under them to save, update,
+// rename or remove one.
 
 type Mode = "idle" | "saving" | "renaming" | "removing";
 
-export function SavedSearches({
+export function useSavedSearchControls({
   query,
   filters,
   narrowing,
@@ -25,7 +28,7 @@ export function SavedSearches({
   /** The search as an address query, to save. */
   currentText: string;
   onApply: (q: string, filters: RecipeFilters) => void;
-}) {
+}): { chip: ReactNode; actions: ReactNode } {
   const { searches, save, rename, update, remove } = useSavedSearches();
   const [activeId, setActiveId] = useState("");
   const [mode, setMode] = useState<Mode>("idle");
@@ -35,7 +38,7 @@ export function SavedSearches({
   const nameId = useId();
   const nameBox = useRef<HTMLInputElement>(null);
 
-  if (searches === null) return null;
+  if (searches === null) return { chip: null, actions: null };
   const active = searches.find((s) => s.id === activeId) ?? null;
   const here = searchKey(query, filters);
   const same = searches.find((s) => {
@@ -46,7 +49,7 @@ export function SavedSearches({
   // one, or on the one chosen last if the filters have been changed since.
   const changedSinceChosen = active !== null && narrowing && same?.id !== active.id;
   const shownSearch = same ?? (changedSinceChosen ? active : null);
-  if (searches.length === 0 && !narrowing) return null;
+  if (searches.length === 0 && !narrowing) return { chip: null, actions: null };
 
   const finish = async (run: () => Promise<Outcome>, done: (o: Outcome) => string) => {
     setBusy(true);
@@ -102,69 +105,71 @@ export function SavedSearches({
     }
   };
 
-  return (
-    <section className={styles.saved} aria-label="Saved searches">
-      <div className={styles.savedRow}>
-        {searches.length > 0 ? (
-          <label className={styles.sort}>
-            Saved searches
-            <select
-              className={styles.select}
-              value={same?.id ?? ""}
-              onChange={(e) => choose(e.target.value)}
+  const chip =
+    searches.length > 0 ? (
+      <span className={same ? `${listStyles.chipSelect} ${listStyles.on}` : listStyles.chipSelect}>
+        <select
+          aria-label="Saved searches"
+          value={same?.id ?? ""}
+          onChange={(e) => choose(e.target.value)}
+          disabled={busy}
+        >
+          <option value="">★ Saved searches</option>
+          {searches.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name}
+            </option>
+          ))}
+        </select>
+      </span>
+    ) : null;
+
+  const offers =
+    mode === "idle" &&
+    ((narrowing && !same && currentText) || (active && changedSinceChosen) || shownSearch);
+  const actions = (
+    <section className={listStyles.saved} aria-label="Saved searches">
+      {offers ? (
+        <div className={styles.savedActions}>
+          {narrowing && !same && currentText ? (
+            <button type="button" className={styles.textButton} onClick={startSaving}>
+              Save this search
+            </button>
+          ) : null}
+          {active && changedSinceChosen ? (
+            <button
+              type="button"
+              className={styles.textButton}
               disabled={busy}
+              onClick={() =>
+                void finish(
+                  () => update(active.id, currentText),
+                  () => `Updated “${active.name}”.`,
+                )
+              }
             >
-              <option value="">Choose a saved search…</option>
-              {searches.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        {mode === "idle" ? (
-          <div className={styles.savedActions}>
-            {narrowing && !same && currentText ? (
-              <button type="button" className={styles.secondary} onClick={startSaving}>
-                Save this search
+              Update “{active.name}”
+            </button>
+          ) : null}
+          {shownSearch ? (
+            <>
+              <button type="button" className={styles.textButton} onClick={startRenaming}>
+                Rename “{shownSearch.name}”
               </button>
-            ) : null}
-            {active && changedSinceChosen ? (
               <button
                 type="button"
-                className={styles.secondary}
-                disabled={busy}
-                onClick={() =>
-                  void finish(
-                    () => update(active.id, currentText),
-                    () => `Updated “${active.name}”.`,
-                  )
-                }
+                className={styles.textButton}
+                onClick={() => {
+                  setMessage(null);
+                  setMode("removing");
+                }}
               >
-                Update “{active.name}”
+                Remove
               </button>
-            ) : null}
-            {shownSearch ? (
-              <>
-                <button type="button" className={styles.textButton} onClick={startRenaming}>
-                  Rename
-                </button>
-                <button
-                  type="button"
-                  className={styles.textButton}
-                  onClick={() => {
-                    setMessage(null);
-                    setMode("removing");
-                  }}
-                >
-                  Remove
-                </button>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
+            </>
+          ) : null}
+        </div>
+      ) : null}
 
       {mode === "saving" || mode === "renaming" ? (
         <form className={styles.savedForm} onSubmit={(e) => void submitName(e)}>
@@ -225,4 +230,5 @@ export function SavedSearches({
       </p>
     </section>
   );
+  return { chip, actions };
 }

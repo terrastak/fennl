@@ -1311,21 +1311,6 @@ a.source:hover {
 
 /* --- Category filter and Select (phase C7) ---------------------------------------------- */
 
-.toolbarStart,
-.toolbarEnd {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
-
-.toolbarLink {
-  display: inline-flex;
-  align-items: center;
-  min-height: var(--tap-target);
-  font-weight: var(--weight-semibold);
-}
-
 .filterNote {
   display: flex;
   flex-wrap: wrap;
@@ -1378,29 +1363,6 @@ label.card {
 }
 
 /* --- Search (phase C8) ------------------------------------------------------------------- */
-
-.search {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 40rem;
-  margin-bottom: var(--space-5);
-}
-
-.searchLabel {
-  font-weight: var(--weight-semibold);
-}
-
-.searchInput {
-  width: 100%;
-  min-height: calc(var(--tap-target) + var(--space-2));
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-lg);
-}
 
 .cardHit {
   color: var(--color-text-muted);
@@ -1518,16 +1480,6 @@ label.card {
 
 /* --- More filters (phase C13a) ------------------------------------------------------------ */
 
-.filterPanel {
-  display: grid;
-  gap: var(--space-5);
-  margin-bottom: var(--space-6);
-  padding: var(--space-4) var(--space-5);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-}
-
 .filterGroup {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
@@ -1565,18 +1517,6 @@ label.card {
   font-weight: var(--weight-regular);
 }
 
-.filterGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  gap: var(--space-4);
-  align-items: start;
-}
-
-.filterGrid .select,
-.filterGrid .filterInput {
-  width: 100%;
-}
-
 .filterChoice {
   display: grid;
   gap: var(--space-1);
@@ -1606,30 +1546,7 @@ label.card {
   gap: var(--space-1) var(--space-6);
 }
 
-.activeFilters {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-4);
-  padding: 0;
-  list-style: none;
-}
-
 /* --- Saved searches (phase C13b) ---------------------------------------------------------- */
-
-.saved {
-  display: grid;
-  gap: var(--space-2);
-  margin-bottom: var(--space-4);
-}
-
-.savedRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-}
 
 .savedActions {
   display: flex;
@@ -1648,11 +1565,6 @@ label.card {
 
 .savedForm .sort {
   min-width: min(100%, 18rem);
-}
-
-.saved p[aria-live] {
-  min-height: 1.5em;
-  margin: 0;
 }
 
 /* --- Surprise me (phase C13c) ------------------------------------------------------------- */

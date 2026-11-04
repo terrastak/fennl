@@ -88,3 +88,21 @@ export async function adjust(page: Page, act: (panel: Locator) => Promise<unknow
   await panel.getByRole("button", { name: "Done" }).click();
   await expect(panel).toBeHidden();
 }
+
+/** Chooses something from the recipe list's ⋯ menu (U13): Select recipes, Surprise me, Print these, Categories... */
+export async function fromListMenu(page: Page, item: string) {
+  await page.getByRole("button", { name: "More actions" }).click();
+  const menu = page.getByRole("list", { name: "More actions" });
+  await menu
+    .getByRole("button", { name: item, exact: true })
+    .or(menu.getByRole("link", { name: item, exact: true }))
+    .click();
+}
+
+/** Opens the recipe list's Filters panel (U13). */
+export async function openFilters(page: Page) {
+  await page.getByRole("button", { name: /^Filters/ }).click();
+  const panel = page.getByRole("dialog", { name: "Filters" });
+  await expect(panel).toBeVisible();
+  return panel;
+}
