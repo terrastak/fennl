@@ -36,6 +36,12 @@ const ACTION_NAMES: Record<string, string> = {
   "impersonation.started": "Started acting as them",
   "impersonation.change": "Changed something while acting as them",
   "impersonation.ended": "Stopped acting as them",
+  "premium.extended": "Extended Premium",
+  "email.unblocked": "Unblocked an address",
+  "sign_up.address_fixed": "Changed a sign-up address",
+  "sign_up.link_sent": "Sent a sign-up link again",
+  "finding.handled": "Marked something handled",
+  "finding.unhandled": "Put something back in Needs attention",
 };
 
 function detailText(row: ActivityRow): string {
@@ -43,6 +49,10 @@ function detailText(row: ActivityRow): string {
   const parts = [d.method, d.code, d.key, d.tier]
     .filter((v) => typeof v === "string" && v)
     .map(String);
+  if (typeof d.until === "string") {
+    parts.push(`until ${new Date(d.until).toLocaleDateString(undefined, { dateStyle: "medium" })}`);
+  }
+  if (typeof d.title === "string") parts.push(d.title);
   if (typeof d.from === "string" && typeof d.to === "string") parts.push(`${d.from} → ${d.to}`);
   else if ("to" in d) parts.push(`→ ${d.to === null ? "no limit" : String(d.to)}`);
   if (typeof d.value !== "undefined" && !("to" in d)) {

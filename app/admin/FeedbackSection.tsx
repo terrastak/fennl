@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import {
   feedbackStatus,
   replyLink,
@@ -27,15 +27,19 @@ function when(iso: string): string {
 export function FeedbackSection({
   onOpenAccount,
   onCounts,
+  initialOpen = null,
 }: {
   onOpenAccount: (userId: string) => void;
   onCounts: (counts: FeedbackInbox["counts"]) => void;
+  /** A message to open (from an account page's finding), shown among all messages. */
+  initialOpen?: string | null;
 }) {
   const id = useId();
-  const [filter, setFilter] = useState<FeedbackFilter>("new");
+  const [filter, setFilter] = useState<FeedbackFilter>(initialOpen ? "all" : "new");
   const [inbox, setInbox] = useState<FeedbackInbox | null>(null);
   const [failed, setFailed] = useState(false);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(initialOpen);
+  const markedOpen = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -71,6 +75,19 @@ export function FeedbackSection({
     },
     [filter, onCounts],
   );
+
+  // The message opened from an account page is read now, as opening it here would.
+  useEffect(() => {
+    if (markedOpen.current || !initialOpen || !inbox) return;
+    markedOpen.current = true;
+    const item = inbox.items.find((i) => i.id === initialOpen);
+    if (!item || item.readAt) return;
+    void adminRequest<FeedbackItem>(`/api/admin/feedback/${item.id}/read`, { body: {} }).then(
+      (result) => {
+        if (result.ok) void replace(result.body as FeedbackItem);
+      },
+    );
+  }, [inbox, initialOpen, replace]);
 
   const open = async (item: FeedbackItem) => {
     if (openId === item.id) {

@@ -1,16 +1,20 @@
-import { and, desc, eq, inArray, isNull, max, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNull, max, or, sql } from "drizzle-orm";
 import type {
+  AccountAdminGrant,
   AccountDetail,
   AccountGrant,
   AccountMatch,
   AccountOverride,
   PlanLimitRow,
 } from "../../shared/adminAccounts";
+import { isEmailProblem } from "../../shared/emailDelivery";
 import { TIERS, isLimitKey, type LimitKey } from "../../shared/entitlements";
 import type { Database } from "../db/client";
 import {
   account,
+  adminGrant,
   device,
+  feedback,
   limitOverride,
   member,
   organization,
@@ -23,6 +27,7 @@ import {
 import { emailHistory, previousEmails, waitingEmailChange } from "../account/emailChange";
 import { activeDevices } from "../devices/devices";
 import { forgetCachedPlanLimits, householdEntitlements } from "../entitlements/entitlements";
+import { householdPhotos, householdUsage, usageWithLimits } from "../limits/usage";
 
 // The admin console's account tools (phase B7): finding an account, what its page shows, and
 // the limit changes. The routes in worker/admin/accountRoutes.ts check the admin, record each
@@ -77,6 +82,37 @@ export async function accountHousehold(db: Database, userId: string) {
   return rows.find((r) => !r.slug.startsWith(PERSONAL_PREFIX)) ?? rows[0] ?? null;
 }
 
+/** accountHousehold for many people at once, in one query (Needs attention, U15). */
+export async function accountHouseholds(
+  db: Database,
+  userIds: string[],
+): Promise<Map<string, { id: string; name: string; slug: string }>> {
+  const answer = new Map<string, { id: string; name: string; slug: string }>();
+  if (userIds.length === 0) return answer;
+  const rows = await db
+    .select({
+      userId: member.userId,
+      id: organization.id,
+      name: organization.name,
+      slug: organization.slug,
+    })
+    .from(member)
+    .innerJoin(organization, eq(member.organizationId, organization.id))
+    .where(sql`${member.userId} in (select value from json_each(${JSON.stringify(userIds)}))`)
+    .all();
+  for (const { userId, ...household } of rows) {
+    const current = answer.get(userId);
+    // A shared household wins over the personal one, as in accountHousehold.
+    if (
+      !current ||
+      (current.slug.startsWith(PERSONAL_PREFIX) && !household.slug.startsWith(PERSONAL_PREFIX))
+    ) {
+      answer.set(userId, household);
+    }
+  }
+  return answer;
+}
+
 export async function findAccount(db: Database, userId: string) {
   return db.select().from(user).where(eq(user.id, userId)).get();
 }
@@ -86,51 +122,90 @@ export async function accountDetail(db: Database, userId: string): Promise<Accou
   if (!person) return null;
   const household = await accountHousehold(db, userId);
 
-  const [methods, sessionSeen, deviceSeen, grants, members, waiting, previous, history] =
-    await Promise.all([
-      db
-        .select({ providerId: account.providerId })
-        .from(account)
-        .where(eq(account.userId, userId))
-        .all(),
-      db
-        .select({ at: max(session.updatedAt) })
-        .from(session)
-        // Not an admin acting as them (phase C12): that isn't the person being seen.
-        .where(and(eq(session.userId, userId), isNull(session.impersonatedBy)))
-        .get(),
-      db
-        .select({ at: max(device.lastSeenAt) })
-        .from(device)
-        .where(eq(device.userId, userId))
-        .get(),
-      db
-        .select({
-          code: promoCode.code,
-          label: promoCode.label,
-          tier: premiumGrant.tier,
-          usedAt: premiumGrant.createdAt,
-          endsAt: premiumGrant.endsAt,
-          accessUntil: promoCode.accessUntil,
-          revokedAt: premiumGrant.revokedAt,
-        })
-        .from(premiumGrant)
-        .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
-        .where(eq(premiumGrant.userId, userId))
-        .orderBy(desc(premiumGrant.createdAt))
-        .all(),
-      household
-        ? db
-            .select({ name: user.name, email: user.email })
-            .from(member)
-            .innerJoin(user, eq(member.userId, user.id))
-            .where(eq(member.organizationId, household.id))
-            .all()
-        : Promise.resolve([]),
-      waitingEmailChange(db, userId),
-      previousEmails(db, userId, person.email),
-      emailHistory(db, userId),
-    ]);
+  const [
+    methods,
+    sessionSeen,
+    deviceSeen,
+    grants,
+    members,
+    waiting,
+    previous,
+    history,
+    givenByAdmin,
+    unread,
+  ] = await Promise.all([
+    db
+      .select({ providerId: account.providerId })
+      .from(account)
+      .where(eq(account.userId, userId))
+      .all(),
+    db
+      .select({ at: max(session.updatedAt) })
+      .from(session)
+      // Not an admin acting as them (phase C12): that isn't the person being seen.
+      .where(and(eq(session.userId, userId), isNull(session.impersonatedBy)))
+      .get(),
+    db
+      .select({ at: max(device.lastSeenAt) })
+      .from(device)
+      .where(eq(device.userId, userId))
+      .get(),
+    db
+      .select({
+        code: promoCode.code,
+        label: promoCode.label,
+        tier: premiumGrant.tier,
+        usedAt: premiumGrant.createdAt,
+        endsAt: premiumGrant.endsAt,
+        accessUntil: promoCode.accessUntil,
+        revokedAt: premiumGrant.revokedAt,
+      })
+      .from(premiumGrant)
+      .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
+      .where(eq(premiumGrant.userId, userId))
+      .orderBy(desc(premiumGrant.createdAt))
+      .all(),
+    household
+      ? db
+          .select({ name: user.name, email: user.email })
+          .from(member)
+          .innerJoin(user, eq(member.userId, user.id))
+          .where(eq(member.organizationId, household.id))
+          .all()
+      : Promise.resolve([]),
+    waitingEmailChange(db, userId),
+    previousEmails(db, userId, person.email),
+    emailHistory(db, userId),
+    db
+      .select({
+        tier: adminGrant.tier,
+        startsAt: adminGrant.startsAt,
+        endsAt: adminGrant.endsAt,
+        revokedAt: adminGrant.revokedAt,
+        createdAt: adminGrant.createdAt,
+        by: user.name,
+      })
+      .from(adminGrant)
+      .leftJoin(user, eq(adminGrant.createdBy, user.id))
+      .where(eq(adminGrant.userId, userId))
+      .orderBy(desc(adminGrant.createdAt))
+      .all(),
+    db
+      .select({ count: count() })
+      .from(feedback)
+      .where(and(eq(feedback.userId, userId), isNull(feedback.readAt)))
+      .get(),
+  ]);
+
+  const plan = household ? await householdEntitlements(db, household.id) : null;
+  const usage =
+    household && plan
+      ? usageWithLimits(
+          await householdUsage(db, household.id),
+          plan,
+          await householdPhotos(db, household.id),
+        )
+      : null;
 
   const seen = [sessionSeen?.at, deviceSeen?.at]
     .filter((d): d is Date => d instanceof Date)
@@ -157,7 +232,7 @@ export async function accountDetail(db: Database, userId: string): Promise<Accou
     signInMethods: [...new Set(methods.map((m) => m.providerId))],
     mustChangePassword: person.mustChangePassword ?? false,
     household: household ? { id: household.id, name: household.name, members } : null,
-    plan: household ? await householdEntitlements(db, household.id) : null,
+    plan,
     grants: grants.map((g): AccountGrant => ({
       code: g.code,
       label: g.label,
@@ -170,7 +245,18 @@ export async function accountDetail(db: Database, userId: string): Promise<Accou
       ? await activeDevices(db, { userId, householdId: household.id, sessionId: "" }, "")
       : [],
     overrides: household ? await householdOverrides(db, household.id) : [],
-    usage: null,
+    usage,
+    photos: usage?.photos ?? null,
+    emailProblem: isEmailProblem(person.emailProblem) ? person.emailProblem : null,
+    adminGrants: givenByAdmin.map((g): AccountAdminGrant => ({
+      tier: g.tier === "household" ? "household" : "individual",
+      startsAt: g.startsAt.toISOString(),
+      endsAt: g.endsAt.toISOString(),
+      revokedAt: g.revokedAt?.toISOString() ?? null,
+      by: g.by ?? null,
+      createdAt: g.createdAt.toISOString(),
+    })),
+    unreadFeedback: unread?.count ?? 0,
   };
 }
 

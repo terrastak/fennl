@@ -129,15 +129,17 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   await page.getByRole("button", { name: "Add a passkey" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Admin console" })).toBeVisible();
 
-  // Find the account and open its page.
+  // Find the account (from Needs attention, where the console opens) and open its page.
   await page.getByLabel("Email or name").fill(helpedEmail);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("button", { name: "Find" }).click();
   await page.getByRole("button", { name: "Petra Ng" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Petra Ng" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Plan and household" })).toContainText("Free");
+  await expect(page.getByRole("heading", { level: 1, name: "Petra Ng" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Account", exact: true })).toContainText("Free");
   await expectAccessible(page);
+  const tools = page.getByRole("region", { name: "Everything you can do" });
 
   // An exception: 500 recipes for this account.
+  await tools.getByRole("button", { name: /^Limit exceptions…/ }).click();
   const limits = page.getByRole("region", { name: "Limits for this account" });
   await limits.getByLabel("Limit").selectOption("max_recipes");
   await limits.getByLabel("New value").fill("500");
@@ -148,6 +150,7 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   );
 
   // A temporary password, shown once.
+  await tools.getByRole("button", { name: "Password help…" }).click();
   const password = page.getByRole("region", { name: "Password help" });
   await password.getByRole("button", { name: "Set a temporary password" }).click();
   const shown = password.getByRole("status").filter({ hasText: "Temporary password" });
@@ -171,7 +174,8 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   await expect(helpedPage.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
   await helped.close();
 
-  // Everything shows in the account's activity.
+  // Everything shows in the account's admin log.
+  await tools.getByRole("button", { name: "Admin log for this account…" }).click();
   const log = page.getByRole("region", { name: "Admin activity for this account" });
   await expect(log.getByText("Set a temporary password").first()).toBeVisible();
   await expect(log.getByText("Set an account's limit").first()).toBeVisible();
@@ -231,16 +235,19 @@ test("an admin puts back an account's earlier email after someone changed it", a
 
   // Search shows whether each address is verified.
   await page.getByLabel("Email or name").fill(taken);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("button", { name: "Find" }).click();
   await expect(page.getByRole("list", { name: "Matching accounts" })).toContainText("Verified on");
   await page.getByRole("button", { name: "Omar Haddad" }).click();
 
+  const everything = page.getByRole("region", { name: "Everything you can do" });
+  await everything.getByRole("button", { name: /^Email address…/ }).click();
   const tools = page.getByRole("region", { name: "Email address" });
   await expect(tools.getByRole("table")).toContainText(original);
   await expectAccessible(page);
   await tools.getByRole("button", { name: `Put back ${original}` }).click();
   await expect(tools.getByRole("status")).toContainText(`Put back ${original}`);
   await expect(page.locator("dd").filter({ hasText: original }).first()).toBeVisible();
+  await everything.getByRole("button", { name: "Admin log for this account…" }).click();
   const log = page.getByRole("region", { name: "Admin activity for this account" });
   await expect(log.getByText("Put back an earlier email").first()).toBeVisible();
 });
@@ -307,7 +314,8 @@ test("an admin reads feedback, replies by email, and marks it done", async ({
   const done = inbox.getByRole("listitem").filter({ hasText: message });
   await done.getByRole("button", { expanded: false }).click();
   await done.getByRole("button", { name: "Open their account" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Lena Park" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Lena Park" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Back to feedback" })).toBeVisible();
 });
 
 test("an admin sees how AI reads turned out, by month, quarter or year", async ({

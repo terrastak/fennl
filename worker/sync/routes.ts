@@ -1,6 +1,8 @@
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isDeviceId } from "../../shared/devices";
+import type { LimitRefusedDetails } from "../../shared/accountEvents";
+import { inBackground, recordLimitRefusals } from "../account/events";
 import {
   SYNC_RULES,
   checkChange,
@@ -136,6 +138,7 @@ syncRoutes.post("/api/sync/push", async (c) => {
   }
 
   const householdId = signedIn.household.householdId;
+  const refusals: LimitRefusedDetails[] = [];
   const applied = await applyChanges(
     signedIn.db,
     { userId: signedIn.userId, householdId },
@@ -149,7 +152,12 @@ syncRoutes.post("/api/sync/push", async (c) => {
       maxPhotosPerRecipe: plan.max_photos_per_recipe,
       structuredImports: plan.import_structured_enabled,
     },
+    (refusal) => refusals.push({ ...refusal, origin: "server" }),
   );
+  // Refused for a limit (U15): one line per limit for the admin console, never while acting.
+  if (refusals.length > 0 && !signedIn.impersonating) {
+    await inBackground(c, recordLimitRefusals(signedIn.db, signedIn.userId, refusals, now));
+  }
   valid.forEach((v, i) => {
     results[v.index] = applied[i] ?? { status: "rejected", reason: "failed" };
   });

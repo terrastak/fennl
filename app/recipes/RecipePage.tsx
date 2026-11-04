@@ -24,6 +24,7 @@ import { bakeNote, panName } from "../../shared/pans";
 import { showIngredient, showStep } from "../../shared/scale";
 import type { OpinionChange, SyncChange } from "../../shared/sync";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
+import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { guardLeaving, navigate } from "../navigation";
 import { Link } from "../router";
@@ -1079,8 +1080,9 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
   const usage = useUsage();
   const blocked = useAddBlocked(true);
   const [noRoom, setNoRoom] = useState(false);
-  const restore = async () =>
-    blocked
+  const restore = async () => {
+    if (blocked) reportRefused(blocked, "restore");
+    return blocked
       ? setNoRoom(true)
       : setFailed(
           !(await save({
@@ -1091,6 +1093,7 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
             changedAt: Date.now(),
           })),
         );
+  };
   return (
     <article>
       <Link href="/trash" className={styles.back}>

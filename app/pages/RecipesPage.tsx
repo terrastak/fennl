@@ -3,6 +3,7 @@ import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
 import { UsageNote } from "../limits/Usage";
+import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
@@ -266,8 +267,15 @@ export function RecipesPage() {
   // Over a plan limit (phase C11), "Add recipe" says why instead of opening the editor.
   const addBlocked = useAddBlocked();
   const limitNote = useRef<HTMLParagraphElement>(null);
-  const add = () =>
-    addBlocked ? limitNote.current?.focus() : navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
+  const add = () => {
+    if (!addBlocked) {
+      navigate(`/recipes/${crypto.randomUUID()}/edit?new`);
+      return;
+    }
+    limitNote.current?.focus();
+    // The admin console sees what the person tried (phase U15).
+    reportRefused(addBlocked, "recipe");
+  };
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
   const [filters, setFilters] = useState<RecipeFilters>(() =>
     filtersFromParams(new URLSearchParams(window.location.search)),

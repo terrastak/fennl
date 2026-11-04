@@ -4,12 +4,14 @@ import { isColorScheme } from "../shared/appearance";
 import { isPrintOptions } from "../shared/print";
 import { isUnitSystem } from "../shared/scale";
 import { healthStatus } from "../shared/health";
+import { inBackground, recordFailedSignInFrom, removeOldAccountEvents } from "./account/events";
 import { removeUnverifiedAccounts } from "./account/purge";
 import { accountRoutes } from "./account/routes";
 import { signUpRoutes, withSignUpProof } from "./account/signUpRoutes";
 import { adminAiRoutes } from "./ai/adminRoutes";
 import { aiRoutes } from "./ai/routes";
 import { adminAccountRoutes } from "./admin/accountRoutes";
+import { adminAttentionRoutes } from "./admin/attentionRoutes";
 import { accountNames } from "./admin/accounts";
 import { passedAccess } from "./admin/access";
 import { adminAreaAllowedOn, isAdminPath, isStaticFile, onAdminHost } from "./admin/area";
@@ -36,6 +38,7 @@ import {
   reconcileImages,
 } from "./images/housekeeping";
 import { imageRoutes } from "./images/routes";
+import { limitRoutes } from "./limits/routes";
 import { requireHousehold } from "./household/requireHousehold";
 import { readSetting } from "./settings/settings";
 import { syncRoutes } from "./sync/routes";
@@ -161,7 +164,13 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const url = new URL(c.req.url);
   const signUpOrIn = path === "/api/auth/sign-up/email" || path === "/api/auth/sign-in/email";
   const copy = path === "/api/auth/sign-in/email" ? c.req.raw.clone() : null;
+  const attempt = copy?.clone() ?? null;
   const response = await auth.handler(c.req.raw);
+  // A wrong password (U15): kept against the account whose address was typed, after the answer
+  // is sent and without touching it, so it tells nobody whether the address has an account.
+  if (attempt && response.status === 401) {
+    await inBackground(c, recordFailedSignInFrom(c.env, attempt, response.clone()));
+  }
   if (signUpOrIn) return withSignUpProof(c.env, url, copy, response);
   // An admin acting as someone never shows in that person's own list of sessions.
   if (path === "/api/auth/list-sessions" && response.ok) {
@@ -196,6 +205,9 @@ app.route("/", emailRoutes);
 
 // The browsers each household uses, and the device limit (phase B6).
 app.route("/", deviceRoutes);
+
+// Something the app stopped for a limit, kept for the admin console once checked (U15).
+app.route("/", limitRoutes);
 
 // Sending and fetching recipe changes (phase C3).
 app.route("/", syncRoutes);
@@ -359,6 +371,8 @@ app.route("/api/admin", adminCodeRoutes);
 
 // Account lookup, password help, overrides and tier limits (phase B7).
 app.route("/api/admin", adminAccountRoutes);
+// Needs attention, and the account page's findings, history and new tools (U15).
+app.route("/api/admin", adminAttentionRoutes);
 // The AI imports section: cost this month and its settings (phase E7).
 app.route("/api/admin", adminAiRoutes);
 
@@ -410,8 +424,9 @@ app.notFound((c) => {
  * Scheduled work (wrangler.jsonc "triggers"). Every hour: remove accounts whose email was never
  * verified (worker/account/purge.ts), delete for good recipes in Trash for more than 30 days
  * (worker/sync/trash.ts), remove import drafts nobody reviewed (worker/import/jobs.ts), timer
- * alerts a day after they ended (worker/push/timerAlerts.ts) and records of emails sent more
- * than 90 days ago (worker/email/delivery.ts).
+ * alerts a day after they ended (worker/push/timerAlerts.ts), records of emails sent more
+ * than 90 days ago (worker/email/delivery.ts) and account events over 90 days old
+ * (worker/account/events.ts, U15).
  */
 async function scheduled(controller: ScheduledController, env: Env) {
   const db = database(env.DB);
@@ -430,6 +445,8 @@ async function scheduled(controller: ScheduledController, env: Env) {
   if (alerts > 0) console.log(`Removed ${alerts} finished timer alert(s)`);
   const emails = await removeOldEmailMessages(db);
   if (emails > 0) console.log(`Removed the records of ${emails} email(s) over 90 days old`);
+  const events = await removeOldAccountEvents(db);
+  if (events > 0) console.log(`Removed ${events} account event(s) over 90 days old`);
   const importPhotos = await removeImportPhotos(db, env.IMAGES);
   if (importPhotos > 0) console.log(`Removed ${importPhotos} photo(s) kept for finished imports`);
 

@@ -1,5 +1,11 @@
-import { Hono } from "hono";
-import { deviceLabel, isDeviceId, type DeviceList } from "../../shared/devices";
+import { Hono, type Context } from "hono";
+import { inBackground, recordAccountEvent, recordLimitRefusals } from "../account/events";
+import {
+  deviceLabel,
+  isDeviceId,
+  type DeviceList,
+  type RegisterResult,
+} from "../../shared/devices";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
@@ -36,6 +42,23 @@ async function maxDevices(signedIn: SignedIn): Promise<number | null> {
   return plan.max_devices;
 }
 
+/** A browser turned away by the device limit (U15), once an hour at most. */
+async function recordOverLimit(c: Context, signedIn: SignedIn, result: RegisterResult) {
+  if (result.status !== "over_limit") return;
+  await inBackground(
+    c,
+    recordLimitRefusals(signedIn.db, signedIn.userId, [
+      {
+        limit: "max_devices",
+        what: "device",
+        used: result.devices.length,
+        max: result.max,
+        origin: "server",
+      },
+    ]),
+  );
+}
+
 async function deviceIdFrom(request: Request): Promise<unknown> {
   const body = (await request.json().catch(() => null)) as { deviceId?: unknown } | null;
   return body?.deviceId;
@@ -54,6 +77,7 @@ deviceRoutes.post("/api/devices/register", async (c) => {
     deviceLabel(c.req.header("user-agent")),
     await maxDevices(signedIn),
   );
+  await recordOverLimit(c, signedIn, result);
   return c.json(result);
 });
 
@@ -73,14 +97,40 @@ deviceRoutes.post("/api/devices/takeover", async (c) => {
   if (!(await withinRateLimit(signedIn.db, `takeover:${signedIn.userId}`, TAKEOVERS))) {
     return c.json({ error: "rate_limited" }, 429);
   }
+  const label = deviceLabel(c.req.header("user-agent"));
+  let takenOver: string[] = [];
   const result = await takeOver(
     signedIn.db,
     caller(signedIn),
     deviceId,
-    deviceLabel(c.req.header("user-agent")),
+    label,
     await maxDevices(signedIn),
     (chosen as string[] | undefined) ?? null,
+    new Date(),
+    (labels) => (takenOver = labels),
   );
+  // Each browser signed out by this one, for "What happened" in the admin console (U15).
+  if (takenOver.length > 0) {
+    const now = Date.now();
+    await inBackground(
+      c,
+      Promise.all(
+        takenOver.map((browser) =>
+          recordAccountEvent(
+            signedIn.db,
+            signedIn.userId,
+            "device_taken_over",
+            {
+              browser,
+              by: label,
+            },
+            now,
+          ),
+        ),
+      ),
+    );
+  }
+  await recordOverLimit(c, signedIn, result);
   return c.json(result);
 });
 

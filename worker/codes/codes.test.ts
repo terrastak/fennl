@@ -367,6 +367,7 @@ describe("using a code from the Account page", () => {
     expect(await activeGrant(db(), householdId, new Date(Date.now() + 36500 * DAY))).toEqual({
       tier: "household",
       endsAt: null,
+      source: "promo_code",
     });
   });
 

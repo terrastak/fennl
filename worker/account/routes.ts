@@ -1,8 +1,8 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { maskEmail, normalizeEmail, type EmailStatus } from "../../shared/email";
 import { isEmailProblem } from "../../shared/emailDelivery";
-import { database } from "../db/client";
+import { database, type Database } from "../db/client";
 import { session, user } from "../db/schema";
 import { createEmailSender } from "../email/email";
 import { removeSuppression } from "../email/suppressions";
@@ -143,14 +143,29 @@ accountRoutes.post("/api/account/email/address-is-right", requireHousehold, asyn
   ) {
     return c.json({ error: "too_many" }, 429);
   }
-  const [person] = await db
-    .update(user)
-    .set({ emailProblem: null })
-    .where(eq(user.id, userId))
-    .returning({ email: user.email })
-    .all();
-  if (!person) return c.json({ error: "unauthorized" }, 401);
-  const result = await removeSuppression(c.env, person.email);
+  const result = await unblockEmail(c.env, db, userId);
+  if (result === null) return c.json({ error: "unauthorized" }, 401);
   if (result !== "removed") console.log(`"This address is right": suppression ${result}`);
   return c.json({ ok: true });
 });
+
+/**
+ * Clears the account's email problem and takes its address off Resend's blocked list, so the next
+ * email is tried again ("This address is right", and Unblock in the admin console, U15). With
+ * `address`, only while the account still has that address. Null: no such account (or address).
+ */
+export async function unblockEmail(
+  env: Env,
+  db: Database,
+  userId: string,
+  address?: string,
+): Promise<Awaited<ReturnType<typeof removeSuppression>> | null> {
+  const [person] = await db
+    .update(user)
+    .set({ emailProblem: null })
+    .where(address ? and(eq(user.id, userId), eq(user.email, address)) : eq(user.id, userId))
+    .returning({ email: user.email })
+    .all();
+  if (!person) return null;
+  return removeSuppression(env, person.email);
+}

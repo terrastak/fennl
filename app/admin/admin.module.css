@@ -17,7 +17,7 @@
 }
 
 .main {
-  max-width: 60rem;
+  max-width: 76rem;
   margin: 0 auto;
   padding: var(--space-8) var(--space-4) var(--space-12);
   outline: none;
@@ -67,6 +67,10 @@
   font: inherit;
   font-weight: var(--weight-semibold);
   cursor: pointer;
+  /* A label with a long email address wraps inside the button, never past the page's edge. */
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .button {
@@ -399,4 +403,419 @@ a.secondary {
   border-left: 3px solid var(--color-border-strong);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Needs attention and the account page (phase U15). Tags say what they are in words, never by
+   colour alone. */
+.back {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.head h1 {
+  font-size: var(--text-3xl);
+  margin: 0;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.sub {
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.cols {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-6);
+}
+
+.mainCol {
+  flex: 999 1 35rem;
+  min-width: 0;
+}
+
+.side {
+  flex: 1 1 18rem;
+  min-width: 0;
+}
+
+.lede {
+  margin: 0 0 var(--space-4);
+  color: var(--color-text-muted);
+}
+
+.finding {
+  margin-bottom: var(--space-3);
+  padding: var(--space-4);
+  overflow-wrap: anywhere;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+}
+
+.finding.act {
+  border-color: color-mix(in srgb, var(--color-warm) 35%, var(--color-border));
+  background: color-mix(in srgb, var(--color-warm-soft) 45%, var(--color-surface));
+}
+
+.finding h3 {
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: var(--text-lg);
+}
+
+.finding p {
+  margin: 0 0 var(--space-3);
+}
+
+.fTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0.125rem var(--space-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.tagAct {
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.tagKnow {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.tagFine {
+  background: color-mix(in srgb, var(--color-success) 14%, var(--color-surface));
+  color: var(--color-text);
+}
+
+.since {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.why {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.key {
+  margin-left: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  opacity: 0.85;
+}
+
+.handled {
+  margin: var(--space-3) 0 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-soft);
+  font-size: var(--text-sm);
+}
+
+.handled p {
+  margin: 0 0 var(--space-2);
+}
+
+.fineList {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fineList[hidden] {
+  display: none;
+}
+
+.fineList li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.toggle {
+  min-height: var(--tap-target);
+}
+
+.period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-4);
+}
+
+.periodLabel {
+  margin-right: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.seg {
+  min-height: var(--tap-target);
+  padding: var(--space-1) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.seg[aria-pressed="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+  font-weight: var(--weight-semibold);
+}
+
+.tl {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tlRow {
+  display: grid;
+  grid-template-columns: 7.5rem minmax(0, 1fr);
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border-soft);
+}
+
+@media (max-width: 30rem) {
+  .tlRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+}
+
+.tlWhen {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.tlKind {
+  margin-right: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.tlText {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.tlDetail {
+  margin: var(--space-1) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.prob {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.facts {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.facts dt {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.warnText {
+  color: var(--color-warm-text);
+  font-weight: var(--weight-semibold);
+}
+
+.meter {
+  height: 0.5rem;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  border: 1px solid var(--color-border-soft);
+  overflow: hidden;
+}
+
+.meterFill {
+  height: 100%;
+  background: var(--color-accent);
+}
+
+.meterFill.over {
+  background: var(--color-danger);
+}
+
+.tools {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.tools + .hint {
+  margin-top: var(--space-4);
+}
+
+.tools .secondary {
+  justify-content: flex-start;
+  text-align: left;
+  font-weight: var(--weight-regular);
+}
+
+.tools .secondary[aria-expanded="true"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.panelHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panelHead h2,
+.quietFocus {
+  outline: none;
+}
+
+.panel {
+  scroll-margin-top: var(--space-4);
+  /* Email addresses in a tool's words and buttons wrap at phone width. */
+  overflow-wrap: anywhere;
+}
+
+.attnList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.attnItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.who {
+  flex: 0 0 11rem;
+  min-width: 0;
+  font-weight: var(--weight-semibold);
+  overflow-wrap: anywhere;
+}
+
+.what {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.what p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.what .tag {
+  margin-right: var(--space-2);
+}
+
+.more {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.when {
+  flex: 0 0 7rem;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.two {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 var(--space-6);
+}
+
+.two > section {
+  flex: 1 1 20rem;
+  min-width: 0;
+}
+
+.stats {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stats li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border-soft);
+}
+
+.num {
+  font-weight: var(--weight-semibold);
 }

@@ -153,9 +153,11 @@ export async function takeOver(
   maxDevices: number | null,
   chosen: string[] | null,
   now = new Date(),
+  /** Told which browsers were signed out (U15 records them for the admin console). */
+  onTakenOver?: (labels: string[]) => void,
 ): Promise<RegisterResult> {
   const others = await db
-    .select({ id: device.id, sessionId: device.sessionId })
+    .select({ id: device.id, sessionId: device.sessionId, label: device.label })
     .from(device)
     .where(
       and(
@@ -167,6 +169,7 @@ export async function takeOver(
     )
     .all();
   await revoke(db, caller, others, "taken_over", now);
+  if (others.length > 0) onTakenOver?.(others.map((d) => d.label));
   return registerDevice(db, caller, deviceId, label, maxDevices, now);
 }
 

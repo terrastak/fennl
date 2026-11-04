@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
+import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked } from "../limits/useLimits";
 import { PageHeader } from "../pages/PageHeader";
 import { Link } from "../router";
@@ -80,6 +81,7 @@ export function TrashPage() {
   const restore = async (item: TrashItem) => {
     if (restoreBlocked && status.usage) {
       setMessage(`${restoreBlockedText(status.usage)} ${NOTHING_LOST}`);
+      reportRefused(restoreBlocked, "restore");
       return;
     }
     setMessage(

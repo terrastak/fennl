@@ -44,7 +44,11 @@ const REFUSED = [
 ];
 
 /** Writes that change nothing while acting as someone, so aren't worth a log entry. */
-const NOT_CHANGES = ["/api/devices/register"];
+const NOT_CHANGES = [
+  "/api/devices/register",
+  // A note that the app stopped something for a limit (U15); nothing is kept while acting.
+  "/api/limits/refused",
+];
 
 const isWrite = (method: string) => method !== "GET" && method !== "HEAD";
 
