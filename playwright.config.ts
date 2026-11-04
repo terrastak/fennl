@@ -24,6 +24,7 @@ const PHONE_TESTS = [
   "scan",
   "scanCamera",
   "smoke",
+  "stepIngredients",
   "timers",
 ].map((name) => `${name}.spec.ts`);
 

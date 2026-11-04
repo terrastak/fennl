@@ -1,21 +1,24 @@
 import {
   useEffect,
   useEffectEvent,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type KeyboardEvent,
   type TouchEvent,
 } from "react";
-import { durationText, stepIngredients, stepTimes, timerName } from "../../shared/cook";
+import { durationText, stepTimes, timerName } from "../../shared/cook";
 import { bakeNote, panName } from "../../shared/pans";
 import type { DirectionStep, IngredientLine, Recipe } from "../../shared/recipe";
 import { showIngredient, showStep } from "../../shared/scale";
+import type { StepUse } from "../../shared/stepIngredients";
 import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
 import { localDay } from "../recipes/format";
 import { Suggestion } from "../recipes/PanControls";
 import { ShownText } from "../recipes/ScaleControls";
 import { scaleNote, useScaling, type Scaling } from "../recipes/scaling";
+import { shownUses, usesByStep } from "../recipes/stepUses";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
@@ -71,12 +74,6 @@ function useWide(): boolean {
     () => false,
   );
 }
-
-/**
- * An ingredient as a step mentions it: the words before its first comma ("2 lb pork shoulder",
- * not ", cut into 1-inch cubes"); the whole line is in "You'll need".
- */
-const shortLine = (text: string) => text.split(", ")[0] ?? text;
 
 /** Steps shown together on a wide screen. */
 const PER_SCREEN = 2;
@@ -145,6 +142,19 @@ export function CookMode({ id }: { id: string }) {
   const loaded = recipe !== null;
   useEffect(() => heading.current?.focus(), [first, wide, loaded]);
 
+  // The ingredients each step uses (U16), as the recipe page will show them under each step:
+  // worked out again only when the recipe changes, not on every swipe.
+  const ingredients = recipe?.ingredients;
+  const directions = recipe?.directions;
+  const linked = detail ? detail.linked : undefined;
+  const uses = useMemo(
+    () =>
+      ingredients && directions
+        ? usesByStep(ingredients, directions, linked)
+        : new Map<string, StepUse[]>(),
+    [ingredients, directions, linked],
+  );
+
   if (detail === undefined) {
     return (
       <p role="status" className="visually-hidden">
@@ -165,7 +175,6 @@ export function CookMode({ id }: { id: string }) {
 
   const leaveTo = back ? `/recipes/${back}/cook` : `/recipes/${id}`;
   const parentTitle = back ? parent?.recipe?.title : undefined;
-  const uses = stepIngredients(recipe.directions, recipe.ingredients);
   const note = scaling.pans ? bakeNote(recipe, scaling.pans, scaling.factor) : null;
   const step = wide ? PER_SCREEN : 1;
 
@@ -268,7 +277,14 @@ export function CookMode({ id }: { id: string }) {
   const stepColumn = (index: number) => {
     const shown = steps[index];
     if (!shown) return null;
-    const used = (uses.get(shown.step.id) ?? []).filter((line) => !line.heading);
+    // Each in a few words above the step, the whole line being in "You'll need" (U8).
+    const used = shownUses(uses.get(shown.step.id) ?? [], {
+      step: shown.step,
+      lines: recipe.ingredients,
+      steps: recipe.directions,
+      scaling,
+      short: true,
+    });
     return (
       <section key={shown.step.id} className={styles.step} aria-labelledby={`step-${index}`}>
         {shown.section ? <p className={styles.sectionName}>{shown.section}</p> : null}
@@ -278,12 +294,12 @@ export function CookMode({ id }: { id: string }) {
         {used.length > 0 ? (
           <p className={styles.uses}>
             Uses{" "}
-            {used.map((line, i) => (
-              <span key={line.id}>
+            {used.map((use, i) => (
+              <span key={use.key}>
                 {i > 0 ? " · " : ""}
-                <ShownText
-                  line={showIngredient(shortLine(line.text), scaling, scaling.held.has(line.id))}
-                />
+                <ShownText line={use.line} />
+                {use.from ? ` from step ${use.from.number}` : ""}
+                {use.unsure ? ` (${use.unsure.short})` : ""}
               </span>
             ))}
           </p>

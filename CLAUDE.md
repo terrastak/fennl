@@ -370,7 +370,7 @@ Other current thinking:
 
 New Claude Code threads can't see earlier conversations; this section carries what they established. Keep it current.
 
-**Status (2026-11-04).** Stages A to F are built and live: accounts, the admin console, sync, photos, every importer, scaling and units, pan sizes, linked recipes, nutrition, cook mode and printing (F6). Changes found in use (`spec.md` U1 to U12) are live; U13 (the recipe list's search and filters) and U14 (emails that don't arrive) are built, waiting for review. The owner is now **using the app on their own** before households (Stage G) and other beta users (Stage H). **G and H wait until the owner says they like how the app works for their own use.** Problems and changes found in use start in new threads: fix them as small, separate changes, without starting G or H.
+**Status (2026-11-04).** Stages A to F are built and live: accounts, the admin console, sync, photos, every importer, scaling and units, pan sizes, linked recipes, nutrition, cook mode and printing (F6). Changes found in use (`spec.md` U1 to U13) are live; U14 (emails that don't arrive) and U16 (each step's ingredients, under the step) are built, waiting for review. The owner is now **using the app on their own** before households (Stage G) and other beta users (Stage H). **G and H wait until the owner says they like how the app works for their own use.** Problems and changes found in use start in new threads: fix them as small, separate changes, without starting G or H.
 
 **How the owner (Brian) likes to work:**
 

@@ -1,67 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { clockText, durationText, stepIngredients, stepTimes, timerName } from "./cook";
-import type { DirectionStep, IngredientLine } from "./recipe";
+import { clockText, durationText, stepTimes, timerName } from "./cook";
 
-// Phase F5: cook mode.
-
-const lines = (text: string): IngredientLine[] =>
-  text.split("\n").map((t, i) => ({ id: `i${i}`, text: t, heading: t.endsWith(":") }));
-const steps = (text: string): DirectionStep[] =>
-  text.split("\n").map((t, i) => ({ id: `s${i}`, text: t, heading: false }));
-
-const used = (ingredients: string, method: string) => {
-  const map = stepIngredients(steps(method), lines(ingredients));
-  return [...map.values()].map((list) => list.map((l) => l.text));
-};
-
-describe("the ingredients each step uses", () => {
-  it("finds them by name in the step", () => {
-    expect(
-      used(
-        `2 cups all-purpose flour
-2 tablespoons sugar
-2 teaspoons baking powder
-½ teaspoon baking soda
-½ teaspoon salt
-2 cups buttermilk
-2 large eggs
-3 tablespoons butter, melted, plus more for the pan`,
-        `Whisk the flour, sugar, baking powder, baking soda and salt in a large bowl.
-In another bowl, whisk the buttermilk, eggs and melted butter.
-Pour the wet ingredients into the dry and stir just until combined.`,
-      ),
-    ).toEqual([
-      [
-        "2 cups all-purpose flour",
-        "2 tablespoons sugar",
-        "2 teaspoons baking powder",
-        "½ teaspoon baking soda",
-        "½ teaspoon salt",
-      ],
-      ["2 cups buttermilk", "2 large eggs", "3 tablespoons butter, melted, plus more for the pan"],
-      [],
-    ]);
-  });
-
-  it("looks for the last word first, and the others only when no step names it", () => {
-    expect(
-      used(
-        `For the stew:
-2 lb pork shoulder, cut into 1-inch cubes
-1 tablespoon salt, divided
-Warm flour tortillas
-1 cup flour`,
-        `Season the pork with half the salt.
-Dust with the flour.
-Serve with warm tortillas and the rest of the salt.`,
-      ),
-    ).toEqual([
-      ["2 lb pork shoulder, cut into 1-inch cubes", "1 tablespoon salt, divided"],
-      ["1 cup flour"],
-      ["1 tablespoon salt, divided", "Warm flour tortillas"],
-    ]);
-  });
-});
+// Phase F5: cook mode. The ingredients each step uses are tested in stepIngredients.test.ts.
 
 describe("the times a step gives", () => {
   const times = (text: string) => stepTimes(text).map((t) => [t.text, t.seconds]);

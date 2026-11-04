@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { showIngredient, showStep, type UnitSystem } from "../../shared/scale";
 import { stepParts } from "../timers/stepParts";
 import { TimeLink } from "../timers/TimeLink";
@@ -6,6 +6,8 @@ import { linkView, type LinkedRecipe } from "../../shared/subRecipes";
 import { Link } from "../router";
 import { servingsText } from "./format";
 import { ShownText } from "./ScaleControls";
+import { StepNumber, StepUsesList } from "./StepIngredients";
+import { toggled, usesByStep } from "./stepUses";
 import styles from "./recipes.module.css";
 
 // A linked sub-recipe on the recipe page (phase F3): "1 cup BBQ sauce" can show the BBQ sauce
@@ -103,37 +105,92 @@ export function SubRecipe({
               )}
             </ul>
             {recipe.directions.length > 0 ? (
-              <ol className={styles.steps}>
-                {recipe.directions
-                  .filter((step) => !step.heading)
-                  .map((step, i) => (
-                    <li key={step.id}>
-                      {/* Times start timers here too (U11), named for the linked recipe. */}
-                      {(
-                        stepParts(step.text, (words) => showStep(words, { factor: 1, units })) ?? [
-                          { line: showStep(step.text, { factor: 1, units }) },
-                        ]
-                      ).map((part, k) =>
-                        "time" in part ? (
-                          <TimeLink
-                            key={k}
-                            time={part.time}
-                            stepText={step.text}
-                            number={i + 1}
-                            recipeTitle={recipe.title}
-                            atStep={false}
-                          />
-                        ) : (
-                          <ShownText key={k} line={part.line} />
-                        ),
-                      )}
-                    </li>
-                  ))}
-              </ol>
+              <SubRecipeSteps recipe={recipe} anchor={id} linked={linked} units={units} />
             ) : null}
           </>
         ) : null}
       </section>
     </div>
+  );
+}
+
+const AS_WRITTEN_HELD: ReadonlySet<string> = new Set();
+
+/**
+ * A linked recipe's steps, as written, each number opening the ingredients it uses (U16), as on
+ * the page's own method.
+ */
+function SubRecipeSteps({
+  recipe,
+  anchor,
+  linked,
+  units,
+}: {
+  recipe: LinkedRecipe;
+  /** Makes its steps' element IDs, apart from the page's own "step-1". */
+  anchor: string;
+  linked: Readonly<Record<string, LinkedRecipe>>;
+  units: UnitSystem;
+}) {
+  const { ingredients, directions } = recipe;
+  const uses = useMemo(
+    () => usesByStep(ingredients, directions, linked),
+    [ingredients, directions, linked],
+  );
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const scaling = { factor: 1, units, held: AS_WRITTEN_HELD };
+  const stepAnchor = (n: number) => `${anchor}-step-${n}`;
+  return (
+    <ol className={styles.steps}>
+      {directions
+        .filter((step) => !step.heading)
+        .map((step, i) => {
+          const used = uses.get(step.id) ?? [];
+          const listId = `${anchor}-uses-${i + 1}`;
+          return (
+            <li key={step.id} id={stepAnchor(i + 1)}>
+              <StepNumber
+                number={i + 1}
+                listId={used.length > 0 ? listId : undefined}
+                open={open.has(step.id)}
+                onToggle={() => setOpen((now) => toggled(now, step.id))}
+              />
+              <div className={styles.stepBody}>
+                {/* Times start timers here too (U11), named for the linked recipe. */}
+                {(
+                  stepParts(step.text, (words) => showStep(words, { factor: 1, units })) ?? [
+                    { line: showStep(step.text, { factor: 1, units }) },
+                  ]
+                ).map((part, k) =>
+                  "time" in part ? (
+                    <TimeLink
+                      key={k}
+                      time={part.time}
+                      stepText={step.text}
+                      number={i + 1}
+                      recipeTitle={recipe.title}
+                      atStep={false}
+                    />
+                  ) : (
+                    <ShownText key={k} line={part.line} />
+                  ),
+                )}
+                {used.length > 0 ? (
+                  <StepUsesList
+                    id={listId}
+                    open={open.has(step.id)}
+                    uses={used}
+                    step={step}
+                    lines={ingredients}
+                    steps={directions}
+                    scaling={scaling}
+                    stepAnchor={stepAnchor}
+                  />
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+    </ol>
   );
 }

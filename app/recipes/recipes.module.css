@@ -1005,26 +1005,32 @@ a.source:hover {
   list-style: none;
 }
 
-.ingredients li {
+/* Only the list's own lines: a linked recipe shown in place has lists of its own inside. */
+.ingredients > li {
   padding-bottom: var(--space-2);
   border-bottom: 1px solid var(--color-border-soft);
 }
 
-/* Numbered steps; numbering carries on across sections (each list's start attribute). */
+/* Numbered steps, each number in a soft circle (U16) in place of the list's own numbers;
+   numbering carries on across sections (each list's start attribute). */
 .steps {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-5);
   margin: 0;
-  padding-left: 2rem;
+  padding-left: 0;
+  list-style: none;
 }
 
-.steps li {
-  padding-left: var(--space-2);
+/* Only the steps themselves, not the ingredient list under a step (U16). */
+.steps > li {
+  display: grid;
+  grid-template-columns: var(--space-8) minmax(0, 1fr);
+  column-gap: var(--space-2);
   border-radius: var(--radius-sm);
 }
 
 /* A step a timer's View step lands on (owner's choice 2026-10-29): a pale tint that fades away. */
-.steps li[data-flash] {
+.steps > li[data-flash] {
   animation: step-flash 3s ease-out forwards;
 }
 
@@ -1043,18 +1049,11 @@ a.source:hover {
 
 /* No fading for people who turned motion off: the tint shows, then goes (removed after 3 s). */
 @media (prefers-reduced-motion: reduce) {
-  .steps li[data-flash] {
+  .steps > li[data-flash] {
     animation: none;
     background: var(--color-accent-soft);
     box-shadow: 0 0 0 var(--space-2) var(--color-accent-soft);
   }
-}
-
-.steps li::marker {
-  font-family: var(--font-display);
-  font-variation-settings: var(--font-display-settings);
-  font-size: var(--text-lg);
-  color: var(--color-accent);
 }
 
 .section {
@@ -2031,4 +2030,210 @@ label.card {
   margin: var(--space-1) 0 0;
   color: var(--color-danger);
   font-size: var(--text-sm);
+}
+
+/* Each step's ingredients (U16, owner's choices 2026-11-04). "Show all ingredients" beside the
+   Method heading, and a line saying the step numbers open them. */
+.methodHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  column-gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.method .methodHead h2 {
+  margin: 0;
+}
+
+/* The whole tap target sits in ::before, so the heading's row stays as tall as the heading and
+   the line under it sits close, as in the approved mockup. */
+.allUses {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.allUses::before {
+  position: absolute;
+  inset: calc((1lh - var(--tap-target)) / 2) 0;
+  content: "";
+}
+
+.stepHint {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-5);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+/* A step's number, centred on the first line of the step. */
+.stepMark {
+  display: flex;
+  align-items: center;
+  height: 1lh;
+}
+
+.stepNumber {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--space-8);
+  height: var(--space-8);
+  padding: 0;
+  border: 1px solid var(--color-step-number-edge);
+  border-radius: var(--radius-full);
+  background: var(--color-step-number);
+  color: var(--color-accent);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+button.stepNumber {
+  cursor: pointer;
+}
+
+/* The whole tap target, though the circle is smaller. */
+button.stepNumber::before {
+  position: absolute;
+  inset: calc((var(--space-8) - var(--tap-target)) / 2);
+  border-radius: var(--radius-full);
+  content: "";
+}
+
+/* The focus ring drawn over the caret, which would otherwise cover part of it. */
+button.stepNumber:focus-visible {
+  outline: none;
+}
+
+button.stepNumber:focus-visible::after {
+  position: absolute;
+  inset: -1px;
+  border-radius: var(--radius-full);
+  outline: 3px solid var(--color-focus);
+  outline-offset: 2px;
+  pointer-events: none;
+  content: "";
+}
+
+/* Only where there's a pointer to hover with: on a touch screen it would stay after a tap. */
+@media (hover: hover) {
+  button.stepNumber:hover,
+  button.stepNumber:hover .stepCaret {
+    border-color: var(--color-border-strong);
+  }
+}
+
+/* The caret tucked into the circle's lower right, the same colour and edge, so they read as one:
+   down while closed, up while open. */
+.stepCaret {
+  position: absolute;
+  right: calc(-1 * var(--space-1));
+  bottom: calc(-1 * var(--space-1));
+  display: grid;
+  place-items: center;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 1px solid var(--color-step-number-edge);
+  border-radius: var(--radius-full);
+  background: var(--color-step-number);
+  color: var(--color-text-muted);
+}
+
+.stepCaret svg {
+  width: 60%;
+  height: 60%;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.stepNumber[aria-expanded="true"] .stepCaret svg {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stepCaret svg {
+    transition: none;
+  }
+}
+
+.stepBody {
+  min-width: 0;
+}
+
+/* The list itself: no card, a size down from the step, so the step keeps the emphasis. */
+.stepUses {
+  display: grid;
+  gap: var(--space-1);
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  list-style: disc;
+}
+
+.stepUses[hidden] {
+  display: none;
+}
+
+.stepUses li::marker {
+  color: var(--color-text-subtle);
+}
+
+/* "Not sure which: cheddar or Parmesan": said in words, with a small circled question mark. */
+.unsure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.unsureMark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 1.5px solid currentColor;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+
+/* The step "from step 1" leads to takes focus for a moment, marked by its tint rather than an
+   outline round the whole step (it isn't a control). */
+.steps > li:focus {
+  outline: none;
+}
+
+.fromStep {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* Its focus ring kept off the word before it: drawn close, with a hair more room before it. */
+.fromStep {
+  margin-left: calc(var(--space-1) / 2);
+}
+
+.fromStep:focus-visible {
+  outline-offset: 0;
 }

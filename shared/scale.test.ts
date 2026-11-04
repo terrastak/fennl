@@ -6,6 +6,7 @@ import {
   scaledServings,
   showIngredient,
   showStep,
+  showStepPart,
   type ShownLine,
   type UnitSystem,
 } from "./scale";
@@ -171,6 +172,28 @@ describe("scaling a step", () => {
     );
     expect(marked(showStep("Add 1/2 cup sugar, then roll 1 tablespoon into balls.", doubled))).toBe(
       "Add [1 cup] sugar, then roll 1 tablespoon into balls.",
+    );
+  });
+
+  it("shows part of a step as the whole step shows it (U16)", () => {
+    const doubled = { factor: 2, units: "written" } as const;
+    const step = "Add 1/2 cup sugar, then press 1 teaspoon of the jam into each ball.";
+    // The jam is one ball's share, so it stays a teaspoon, as it does in the step.
+    expect(marked(showStepPart(step, 30, 40, doubled))).toBe("1 teaspoon");
+    expect(marked(showStepPart(step, 4, 11, doubled))).toBe("[1 cup]");
+    expect(marked(showStepPart(step, 4, 11, { factor: 1, units: "written" }))).toBe("1/2 cup");
+  });
+
+  it("keeps the full stop after an amount that ends a sentence", () => {
+    const doubled = { factor: 2, units: "written" } as const;
+    expect(marked(showStep("Stir in 2 tbsp. Serve.", doubled))).toBe("Stir in [1/4 cup]. Serve.");
+    expect(marked(showStep("Cook the onion in the stock, reserving 1/4 cup.", doubled))).toBe(
+      "Cook the onion in the stock, reserving [1/2 cup].",
+    );
+    expect(marked(showStep("Add 1 cup.", doubled))).toBe("Add [2 cups].");
+    // A unit's own full stop in the middle of a sentence is the unit's.
+    expect(marked(showStep("Add 2 tbsp. sugar and stir.", doubled))).toBe(
+      "Add [1/4 cup] sugar and stir.",
     );
   });
 });

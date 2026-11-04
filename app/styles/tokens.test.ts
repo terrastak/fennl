@@ -54,6 +54,7 @@ const READABLE_PAIRS: [string, string][] = [
   ["--color-text-subtle", "--color-surface"],
   ["--color-accent", "--color-bg"],
   ["--color-accent", "--color-surface"],
+  ["--color-accent", "--color-step-number"],
   ["--color-on-accent", "--color-accent"],
   ["--color-accent-soft-text", "--color-accent-soft"],
   ["--color-warm-text", "--color-bg"],

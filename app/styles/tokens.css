@@ -42,6 +42,7 @@
   --weight-regular: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
+  --weight-bold: 700;
 
   --space-1: 0.25rem;
   --space-2: 0.5rem;
@@ -107,6 +108,10 @@
   --color-on-accent: #ffffff;
   --color-accent-soft: #e1e8f3;
   --color-accent-soft-text: #1b3257;
+  /* A step's number on the recipe page (U16): a soft circle, white with a hairline edge in light
+     mode, a soft grey (the text mixed 9% into the page, its edge 18%) in dark mode. */
+  --color-step-number: #ffffff;
+  --color-step-number-edge: #e3e1d8;
   --color-warm: #e0664a;
   --color-warm-soft: #fbe6df;
   --color-warm-text: #a8432b;
@@ -134,6 +139,8 @@
   --color-on-accent: #fffaf1;
   --color-accent-soft: #e7e8d3;
   --color-accent-soft-text: #3c4722;
+  --color-step-number: #fffaf1;
+  --color-step-number-edge: #e2d6c1;
   --color-warm: #9a3b4f;
   --color-warm-soft: #f6e1e3;
   --color-warm-text: #8a3346;
@@ -162,6 +169,8 @@
   --color-on-accent: #0b1629;
   --color-accent-soft: #1a2638;
   --color-accent-soft-text: #bcd1f2;
+  --color-step-number: #252825;
+  --color-step-number-edge: #383b39;
   --color-warm: #f08c73;
   --color-warm-soft: #3a211a;
   --color-warm-text: #f5a690;
@@ -189,6 +198,8 @@
   --color-on-accent: #1b2010;
   --color-accent-soft: #2c3120;
   --color-accent-soft-text: #d6e0ad;
+  --color-step-number: #2d2925;
+  --color-step-number-edge: #413c37;
   --color-warm: #e39aa8;
   --color-warm-soft: #3a2228;
   --color-warm-text: #e9a9b5;
@@ -219,6 +230,8 @@
     --color-on-accent: #0b1629;
     --color-accent-soft: #1a2638;
     --color-accent-soft-text: #bcd1f2;
+    --color-step-number: #252825;
+    --color-step-number-edge: #383b39;
     --color-warm: #f08c73;
     --color-warm-soft: #3a211a;
     --color-warm-text: #f5a690;
@@ -246,6 +259,8 @@
     --color-on-accent: #1b2010;
     --color-accent-soft: #2c3120;
     --color-accent-soft-text: #d6e0ad;
+    --color-step-number: #2d2925;
+    --color-step-number-edge: #413c37;
     --color-warm: #e39aa8;
     --color-warm-soft: #3a2228;
     --color-warm-text: #e9a9b5;
