@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { FeedbackInbox } from "../../shared/feedback";
 import { adminRequest } from "./api";
 import { adminAuthClient, loadAdminState, type AdminMe, type AdminState } from "./client";
-import { AccountsSection } from "./AccountsSection";
+import { AccountPage, AccountsSection } from "./AccountsSection";
+import { AttentionSection } from "./AttentionSection";
 import { AiSection } from "./AiSection";
 import { ActivitySection } from "./ActivitySection";
 import { FeedbackSection } from "./FeedbackSection";
@@ -289,6 +290,7 @@ function AddBackupPasskey({ refresh }: { refresh: () => Promise<void> }) {
 }
 
 const SECTIONS = [
+  { id: "attention", name: "Needs attention" },
   { id: "accounts", name: "Accounts" },
   { id: "feedback", name: "Feedback" },
   { id: "codes", name: "Codes and sign-up" },
@@ -300,14 +302,33 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
+const BACK_LABELS: Partial<Record<SectionId, string>> = {
+  attention: "Back to Needs attention",
+  accounts: "Back to search",
+  feedback: "Back to feedback",
+};
+
 function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
-  const [section, setSection] = useState<SectionId>("accounts");
-  // An account opened from the feedback inbox, or the one just acted as (/admin?account=…).
+  // The account just acted as (/admin?account=…) opens straight away; otherwise Needs attention.
   const [account, setAccount] = useState<string | null>(() =>
     new URLSearchParams(window.location.search).get("account"),
   );
+  const [section, setSection] = useState<SectionId>(() => (account ? "accounts" : "attention"));
+  // The last search, so "Back to search" shows it again.
+  const [query, setQuery] = useState("");
+  // A feedback message to open, from an account page.
+  const [feedbackOpen, setFeedbackOpen] = useState<string | null>(null);
   const [newFeedback, setNewFeedback] = useState<number | null>(null);
   const onCounts = useCallback((counts: FeedbackInbox["counts"]) => setNewFeedback(counts.new), []);
+  // Going back from an account page removes the button that had focus: it goes to the page's
+  // heading, so the keyboard carries on from the top of the section, not the top of the page.
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const focusTitle = useRef(false);
+  useEffect(() => {
+    if (account || !focusTitle.current) return;
+    focusTitle.current = false;
+    titleRef.current?.focus();
+  }, [account]);
 
   useEffect(() => {
     let cancelled = false;
@@ -321,35 +342,83 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
 
   const show = (next: SectionId) => {
     setAccount(null);
+    setFeedbackOpen(null);
     setSection(next);
   };
+  const openAccount = (userId: string, from: SectionId) => {
+    setFeedbackOpen(null);
+    setSection(from);
+    setAccount(userId);
+  };
+
+  const nav = (
+    <nav aria-label="Admin sections" className={styles.nav}>
+      {SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          className={styles.navButton}
+          aria-current={!account && section === s.id ? "page" : undefined}
+          onClick={() => show(s.id)}
+        >
+          {s.name}
+          {s.id === "feedback" && newFeedback ? ` (${newFeedback} new)` : ""}
+        </button>
+      ))}
+    </nav>
+  );
+
+  if (account) {
+    return (
+      <>
+        {nav}
+        <AccountPage
+          key={account}
+          id={account}
+          backLabel={BACK_LABELS[section] ?? "Back to search"}
+          onBack={() => {
+            focusTitle.current = true;
+            setAccount(null);
+          }}
+          onOpenFeedback={(feedbackId) => {
+            setAccount(null);
+            setFeedbackOpen(feedbackId);
+            setSection("feedback");
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <>
-      <h1 className={styles.title} tabIndex={-1}>
+      <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
         Admin console
       </h1>
-      <nav aria-label="Admin sections" className={styles.nav}>
-        {SECTIONS.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className={styles.navButton}
-            aria-current={section === s.id ? "page" : undefined}
-            onClick={() => show(s.id)}
-          >
-            {s.name}
-            {s.id === "feedback" && newFeedback ? ` (${newFeedback} new)` : ""}
-          </button>
-        ))}
-      </nav>
-      {section === "accounts" ? <AccountsSection key={account ?? ""} open={account} /> : null}
+      {nav}
+      {section === "attention" ? (
+        <AttentionSection
+          onFind={(q) => {
+            setQuery(q);
+            setSection("accounts");
+          }}
+          onOpen={(userId) => openAccount(userId, "attention")}
+        />
+      ) : null}
+      {section === "accounts" ? (
+        <AccountsSection
+          query={query}
+          onOpen={(userId, q) => {
+            setQuery(q);
+            openAccount(userId, "accounts");
+          }}
+        />
+      ) : null}
       {section === "feedback" ? (
         <FeedbackSection
           onCounts={onCounts}
-          onOpenAccount={(userId) => {
-            setAccount(userId);
-            setSection("accounts");
-          }}
+          initialOpen={feedbackOpen}
+          onOpenAccount={(userId) => openAccount(userId, "feedback")}
         />
       ) : null}
       {section === "codes" ? (

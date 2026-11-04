@@ -288,6 +288,13 @@
       "when": 1793769298481,
       "tag": "0040_email_messages",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1793775865665,
+      "tag": "0041_admin_account_page",
+      "breakpoints": true
     }
   ]
 }

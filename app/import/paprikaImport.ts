@@ -1,5 +1,5 @@
 import { draftContent } from "../../shared/importDraft";
-import { addBlockedBy, type Usage } from "../../shared/limits";
+import { addBlockedBy, type AddLimit, type Usage } from "../../shared/limits";
 import { readPaprikaRecipe, paprikaProblemText, type PaprikaRecipe } from "../../shared/paprika";
 import {
   PaprikaEntryError,
@@ -81,6 +81,8 @@ export interface PaprikaPlan {
   add: PaprikaItem[];
   /** New recipes past the plan's recipe limit. */
   needRoom: PaprikaItem[];
+  /** The limit that left `needRoom` out (phase C11), when any did. */
+  needRoomLimit: AddLimit | null;
   /** Changed in Paprika since they were imported. */
   changed: PaprikaItem[];
   unchanged: number;
@@ -207,6 +209,7 @@ export function planPaprika(
   const plan: PaprikaPlan = {
     add: [],
     needRoom: [],
+    needRoomLimit: null,
     changed: [],
     unchanged: 0,
     inTrash: 0,
@@ -216,8 +219,10 @@ export function planPaprika(
   const photosOn = photos?.enabled ?? false;
   for (const item of preview.items) {
     if (item.status === "new") {
-      if (room && addBlockedBy(room)) {
+      const limit = room ? addBlockedBy(room) : null;
+      if (limit) {
         plan.needRoom.push(item);
+        plan.needRoomLimit ??= limit;
         continue;
       }
       if (room) {

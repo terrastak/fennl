@@ -68,13 +68,19 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   // The admin finds her account and acts as her, with a reason.
   await signedInAdmin(page, context, testInfo);
   await page.getByLabel("Email or name").fill(petraEmail);
-  await page.getByRole("button", { name: "Search" }).click();
+  await page.getByRole("button", { name: "Find" }).click();
   await page.getByRole("button", { name: "Petra Ng" }).click();
+  await page
+    .getByRole("button", { name: /^View as Petra/ })
+    .first()
+    .click();
   const actAs = page.getByRole("region", { name: "View as this user" });
-  await expect(actAs.getByRole("button", { name: "View as this user" })).toBeDisabled();
+  await expect(
+    actAs.getByRole("button", { name: "View as this user", exact: true }),
+  ).toBeDisabled();
   await actAs.getByLabel("Reason (kept in the admin log)").fill("Petra says her stew is missing");
   await expectAccessible(page);
-  await actAs.getByRole("button", { name: "View as this user" }).click();
+  await actAs.getByRole("button", { name: "View as this user", exact: true }).click();
 
   // The app, as Petra, with the bar on every page.
   const banner = page.getByRole("region", { name: "Acting as this person" });
@@ -104,7 +110,11 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
 
   // Stopping goes back to her account in the console, where the log shows the reason and edit.
   await banner.getByRole("button", { name: "Stop acting as Petra Ng" }).click();
-  await expect(page.getByRole("heading", { level: 2, name: "Petra Ng" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Petra Ng" })).toBeVisible();
+  await page
+    .getByRole("region", { name: "Everything you can do" })
+    .getByRole("button", { name: "Admin log for this account…" })
+    .click();
   const log = page.getByRole("region", { name: "Admin activity for this account" });
   await expect(log.getByRole("row").filter({ hasText: "Started acting as them" })).toContainText(
     "Reason: Petra says her stew is missing",

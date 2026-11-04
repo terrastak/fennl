@@ -3,6 +3,7 @@ import { IMPORT_RULES, type ImportJobSummary } from "../../shared/importJobs";
 import { addBlockedBy } from "../../shared/limits";
 import { PASTED_TEXT_CHARS } from "../../shared/pastedText";
 import { addBlockedText } from "../limits/limitText";
+import { reportRefused } from "../limits/reportRefused";
 import { navigate } from "../navigation";
 import { PageHeader } from "../pages/PageHeader";
 import recipes from "../recipes/recipes.module.css";
@@ -170,6 +171,7 @@ export function ImportPage() {
     const blocked = usage ? addBlockedBy(usage) : null;
     if (usage && blocked) {
       setMessage({ text: addBlockedText(blocked, usage), problem: true });
+      reportRefused(blocked, "import");
       return;
     }
     const me = activeSyncClient()?.userId;

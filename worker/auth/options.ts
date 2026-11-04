@@ -18,6 +18,8 @@ export interface SessionCreatedEvent {
   sessionId: string;
   method: SignInMethod;
   request: Request | undefined;
+  /** The admin acting as the person (phase C12), for a session that is them. */
+  impersonatedBy: string | null;
 }
 
 export interface AuthSettings {
@@ -211,6 +213,8 @@ export function authOptions(settings: AuthSettings) {
               sessionId: session.id,
               method: signInMethodFor(ctx?.path),
               request: ctx?.request,
+              impersonatedBy:
+                (session as { impersonatedBy?: string | null }).impersonatedBy ?? null,
             });
           },
         },

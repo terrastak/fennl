@@ -21,7 +21,7 @@ export const signUpRoutes = new Hono<{ Bindings: Env }>();
 const HOUR = 60 * 60 * 1000;
 
 /** The account a proof names, while it is still waiting to be verified with a password. */
-async function waitingAccount(db: Database, userId: string) {
+export async function waitingAccount(db: Database, userId: string) {
   return db
     .select({ id: user.id, email: user.email, name: user.name })
     .from(user)

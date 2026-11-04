@@ -47,8 +47,11 @@ export function isLimitKey(value: unknown): value is LimitKey {
   return typeof value === "string" && (LIMIT_KEYS as readonly string[]).includes(value);
 }
 
-/** Where the household's tier comes from. */
-export type EntitlementSource = "free" | "subscription" | "promo_code";
+/**
+ * Where the household's tier comes from: a paid plan, a code, or Premium an admin gave without a
+ * code ("Extend Premium" in the admin console, U15).
+ */
+export type EntitlementSource = "free" | "subscription" | "promo_code" | "admin_grant";
 
 export interface Entitlements extends Limits {
   tier: Tier;

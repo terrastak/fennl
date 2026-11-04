@@ -1,5 +1,6 @@
 import { eq, inArray, sql } from "drizzle-orm";
 import { addBlockedBy, tooLarge, type AddLimit, type Usage } from "../../shared/limits";
+import type { LimitRefusedDetails, RefusedWhat } from "../../shared/accountEvents";
 import {
   RECIPE_FIELDS,
   fieldBytes,
@@ -696,6 +697,15 @@ export async function householdMembers(db: Database, householdId: string): Promi
 
 type Planned = { result: ChangeResult } | { build: (k: number) => Statement };
 
+/** A change refused for a plan limit (U15): which, what it was, and the numbers. */
+export type Refusal = Omit<LimitRefusedDetails, "origin">;
+
+function addRefusal(limit: AddLimit, what: RefusedWhat, usage: Usage): Refusal {
+  return limit === "max_recipes"
+    ? { limit, what, used: usage.recipes, max: usage.maxRecipes }
+    : { limit, what, used: usage.textBytes, max: usage.maxTextBytes };
+}
+
 /**
  * Decides, for each change, whether it's allowed, and if so the statement that saves it. Owners
  * are read once up front; changes earlier in the same push (a new recipe, a new category) count.
@@ -711,6 +721,7 @@ async function plan(
   times: number[],
   now: number,
   limits: PushLimits,
+  onRefused?: (refusal: Refusal) => void,
 ): Promise<Planned[]> {
   const recipeIds = new Set<string>();
   const categoryIds = new Set<string>();
@@ -800,15 +811,28 @@ async function plan(
         const turnedAway = refused.get(change.id);
         if (turnedAway) return overLimit(turnedAway);
         const imported = change.create?.import ?? change.import;
-        if (imported?.source === "paprika" && !limits.structuredImports) return notImported;
+        if (imported?.source === "paprika" && !limits.structuredImports) {
+          onRefused?.({ limit: "import_structured_enabled", what: "import" });
+          return notImported;
+        }
         if (change.create && !recipeOwner.has(change.id)) {
           // A new recipe.
           const content = change.fields as RecipeContent;
           const bytes = recipeBytes(content);
-          if (tooLarge(bytes, 0, limits.maxRecipeBytes)) return tooBig;
+          const what = imported ? "import" : "recipe";
+          if (tooLarge(bytes, 0, limits.maxRecipeBytes)) {
+            onRefused?.({
+              limit: "max_recipe_bytes",
+              what,
+              used: bytes,
+              max: limits.maxRecipeBytes,
+            });
+            return tooBig;
+          }
           const limit = addBlockedBy(usage);
           if (limit) {
             refused.set(change.id, limit);
+            onRefused?.({ ...addRefusal(limit, what, usage), recipeIds: [change.id] });
             return overLimit(limit);
           }
           recipeOwner.set(change.id, caller.userId);
@@ -829,13 +853,24 @@ async function plan(
                 : stored[field]),
             0,
           );
-          if (tooLarge(after, before, limits.maxRecipeBytes)) return tooBig;
+          if (tooLarge(after, before, limits.maxRecipeBytes)) {
+            onRefused?.({
+              limit: "max_recipe_bytes",
+              what: "recipe",
+              used: after,
+              max: limits.maxRecipeBytes,
+            });
+            return tooBig;
+          }
           usage.textBytes += after - before;
         }
         if (change.deleted === false && trashed.has(change.id)) {
           // Back from Trash: one more recipe (its text was counted all along).
           const limit = addBlockedBy(usage, true);
-          if (limit) return overLimit(limit);
+          if (limit) {
+            onRefused?.(addRefusal(limit, "restore", usage));
+            return overLimit(limit);
+          }
           trashed.delete(change.id);
           usage.recipes += 1;
         } else if (change.deleted === true && !trashed.has(change.id)) {
@@ -897,15 +932,23 @@ async function plan(
         const gallery = (stored?.role ?? change.create?.role) === "photo";
         const count = galleries.get(change.recipeId) ?? 0;
         const full = limits.maxPhotosPerRecipe !== null && count >= limits.maxPhotosPerRecipe;
-        const photoLimit: Planned = {
-          result: { status: "rejected", reason: "limit", limit: "max_photos_per_recipe" },
+        const photoLimit = (): Planned => {
+          onRefused?.({
+            limit: "max_photos_per_recipe",
+            what: "photo",
+            used: count,
+            max: limits.maxPhotosPerRecipe,
+          });
+          return {
+            result: { status: "rejected", reason: "limit", limit: "max_photos_per_recipe" },
+          };
         };
         if (!stored) {
           // A new photo: its image must be stored for the recipe's owner, and there must be room.
           if (!change.create) return rejected("not_found");
           if (!images.has(`${owner}|${change.create.imageHash}`)) return rejected("not_found");
           if (gallery && !change.deleted) {
-            if (full) return photoLimit;
+            if (full) return photoLimit();
             galleries.set(change.recipeId, count + 1);
           }
           photos.set(change.id, {
@@ -916,7 +959,7 @@ async function plan(
           });
         } else if (gallery && change.deleted === false && stored.deleted) {
           // Putting a removed photo back needs room too; removing one makes room.
-          if (full) return photoLimit;
+          if (full) return photoLimit();
           galleries.set(change.recipeId, count + 1);
           stored.deleted = false;
         } else if (gallery && change.deleted === true && !stored.deleted) {
@@ -945,8 +988,10 @@ export async function applyChanges(
   times: number[],
   now = Date.now(),
   limits: PushLimits = NO_LIMITS,
+  /** Told about each change refused for a plan limit (U15 records them for the admin console). */
+  onRefused?: (refusal: Refusal) => void,
 ): Promise<ChangeResult[]> {
-  const planned = await plan(db, caller, changes, times, now, limits);
+  const planned = await plan(db, caller, changes, times, now, limits, onRefused);
   const results: (ChangeResult | null)[] = planned.map((p) => ("result" in p ? p.result : null));
   const toRun = planned.flatMap((p, i) => ("build" in p ? [{ i, build: p.build }] : []));
   if (toRun.length === 0) return results as ChangeResult[];

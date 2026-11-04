@@ -24,6 +24,9 @@ import { ABSOLUTE_MAX_IMAGE_BYTES, detectImageType } from "../../shared/images";
 import { recipeCardHtml } from "../../shared/pageSnapshot";
 import { readWebRecipes } from "../../shared/webRecipe";
 import { cleanText } from "../../shared/webText";
+import type { RefusedLimit } from "../../shared/accountEvents";
+import { inBackground, recordAccountEvent, recordLimitRefusals } from "../account/events";
+import { householdMonth } from "../ai/usage";
 import { readCapped } from "../body";
 import { importJob, recipe } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
@@ -77,6 +80,79 @@ importRoutes.use("/api/import/*", async (c, next) => {
     return next();
   }
   return requireHousehold(c, next);
+});
+
+/** The routes that read something into drafts, and where each one's import comes from. */
+function importSourceOf(method: string, path: string): string | null {
+  if (method !== "POST") return null;
+  if (path === "/api/import/web") return "web";
+  if (path === "/api/import/photos") return "photos";
+  if (path === "/api/import/pdf" || path === "/api/import/pdf/find") return "pdf";
+  if (path === "/api/import/text") return "text";
+  if (/^\/api\/import\/jobs\/[^/]+\/read-again$/.test(path)) return "read_again";
+  return null;
+}
+
+/** Answers that aren't an import failing: the request itself was wrong or too quick. */
+const NOT_FAILURES = new Set(["invalid_request", "rate_limited", "not_found", "web_address"]);
+
+/** Answers refused for the plan, and the limit each one is. */
+const LIMIT_ANSWERS: Record<string, RefusedLimit> = {
+  import_not_included: "import_structured_enabled",
+  ai_import_not_included: "import_ai_enabled",
+  daily_limit: "structured_imports_per_day",
+  monthly_limit: "ai_imports_per_month",
+};
+
+/**
+ * What an import's refusal or failure was (U15), for the admin console's account page: refused
+ * for a limit, or failed for another reason (no recipe found, the AI unavailable...). Read from
+ * the answer, after it's sent; never while an admin acts as the person.
+ */
+async function recordImportOutcome(c: Context<ImportEnv>, source: string): Promise<void> {
+  const { db, userId, household } = c.var.signedIn;
+  if (c.res.status < 400) return;
+  const answer = (await c.res
+    .clone()
+    .json()
+    .catch(() => null)) as { error?: unknown } | null;
+  const error = typeof answer?.error === "string" ? answer.error : null;
+  if (!error || NOT_FAILURES.has(error)) return;
+  const limit = LIMIT_ANSWERS[error];
+  if (!limit) {
+    await recordAccountEvent(db, userId, "import_failed", { source, reason: error });
+    return;
+  }
+  const what =
+    limit === "import_ai_enabled" || limit === "ai_imports_per_month" ? "ai_import" : "import";
+  if (limit !== "ai_imports_per_month") {
+    await recordLimitRefusals(db, userId, [{ limit, what, origin: "server" }]);
+    return;
+  }
+  // This month's AI imports, or the hidden cost backstop behind them.
+  const [plan, month] = await Promise.all([
+    householdEntitlements(db, household.householdId),
+    householdMonth(db, household.householdId),
+  ]);
+  const max = plan.ai_imports_per_month;
+  await recordLimitRefusals(db, userId, [
+    max !== null && month.imports >= max
+      ? { limit, what, used: month.imports, max, origin: "server" }
+      : {
+          limit: "ai_cost_cents_per_month",
+          what,
+          used: Math.round(month.costMicroUsd / 10_000),
+          max: plan.ai_cost_cents_per_month,
+          origin: "server",
+        },
+  ]);
+}
+
+importRoutes.use("/api/import/*", async (c, next) => {
+  await next();
+  const source = importSourceOf(c.req.method, c.req.path);
+  if (!source || c.res.status < 400 || c.var.signedIn?.impersonating !== false) return;
+  await inBackground(c, recordImportOutcome(c, source));
 });
 
 const MINUTE = 60 * 1000;

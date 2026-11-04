@@ -6,6 +6,7 @@ import {
   type APIRequestContext,
   type BrowserContext,
   type Locator,
+  type Page,
 } from "@playwright/test";
 
 /** Browser tests start signed in as this account (made by auth.setup.ts). */
@@ -118,8 +119,8 @@ export async function signUpConfirmed(
   context: BrowserContext,
   baseURL: string,
   name = "June Lee",
+  email = uniqueEmail("e2e"),
 ): Promise<string> {
-  const email = uniqueEmail("e2e");
   const res = await context.request.post("/api/auth/sign-up/email", {
     headers: { origin: baseURL },
     data: { name, email, password: PASSWORD, callbackURL: "/email-confirmed" },
@@ -210,6 +211,8 @@ export const ADMIN_ACCOUNTS = {
   feedback: "Support",
   acts: "Ada Admin",
   "ai-outcomes": "Analyst",
+  attention: "Attention Admin",
+  extends: "Grant Admin",
 } as const;
 export type AdminLabel = keyof typeof ADMIN_ACCOUNTS;
 /** Where the admin tests run (the console is checked on a computer). */
@@ -238,4 +241,42 @@ export async function showFolded(show: Locator, content: Locator): Promise<void>
   await expect(show.or(content).first()).toBeVisible();
   if (await show.isVisible()) await show.click();
   await expect(content.first()).toBeVisible();
+}
+
+/** A software passkey device, so a test can create and use passkeys without a person. */
+export async function addVirtualAuthenticator(context: BrowserContext, page: Page): Promise<void> {
+  const cdp = await context.newCDPSession(page);
+  await cdp.send("WebAuthn.enable");
+  await cdp.send("WebAuthn.addVirtualAuthenticator", {
+    options: {
+      protocol: "ctap2",
+      transport: "internal",
+      hasResidentKey: true,
+      hasUserVerification: true,
+      isUserVerified: true,
+      automaticPresenceSimulation: true,
+    },
+  });
+}
+
+/**
+ * Signs in to the admin console as this test's admin account, adding its passkey (which also
+ * signs in with it), so the passkey sign-in is fresh for tools that ask for it again.
+ */
+export async function signInAdmin(
+  page: Page,
+  context: BrowserContext,
+  testInfo: { project: { name: string }; retry: number },
+  label: AdminLabel,
+): Promise<void> {
+  const email = adminEmail(testInfo, label);
+  await context.clearCookies();
+  await addVirtualAuthenticator(context, page);
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { level: 1, name: "Sign in" })).toBeVisible();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(PASSWORD);
+  await page.getByRole("button", { name: "Sign in with password" }).click();
+  await page.getByRole("button", { name: "Add a passkey" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Admin console" })).toBeVisible();
 }

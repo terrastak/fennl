@@ -95,7 +95,10 @@ describe("the account tools", () => {
       mustChangePassword: false,
       grants: [],
       overrides: [],
-      usage: null,
+      usage: { recipes: 0, textBytes: 0, maxRecipes: 100 },
+      emailProblem: null,
+      adminGrants: [],
+      unreadFeedback: 0,
     });
     expect(detail.plan?.tier).toBe("free");
     expect(detail.household?.members).toEqual([{ name: "Rosa Lee", email: address }]);

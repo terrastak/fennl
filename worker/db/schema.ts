@@ -931,3 +931,75 @@ export const emailMessage = sqliteTable(
     index("email_message_sent_idx").on(table.sentAt),
   ],
 );
+
+/**
+ * Things that happened on an account that no other table keeps (U15; shared/accountEvents.ts):
+ * something refused because of a limit, a failed sign-in (only the time and the browser, never
+ * what was typed), a sign-in, a device taking over from another, and an import that failed.
+ * The admin console's account page reads them. Removed 90 days after they happened by the hourly
+ * job, and with the account.
+ */
+export const accountEvent = sqliteTable(
+  "account_event",
+  {
+    id: text("id").primaryKey(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** shared/accountEvents.ts, AccountEventKind. */
+    kind: text("kind").notNull(),
+    /** JSON: what the kind records (AccountEventDetails). */
+    details: text("details").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [
+    index("account_event_user_idx").on(table.userId, table.createdAt),
+    index("account_event_created_idx").on(table.createdAt),
+  ],
+);
+
+/**
+ * Premium given to one person's household by an admin, without a code (U15, "Extend Premium").
+ * The best of these and the household's code grants is the entitlement's grant input. Always
+ * ends on a date. Replacing one revokes the earlier one.
+ */
+export const adminGrant = sqliteTable(
+  "admin_grant",
+  {
+    id: text("id").primaryKey(),
+    householdId: text("household_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** "individual" or "household". */
+    tier: text("tier").notNull(),
+    startsAt: integer("starts_at", { mode: "timestamp_ms" }).notNull(),
+    endsAt: integer("ends_at", { mode: "timestamp_ms" }).notNull(),
+    revokedAt: integer("revoked_at", { mode: "timestamp_ms" }),
+    createdBy: text("created_by").references(() => user.id, { onDelete: "set null" }),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [index("admin_grant_household_idx").on(table.householdId)],
+);
+
+/**
+ * A finding on an account an admin marked handled (U15), so it leaves Needs attention. It comes
+ * back when the finding's fingerprint (its newest record) changes.
+ */
+export const adminHandled = sqliteTable(
+  "admin_handled",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** shared/accountFindings.ts, FindingKey. */
+    finding: text("finding").notNull(),
+    fingerprint: text("fingerprint").notNull(),
+    adminUserId: text("admin_user_id").references(() => user.id, { onDelete: "set null" }),
+    note: text("note"),
+    handledAt: integer("handled_at", { mode: "timestamp_ms" }).notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.finding] })],
+);

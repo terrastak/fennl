@@ -41,6 +41,56 @@ export async function householdPhotos(db: Database, householdId: string): Promis
   return rows;
 }
 
+/** householdUsage for many households at once, in one query (the admin console, U15). */
+export async function manyHouseholdsUsage(
+  db: Database,
+  householdIds: string[],
+): Promise<Map<string, UsageCounts>> {
+  const answer = new Map<string, UsageCounts>(
+    householdIds.map((id) => [id, { recipes: 0, textBytes: 0 }]),
+  );
+  if (householdIds.length === 0) return answer;
+  const ids = JSON.stringify([...new Set(householdIds)]);
+  const rows = await db.all<{
+    householdId: string;
+    recipes: number | null;
+    textBytes: number | null;
+  }>(sql`
+    select m.organization_id as householdId,
+      sum(case when r.deleted_at is null then 1 else 0 end) as recipes,
+      sum(r.text_bytes) as textBytes
+    from member m join recipe r on r.owner_user_id = m.user_id
+    where m.organization_id in (select value from json_each(${ids}))
+    group by m.organization_id`);
+  for (const row of rows) {
+    answer.set(row.householdId, { recipes: row.recipes ?? 0, textBytes: row.textBytes ?? 0 });
+  }
+  return answer;
+}
+
+/** householdPhotos for many households at once, in one query (the admin console, U15). */
+export async function manyHouseholdsPhotos(
+  db: Database,
+  householdIds: string[],
+): Promise<Map<string, MemberPhotos[]>> {
+  const answer = new Map<string, MemberPhotos[]>(householdIds.map((id) => [id, []]));
+  if (householdIds.length === 0) return answer;
+  const ids = JSON.stringify([...new Set(householdIds)]);
+  const rows = await db.all<MemberPhotos & { householdId: string }>(sql`
+    select m.organization_id as householdId, m.user_id as userId, u.name as name,
+      coalesce((select sum(bytes) from image i
+        where i.owner_user_id = m.user_id and i.deleted_at is null), 0) as bytes,
+      (select count(*) from image i
+        where i.owner_user_id = m.user_id and i.deleted_at is null) as count,
+      (select delete_after from photo_grace g
+        where g.user_id = m.user_id and g.ended_at is null) as deleteAfter
+    from member m join user u on u.id = m.user_id
+    where m.organization_id in (select value from json_each(${ids}))
+    order by m.created_at, m.user_id`);
+  for (const { householdId, ...photos } of rows) answer.get(householdId)?.push(photos);
+  return answer;
+}
+
 /** Usage with the limits that apply to it, and the household's photos when given. */
 export function usageWithLimits(
   counts: UsageCounts,

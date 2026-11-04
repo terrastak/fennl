@@ -2,7 +2,7 @@ import { and, eq, gt, isNull, lt, or, sql } from "drizzle-orm";
 import type { CodeProblem } from "../../shared/codes";
 import type { PaidTier } from "../../shared/entitlements";
 import type { Database } from "../db/client";
-import { premiumGrant, promoCode } from "../db/schema";
+import { adminGrant, premiumGrant, promoCode } from "../db/schema";
 import type { GrantInput } from "../entitlements/compute";
 
 // Codes that give a household free Premium (phase B5). The rules, in CLAUDE.md "Beta grants":
@@ -158,8 +158,8 @@ export async function redeemCode(
 const RANK: Record<PaidTier, number> = { individual: 1, household: 2 };
 
 /**
- * The best Premium a household has from codes right now: the higher tier, then the later end
- * (no end date beats any date).
+ * The best Premium a household has from codes, or given by an admin without one (U15), right
+ * now: the higher tier, then the later end (no end date beats any date).
  * Grants from "until a date" codes end on the code's current date, so moving it moves them.
  */
 export async function activeGrant(
@@ -167,30 +167,79 @@ export async function activeGrant(
   householdId: string,
   now = new Date(),
 ): Promise<GrantInput | null> {
-  const rows = await db
-    .select({
-      tier: premiumGrant.tier,
-      startsAt: premiumGrant.startsAt,
-      endsAt: premiumGrant.endsAt,
-      accessUntil: promoCode.accessUntil,
-    })
-    .from(premiumGrant)
-    .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
-    .where(and(eq(premiumGrant.householdId, householdId), isNull(premiumGrant.revokedAt)))
-    .all();
+  return (await activeGrants(db, [householdId], now)).get(householdId) ?? null;
+}
+
+/**
+ * activeGrant for many households at once, in two queries whatever their number (the admin
+ * console's Needs attention, U15). Households with no grant map to null.
+ */
+export async function activeGrants(
+  db: Database,
+  householdIds: string[],
+  now = new Date(),
+): Promise<Map<string, GrantInput | null>> {
+  const best = new Map<string, GrantInput | null>(householdIds.map((id) => [id, null]));
+  if (householdIds.length === 0) return best;
+  // One bound value for the whole list (D1 allows only so many per query).
+  const ids = JSON.stringify([...new Set(householdIds)]);
+  const [codeRows, adminRows] = await Promise.all([
+    db
+      .select({
+        householdId: premiumGrant.householdId,
+        tier: premiumGrant.tier,
+        startsAt: premiumGrant.startsAt,
+        endsAt: premiumGrant.endsAt,
+        accessUntil: promoCode.accessUntil,
+      })
+      .from(premiumGrant)
+      .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
+      .where(
+        and(
+          sql`${premiumGrant.householdId} in (select value from json_each(${ids}))`,
+          isNull(premiumGrant.revokedAt),
+        ),
+      )
+      .all(),
+    db
+      .select({
+        householdId: adminGrant.householdId,
+        tier: adminGrant.tier,
+        startsAt: adminGrant.startsAt,
+        endsAt: adminGrant.endsAt,
+      })
+      .from(adminGrant)
+      .where(
+        and(
+          sql`${adminGrant.householdId} in (select value from json_each(${ids}))`,
+          isNull(adminGrant.revokedAt),
+        ),
+      )
+      .all(),
+  ]);
+  const rows = [
+    ...codeRows.map((row) => ({
+      householdId: row.householdId,
+      tier: row.tier,
+      startsAt: row.startsAt,
+      endsAt: row.endsAt ?? row.accessUntil,
+      source: "promo_code" as const,
+    })),
+    ...adminRows.map((row) => ({ ...row, source: "admin_grant" as const })),
+  ];
 
   // A null end means no end date, which beats any date.
   const later = (a: Date | null, b: Date | null) => (a === null ? b !== null : b !== null && a > b);
-  let best: GrantInput | null = null;
   for (const row of rows) {
-    const endsAt = row.endsAt ?? row.accessUntil;
+    const { endsAt } = row;
     if (!isPaidTier(row.tier) || (endsAt && endsAt <= now) || row.startsAt > now) continue;
+    const current = best.get(row.householdId) ?? null;
     if (
-      !best ||
-      RANK[row.tier] > RANK[best.tier] ||
-      (RANK[row.tier] === RANK[best.tier] && later(endsAt, best.endsAt))
+      !current ||
+      RANK[row.tier] > RANK[current.tier] ||
+      (RANK[row.tier] === RANK[current.tier] && later(endsAt, current.endsAt))
     ) {
-      best = { tier: row.tier, endsAt };
+      best.set(row.householdId, { tier: row.tier, endsAt, source: row.source });
     }
   }
   return best;

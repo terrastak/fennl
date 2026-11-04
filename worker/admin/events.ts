@@ -4,6 +4,8 @@ import { database } from "../db/client";
 import { user } from "../db/schema";
 import { createEmailSender } from "../email/email";
 import { adminAlertEmail } from "../email/templates";
+import { deviceLabel } from "../../shared/devices";
+import { recordAccountEvent } from "../account/events";
 import { recordAdminAction } from "./audit";
 
 async function adminAccount(env: Env, userId: string) {
@@ -46,7 +48,17 @@ export function adminEventHandlers(env: Env) {
     async onSessionCreated(event: SessionCreatedEvent) {
       try {
         const admin = await adminAccount(env, event.userId);
-        if (!admin) return;
+        if (!admin) {
+          // Someone's own sign-in, for "What happened" on their account page (U15). Never an
+          // admin acting as them.
+          if (!event.impersonatedBy) {
+            await recordAccountEvent(database(env.DB), event.userId, "signed_in", {
+              browser: deviceLabel(event.request?.headers.get("user-agent")),
+              method: event.method,
+            });
+          }
+          return;
+        }
         await recordAdminAction(
           env,
           {

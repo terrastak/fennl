@@ -1,5 +1,7 @@
 import { Hono, type Context } from "hono";
 import { ABSOLUTE_MAX_IMAGE_BYTES, detectImageType, isImageHash } from "../../shared/images";
+import type { LimitRefusedDetails } from "../../shared/accountEvents";
+import { inBackground, recordLimitRefusals } from "../account/events";
 import { and, eq } from "drizzle-orm";
 import { image } from "../db/schema";
 import { householdEntitlements } from "../entitlements/entitlements";
@@ -46,9 +48,35 @@ const THUMB_MAX_BYTES = 512 * 1024;
 // POST /api/images/upload[?owner=]: the photo's bytes as the request body. Answers with its hash,
 // which is its name from then on.
 imageRoutes.post("/api/images/upload", async (c) => {
-  const { db, userId, household } = c.var.signedIn;
+  const { db, userId, household, impersonating } = c.var.signedIn;
   const plan = await householdEntitlements(db, household.householdId);
-  if (!plan.images_enabled) return c.json({ error: "images_not_included" }, 403);
+  /** A photo refused for a limit, for the admin console (U15); never while an admin acts. */
+  const refused = async (refusal: Omit<LimitRefusedDetails, "what" | "origin">) => {
+    if (impersonating) return;
+    await inBackground(
+      c,
+      (async () => {
+        const used =
+          refusal.limit === "image_quota_bytes" || refusal.limit === "image_quota_count"
+            ? await householdImageUsage(db, household.householdId)
+            : null;
+        await recordLimitRefusals(db, userId, [
+          {
+            ...refusal,
+            ...(used
+              ? { used: refusal.limit === "image_quota_bytes" ? used.bytes : used.count }
+              : {}),
+            what: "photo",
+            origin: "server",
+          },
+        ]);
+      })(),
+    );
+  };
+  if (!plan.images_enabled) {
+    await refused({ limit: "images_enabled" });
+    return c.json({ error: "images_not_included" }, 403);
+  }
   const owner = await ownerFrom(c.var.signedIn, c.req.query("owner"));
   if (!owner) return c.json({ error: "not_found" }, 404);
 
@@ -62,6 +90,7 @@ imageRoutes.post("/api/images/upload", async (c) => {
       windowMs: MINUTE,
     }))
   ) {
+    await refused({ limit: "image_uploads_per_minute", max: perMinute });
     return c.json({ error: "rate_limited" }, 429, { "retry-after": "60" });
   }
   const perDay = plan.image_uploads_per_day;
@@ -72,13 +101,21 @@ imageRoutes.post("/api/images/upload", async (c) => {
       windowMs: DAY,
     }))
   ) {
+    await refused({ limit: "image_uploads_per_day", max: perDay });
     return c.json({ error: "rate_limited" }, 429, { "retry-after": String(DAY / 1000) });
   }
 
   const maxFileBytes = Math.min(plan.image_max_file_bytes ?? Infinity, ABSOLUTE_MAX_IMAGE_BYTES);
-  const tooLarge = () => c.json({ error: "image_too_large", maxBytes: maxFileBytes }, 413);
+  const tooLarge = async (used?: number) => {
+    await refused({
+      limit: "image_max_file_bytes",
+      ...(used !== undefined ? { used } : {}),
+      max: maxFileBytes,
+    });
+    return c.json({ error: "image_too_large", maxBytes: maxFileBytes }, 413);
+  };
   const declared = Number(c.req.header("content-length"));
-  if (Number.isFinite(declared) && declared > maxFileBytes) return tooLarge();
+  if (Number.isFinite(declared) && declared > maxFileBytes) return tooLarge(declared);
   const bytes = await readCapped(c.req.raw, maxFileBytes);
   if (!bytes) return tooLarge();
 
@@ -101,6 +138,11 @@ imageRoutes.post("/api/images/upload", async (c) => {
     now,
   );
   if (result.status === "full") {
+    await refused(
+      result.limit === "bytes"
+        ? { limit: "image_quota_bytes", max: plan.image_quota_bytes }
+        : { limit: "image_quota_count", max: plan.image_quota_count },
+    );
     return c.json({ error: "image_quota_full", limit: result.limit }, 403);
   }
   if (result.status === "busy") {

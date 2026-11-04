@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Entitlements } from "../../shared/entitlements";
 import { PaprikaFileError, blobSource, type ByteSource } from "../../shared/paprikaFile";
+import { reportRefused } from "../limits/reportRefused";
 import { formatBytes } from "../pages/plan";
 import { arrangeRecipePhotos } from "../photos/arrange";
 import { currentPhotoCache } from "../photos/usePhoto";
@@ -188,6 +189,11 @@ export function PaprikaImport() {
     setPreview(null);
     setFile(null);
     setMessage({ text: resultText(result), problem: result.stopped !== null });
+    // Recipes left out for want of room: the admin console sees it (phase U15). Sent after the
+    // import, once the server's own count is at the limit too.
+    if (summary.needRoomLimit && result.stopped === null) {
+      reportRefused(summary.needRoomLimit, "import");
+    }
   };
 
   const photoUsage = status.usage?.photos;
