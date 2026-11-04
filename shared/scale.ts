@@ -664,16 +664,37 @@ const isPortion = (text: string, a: IngredientAmount) =>
  * size still converts).
  */
 export function showStep(text: string, options: ShowOptions): ShownLine {
-  if (options.factor === 1 && options.units === "written") return plain(text);
+  return showStepPart(text, 0, text.length, options);
+}
+
+/**
+ * Part of a step (`text.slice(start, end)`) as the whole step shows it: "1 teaspoon of the jam"
+ * in "… into each ball" stays a teaspoon, as it does in the step (U16).
+ */
+export function showStepPart(
+  text: string,
+  start: number,
+  end: number,
+  options: ShowOptions,
+): ShownLine {
+  const part = text.slice(start, end);
+  if (options.factor === 1 && options.units === "written") return plain(part);
   const edits: { start: number; end: number; text: string }[] = [];
-  for (const a of amountsWithin(text)) {
+  for (const found of amountsWithin(text)) {
+    // "Stir in 2 tbsp. Serve.": the full stop also ends the sentence, so it stays as written.
+    const stop =
+      found.end > found.start + 1 &&
+      text[found.end - 1] === "." &&
+      /^(?:\s+[\p{Lu}\d"“(]|\s*$)/u.test(text.slice(found.end));
+    const a = stop ? { ...found, end: found.end - 1 } : found;
+    if (a.start < start || a.end > end) continue;
     const unit = a.unit ? unitNamed(a.unit) : undefined;
     if (!unit || (unit.kind !== "volume" && unit.kind !== "weight")) continue;
     const factor = isPortion(text, a) ? 1 : options.factor;
     const r = rewrite(text, a, factor, options.units);
-    if (r) edits.push({ start: a.start, end: a.end, text: r.text });
+    if (r) edits.push({ start: a.start - start, end: a.end - start, text: r.text });
   }
-  const pieces = piecesOf(text, edits);
+  const pieces = piecesOf(part, edits);
   return { pieces, changed: pieces.some((p) => p.changed) };
 }
 

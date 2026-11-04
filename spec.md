@@ -1504,6 +1504,19 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   - The existing tools (View as, limits, email, password help, codes) move under "Everything you can do" and work as before; each finding's buttons open the same tools with the right values filled in.
   - The privacy policy (H2) must say failed sign-in times and limit refusals are kept 90 days.
 - **You check**, after it's live: open the console and look at Needs attention; open an account with something on it; try each filter and period in What happened; fix one finding with its button and see it leave the list.
+### U16. Each step's ingredients, under the step (owner's choices 2026-11-04)
+- **Asked**: "underneath each step, showing a dropdown of the ingredients (and their quantities) used in that step so a user does not have to look back and forth between the step and the ingredients list", recreated from the earlier Fennl (`terrastak/fennl_g`, `lib/recipes/ingredient-cues.ts`) and modernized. Mockups 2026-11-04.
+- **Owner's choices**:
+  1. **The step's number opens its list**, as in the earlier Fennl. The number sits in a soft circle with a small caret tucked into its lower-right corner (down while closed, up while open), the caret the same colour and edge as the circle so they read as one: a white circle with a hairline edge in light mode, a soft dark grey with a faint edge in dark mode. (Not a filled blue circle, a plain number with an arrow, an underline or a bare outline.)
+  2. **All lists closed** when a recipe opens, with **Show all ingredients** beside Method, and the line "Tap a step's number to see the ingredients it uses."
+  3. **No background** behind the list: a plain list under the step, so the step keeps the emphasis.
+  4. **Amounts as the cook needs them**, scaled and converted like the rest of the page: the step's own amount when it writes one ("Beat the butter with ¾ cup of the sugar": ¾ cup sugar); **"The remaining ¼ cup sugar"** when Fennl works out the rest, with no "worked out by Fennl" ("users are going to expect that Fennl got it right"), so the rest is shown only when the sum is certain; small amounts in the step's words ("A little of the butter").
+  5. **Not sure is said, but rarely**: a bare "pepper" is black pepper, and "sugar", "flour" and "salt" are the plain ones, with no note ("pepper … is almost always black pepper and doesn't need to be flagged"); "a little of the butter" is not flagged. A note ("Not sure which: cheddar or Parmesan", "Not sure how much: the recipe doesn't say") only when two ingredients really fit, or a divided ingredient's share can't be worked out.
+  6. **"The flour mixture from step 1"** rather than the flour again; "from step 1" jumps to step 1 and marks it, as a timer's View step does.
+  7. **Cook mode keeps its "Uses …" line** above each step, with the same matching and amounts. Printouts stay as they are for now.
+- **A wrong ingredient is worse than a missing one** (the cook adds it to the bowl): when Fennl can't tell, it leaves the ingredient out or says it isn't sure. Measured on the earlier Fennl's 40 test recipes, 10 harder ones and 50 of the owner's own recipes (hand-checked answers, `shared/stepIngredients.scorecard.json`): no wrong ingredient, about 5% of ingredients missed; the test fails on any wrong one.
+- **Built in two changes.** First the matching, with cook mode moved onto it (`shared/stepIngredients.ts`, replacing `stepIngredients` in `shared/cook.ts`; the wording in `app/recipes/stepUses.ts`; `showStepPart` in `shared/scale.ts` so a step's amount in the list scales exactly as in the step). It keeps today's plurals and preparation words and adds the earlier Fennl's longest-name-first matching, word pairs that stay together (peanut butter, cream cheese, coconut milk), synonyms (courgette, chickpeas, coriander, pasta, slaw), method sections matched to ingredient sections ("For the crust"), linked recipes by their title, and "the remaining", "half the" and "the … mixture". Nothing is stored or synced: it's worked out on the device each time. Then the recipe page, as in the mockup.
+- **You check** (after the recipe page change): open a few of your own recipes on the phone and the computer, open each step's list, and tell me any ingredient that's wrong, missing or oddly worded; in cook mode, the "Uses" line above each step.
 
 ## Stage G: Premium sharing and history
 
@@ -1845,7 +1858,8 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U10 | Done 2026-10-29 (merged as #107 and #108) |
 | U11 | Done 2026-10-29 (merged as #111) |
 | U12 | Done 2026-11-02 (merged as #115, then #116 to #121) |
-| U13 | Built 2026-11-04, waiting for review |
+| U13 | Done 2026-11-04 (merged as #122; live) |
 | U14 | Drafted 2026-11-04, waiting for approval |
 | U15 | Drafted 2026-11-04, waiting for approval (after U14) |
+| U16 | Matching and cook mode built 2026-11-04, waiting for review; the recipe page next |
 | All others | Not started |
