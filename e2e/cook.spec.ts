@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { recipeCard, syncStatus, quickScale } from "./recipes";
+import { editorStatus, recipeCard, syncStatus, quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F5, made simpler in U8 (owner's choices 2026-10-27): cook mode.
@@ -125,4 +125,48 @@ test("On a phone: what you'll need, then one step per screen", async ({
   // Finished: the next time starts from the beginning.
   await page.getByRole("link", { name: "Start cooking" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "You’ll need" })).toBeFocused();
+});
+
+test("Each step's ingredients: the rest worked out, the mixture's step, and doubts in words (U14)", async ({
+  page,
+  context,
+  baseURL,
+}, info) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Add recipe" }).click();
+  await page.getByLabel("Title", { exact: true }).fill("Sugared Cheese Shortbread");
+  await page
+    .getByRole("textbox", { name: "Ingredients" })
+    .fill(
+      "1 cup sugar, divided\n2 cups flour\n1 tsp salt\n1/2 cup butter\n1 cup shredded cheddar cheese\n1/2 cup grated Parmesan cheese",
+    );
+  await page
+    .getByRole("textbox", { name: "Method" })
+    .fill(
+      "Whisk the flour and salt.\nBeat the butter with 3/4 cup of the sugar. Add the flour mixture.\nSprinkle with the remaining sugar and the cheese.",
+    );
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await page.getByRole("button", { name: "Done" }).first().click();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Sugared Cheese Shortbread" }),
+  ).toBeVisible();
+  await quickScale(page, "2×");
+  await page.getByRole("link", { name: "Start cooking" }).click();
+
+  const step = (n: number) => page.getByRole("region", { name: `Step ${n} of 3` });
+  if (info.project.name === "phone") {
+    await page.getByRole("button", { name: "Start · Step 1 of 3" }).click();
+    await page.getByRole("button", { name: "Next step" }).click();
+  }
+  // The step's own amount, doubled as the step shows it, and the mixture it made before.
+  await expect(step(2)).toContainText(
+    "Uses 1 cup butter · 1 1/2 cups sugar · the flour mixture from step 1",
+  );
+  if (info.project.name === "phone") await page.getByRole("button", { name: "Next step" }).click();
+  else await page.getByRole("button", { name: /^Next/ }).click();
+  // What's left of the sugar, worked out and doubled; which cheese, said in words.
+  await expect(step(3)).toContainText("the remaining ½ cup sugar");
+  await expect(step(3)).toContainText("cheese (not sure which: cheddar or Parmesan)");
+  await noAccessibilityProblems(page);
 });
