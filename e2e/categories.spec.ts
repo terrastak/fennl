@@ -1,7 +1,18 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import { keys } from "./keys";
-import { premium, recipeCard, fromListMenu, signInElsewhere, syncStatus } from "./recipes";
+import {
+  dragCategory,
+  fromListMenu,
+  library,
+  libraryRow,
+  panelCategories,
+  premium,
+  recipeCard,
+  showCategory,
+  signInElsewhere,
+  syncStatus,
+} from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C7: categories.
@@ -28,8 +39,8 @@ const undoStatus = (page: Page) => page.getByRole("status").filter({ hasText: /\
 /** The recipe cards' titles, in the order shown. */
 const cardTitles = (page: Page) =>
   page.getByRole("region", { name: /^\d+ recipes?$/ }).getByRole("listitem");
-/** The list's Category quick filter. */
-const category = (page: Page) => page.getByRole("combobox", { name: "Category", exact: true });
+/** The category picked in the left panel (U17). */
+const picked = (page: Page) => library(page).locator('[aria-current="page"]');
 
 test("A category tree built, changed and undone with the keyboard", async ({
   page,
@@ -132,16 +143,19 @@ test("Many recipes filed at once, with a preview, a count and undo; the list fil
 
   // The filter, kept in the address.
   await page.getByRole("button", { name: "Done selecting" }).click();
-  await category(page).selectOption({ label: "Weeknight (2)" });
+  await showCategory(page, "Weeknight");
   await expect(cardTitles(page)).toHaveText([/Black Bean Tacos/, /Green Chile Stew/]);
   await expect(page).toHaveURL(/\?category=Weeknight$/);
   await page.reload();
   await expect(cardTitles(page)).toHaveCount(2);
-  await category(page).selectOption({ label: "Desserts (1)" });
+  await expect(picked(page)).toHaveText(/^Weeknight/);
+  await showCategory(page, "Desserts");
   await expect(cardTitles(page)).toHaveText([/Lemon Olive Oil Cake/]);
-  await category(page).selectOption({ label: "Not in a category" });
+  // Every recipe is filed, so the left panel offers no "Not in a category"; the address still can.
+  await expect(libraryRow(page, "Not in a category")).toHaveCount(0);
+  await page.goto("/?category=__unfiled");
   await expect(page.getByText("Every recipe is in a category.")).toBeVisible();
-  await page.getByRole("button", { name: "Clear all" }).click();
+  await page.getByRole("button", { name: "Show all categories" }).click();
   await expect(cardTitles(page)).toHaveCount(4);
 
   // Taken out again, many at once.
@@ -194,11 +208,13 @@ test("A recipe's categories, chosen in the editor by typing", async ({
   const above = page.getByRole("list", { name: "Categories" });
   await expect(above).toHaveText("Desserts › Cakes");
   await above.getByRole("link", { name: "Desserts › Cakes" }).click();
-  await expect(category(page)).toHaveValue("desserts › cakes");
+  await expect(page.getByRole("heading", { level: 1, name: "Cakes" })).toBeVisible();
+  await expect(picked(page)).toHaveText(/^Cakes/);
   await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
   await page.goBack();
   await above.getByRole("link", { name: "Desserts", exact: true }).click();
-  await expect(category(page)).toHaveValue("desserts");
+  await expect(page.getByRole("heading", { level: 1, name: "Desserts" })).toBeVisible();
+  await expect(picked(page)).toHaveText(/^Desserts/);
   await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
 });
 
@@ -269,4 +285,105 @@ test("A recipe's categories, changed from its page with Change", async ({
   await window.getByRole("button", { name: "Done" }).click();
   await expect(above).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Add a category" })).toBeVisible();
+});
+
+test("Categories put in order by dragging in the left panel, and with Move up and down", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  // Tall enough that no row is at the panel's bottom edge, where holding scrolls the list.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto("/categories");
+  for (const path of ["Entrees", "Bars", "Desserts > Cakes", "Christmas"]) {
+    await page.getByLabel("New category").fill(path);
+    await page.getByRole("button", { name: "Add", exact: true }).click();
+    await expect(page.getByLabel("New category")).toHaveValue("");
+  }
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await page.goto("/");
+  // A to Z to start with.
+  await expect(panelCategories(page)).toHaveText(["Bars", "Christmas", "Desserts", "Entrees"]);
+
+  // Between two moves it there; the hint says so the first few times.
+  await dragCategory(page, "Entrees", "Christmas", "top");
+  await expect(library(page).getByText("moves it there.")).toBeVisible();
+  await page.mouse.up();
+  await expect(panelCategories(page)).toHaveText(["Bars", "Entrees", "Christmas", "Desserts"]);
+  await expect(library(page).getByRole("status")).toHaveText("Moved Entrees before Christmas.");
+  // The drop didn't also open the category it ended on.
+  await expect(page).toHaveURL(/\/$/);
+
+  // Onto one puts it inside (and opens it, to show where it went).
+  await dragCategory(page, "Christmas", "Desserts", "middle");
+  await page.mouse.up();
+  await expect(library(page).getByRole("status")).toHaveText("Moved Christmas into Desserts.");
+  await expect(panelCategories(page)).toHaveText([
+    "Bars",
+    "Entrees",
+    "Desserts",
+    "Cakes",
+    "Christmas",
+  ]);
+
+  // Never into itself or its own subcategories.
+  await dragCategory(page, "Desserts", "Cakes", "middle");
+  await expect(page.getByText("Can’t go inside itself")).toBeVisible();
+  await page.mouse.up();
+  await expect(library(page).getByRole("status")).toHaveText("Moved Christmas into Desserts.");
+  // Escape puts it back down where it was.
+  await dragCategory(page, "Bars", "Cakes", "top");
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  await expect(panelCategories(page)).toHaveText([
+    "Bars",
+    "Entrees",
+    "Desserts",
+    "Cakes",
+    "Christmas",
+  ]);
+
+  // Undo takes the last move back.
+  await library(page).getByRole("button", { name: "Undo" }).click();
+  await expect(panelCategories(page)).toHaveText([
+    "Bars",
+    "Entrees",
+    "Christmas",
+    "Desserts",
+    "Cakes",
+  ]);
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+
+  // The same order on the Categories page, kept in the account; Move up and down there.
+  await page.goto("/categories");
+  await expect(treeRows(page)).toHaveText([
+    /^Bars/,
+    /^Entrees/,
+    /^Christmas/,
+    /^Desserts/,
+    /^Cakes/,
+  ]);
+  await expect(page.getByRole("button", { name: "Move up: Bars" })).toBeDisabled();
+  await page.getByRole("button", { name: "Move down: Bars" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(undoStatus(page)).toHaveText("Moved Bars down.");
+  await expect(treeRows(page)).toHaveText([
+    /^Entrees/,
+    /^Bars/,
+    /^Christmas/,
+    /^Desserts/,
+    /^Cakes/,
+  ]);
+  await expect(page.getByRole("button", { name: "Move down: Bars" })).toBeFocused();
+  await noAccessibilityProblems(page);
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await page.reload();
+  await expect(panelCategories(page)).toHaveText([
+    "Entrees",
+    "Bars",
+    "Christmas",
+    "Desserts",
+    "Cakes",
+  ]);
 });

@@ -39,15 +39,15 @@ test("An empty recipe box invites you in, and sample recipes fill it", async ({
 
   await addSamples(page);
   await expect(cardTitles(page)).toHaveCount(4);
-  // Alphabetical at first, with categories and time on each card.
+  // Alphabetical at first, with the time and then the categories on each card (U17).
   await expect(cardTitles(page).first()).toContainText("Black Bean Tacos with Lime Crema");
-  await expect(recipeCard(page, "Green Chile Stew")).toContainText("Mexican, Soups · 2 hr 5 min");
+  await expect(recipeCard(page, "Green Chile Stew")).toContainText("2 hr 5 minMexican, Soups");
   await expect(recipeCard(page, "Lemon Olive Oil Cake")).toContainText("Desserts › Cakes");
   await noAccessibilityProblems(page);
 
   // A newer recipe comes first when sorted by newest.
   await addRecipe(page, "Zucchini Bread");
-  await page.getByLabel("Sort by").selectOption({ label: "Newest first" });
+  await page.getByLabel("Sort by").selectOption("newest");
   await expect(cardTitles(page).first()).toContainText("Zucchini Bread");
   await page.reload();
   await expect(page.getByLabel("Sort by")).toHaveValue("newest");
@@ -238,7 +238,7 @@ test("Recipes open and close from the keyboard", async ({ page, context, baseURL
 
   await page.getByRole("link", { name: "← All recipes" }).focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeFocused();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeFocused();
 });
 
 test("A recipe that isn't here says so", async ({ page }) => {

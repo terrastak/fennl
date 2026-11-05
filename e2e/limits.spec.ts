@@ -127,7 +127,7 @@ test("Over the limit (say, Premium ended): everything stays, adding waits", asyn
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
   await page.getByRole("radio", { name: "4 stars" }).check({ force: true });
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
   await moveToTrash(page, "Buttermilk Pancakes");
   await expect(storage(page)).toContainText("3 of 2 recipes");
 });
@@ -149,7 +149,7 @@ test("A new recipe the server turns away stays on this device until there's room
   const held = page.getByRole("alert").filter({ hasText: "isn’t in your account yet" });
   await expect(held).toBeVisible();
   await page.getByRole("button", { name: "Done" }).first().click();
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
   await expect(recipeCard(page, "Pozole")).toContainText("Not synced yet");
 
   // Making room sends it.

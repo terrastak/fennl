@@ -75,7 +75,7 @@ async function linkLimeCrema(page: Page) {
   await page.getByRole("textbox", { name: "Method" }).fill("Stir together.");
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
   await page.getByRole("link", { name: /Black Bean Tacos/ }).click();
   await page.getByRole("link", { name: "Edit recipe" }).click();
   await ingredientsBox.fill(`${await ingredientsBox.inputValue()}\n½ cup lime crema`);
@@ -208,7 +208,7 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
 
   // Narrowed by a search: Print these.
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("lemon");
-  await expect(page.getByText("Showing 2 of 4")).toBeVisible();
+  await expect(page.getByText("2 recipes match “lemon”")).toBeVisible();
   await fromListMenu(page, "Print these");
   await expect(page.getByRole("heading", { level: 1, name: "Print: 2 recipes" })).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(2);
@@ -225,7 +225,7 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
 
   // Ticked one by one in Select.
-  await page.getByRole("button", { name: "Clear all" }).click();
+  await page.getByRole("button", { name: "Clear search" }).click();
   await fromListMenu(page, "Select recipes");
   await page.getByRole("checkbox", { name: TACOS }).check();
   await page.getByRole("checkbox", { name: "Green Chile Stew" }).check();
@@ -239,7 +239,7 @@ test("A booklet of 200 recipes is ready quickly", async ({ page, context, baseUR
   await useOwnAccount(context, baseURL!);
   await premium(context, baseURL!);
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 
   // 200 recipes of a usual length, sent the way another device would.
   const deviceId = await page.evaluate(() => localStorage.getItem("fennl:device-id"));
@@ -266,7 +266,7 @@ test("A booklet of 200 recipes is ready quickly", async ({ page, context, baseUR
   }
   await page.reload();
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("booklet");
-  await expect(page.getByText(/Showing 200 of 200/)).toBeVisible();
+  await expect(page.getByText("200 recipes match “booklet”")).toBeVisible();
 
   await page.getByRole("button", { name: "More actions" }).click();
   const started = Date.now();

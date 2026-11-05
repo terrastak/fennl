@@ -1,19 +1,101 @@
 /*
- * The recipe list's search and filters (U13, owner's choices 2026-11-04): the title with Add
- * recipe and ⋯, one search bar with Filters, a row of quick filters, and the Filters panel.
+ * The recipe list (U17, owner's choices 2026-11-04; U13 before it): a slim header saying what's
+ * shown, with + Add recipe and ⋯, a line with More filters and the order, and the Filters
+ * panel. The search, quick lists and categories are in the left panel (app/shell/Library.tsx).
  * Tokens only (docs/design/design-direction.md).
  */
 
-/* The title, with + Add recipe and ⋯ beside it. */
 .head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: var(--space-3);
+  display: grid;
+  margin-bottom: var(--space-4);
 }
 
-.head > header {
+.head > :global(.hand-note) {
+  justify-self: start;
+  margin-bottom: calc(var(--space-2) * -1);
+}
+
+/* The title (what's shown), its ✕, the count or the sentence, then + Add recipe and ⋯ (on a
+   phone the order goes between them). */
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2) var(--space-3);
+}
+
+/* Takes the room the actions leave, so + Add recipe and ⋯ always stay on the first line. */
+.what {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
   min-width: 0;
+  /* As tall as the buttons beside it, so a one-line title sits level with them. */
+  min-height: var(--tap-target);
+}
+
+/* The name with its ✕ and count, which never wrap away from it: a long name takes the room
+   it has, and they follow its last line. */
+.nameRow {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: flex-end;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.after {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  /* One line of the title tall, so they sit level with its last line. */
+  min-height: calc(var(--text-3xl) * var(--leading-tight));
+}
+
+/* A long category name takes two lines at most, balanced, then "…" (the whole name is still
+   the heading's text, read out in full). */
+.title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  text-wrap: balance;
+  padding-bottom: 0.08em;
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+  outline: none;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* "Show all categories": a small round ✕ beside the category's name. */
+.unpick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.unpick:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.shown {
+  min-width: 0;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-md);
 }
 
 .headActions {
@@ -21,7 +103,185 @@
   flex: none;
   align-items: center;
   gap: var(--space-2);
-  margin-bottom: var(--space-6);
+  margin-left: auto;
+}
+
+/* "5 more match outside Dessert": a very long name is shortened here (the heading has it). */
+.outsideName {
+  display: inline-block;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* The line under the title: a hint or how many match elsewhere, then the tools. */
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  min-height: 2.75rem;
+  margin-top: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.hint {
+  flex: 1 1 16rem;
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.hint:empty {
+  flex-basis: 0;
+}
+
+.inlineLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+/* On a phone (U17 mockup): one line with what's shown, the order, + and ⋯; under it only what
+   has something to say (how many more match elsewhere, saving a search). */
+@media (max-width: 899px) {
+  /* With larger text the order, + and ⋯ go to their own line rather than squeeze the title. */
+  .titleRow {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .what {
+    flex: 1 1 8.5rem;
+    gap: var(--space-1) var(--space-2);
+    min-height: 0;
+  }
+
+  /* A long name takes the whole line, so it isn't squeezed down to a word or two; the order,
+     + and ⋯ go under it. */
+  .longName {
+    flex-basis: 100%;
+  }
+
+  .nameRow,
+  .after {
+    gap: var(--space-2);
+  }
+
+  .after {
+    min-height: calc(var(--text-xl) * var(--leading-tight));
+  }
+
+  .title {
+    font-size: var(--text-xl);
+  }
+
+  .shown {
+    font-size: var(--text-sm);
+  }
+
+  /* The sentence ("6 recipes match “lemon”") has a line of its own under the title. */
+  .sentence {
+    flex-basis: 100%;
+  }
+
+  /* The order, + and ⋯ stay together, at the right even on a line of their own. */
+  .headActions {
+    margin-left: auto;
+  }
+
+  .titleRow .sortChip svg {
+    left: var(--space-1);
+  }
+
+  .titleRow .sortChip select {
+    padding: 0 var(--space-1) 0 calc(var(--space-1) + 1.3rem);
+  }
+
+  .titleRow .sortChip::after {
+    content: none;
+  }
+
+  .bar {
+    min-height: 0;
+    margin-top: var(--space-2);
+    padding-bottom: 0;
+    border-bottom: 0;
+  }
+
+  .hint:empty {
+    display: none;
+  }
+
+  .bar:has(> .hint:empty):has(> .tools:empty) {
+    display: none;
+  }
+
+  .bar > .tools {
+    margin-left: 0;
+  }
+
+  /* "Save this search" lines its star up with the words above it, and sits close to them. */
+  .bar > .tools > .tool:first-child {
+    margin-left: calc(var(--space-3) * -1);
+  }
+
+  .bar:has(> .hint:empty) {
+    margin-top: var(--space-1);
+  }
+
+  .tools:empty {
+    display: none;
+  }
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.tool:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.toolOutlined {
+  border-color: var(--color-border);
+}
+
+.results {
+  margin-top: var(--space-4);
+  outline: none;
 }
 
 .add {
@@ -117,64 +377,6 @@
   border-top: 1px solid var(--color-border-soft);
 }
 
-/* One search bar, with Filters inside it. */
-.searchBar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: calc(var(--tap-target) + var(--space-2));
-  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-}
-
-.searchBar:focus-within {
-  border-color: var(--color-accent);
-  box-shadow: 0 0 0 3px var(--color-accent-soft);
-}
-
-.searchIcon {
-  flex: none;
-  color: var(--color-text-muted);
-}
-
-.searchField {
-  flex: 1;
-  min-width: 0;
-  min-height: var(--tap-target);
-  padding: 0;
-  border: 0;
-  background: none;
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-lg);
-}
-
-.searchField:focus {
-  outline: none;
-}
-
-.filtersButton {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: var(--tap-target);
-  padding: 0 var(--space-4);
-  border: 0;
-  border-radius: var(--radius-full);
-  background: var(--color-accent-soft);
-  color: var(--color-accent-soft-text);
-  font: inherit;
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.filtersButton:hover {
-  background: var(--color-surface-sunken);
-}
-
 .count {
   padding: 0 var(--space-2);
   border-radius: var(--radius-full);
@@ -184,211 +386,104 @@
   line-height: 1.6;
 }
 
-/* On a phone, Filters is its icon (and the number on). */
-@media (max-width: 599px) {
-  .filtersButton {
-    padding: 0 var(--space-3);
-  }
-
-  .filtersText {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-}
-
-/* The quick filters, and how many recipes with the order on the right. */
-.quick {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2) var(--space-4);
-  margin: var(--space-3) 0 var(--space-4);
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-/* On a phone the chips scroll sideways rather than taking several lines. */
-@media (max-width: 599px) {
-  .quick {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  /* No width of its own (so the row of chips can't widen the page), then the full width. */
-  .chips {
-    width: 0;
-    min-width: calc(100% + var(--space-4) * 2);
-    flex-wrap: nowrap;
-    margin: 0 calc(var(--space-4) * -1);
-    padding: var(--space-1) var(--space-4);
-    overflow-x: auto;
-    scrollbar-width: none;
-  }
-
-  .chips > * {
-    flex: none;
-  }
-
-  .onChips {
-    flex-wrap: nowrap;
-  }
-}
-
-/* A drop-down that looks like a chip: the arrow drawn beside the browser's own list. */
-.chipSelect,
+/* The order, quiet: an icon and the order's name with an arrow, the browser's own list. */
 .sortChip {
   position: relative;
   display: inline-flex;
+  align-items: center;
+  color: var(--color-text-muted);
 }
 
-.chipSelect select,
+.sortChip > svg {
+  position: absolute;
+  left: var(--space-3);
+  pointer-events: none;
+}
+
 .sortChip select {
-  min-height: 2.5rem;
-  padding: 0 var(--space-8) 0 var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-text);
+  /* As wide as the order chosen, so the arrow follows its name (Chrome and Edge; Safari keeps
+     the longest name's width). */
+  field-sizing: content;
+  min-height: 2.25rem;
+  padding: 0 var(--space-8) 0 calc(var(--space-3) + 1.4rem);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
   font: inherit;
   font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
+  font-weight: var(--weight-medium);
   appearance: none;
   cursor: pointer;
 }
 
-.chipSelect::after,
+.sortChip select:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
 .sortChip::after {
   content: "▾";
   position: absolute;
   top: 50%;
-  right: var(--space-4);
+  right: var(--space-3);
   transform: translateY(-50%);
   font-size: var(--text-xs);
   pointer-events: none;
 }
 
-.chipSelect.on select {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-
-.chipSelect.on::after {
-  color: var(--color-on-accent);
-}
-
-/* The order, quieter: a word with an arrow. */
-.sortChip select {
-  border-color: transparent;
-  background: none;
-  color: var(--color-text-muted);
-}
-
-.sortChip select:hover {
-  color: var(--color-text);
-}
-
-.chipToggle {
-  min-height: 2.5rem;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-surface);
-  color: var(--color-text);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.chipToggle[aria-pressed="true"] {
-  border-color: var(--color-accent);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-}
-
-/* Filters set in the panel, each with ✕ to take it off. */
-.onChips {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.onChip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 2.5rem;
-  padding: 0 var(--space-1) 0 var(--space-4);
-  border-radius: var(--radius-full);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-}
-
-.onChip button {
-  display: inline-grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: 0;
-  border-radius: var(--radius-full);
-  background: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-
-.onChip button:hover {
-  background: var(--color-accent-hover);
-}
-
-.clear {
-  min-height: 2.5rem;
-  padding: 0 var(--space-2);
-  border: 0;
-  background: none;
-  color: var(--color-accent);
-  font: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.end {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
+/* A card's facts (U17 mockup): stars and time on one line, the dot kept with the time. */
+.cardFacts {
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
 
-.total {
+.stars {
+  color: var(--color-warm);
+  font-size: var(--text-xs);
+  letter-spacing: 1px;
+}
+
+.time {
+  color: var(--color-text);
+  font-weight: var(--weight-medium);
+}
+
+.nowrap {
   white-space: nowrap;
 }
 
-/* Saving the search the list shows, under the quick filters. */
+/* A category path on a card: whole on one line, ending in "…" if it can't fit the card. */
+.path {
+  display: inline-block;
+  /* Room for the comma after it. */
+  max-width: calc(100% - 0.5em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* A favorite's heart on its cover. */
+.heart {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-warm);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Naming a search to save it, and what happened, under the header. */
 .saved {
   display: grid;
   gap: var(--space-2);
-  margin: calc(var(--space-2) * -1) 0 var(--space-2);
+  margin: 0 0 var(--space-2);
 }
 
 .saved p[aria-live]:empty {
@@ -524,4 +619,39 @@
   border-color: var(--color-accent);
   background: var(--color-accent);
   color: var(--color-on-accent);
+}
+
+/* A phone's saved searches in the Filters panel (U17): one tap each. */
+.savedList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.savedLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.savedLink:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.savedLink[aria-current="page"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
 }

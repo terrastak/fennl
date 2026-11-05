@@ -26,7 +26,7 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   await page.getByRole("textbox", { name: "Method" }).fill("Stir together.");
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
 
   // The main dish uses it.
   await page.getByRole("link", { name: /Black Bean Tacos/ }).click();

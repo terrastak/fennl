@@ -142,7 +142,7 @@ test("A linked recipe shown in place has its own steps' ingredients", async ({
     );
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
 
   // The tacos use it, and have a step 1 of their own.
   await page.getByRole("button", { name: "Add recipe" }).click();

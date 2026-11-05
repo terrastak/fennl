@@ -171,7 +171,7 @@ test("an admin helps an account: limits, an exception, and a temporary password"
   await helpedPage.getByLabel("New password", { exact: true }).fill("petra's own password");
   await helpedPage.getByLabel("New password again").fill("petra's own password");
   await helpedPage.getByRole("button", { name: "Save new password" }).click();
-  await expect(helpedPage.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(helpedPage.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
   await helped.close();
 
   // Everything shows in the account's admin log.

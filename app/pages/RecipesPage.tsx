@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
@@ -7,26 +7,29 @@ import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
-import { NAVIGATE_EVENT, navigate, queryParam } from "../navigation";
+import { navigate, useSearchString } from "../navigation";
 import { FiltersPanel } from "../recipes/FiltersPanel";
 import { ListMenu } from "../recipes/ListMenu";
 import { useSavedSearchControls } from "../recipes/savedSearchControls";
 import {
   activeFilterCount,
   applyFilters,
-  filterChips,
-  filtersFromParams,
   filtersToParams,
-  ingredientWords,
-  NO_FILTERS,
   pickSurprise,
-  RATING_LABELS,
-  shortMinutes,
-  TIME_CHOICES,
   UNFILED,
-  type RatingFilter,
   type RecipeFilters,
 } from "../recipes/filters";
+import {
+  addressCategoryName,
+  favoritesOn,
+  listTitle,
+  pickAll,
+  outsideCount,
+  pickedList,
+  quickOn,
+  shownSentence,
+} from "../recipes/library";
+import { today, useLibrary } from "../recipes/libraryContext";
 import { minutesText } from "../recipes/format";
 import { Highlight } from "../recipes/Highlight";
 import { forgetTrashed, recentlyTrashed } from "../recipes/trashNotice";
@@ -39,25 +42,22 @@ import { printRecipes } from "../print/booklet";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import type { SearchHit } from "../sync/search";
-import {
-  activeSyncClient,
-  useCategoryTree,
-  useIngredientMatches,
-  useRecipeList,
-  useSearch,
-  useSyncStatus,
-} from "../sync/useSync";
+import { activeSyncClient, useSyncStatus } from "../sync/useSync";
+import { PhoneLibrary } from "../shell/PhoneLibrary";
+import { typeIntoSearch } from "../shell/typeToSearch";
+import { useWide } from "../shell/useWide";
 import { greetingFor } from "./greeting";
-import { PageHeader } from "./PageHeader";
 
 // The recipe list (phase C5): cards from this browser's copy, sorting, the empty state from
 // docs/design/design-direction.md, and sample recipes to try. "Add recipe" opens the editor
 // (phase C6) on a new recipe. Phase C7 adds the category filter and Select, for filing many
 // recipes at once. Phase C8 adds search (app/sync/search.ts) and the rating filter. Phase C13a
 // adds "More filters" (app/recipes/filters.ts). The search and filters are kept in the address
-// (?q=, ?category=, ?rating=, and the others filtersToParams writes). U13 (owner's choices
-// 2026-11-04) lays it out as one search bar with a Filters button, a row of quick filters, and a
-// ⋯ menu for the rest.
+// (?q=, ?category=, ?rating=, and the others filtersToParams writes). U17 (owner's choices
+// 2026-11-04) moves the search, quick lists, saved searches and categories into the left panel
+// (app/shell/Library.tsx); the list keeps a slim header saying what's shown, with More filters,
+// the order, Add recipe and a ⋯ menu for the rest. A phone has the search box, Filters and a row
+// of categories at the top of the list instead (app/shell/PhoneLibrary.tsx).
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -70,10 +70,10 @@ async function save(change: SyncChange): Promise<boolean> {
 
 type SortBy = "title" | "newest" | "changed";
 
-const SORTS: { value: SortBy; label: string }[] = [
-  { value: "title", label: "Title, A to Z" },
-  { value: "newest", label: "Newest first" },
-  { value: "changed", label: "Recently changed" },
+const SORTS: { value: SortBy; label: string; short: string }[] = [
+  { value: "title", label: "Title, A to Z", short: "A to Z" },
+  { value: "newest", label: "Newest first", short: "Newest" },
+  { value: "changed", label: "Recently changed", short: "Changed" },
 ];
 
 const SORT_KEY = "fennl:recipe-sort";
@@ -110,11 +110,19 @@ function RecipeCard({
   /** Where the search found it, when not in the title. */
   hit: SearchHit | undefined;
 }) {
-  const meta = [
-    recipe.categories.join(", "),
-    recipe.totalMinutes !== null ? minutesText(recipe.totalMinutes) : "",
-  ].filter(Boolean);
+  // Stars and time on one line (the dot stays with the time, so a line never ends on one), the
+  // categories under them (U17 mockup).
+  const stars = recipe.myRating ?? 0;
+  const time = recipe.totalMinutes !== null ? minutesText(recipe.totalMinutes) : "";
   const titleId = `card-title-${recipe.id}`;
+  const heart = recipe.favorite ? (
+    <span className={listStyles.heart}>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
+      </svg>
+      <span className="visually-hidden">Favorite</span>
+    </span>
+  ) : null;
   const body = (
     <>
       {recipe.cover ? (
@@ -143,9 +151,46 @@ function RecipeCard({
           </span>
         ) : null}
         {recipe.addedBy ? <span className={styles.cardBy}>{recipe.addedBy}</span> : null}
-        {meta.length > 0 ? <span className={styles.cardMeta}>{meta.join(" · ")}</span> : null}
+        {stars > 0 || time ? (
+          <span className={listStyles.cardFacts}>
+            {stars > 0 ? (
+              <span className={listStyles.stars}>
+                <span aria-hidden="true">{"★".repeat(stars)}</span>
+                <span className="visually-hidden">
+                  {stars} {stars === 1 ? "star" : "stars"}
+                </span>
+              </span>
+            ) : null}
+            {stars > 0 && time ? (
+              <span className={listStyles.nowrap}>
+                {" "}
+                · <span className={listStyles.time}>{time}</span>
+              </span>
+            ) : time ? (
+              <span className={listStyles.time}>{time}</span>
+            ) : null}
+          </span>
+        ) : null}
+        {recipe.categories.length > 0 ? (
+          <span className={styles.cardMeta}>
+            {recipe.categories.map((path, i) => (
+              <span key={path}>
+                {i > 0 ? " " : ""}
+                {/* Kept whole on its line, its comma with it; one too long for the card ends in
+                    "…", the whole path shown on hover (and read out in full). */}
+                <span className={listStyles.nowrap}>
+                  <span className={listStyles.path} title={path}>
+                    {path}
+                  </span>
+                  {i < recipe.categories.length - 1 ? "," : ""}
+                </span>
+              </span>
+            ))}
+          </span>
+        ) : null}
         {recipe.waiting ? <span className={styles.cardMeta}>Not synced yet</span> : null}
       </span>
+      {heart}
     </>
   );
   // Choosing recipes to file (phase C7): the card becomes a checkbox.
@@ -231,19 +276,6 @@ function EmptyState({
   );
 }
 
-/** The Rating chip's choices; favorites have their own chip (U13). */
-const RATINGS = (["5", "4", "3", "none"] as const).map((value) => ({
-  value,
-  label: RATING_LABELS[value],
-}));
-
-/** Today as a day ("2026-10-20") in this person's own calendar, as "made it" days are. */
-function today(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-}
-
 /** Recipes shown at a time; more on request, so a big recipe box stays quick. */
 const PAGE = 100;
 
@@ -259,11 +291,42 @@ function unknownNote(unknown: { time: number; servings: number }, filters: Recip
   return parts.length > 0 ? ` Not shown: ${parts.join(" and ")}.` : "";
 }
 
+/**
+ * A heading that wraps onto two lines is as wide as its longest line, not the whole row, so
+ * what follows it (the ✕ and the count) sits beside the words rather than at the far edge.
+ * Measured again when the row changes size or the fonts arrive.
+ */
+function useFitToLines(ref: RefObject<HTMLElement | null>, text: string) {
+  useLayoutEffect(() => {
+    const heading = ref.current;
+    const row = heading?.parentElement?.parentElement;
+    if (!heading || !row) return;
+    const fit = () => {
+      heading.style.width = "";
+      const range = document.createRange();
+      range.selectNodeContents(heading);
+      const lines = [...range.getClientRects()];
+      if (new Set(lines.map((line) => Math.round(line.top))).size < 2) return;
+      const left = heading.getBoundingClientRect().left;
+      const right = Math.max(...lines.map((line) => line.right));
+      heading.style.width = `${Math.ceil(right - left) + 1}px`;
+    };
+    fit();
+    void document.fonts?.ready.then(fit);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [ref, text]);
+}
+
 export function RecipesPage() {
   const status = useSyncStatus();
-  const recipes = useRecipeList();
-  const tree = useCategoryTree();
+  const library = useLibrary();
+  const { recipes, tree, query, filters, search, counts } = library;
   const editable = canEdit(status);
+  // A phone has no left panel: the recipe box is at the top of the list instead (U17).
+  const wide = useWide();
   // Over a plan limit (phase C11), "Add recipe" says why instead of opening the editor.
   const addBlocked = useAddBlocked();
   const limitNote = useRef<HTMLParagraphElement>(null);
@@ -277,14 +340,8 @@ export function RecipesPage() {
     reportRefused(addBlocked, "recipe");
   };
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
-  const [filters, setFilters] = useState<RecipeFilters>(() =>
-    filtersFromParams(new URLSearchParams(window.location.search)),
-  );
   const [panelOpen, setPanelOpen] = useState(false);
-  const [query, setQuery] = useState(() => queryParam("q") ?? "");
   const [limit, setLimit] = useState(PAGE);
-  const search = useSearch(query);
-  const ingredientAnswer = useIngredientMatches(ingredientWords(filters));
   const [addingSamples, setAddingSamples] = useState(false);
   const [surprise, setSurprise] = useState<string | null>(null);
   const [selecting, setSelecting] = useState(false);
@@ -292,6 +349,40 @@ export function RecipesPage() {
   // A recipe just moved to Trash from its page can be put back from here (phase C9).
   const { done, failed, run, undo } = useUndoable(recentlyTrashed);
   useEffect(forgetTrashed, []);
+
+  // A new search or list starts at the top, with no suggestion left over from the last one.
+  const [seen, setSeen] = useState({ query, filters });
+  if (seen.query !== query || seen.filters !== filters) {
+    setSeen({ query, filters });
+    setLimit(PAGE);
+    setSurprise(null);
+  }
+
+  // Typing on the list goes straight into the search box (U17), unless it's typed into
+  // something else. "/" is the frame's: it moves to the search box from any page.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key.length !== 1 || event.key === " " || event.key === "/") return;
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+      ) {
+        return;
+      }
+      // Not while a dialog or a menu (the list's ⋯) is open: the letter is for that.
+      if (document.querySelector("dialog[open], [data-popup-open]")) return;
+      const box = [...document.querySelectorAll<HTMLElement>("[data-type-to-search]")].find(
+        (el) => el.getClientRects().length > 0,
+      );
+      if (!box) return;
+      event.preventDefault();
+      typeIntoSearch(event.key);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const chooseSort = (value: SortBy) => {
     setSortBy(value);
@@ -302,54 +393,8 @@ export function RecipesPage() {
     }
   };
 
-  // A search sent from another screen (phase C13c), or the back button, changes the address
-  // under this page: show what it says. This page's own changes don't announce themselves.
-  useEffect(() => {
-    const fromAddress = () => {
-      setQuery(queryParam("q") ?? "");
-      setFilters(filtersFromParams(new URLSearchParams(window.location.search)));
-      setSurprise(null);
-      setLimit(PAGE);
-    };
-    window.addEventListener(NAVIGATE_EVENT, fromAddress);
-    window.addEventListener("popstate", fromAddress);
-    return () => {
-      window.removeEventListener(NAVIGATE_EVENT, fromAddress);
-      window.removeEventListener("popstate", fromAddress);
-    };
-  }, []);
-
-  /** Search and filters go in the address too, so they survive a reload and can be shared. */
-  const remember = (nextQuery: string, next: RecipeFilters) => {
-    const params = filtersToParams(nextQuery, next, (key) => tree?.byKey.get(key)?.path);
-    const search = params.toString();
-    window.history.replaceState(null, "", search ? `/?${search}` : "/");
-    setLimit(PAGE);
-  };
-
-  const changeFilters = (next: RecipeFilters) => {
-    setFilters(next);
-    remember(query, next);
-  };
-
-  /** Shows a saved search: its words and its filters. */
-  const applySearch = (q: string, next: RecipeFilters) => {
-    setQuery(q);
-    setFilters(next);
-    remember(q, next);
-  };
-
-  const typeQuery = (value: string) => {
-    setQuery(value);
-    remember(value, filters);
-  };
-
-  const clearAll = () => {
-    setQuery("");
-    setFilters(NO_FILTERS);
-    window.history.replaceState(null, "", "/");
-    setLimit(PAGE);
-  };
+  /** Filters chosen here (More filters, the title's ✕) replace the address, as typing does. */
+  const changeFilters = (next: RecipeFilters) => library.show(query, next, { replace: true });
 
   const addSamples = async () => {
     setAddingSamples(true);
@@ -361,7 +406,7 @@ export function RecipesPage() {
 
   const list = recipes ?? [];
   const searching = query.trim() !== "";
-  const found = applyFilters(list, filters, ingredientAnswer, today());
+  const found = applyFilters(list, filters, library.ingredients, today());
   const narrowed = found.recipes;
   let shown: RecipeSummary[];
   if (!searching) shown = sorted(narrowed, sortBy);
@@ -398,252 +443,247 @@ export function RecipesPage() {
     setSelecting(false);
     setSelected(new Set());
   };
-  const filterName =
-    filters.category === UNFILED
-      ? "not in a category"
-      : (tree?.byKey.get(filters.category)?.path ?? filters.category);
   const nameOf = (key: string) => tree?.byKey.get(key)?.path ?? key;
-  const chips = filterChips(filters, nameOf);
-  const hasCategories = (tree?.nodes.length ?? 0) > 0;
   // Printing several at once (phase F6), coming back to the list as it was.
   const print = (ids: string[]) => printRecipes(ids, `/${window.location.search}`);
 
-  const quickChips = chips.filter((chip) => chip.id !== "time");
   const busy = (searching && !search) || found.pending;
+  // On a phone the Filters panel also holds the quick lists, so all but the category count.
+  const phoneOn = filtering - (filters.category !== "" ? 1 : 0);
+  // On a phone a category on its own isn't offered as a search to save: the row of categories
+  // is one tap away already, and the button would sit alone between the header and the cards.
+  const phoneNarrowing = searching || phoneOn > 0;
   const saved = useSavedSearchControls({
     query,
     filters,
-    narrowing,
+    narrowing: wide ? narrowing : phoneNarrowing,
     currentText: filtersToParams(query, filters, (key) => tree?.byKey.get(key)?.path).toString(),
-    onApply: applySearch,
   });
+
+  // What the header says (U17): what's shown, and in a sentence what narrows it.
+  const picked = pickedList(filters);
+  const address = useSearchString();
+  const title = listTitle(
+    filters,
+    (key) => tree?.byKey.get(key)?.name ?? addressCategoryName(address, key),
+  );
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useFitToLines(titleRef, title);
+  // An address naming a category that no longer exists (an old bookmark, or one renamed).
+  const gone =
+    !!tree && picked.kind === "category" && picked.key !== UNFILED && !tree.byKey.has(picked.key);
+  const sentence = busy ? "Searching…" : shownSentence(shown.length, query, filters, nameOf);
+  const showCount = recipes !== null && list.length > 0;
+  // Filters only More filters shows (the left panel shows the rest).
+  const moreOn =
+    filtering -
+    [
+      filters.category !== "",
+      favoritesOn(filters),
+      quickOn(filters),
+      picked.kind === "made",
+    ].filter(Boolean).length;
+  const outside =
+    searching && !busy && counts ? outsideCount(filters, counts.all, shown.length) : 0;
+
+  // The order: under the title on a computer, beside it on a phone, where its names are short.
+  const sortChoice = (
+    <span className={listStyles.sortChip}>
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M7 5v14M4 16l3 3 3-3M13 7h7M13 12h5M13 17h3" />
+      </svg>
+      <select
+        aria-label="Sort by"
+        value={sortBy}
+        onChange={(e) => chooseSort(e.target.value as SortBy)}
+      >
+        {SORTS.map((s) => (
+          <option key={s.value} value={s.value}>
+            {wide ? s.label : s.short}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
 
   return (
     <>
-      <div className={listStyles.head}>
-        <PageHeader title="Your recipes" note={greetingFor(new Date())} />
-        {list.length > 0 ? (
-          <div className={listStyles.headActions}>
-            <button
-              type="button"
-              className={`${styles.primary} ${listStyles.add}`}
-              onClick={add}
-              disabled={!editable}
-              aria-disabled={addBlocked ? true : undefined}
-              aria-describedby={addBlocked ? "add-blocked" : undefined}
-            >
-              <span aria-hidden="true">+</span>
-              <span className={listStyles.addText}>Add recipe</span>
-            </button>
-            <ListMenu
-              selecting={selecting}
-              onSelect={() => (selecting ? stopSelecting() : setSelecting(true))}
-              onSurprise={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
-              onPrint={() => print(shown.map((recipe) => recipe.id))}
-              canSurprise={shown.length > 0}
-              canPrint={shown.length > 0 && !busy}
-            />
-          </div>
+      {/* On a phone the search box and categories are on the page (the left panel is a
+          computer's). */}
+      {list.length > 0 && !wide ? (
+        <PhoneLibrary filtersOn={phoneOn} onFilters={() => setPanelOpen(true)} />
+      ) : null}
+
+      <header className={listStyles.head}>
+        {picked.kind === "all" && !narrowing && wide ? (
+          <p className="hand-note">{greetingFor(new Date())}</p>
         ) : null}
-      </div>
-
-      {list.length > 0 ? (
-        <>
-          <form role="search" className={listStyles.searchBar} onSubmit={(e) => e.preventDefault()}>
-            <svg
-              className={listStyles.searchIcon}
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            <label htmlFor="recipe-search" className="visually-hidden">
-              Search recipes
-            </label>
-            <input
-              id="recipe-search"
-              type="search"
-              className={listStyles.searchField}
-              value={query}
-              placeholder="Search titles, ingredients, notes…"
-              autoComplete="off"
-              enterKeyHint="search"
-              onChange={(e) => typeQuery(e.target.value)}
-            />
-            <button
-              type="button"
-              className={listStyles.filtersButton}
-              aria-haspopup="dialog"
-              onClick={() => setPanelOpen(true)}
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden="true"
-              >
-                <path d="M4 6h16M7 12h10M10 18h4" />
-              </svg>
-              <span className={listStyles.filtersText}>Filters</span>
-              {filtering > 0 ? (
-                <span className={listStyles.count}>
-                  {filtering}
-                  <span className="visually-hidden"> on</span>
+        <div className={listStyles.titleRow}>
+          <div className={`${listStyles.what} ${title.length > 18 ? listStyles.longName : ""}`}>
+            {/* The name, then its ✕ and the count kept together after its last line. */}
+            <div className={listStyles.nameRow}>
+              <h1 ref={titleRef} tabIndex={-1} className={listStyles.title}>
+                {title}
+              </h1>
+              {picked.kind !== "all" || (showCount && !sentence) ? (
+                <span className={listStyles.after}>
+                  {picked.kind !== "all" ? (
+                    <button
+                      type="button"
+                      className={listStyles.unpick}
+                      aria-label={
+                        picked.kind === "made" ? "Show all recipes" : "Show all categories"
+                      }
+                      title={picked.kind === "made" ? "Show all recipes" : "Show all categories"}
+                      onClick={() => library.show(query, pickAll(filters))}
+                    >
+                      <svg
+                        width="9"
+                        height="9"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </svg>
+                    </button>
+                  ) : null}
+                  {showCount && !sentence ? (
+                    <span className={listStyles.shown} aria-hidden="true">
+                      {shown.length}
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
-            </button>
-          </form>
-
-          <div className={listStyles.quick}>
-            <div className={listStyles.chips} role="group" aria-label="Quick filters">
-              {hasCategories || filters.category ? (
-                <span
-                  className={
-                    filters.category
-                      ? `${listStyles.chipSelect} ${listStyles.on}`
-                      : listStyles.chipSelect
-                  }
-                >
-                  <select
-                    aria-label="Category"
-                    value={filters.category}
-                    onChange={(e) => changeFilters({ ...filters, category: e.target.value })}
-                  >
-                    <option value="">Category</option>
-                    {tree?.nodes.map((node) => (
-                      <option key={node.key} value={node.key}>
-                        {node.path} ({node.count})
-                      </option>
-                    ))}
-                    {filters.category &&
-                    filters.category !== UNFILED &&
-                    !tree?.byKey.has(filters.category) ? (
-                      <option value={filters.category}>{filterName}</option>
-                    ) : null}
-                    <option value={UNFILED}>Not in a category</option>
-                  </select>
-                </span>
-              ) : null}
-              <span
+            </div>
+            {/* Said aloud as it changes: the sentence, or how many recipes the list shows. */}
+            {showCount ? (
+              <p
                 className={
-                  filters.rating && filters.rating !== "favorite"
-                    ? `${listStyles.chipSelect} ${listStyles.on}`
-                    : listStyles.chipSelect
+                  sentence ? `${listStyles.shown} ${listStyles.sentence}` : "visually-hidden"
                 }
+                aria-live="polite"
               >
-                <select
-                  aria-label="Rating"
-                  value={filters.rating === "favorite" ? "" : filters.rating}
-                  onChange={(e) =>
-                    changeFilters({ ...filters, rating: e.target.value as RatingFilter })
-                  }
-                >
-                  <option value="">Rating</option>
-                  {RATINGS.map((r) => (
-                    <option key={r.value} value={r.value}>
-                      {r.label}
-                    </option>
-                  ))}
-                </select>
-              </span>
-              <span
-                className={
-                  filters.maxMinutes !== null
-                    ? `${listStyles.chipSelect} ${listStyles.on}`
-                    : listStyles.chipSelect
-                }
-              >
-                <select
-                  aria-label="Time"
-                  value={filters.maxMinutes ?? ""}
-                  onChange={(e) =>
-                    changeFilters({
-                      ...filters,
-                      maxMinutes: e.target.value ? Number(e.target.value) : null,
-                    })
-                  }
-                >
-                  <option value="">Time</option>
-                  {TIME_CHOICES.map((minutes) => (
-                    <option key={minutes} value={minutes}>
-                      Up to {shortMinutes(minutes)}
-                    </option>
-                  ))}
-                </select>
-              </span>
+                {sentence ?? `${shown.length} ${shown.length === 1 ? "recipe" : "recipes"}`}
+              </p>
+            ) : null}
+          </div>
+          {list.length > 0 ? (
+            <div className={listStyles.headActions}>
+              {list.length > 1 && !wide ? sortChoice : null}
               <button
                 type="button"
-                className={listStyles.chipToggle}
-                aria-pressed={filters.rating === "favorite"}
-                onClick={() =>
-                  changeFilters({
-                    ...filters,
-                    rating: filters.rating === "favorite" ? "" : "favorite",
-                  })
-                }
+                className={`${styles.primary} ${listStyles.add}`}
+                onClick={add}
+                disabled={!editable}
+                aria-disabled={addBlocked ? true : undefined}
+                aria-describedby={addBlocked ? "add-blocked" : undefined}
               >
-                <span aria-hidden="true">♥ </span>Favorites
+                <span aria-hidden="true">+</span>
+                <span className={listStyles.addText}>Add recipe</span>
               </button>
-              {saved.chip}
-              {quickChips.length > 0 ? (
-                <ul className={listStyles.onChips} aria-label="Filters on">
-                  {quickChips.map((chip) => (
-                    <li key={chip.id} className={listStyles.onChip}>
-                      {chip.label}
-                      <button
-                        type="button"
-                        aria-label={`Remove filter: ${chip.label}`}
-                        onClick={() => changeFilters(chip.remove(filters))}
-                      >
-                        <span aria-hidden="true">✕</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+              <ListMenu
+                selecting={selecting}
+                onSelect={() => (selecting ? stopSelecting() : setSelecting(true))}
+                onSurprise={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
+                onPrint={() => print(shown.map((recipe) => recipe.id))}
+                canSurprise={shown.length > 0}
+                canPrint={shown.length > 0 && !busy}
+              />
+            </div>
+          ) : null}
+        </div>
+
+        {list.length > 0 ? (
+          <div className={listStyles.bar}>
+            <p className={listStyles.hint}>
+              {gone ? (
+                <>There&rsquo;s no category called &ldquo;{title}&rdquo; now. </>
+              ) : outside > 0 ? (
+                <>
+                  {outside} more {outside === 1 ? "matches" : "match"}{" "}
+                  {filters.category === UNFILED ? (
+                    "in categories"
+                  ) : (
+                    <>
+                      outside{" "}
+                      {/* A very long name is shortened here; the heading says it in full. */}
+                      <span className={listStyles.outsideName} title={title}>
+                        {title}
+                      </span>
+                    </>
+                  )}
+                  .{" "}
+                  <button
+                    type="button"
+                    className={listStyles.inlineLink}
+                    onClick={() => library.show(query, pickAll(filters))}
+                  >
+                    Search all recipes
+                  </button>
+                </>
+              ) : !busy && shown.length === 0 ? (
+                filters.category === UNFILED && !searching && filtering === 1 ? (
+                  "Every recipe is in a category."
+                ) : (
+                  "No recipes found."
+                )
+              ) : !narrowing && wide ? (
+                "Pick a category on the left, or just start typing to search."
               ) : null}
-              {narrowing ? (
-                <button type="button" className={listStyles.clear} onClick={clearAll}>
-                  Clear all
+              {busy ? "" : unknownNote(found.unknown, filters)}
+            </p>
+            <div className={listStyles.tools}>
+              {saved.buttons}
+              {wide ? (
+                <button
+                  type="button"
+                  className={`${listStyles.tool} ${listStyles.toolOutlined}`}
+                  aria-haspopup="dialog"
+                  onClick={() => setPanelOpen(true)}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.9"
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+                    <circle cx="16" cy="7" r="2" />
+                    <circle cx="10" cy="17" r="2" />
+                  </svg>
+                  More filters
+                  {moreOn > 0 ? (
+                    <span className={listStyles.count}>
+                      {moreOn}
+                      <span className="visually-hidden"> on</span>
+                    </span>
+                  ) : null}
                 </button>
               ) : null}
-            </div>
-            <div className={listStyles.end}>
-              {narrowing ? null : (
-                <span className={listStyles.total}>
-                  {list.length} {list.length === 1 ? "recipe" : "recipes"}
-                </span>
-              )}
-              {list.length > 1 ? (
-                <span className={listStyles.sortChip}>
-                  <select
-                    aria-label="Sort by"
-                    value={sortBy}
-                    onChange={(e) => chooseSort(e.target.value as SortBy)}
-                  >
-                    {SORTS.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </span>
-              ) : null}
+              {list.length > 1 && wide ? sortChoice : null}
             </div>
           </div>
-          {saved.actions}
-        </>
-      ) : null}
+        ) : null}
+      </header>
+      {list.length > 0 ? saved.panel : null}
 
       {/* Right under the filters, where the list starts, so it is seen on a phone too. */}
       <div aria-live="polite">
@@ -741,29 +781,16 @@ export function RecipesPage() {
       <UndoBar done={done} failed={failed} onUndo={() => void undo()} disabled={!editable} />
 
       {recipes === null ? null : list.length > 0 ? (
-        <section aria-labelledby="list-title">
+        <section
+          id="recipe-results"
+          tabIndex={-1}
+          className={listStyles.results}
+          aria-labelledby="list-title"
+        >
           <h2 id="list-title" className="visually-hidden">
             {shown.length} {shown.length === 1 ? "recipe" : "recipes"}
           </h2>
-          <p className={styles.filterNote}>
-            <span aria-live="polite">
-              {!narrowing
-                ? ""
-                : busy
-                  ? "Searching…"
-                  : shown.length === 0
-                    ? filters.category === UNFILED && !searching && filtering === 1
-                      ? "Every recipe is in a category."
-                      : "No recipes found."
-                    : `Showing ${shown.length} of ${list.length}${
-                        search && search.titleIds.length > 0 && shown.length > 1
-                          ? "; titles with every word come first"
-                          : ""
-                      }.`}
-              {unknownNote(found.unknown, filters)}
-            </span>
-          </p>
-          <ul className={styles.grid}>
+          <ul className={`${styles.grid} ${styles.twoUp}`}>
             {shown.slice(0, limit).map((recipe) => (
               <RecipeCard
                 key={recipe.id}

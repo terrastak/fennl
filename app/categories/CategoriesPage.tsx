@@ -12,6 +12,7 @@ import {
   moveCategory,
   parsePath,
   pathKey,
+  placeCategory,
   renameCategory,
   within,
   type CategoryNode,
@@ -43,11 +44,12 @@ const domId = (prefix: string, key: string) =>
  * a new ID once the tree is read again, so this waits a moment for it; when its row is gone,
  * focus goes to the new-category box.
  */
-function refocus(id: string, tries = 30) {
+function refocus(id: string, tries = 30, fallback?: string) {
   requestAnimationFrame(() => {
     const target = document.getElementById(id);
-    if (target) target.focus();
-    else if (tries > 0) refocus(id, tries - 1);
+    if (target && !(target as HTMLButtonElement).disabled) target.focus();
+    else if (target && fallback) refocus(fallback, tries);
+    else if (tries > 0) refocus(id, tries - 1, fallback);
     else document.getElementById("new-category")?.focus();
   });
 }
@@ -217,6 +219,20 @@ function Row({
     if (here) refocus(domId(here, `button-${node.key}`));
     setMode(null);
   };
+  // Move up and Move down: the person's own order (U17), for the keyboard and phones, where
+  // the left panel's dragging isn't offered.
+  const siblings = node.parent ? node.parent.children : tree.roots;
+  const at = siblings.indexOf(node);
+  const step = (direction: "up" | "down") => {
+    const before = direction === "up" ? siblings[at - 1] : (siblings[at + 2] ?? null);
+    if (before === undefined) return;
+    act(
+      placeCategory(tree, node, { parent: node.parent, before }, planContext()),
+      `Moved ${node.name} ${direction}.`,
+    );
+    const other = direction === "up" ? "down" : "up";
+    refocus(domId(direction, `button-${node.key}`), 30, domId(other, `button-${node.key}`));
+  };
   return (
     <li>
       <div className={styles.row}>
@@ -227,6 +243,20 @@ function Row({
         </Link>
         {here === null ? (
           <span className={styles.actions}>
+            {(["up", "down"] as const).map((direction) => (
+              <button
+                key={direction}
+                id={domId(direction, `button-${node.key}`)}
+                type="button"
+                className={`${styles.small} ${styles.arrow}`}
+                aria-label={`Move ${direction}: ${node.path}`}
+                title={`Move ${direction}`}
+                disabled={!editable || (direction === "up" ? at <= 0 : at >= siblings.length - 1)}
+                onClick={() => step(direction)}
+              >
+                <span aria-hidden="true">{direction === "up" ? "↑" : "↓"}</span>
+              </button>
+            ))}
             {(["rename", "move", "delete"] as const).map((kind) => (
               <button
                 key={kind}

@@ -71,7 +71,7 @@ test("the color scheme follows the account to another device", async ({
   await otherPage.getByRole("button", { name: "Sign in" }).click();
   // A free account uses one device at a time (phase B6): this one takes over.
   await otherPage.getByRole("button", { name: "Use Fennl on this device" }).click();
-  await expect(otherPage.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(otherPage.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 
   // The scheme comes along; light or dark stays per device.
   await expect(html(otherPage)).toHaveAttribute("data-scheme", "heirloom");

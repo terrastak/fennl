@@ -83,7 +83,7 @@ test("Premium: add photos, choose the cover, and see them everywhere", async ({
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
   // The list shows the cover.
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
   await expect(recipeCard(page, "Shakshuka").locator("img")).toBeVisible();
 
   // The Account page shows the photos against the household's allowance (phase D3), and the

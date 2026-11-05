@@ -16,10 +16,11 @@ export function LogoMark({ size = 34 }: { size?: number }) {
   );
 }
 
-export function Logo() {
+/** `compact`: the phone's top bar, a little smaller (U17 mockup) so the status fits beside it. */
+export function Logo({ compact = false }: { compact?: boolean }) {
   return (
-    <span className={styles.logo}>
-      <LogoMark />
+    <span className={compact ? `${styles.logo} ${styles.compact}` : styles.logo}>
+      <LogoMark size={compact ? 28 : 34} />
       <span className={styles.wordmark}>Fennl</span>
     </span>
   );

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("home page shows the recipes page", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
   await expect(page).toHaveTitle("Recipes · Fennl");
 });
 

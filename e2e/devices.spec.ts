@@ -25,7 +25,7 @@ test("Free: a second browser takes over, and the first is signed out", async ({
 }) => {
   const email = await useOwnAccount(context, baseURL!);
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 
   const other = await signInElsewhere(browser, baseURL!, email);
   await expect(
@@ -38,7 +38,7 @@ test("Free: a second browser takes over, and the first is signed out", async ({
   expect(results.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   await other.getByRole("button", { name: "Use Fennl on this device" }).click();
-  await expect(other.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(other.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 
   // The first browser was signed out.
   await page.reload();
@@ -54,14 +54,14 @@ test("Free: choosing to sign out instead leaves the first browser alone", async 
 }) => {
   const email = await useOwnAccount(context, baseURL!);
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 
   const other = await signInElsewhere(browser, baseURL!, email);
   await other.getByRole("button", { name: "Sign out here instead" }).click();
   await expect(other).toHaveURL(/\/sign-in$/);
 
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
   await other.context().close();
 });
 
@@ -86,7 +86,7 @@ test("Premium: several browsers at once, signed out one by one or all at once fr
   const others: Page[] = [];
   for (let i = 0; i < 3; i++) {
     const other = await signInElsewhere(browser, baseURL!, email);
-    await expect(other.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+    await expect(other.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
     others.push(other);
   }
 
