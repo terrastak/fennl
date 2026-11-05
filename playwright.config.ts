@@ -27,6 +27,7 @@ const PHONE_TESTS = [
   "smoke",
   "stepIngredients",
   "timers",
+  "waitingList",
 ].map((name) => `${name}.spec.ts`);
 
 export default defineConfig({

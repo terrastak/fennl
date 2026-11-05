@@ -63,6 +63,273 @@
   align-self: center;
 }
 
+/* Waiting for review (phase U19): the drafts in two groups, the buttons on the heading's line. */
+.waiting {
+  justify-items: stretch;
+  max-width: 56rem;
+}
+
+.waitingHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-4);
+}
+
+.waitingButtons,
+.phoneBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.waiting .discard {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.waitingNote {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-2);
+  min-height: var(--tap-target);
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.waitingNote.problem {
+  background: var(--color-warm-soft);
+  color: var(--color-danger);
+}
+
+.waitingNote button {
+  font-weight: var(--weight-semibold);
+}
+
+.selectLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 var(--space-1);
+  margin-left: calc(-1 * var(--space-2));
+}
+
+.selectLine > span:last-child {
+  margin-left: var(--space-3);
+}
+
+.selectLine button:disabled {
+  color: var(--color-text-subtle);
+  text-decoration: none;
+  cursor: default;
+}
+
+.group {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  font-variation-settings: normal;
+}
+
+.groupCount {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.readyBox {
+  margin-top: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.readyDot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--color-success);
+}
+
+.waiting .jobs {
+  gap: 0;
+}
+
+.waiting .jobs li {
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--color-border-soft);
+}
+
+.waiting .jobs li:last-child {
+  border-bottom: none;
+}
+
+.waiting .jobs li[data-chosen] {
+  border-radius: var(--radius-sm);
+  background: var(--color-accent-soft);
+}
+
+.waiting .jobs .chooseBox {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  flex: none;
+}
+
+.jobText {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-3);
+  min-width: 0;
+}
+
+.jobText a {
+  overflow-wrap: anywhere;
+}
+
+/* A draft's label: in words, with a dot of its colour. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.tag::before {
+  content: "";
+  flex: none;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tag[data-kind="check"],
+.tag[data-kind="duplicate"] {
+  background: var(--color-warm-soft);
+  color: var(--color-warm-text);
+}
+
+.tag[data-kind="photos"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.tag[data-kind="blocked"] {
+  background: var(--color-warm-soft);
+  color: var(--color-danger);
+}
+
+.tag[data-kind="checking"] {
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+}
+
+.tag[data-kind="checking"]::before {
+  display: none;
+}
+
+.waiting .jobs li[data-chosen] .tag[data-kind="photos"] {
+  background: var(--color-surface);
+}
+
+/* "Save 4 recipes?": the ready ones, or all of them anyway. */
+.ask {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.ask .smallTitle {
+  margin: 0;
+}
+
+.askList {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.ask details[open] .askList {
+  margin-top: var(--space-2);
+}
+
+.ask summary {
+  color: var(--color-accent);
+  cursor: pointer;
+}
+
+.askButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* On a phone the buttons sit in a bar at the bottom of the screen, above the tabs. */
+.phoneBar {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .waitingButtons {
+    display: none;
+  }
+
+  .phoneBar {
+    position: sticky;
+    bottom: calc(3.75rem + 1px + env(safe-area-inset-bottom));
+    z-index: 5;
+    display: flex;
+    flex-wrap: nowrap;
+    margin: 0 calc(-1 * var(--space-4));
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg);
+  }
+
+  .phoneBar button {
+    flex: 1 1 auto;
+    padding-inline: var(--space-3);
+  }
+
+  .phoneBar button:first-child:not(:only-child) {
+    flex-grow: 2;
+  }
+
+  .askButtons button {
+    flex: 1 1 100%;
+  }
+}
+
 /* --- Review ------------------------------------------------------------------------------ */
 
 .review {
