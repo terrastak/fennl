@@ -233,9 +233,11 @@ export async function importJob(id: string): Promise<ImportJobDetail | null | un
   return (await res.json()) as ImportJobDetail;
 }
 
-export async function discardImportJob(id: string): Promise<boolean> {
+/** `keepalive`: still sent if the page is being left (an Undo whose time ran out, U19). */
+export async function discardImportJob(id: string, keepalive = false): Promise<boolean> {
   const res = await fetch(`/api/import/jobs/${encodeURIComponent(id)}/discard`, {
     method: "POST",
+    keepalive,
   }).catch(() => null);
   return Boolean(res?.ok || res?.status === 404);
 }

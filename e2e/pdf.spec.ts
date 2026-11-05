@@ -69,14 +69,14 @@ test("Premium: a PDF's recipes are found, checked, and each read into a draft", 
 
   // Both drafts read cleanly, so they can be saved together from the list.
   await page.goto("/import");
-  const chooseAll = waiting.getByRole("checkbox", { name: "Select all" });
-  await chooseAll.check();
+  await waiting.getByRole("button", { name: "Select all" }).click();
   await expect(waiting.getByRole("checkbox", { name: "Select Lemon Bars" })).toBeChecked();
-  await waiting.getByRole("button", { name: "Save 2 selected" }).click();
+  await expect(waiting).toContainText("2 of 2 selected");
+  await waiting.getByRole("button", { name: "Save selected" }).click();
   await expect(page.getByRole("status").filter({ hasText: "Saved 2 recipes." })).toBeVisible({
     timeout: 30_000,
   });
-  await expect(waiting).toHaveCount(0);
+  await expect(waiting.getByRole("link")).toHaveCount(0);
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.goto("/");
   await page.getByRole("link", { name: "Lemon Bars" }).first().click();
