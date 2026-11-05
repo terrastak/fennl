@@ -115,7 +115,7 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   await expect(panel(page).getByRole("button", { name: "Show 1 recipe" })).toBeVisible();
   await panel(page).getByRole("button", { name: "Remove cumin" }).click();
   await panel(page).getByLabel("Without ingredient").fill("cumin");
-  await panel(page).getByRole("button", { name: "Add" }).last().click();
+  await panel(page).getByRole("button", { name: "Add", exact: true }).last().click();
   await showRecipes(page, 3);
   await expect(titles(page)).toHaveText([
     "Black Bean Tacos with Lime Crema",
@@ -127,9 +127,9 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
 
   // Nutrition, and the source.
   await openFilters(page);
-  await panel(page).getByLabel("Has nutrition").check();
+  await panel(page).getByRole("checkbox", { name: "Has nutrition" }).check();
   await expect(panel(page).getByRole("button", { name: "Show 1 recipe" })).toBeVisible();
-  await panel(page).getByLabel("Has nutrition").uncheck();
+  await panel(page).getByRole("checkbox", { name: "Has nutrition" }).uncheck();
   await panel(page).getByLabel("Source").fill("nana");
   await expect(panel(page).getByRole("button", { name: "Show 1 recipe" })).toBeVisible();
 
@@ -175,7 +175,7 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
   await expect(filtersButton(page, 2)).toBeVisible();
   await expect(
-    page.getByText("2 recipes match “lemon” · Up to 1 hour · Without cumin"),
+    page.getByText("2 recipes match “lemon” · 1 hour or less · Without cumin"),
   ).toBeVisible();
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake", "Buttermilk Pancakes"]);
 
@@ -305,15 +305,14 @@ test("On a phone: search with Filters, a row of categories, their subcategories 
   await expect(heading).toHaveText("All recipes");
   await expect(titles(page)).toHaveCount(4);
 
-  // The quick lists are in Filters, and stay on with the category shown.
+  // The quick searches are in Filters, and stay on with the category shown.
   await showCategory(page, "Mexican");
   await openFilters(page);
-  const quick = panel(page).getByRole("group", { name: "Quick lists" });
-  await quick.getByRole("button", { name: "30 minutes or less" }).click();
-  await expect(quick.getByRole("button", { name: "30 minutes or less" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  const quick = panel(page).getByRole("group", { name: "Quick searches" });
+  await quick.getByRole("button", { name: "30 minutes or less", exact: true }).click();
+  await expect(
+    quick.getByRole("button", { name: "30 minutes or less", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await showRecipes(page, 1);
   await expect(heading).toHaveText("Mexican");
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);

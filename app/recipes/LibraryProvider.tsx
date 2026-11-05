@@ -10,6 +10,8 @@ import {
 } from "./filters";
 import { libraryCounts } from "./library";
 import { LibraryContext, today, type Library } from "./libraryContext";
+import { quickSearchWords } from "./quickSearchFilters";
+import { useQuickSearches } from "./quickSearches";
 import { useSavedSearches } from "./savedSearches";
 
 // The recipe box, shared by the left panel and the recipe list (U17): the address says what is
@@ -29,16 +31,33 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
   const recipes = useRecipeList();
   const tree = useCategoryTree();
   const search = useSearch(query);
-  const ingredients = useIngredientMatches(ingredientWords(filters));
+  const words = ingredientWords(filters);
+  const ingredients = useIngredientMatches(words);
   const saved = useSavedSearches();
+  const quick = useQuickSearches(saved.searches);
+  // The quick searches' ingredient words the filters don't ask about, asked for apart, so the
+  // list itself never waits for them (only their lines' counts do).
+  const quickWords = quickSearchWords(quick.items).filter(
+    (word) => !words.some((w) => w.toLocaleLowerCase() === word.toLocaleLowerCase()),
+  );
+  const quickIngredients = useIngredientMatches(quickWords);
   const [chosenSearch, setChosenSearch] = useState("");
 
   const searching = query.trim() !== "";
   const counts = useMemo(() => {
     if (!recipes || (searching && !search)) return null;
     const matching = searching && search ? new Set(search.ids) : null;
-    return libraryCounts(recipes, filters, ingredients, today(), matching);
-  }, [recipes, filters, ingredients, search, searching]);
+    // The filters' words must be answered (null until they are, when there are any); the quick
+    // searches' own are added as they arrive.
+    const answers =
+      words.length > 0 && !ingredients
+        ? null
+        : ingredients || quickIngredients
+          ? { ...quickIngredients, ...ingredients }
+          : null;
+    return libraryCounts(recipes, filters, answers, today(), matching, quick.items);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `words` follows `filters`.
+  }, [recipes, filters, ingredients, quickIngredients, search, searching, quick.items]);
 
   const value = useMemo<Library>(() => {
     const hrefFor = (q: string, next: RecipeFilters) => {
@@ -55,6 +74,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       ingredients,
       counts,
       saved,
+      quick,
       chosenSearch,
       setChosenSearch,
       hrefFor,
@@ -72,6 +92,7 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     ingredients,
     counts,
     saved,
+    quick,
     chosenSearch,
   ]);
 

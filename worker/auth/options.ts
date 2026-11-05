@@ -124,6 +124,10 @@ export function authOptions(settings: AuthSettings) {
         // What printouts hold (phase F6), as JSON (shared/print.ts). Only PUT /api/account/print
         // changes it.
         printOptions: { type: "string", required: false, input: false },
+        // The left panel's quick searches and their order (U18), as JSON
+        // (shared/quickSearches.ts); null until first changed, meaning the starting list. Only
+        // PUT /api/account/quick-searches changes it.
+        quickSearches: { type: "string", required: false, input: false },
         // Set when an admin gives a temporary password (phase B7): the app asks for a new one
         // before anything else, and household routes refuse until it's changed.
         mustChangePassword: {

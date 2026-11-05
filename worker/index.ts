@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { isColorScheme } from "../shared/appearance";
 import { isPrintOptions } from "../shared/print";
+import { isQuickSearchList } from "../shared/quickSearches";
 import { isUnitSystem } from "../shared/scale";
 import { healthStatus } from "../shared/health";
 import { inBackground, recordFailedSignInFrom, removeOldAccountEvents } from "./account/events";
@@ -330,6 +331,19 @@ app.put("/api/account/print", requireHousehold, async (c) => {
     .set({ printOptions: JSON.stringify(options) })
     .where(eq(user.id, userId));
   return c.json({ options });
+});
+
+// The left panel's quick searches and their order (U18), following the account to every device.
+app.put("/api/account/quick-searches", requireHousehold, async (c) => {
+  const body = await c.req.json<unknown>().catch(() => null);
+  const items = (body as { items?: unknown } | null)?.items;
+  if (!isQuickSearchList(items)) return c.json({ error: "invalid_quick_searches" }, 400);
+  const { db, userId } = c.var.signedIn;
+  await db
+    .update(user)
+    .set({ quickSearches: JSON.stringify(items) })
+    .where(eq(user.id, userId));
+  return c.json({ items });
 });
 
 // The admin console's own data. Every route here goes through requireAdmin.

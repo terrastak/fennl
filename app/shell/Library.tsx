@@ -5,11 +5,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import type { Drop } from "../categories/drop";
 import {
   moveCategory,
   pathKey,
@@ -17,59 +15,31 @@ import {
   type CategoryNode,
   type PlanContext,
 } from "../categories/tree";
-import { UndoBar } from "../categories/UndoBar";
-import { useUndoable } from "../categories/useUndoable";
-import { usePath } from "../navigation";
 import { CATEGORY_SEPARATOR as SEPARATOR } from "../../shared/recipe";
 import { parseSearch, searchKey, UNFILED } from "../recipes/filters";
-import {
-  categoryCount,
-  favoritesOn,
-  pickAll,
-  pickCategory,
-  pickedList,
-  pickMadeLately,
-  quickOn,
-  toggleFavorites,
-  toggleQuick,
-} from "../recipes/library";
+import { categoryCount, pickAll, pickCategory, pickedList } from "../recipes/library";
 import { useLibrary } from "../recipes/libraryContext";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
-import { activeSyncClient, useSyncStatus } from "../sync/useSync";
+import { activeSyncClient, saveChanges, useSyncStatus } from "../sync/useSync";
 import styles from "./Library.module.css";
 import { keepOpen, moveOpen, rememberedOpen } from "./openCategories";
+import { QuickSearches } from "./QuickSearches";
+import { titleIfCut } from "./titleIfCut";
 import { takeSearchFocus, TYPE_EVENT } from "./typeToSearch";
 import { scrollParent, useCategoryDrag, type DragState } from "./useCategoryDrag";
 
 // The recipe box in the left panel on a computer (U17, owner's choices 2026-11-04): search,
-// the quick lists, saved searches and every category with how many recipes it has, always in
-// view and one click each. The counts follow the words searched for and the switches that are
-// on; a category with nothing that matches is faint, never hidden. It shows on every page: a
-// click from another page goes to the recipe list with that list picked. Categories are put in
-// order by dragging them with the mouse (useCategoryDrag.ts), each move with its Undo.
+// the quick searches (U18, QuickSearches.tsx) and every category with how many recipes it has,
+// always in view and one click each. The counts follow the words searched for and the tick lines
+// that are on; a category with nothing that matches is faint, never hidden. It shows on every
+// page: a click from another page goes to the recipe list with that list picked. Categories are
+// put in order by dragging them with the mouse (useCategoryDrag.ts); a move is taken back by
+// dragging it back (U18).
 
 /** Who is moving categories, and when. */
 function planContext(): PlanContext {
   return { me: activeSyncClient()?.userId ?? "", now: Date.now() };
-}
-
-/** What the Undo bar says after a category was dragged somewhere. */
-function movedMessage(node: CategoryNode, drop: Drop): string {
-  if (drop.kind === "inside") return `Moved ${node.name} into ${drop.target.path}.`;
-  const { parent, before } = drop.place;
-  if (parent !== node.parent) {
-    return `Moved ${node.name} ${parent ? `into ${parent.path}` : "to the top level"}.`;
-  }
-  return before ? `Moved ${node.name} before ${before.name}.` : `Moved ${node.name} to the end.`;
-}
-
-/** Shows a name cut short in full when the mouse is over it (the page reads it whole anyway). */
-function titleIfCut(event: ReactPointerEvent<HTMLElement>, name: string) {
-  const el = event.currentTarget;
-  const cut = el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
-  if (cut) el.title = name;
-  else el.removeAttribute("title");
 }
 
 /** A row's count, said in full to screen readers ("6 recipes"). */
@@ -197,17 +167,8 @@ export function Library() {
   const [open, setOpen] = useState(rememberedOpen);
   const panel = useRef<HTMLElement>(null);
   const editable = canEdit(useSyncStatus());
-  const moves = useUndoable();
   // Scrolled down: the top edge fades too, rather than cutting a row in half.
   const [scrolled, setScrolled] = useState(false);
-
-  // A move's Undo shows on the page it was made on; going to another page puts it away.
-  const path = usePath();
-  const [movedOn, setMovedOn] = useState(path);
-  if (movedOn !== path) {
-    setMovedOn(path);
-    if (moves.done || moves.failed) moves.clear();
-  }
 
   const searches = library.saved.searches ?? [];
   const here = searchKey(query, filters);
@@ -219,9 +180,9 @@ export function Library() {
     : undefined;
   const picked = pickedList(filters);
   // One row is the list shown: a saved search when it's exactly that, else the list or category.
-  const current = (kind: "all" | "made" | string) => {
+  const current = (kind: "all" | string) => {
     if (!onList || savedHere) return false;
-    if (kind === "all" || kind === "made") return picked.kind === kind;
+    if (kind === "all") return picked.kind === "all";
     return picked.kind === "category" && picked.key === kind;
   };
 
@@ -286,9 +247,8 @@ export function Library() {
    * so the address, changed. The new address is made once the categories have the new path, as
    * the address is written from them.
    */
-  const lastMove = useRef<{ from: string; to: string } | null>(null);
   const follow = useRef<{ from: string; to: string } | null>(null);
-  const followMove = (from: string, to: string, opened: Set<string> = shownOpen) => {
+  const followMove = (from: string, to: string, opened: Set<string>) => {
     const next = moveOpen(opened, from, to);
     setOpen(next);
     keepOpen(next);
@@ -333,10 +293,9 @@ export function Library() {
       if (parent) opened.add(parent.key);
       const from = node.key;
       const to = pathKey([...(parent?.names ?? []), node.name]);
-      void moves.run(plan, movedMessage(node, drop)).then((ok) => {
-        if (!ok) return;
-        lastMove.current = { from, to };
-        followMove(from, to, opened);
+      if (plan.changes.length === 0) return;
+      void saveChanges(plan.changes).then((ok) => {
+        if (ok) followMove(from, to, opened);
       });
     },
   });
@@ -418,77 +377,9 @@ export function Library() {
             <Count n={counts?.all} />
           </Link>
         </li>
-        <li>
-          <button
-            type="button"
-            className={`${styles.tile} ${styles.switch}`}
-            aria-pressed={onList && favoritesOn(filters)}
-            onClick={() => library.show(query, toggleFavorites(filters))}
-          >
-            <span className={styles.icon}>
-              <span className={styles.box}>
-                <CheckIcon />
-              </span>
-            </span>
-            <span className={styles.name}>Favorites</span>
-            <Count n={counts?.favorites} />
-          </button>
-        </li>
-        <li>
-          <Link
-            href={library.hrefFor(query, pickMadeLately(filters))}
-            className={styles.tile}
-            aria-current={current("made") ? "page" : undefined}
-          >
-            <span className={styles.icon}>
-              <MadeIcon />
-            </span>
-            <span className={styles.name}>Made lately</span>
-            <Count n={counts?.made} />
-          </Link>
-        </li>
-        <li>
-          <button
-            type="button"
-            className={`${styles.tile} ${styles.switch}`}
-            aria-pressed={onList && quickOn(filters)}
-            onClick={() => library.show(query, toggleQuick(filters))}
-          >
-            <span className={styles.icon}>
-              <span className={styles.box}>
-                <CheckIcon />
-              </span>
-            </span>
-            <span className={styles.name}>30 minutes or less</span>
-            <Count n={counts?.quick} />
-          </button>
-        </li>
       </ul>
 
-      {searches.length > 0 ? (
-        <>
-          <h2 className={styles.heading}>Saved searches</h2>
-          <ul className={styles.list}>
-            {searches.map((s) => (
-              <li key={s.id}>
-                <Link
-                  href={s.query ? `/?${s.query.replace(/^\?/, "")}` : "/"}
-                  className={`${styles.cat} ${styles.saved}`}
-                  aria-current={savedHere?.id === s.id ? "page" : undefined}
-                  onClick={() => library.setChosenSearch(s.id)}
-                >
-                  <span className={styles.icon}>
-                    <SearchIcon size={15} />
-                  </span>
-                  <span className={styles.name} onPointerEnter={(e) => titleIfCut(e, s.name)}>
-                    {s.name}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : null}
+      <QuickSearches savedHere={savedHere?.id ?? null} />
 
       {tree && tree.roots.length > 0 ? (
         <>
@@ -498,31 +389,6 @@ export function Library() {
               Edit
             </Link>
           </div>
-          <div className={styles.undo}>
-            <UndoBar
-              done={moves.done}
-              failed={moves.failed}
-              onUndo={() => {
-                const move = lastMove.current;
-                void moves.undo().then((ok) => {
-                  if (!ok || !move) return;
-                  lastMove.current = null;
-                  followMove(move.to, move.from);
-                });
-              }}
-              disabled={!editable}
-            />
-          </div>
-          {drag?.hint ? (
-            <div className={styles.dragHint}>
-              <p>
-                <b>Between two</b> moves it there.
-              </p>
-              <p>
-                <b>Onto one</b> puts it inside.
-              </p>
-            </div>
-          ) : null}
           <ul className={styles.list}>
             {tree.roots.map(row)}
             {(counts?.unfiled ?? 0) > 0 || current(UNFILED) ? (
@@ -573,12 +439,7 @@ function DragOverlay({ drag, count }: { drag: DragState; count: number | undefin
         style={{ left, top: drag.y + 6, width: drag.span - 8 }}
       >
         <GripIcon />
-        <span className={styles.liftedName}>
-          {drag.node.name}
-          {drag.check === "refused" ? (
-            <span className={styles.liftedNo}>Can&rsquo;t go inside itself</span>
-          ) : null}
-        </span>
+        <span className={styles.liftedName}>{drag.node.name}</span>
         {count !== undefined ? <span className={styles.count}>{count}</span> : null}
       </div>
     </div>
@@ -631,15 +492,6 @@ function BookIcon() {
     <SvgIcon>
       <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" />
       <path d="M5 18a2 2 0 0 1 2-2h11" />
-    </SvgIcon>
-  );
-}
-
-function MadeIcon() {
-  return (
-    <SvgIcon>
-      <rect x="4" y="5" width="16" height="15" rx="2" />
-      <path d="M4 10h16M9 3v4M15 3v4M9 15l2 2 4-4" />
     </SvgIcon>
   );
 }

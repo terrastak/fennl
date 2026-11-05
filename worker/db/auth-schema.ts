@@ -22,6 +22,7 @@ export const user = sqliteTable("user", {
   units: text("units"),
   hideNutrition: integer("hide_nutrition", { mode: "boolean" }).default(false),
   printOptions: text("print_options"),
+  quickSearches: text("quick_searches"),
   mustChangePassword: integer("must_change_password", {
     mode: "boolean",
   }).default(false),

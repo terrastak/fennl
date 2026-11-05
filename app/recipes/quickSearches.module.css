@@ -1,0 +1,289 @@
+/*
+ * Quick searches (U18, owner's choices 2026-11-05) outside the left panel: their small menus
+ * (QuickMenu.tsx), the phone's group at the top of Filters, and Filters' "Add to quick searches"
+ * buttons. Tokens only (docs/design/design-direction.md).
+ */
+
+/* --- The menus (a tick line's ▾, and + Add) ------------------------------------------------ */
+
+.menu {
+  position: fixed;
+  z-index: 70;
+  width: max-content;
+  min-width: 13rem;
+  max-width: min(20rem, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  text-align: left;
+}
+
+/* In the phone's Filters sheet: under its button, inside the sheet. */
+.menuInline {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  z-index: 5;
+}
+
+.menuList {
+  display: grid;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.25rem;
+  padding: 0 var(--space-3) 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem:hover,
+.menuItem:focus-visible {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.menuItem:focus-visible {
+  outline-offset: -3px;
+}
+
+.menuItem[aria-checked="true"] {
+  font-weight: var(--weight-semibold);
+}
+
+.menuCheck {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  color: var(--color-accent);
+}
+
+.menuItem:hover .menuCheck,
+.menuItem:focus-visible .menuCheck {
+  color: inherit;
+}
+
+.menuNote {
+  margin: var(--space-1) 0 0;
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  border-top: 1px solid var(--color-border-soft);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.menuNote b {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+/* --- Filters' "Add to quick searches" ----------------------------------------------------- */
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.addButton {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+}
+
+.addButton:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.addButton[aria-pressed="true"] {
+  border-color: var(--color-accent-soft);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+/* Inside an ingredient word's chip: smaller, so the chip stays a chip. */
+.addSmall {
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+}
+
+/* A filter in "More" with its button beside it. */
+.withAdd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.problem {
+  margin: var(--space-3) 0 0;
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+.problem:empty {
+  display: none;
+}
+
+/* --- The phone's quick searches, at the top of Filters ------------------------------------ */
+
+.phoneEdit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.phoneEdit:hover {
+  color: var(--color-accent-hover);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chipWrap {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+/* A tick line with choices: the line and its ▾ as one pill. */
+.chipWrap > .chip:has(+ .chipMore) {
+  padding-right: var(--space-2);
+  border-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.chip[aria-pressed="true"],
+.chip[aria-pressed="true"] + .chipMore {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.chip[aria-current="page"] {
+  border-color: var(--color-accent);
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.chip > svg {
+  flex: none;
+}
+
+.chipMore {
+  display: grid;
+  place-items: center;
+  min-width: 2rem;
+  padding: 0 var(--space-2) 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-left: 0;
+  border-top-right-radius: var(--radius-full);
+  border-bottom-right-radius: var(--radius-full);
+  background: var(--color-bg);
+  color: inherit;
+  cursor: pointer;
+}
+
+.chipMore:hover {
+  border-color: var(--color-accent);
+}
+
+/* While editing: the line itself does nothing, its ✕ removes it. */
+.chipEditing {
+  padding-right: var(--space-1);
+  cursor: default;
+}
+
+.chipEditing:hover {
+  border-color: var(--color-border-strong);
+}
+
+.chipRemove {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.chipRemove:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.chipAdd {
+  border-style: dashed;
+  background: none;
+  color: var(--color-text-muted);
+}

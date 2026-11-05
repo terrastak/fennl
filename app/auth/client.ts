@@ -12,6 +12,8 @@ export const authClient = createAuthClient({
         units: { type: "string", required: false },
         hideNutrition: { type: "boolean", required: false },
         printOptions: { type: "string", required: false },
+        // The left panel's quick searches (U18), as JSON (shared/quickSearches.ts).
+        quickSearches: { type: "string", required: false },
         mustChangePassword: { type: "boolean", required: false },
         // Emails to the address stopped arriving (phase U14): "bounced", "complained" or
         // "suppressed", else null.

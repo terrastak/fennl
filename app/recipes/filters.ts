@@ -1,3 +1,9 @@
+import {
+  MAX_SOURCE_LENGTH,
+  MAX_WORD_LENGTH,
+  SERVING_CHOICES,
+  TIME_CHOICES,
+} from "../../shared/quickSearches";
 import { underPath } from "../categories/tree";
 import type { RecipeSummary } from "../sync/dbProtocol";
 
@@ -16,13 +22,12 @@ export const RATING_VALUES: RatingFilter[] = ["", "favorite", "5", "4", "3", "no
 export type MadeFilter = "" | "never" | "recent" | "old";
 export const MADE_VALUES: MadeFilter[] = ["", "never", "recent", "old"];
 
-export const TIME_CHOICES = [15, 30, 45, 60, 90, 120];
-export const SERVING_CHOICES = [2, 4, 6, 8, 12];
+// The time and serving choices, and how long a word or source may be, are shared with quick
+// searches (U18), which keep filters with the account.
+export { SERVING_CHOICES, TIME_CHOICES };
 
 const MAX_WORDS = 10;
-const MAX_WORD_LENGTH = 40;
 const MAX_CATEGORIES = 10;
-const MAX_SOURCE_LENGTH = 80;
 
 export interface RecipeFilters {
   /** The main category (a category's key, or UNFILED), or "" for any. */

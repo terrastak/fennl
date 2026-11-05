@@ -2,6 +2,7 @@ import { env } from "cloudflare:test";
 import { eq } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
 import { DEFAULT_PRINT } from "../../shared/print";
+import { quick } from "../../shared/quickSearches";
 import { database } from "../db/client";
 import { organization, session, user } from "../db/schema";
 import { signUp, signUpConfirmed, visitor, setUpDatabase } from "../test/visitor";
@@ -232,6 +233,72 @@ describe("print choices (phase F6)", () => {
     const res = await visitor().request("/api/account/print", {
       method: "PUT",
       body: { options },
+    });
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("quick searches (U18)", () => {
+  const items = [
+    quick.time(45),
+    quick.without("mushroom"),
+    quick.search("a1b2-c3"),
+    quick.favorites,
+  ];
+
+  it("are saved to the account in their order and come back with the session", async () => {
+    const v = await signUpConfirmed("quick@example.com");
+    // Never set: the app shows the starting list.
+    expect((await v.session())?.user.quickSearches ?? null).toBeNull();
+    const res = await v.request("/api/account/quick-searches", { method: "PUT", body: { items } });
+    expect(res.status).toBe(200);
+    expect(JSON.parse((await v.session())?.user.quickSearches ?? "null")).toEqual(items);
+    // Emptied is kept as empty, not the starting list.
+    await v.request("/api/account/quick-searches", { method: "PUT", body: { items: [] } });
+    expect((await v.session())?.user.quickSearches).toBe("[]");
+  });
+
+  it("have room for every saved search beside the tick lines", async () => {
+    const v = await signUpConfirmed("full.quick@example.com");
+    const full = [
+      ...Array.from({ length: 60 }, (_, i) => quick.with(`w${i}`)),
+      ...Array.from({ length: 100 }, (_, i) => quick.search(`s${i}`)),
+    ];
+    const res = await v.request("/api/account/quick-searches", {
+      method: "PUT",
+      body: { items: full },
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("only take a whole, correct list, and not through update-user", async () => {
+    const v = await signUpConfirmed("bad.quick@example.com");
+    for (const bad of [
+      [quick.time(31)],
+      [quick.favorites, quick.favorites],
+      [quick.with("Lime"), quick.with("lime")],
+      [{ ...quick.photo, extra: true }],
+      [{ type: "filter", filter: "category", value: "desserts" }],
+      Array.from({ length: 61 }, (_, i) => quick.with(`w${i}`)),
+      Array.from({ length: 101 }, (_, i) => quick.search(`s${i}`)),
+      "favorites",
+      null,
+    ]) {
+      const res = await v.request("/api/account/quick-searches", {
+        method: "PUT",
+        body: { items: bad },
+      });
+      expect(res.status).toBe(400);
+      expect(await res.json()).toEqual({ error: "invalid_quick_searches" });
+    }
+    await v.request("/api/auth/update-user", { body: { quickSearches: JSON.stringify(items) } });
+    expect((await v.session())?.user.quickSearches ?? null).toBeNull();
+  });
+
+  it("need a signed-in account", async () => {
+    const res = await visitor().request("/api/account/quick-searches", {
+      method: "PUT",
+      body: { items },
     });
     expect(res.status).toBe(401);
   });

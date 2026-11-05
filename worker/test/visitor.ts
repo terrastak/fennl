@@ -85,6 +85,7 @@ export function visitor(ip = `203.0.113.${++ipCounter}`) {
           units?: string | null;
           hideNutrition?: boolean | null;
           printOptions?: string | null;
+          quickSearches?: string | null;
           emailProblem?: string | null;
         };
         session: { id: string; activeOrganizationId?: string | null };

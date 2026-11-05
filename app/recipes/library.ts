@@ -1,83 +1,51 @@
+import {
+  quick,
+  quickFilterLabel,
+  QUICK_MADE,
+  SERVING_CHOICES,
+  TIME_CHOICES,
+  type QuickSearchItem,
+} from "../../shared/quickSearches";
 import { CATEGORY_SEPARATOR } from "../../shared/recipe";
 import { pathKey } from "../categories/tree";
 import type { RecipeSummary } from "../sync/dbProtocol";
-import {
-  applyFilters,
-  filterLabels,
-  minutesLabel,
-  RATING_LABELS,
-  UNFILED,
-  type RecipeFilters,
-} from "./filters";
+import { applyFilters, filterLabels, minutesLabel, UNFILED, type RecipeFilters } from "./filters";
+import { quickSearchCounts } from "./quickSearchFilters";
 
 // The recipe box in the left panel (U17, owner's choices 2026-11-04), as plain data: which list
-// or category is picked, the quick lists' on/off switches, and how many recipes each row would
-// show with the words searched for and the switches that are on.
+// or category is picked, and how many recipes each row would show with the words searched for
+// and the filters that are on.
 //
-// "All recipes", "Made lately" and the categories are lists: one is picked at a time. Favorites
-// and "30 minutes or less" are on/off and stay on together with whatever is picked. Everything is
-// still kept in the address (filters.ts), so back, forward and saved searches keep working.
+// "All recipes" and the categories are lists: one is picked at a time. The quick searches' tick
+// lines (U18, quickSearchFilters.ts) are on/off and stay on together with whatever is picked.
+// Everything is still kept in the address (filters.ts), so back, forward and saved searches keep
+// working.
 
-/** The quick list's time: "30 minutes or less". */
-export const QUICK_MINUTES = 30;
+export type Picked = { kind: "all" } | { kind: "category"; key: string };
 
-export type Picked = { kind: "all" } | { kind: "made" } | { kind: "category"; key: string };
-
-/** What the list shows: a category, the recipes made lately, or all of them. */
+/** What the list shows: a category, or all recipes. */
 export function pickedList(filters: RecipeFilters): Picked {
   if (filters.category) return { kind: "category", key: filters.category };
-  if (filters.made === "recent") return { kind: "made" };
   return { kind: "all" };
 }
 
-/** "Made lately" is the "made in the last 30 days" filter, picked like a list. */
-const withoutMadeLately = (filters: RecipeFilters): RecipeFilters["made"] =>
-  filters.made === "recent" ? "" : filters.made;
-
-/** All recipes: no category and not only those made lately; the search and switches stay. */
+/** All recipes: no category; the search and the tick lines stay. */
 export function pickAll(filters: RecipeFilters): RecipeFilters {
-  return {
-    ...filters,
-    category: "",
-    alsoIn: [],
-    anyCategory: false,
-    made: withoutMadeLately(filters),
-  };
-}
-
-export function pickMadeLately(filters: RecipeFilters): RecipeFilters {
-  return { ...pickAll(filters), made: "recent" };
+  return { ...filters, category: "", alsoIn: [], anyCategory: false };
 }
 
 export function pickCategory(filters: RecipeFilters, key: string): RecipeFilters {
-  return {
-    ...filters,
-    category: key,
-    alsoIn: filters.alsoIn.filter((k) => k !== key),
-    made: withoutMadeLately(filters),
-  };
-}
-
-export const favoritesOn = (filters: RecipeFilters) => filters.rating === "favorite";
-export const quickOn = (filters: RecipeFilters) => filters.maxMinutes === QUICK_MINUTES;
-
-export function toggleFavorites(filters: RecipeFilters): RecipeFilters {
-  return { ...filters, rating: favoritesOn(filters) ? "" : "favorite" };
-}
-
-export function toggleQuick(filters: RecipeFilters): RecipeFilters {
-  return { ...filters, maxMinutes: quickOn(filters) ? null : QUICK_MINUTES };
+  return { ...filters, category: key, alsoIn: filters.alsoIn.filter((k) => k !== key) };
 }
 
 export interface LibraryCounts {
-  /** Every recipe the search and switches leave, whatever is picked. */
+  /** Every recipe the search and filters leave, whatever is picked. */
   all: number;
-  /** Those made in the last 30 days. */
-  made: number;
-  /** What the list would show with Favorites on (or shows, when it is on). */
-  favorites: number;
-  /** What the list would show with "30 minutes or less" on (or shows). */
-  quick: number;
+  /**
+   * By quick search key (shared/quickSearches.ts): what the list would show with that tick line
+   * on (or shows, when it is on). Search lines aren't counted.
+   */
+  quick: Map<string, number>;
   /**
    * By category key: what clicking it would show (recipes in it or anything inside it, with
    * More filters' "also in" kept). Read with `categoryCount`: a key not here has `otherwise`.
@@ -106,6 +74,8 @@ export function libraryCounts(
   ingredients: Record<string, string[]> | null,
   today: string,
   matching: Set<string> | null,
+  /** The quick searches, each tick line counted. */
+  items: QuickSearchItem[] = [],
 ): LibraryCounts | null {
   const count = (f: RecipeFilters) => {
     const found = applyFilters(recipes, f, ingredients, today);
@@ -113,11 +83,8 @@ export function libraryCounts(
     return matching ? found.recipes.filter((r) => matching.has(r.id)) : found.recipes;
   };
   const base = count(pickAll(filters));
-  // What clicking "Made lately" would show: More filters' own "made" choice gives way to it.
-  const made = count(pickMadeLately(filters));
-  const favorites = count({ ...filters, rating: "favorite" });
-  const quick = count({ ...filters, maxMinutes: QUICK_MINUTES });
-  if (!base || !made || !favorites || !quick) return null;
+  const quickCounts = quickSearchCounts(items, recipes, filters, ingredients, today, matching);
+  if (!base || !quickCounts) return null;
 
   // A category's count is what clicking it shows (pickCategory), so More filters' "also in"
   // stays: the recipes in every one of those (each under the key is then counted), or, with "in
@@ -140,9 +107,7 @@ export function libraryCounts(
   }
   return {
     all: base.length,
-    made: made.length,
-    favorites: favorites.length,
-    quick: quick.length,
+    quick: quickCounts,
     byKey,
     otherwise,
     unfiled: unfiled ? unfiled.length : base.filter((r) => r.categories.length === 0).length,
@@ -176,10 +141,9 @@ export function addressCategoryName(search: string, key: string): string {
   return typed.split(CATEGORY_SEPARATOR).pop()?.trim() || key;
 }
 
-/** The list's title: the category's name, "Made lately", or "All recipes". */
+/** The list's title: the category's name, or "All recipes". */
 export function listTitle(filters: RecipeFilters, nameOf: (key: string) => string): string {
   const picked = pickedList(filters);
-  if (picked.kind === "made") return "Made lately";
   if (picked.kind === "category") {
     return picked.key === UNFILED ? "Not in a category" : nameOf(picked.key);
   }
@@ -187,23 +151,33 @@ export function listTitle(filters: RecipeFilters, nameOf: (key: string) => strin
 }
 
 /**
- * What narrows the list beyond what is picked, in words, the switches first: "30 minutes or
- * less", "Without mushroom".
+ * What narrows the list beyond what is picked, in words, the stars and time first. A choice a
+ * quick search's tick line can hold is said as the line says it ("45 minutes or less", "Made
+ * lately"); anything else as Filters says it ("Up to 25 minutes").
  */
 export function narrowingLabels(filters: RecipeFilters, nameOf: (key: string) => string): string[] {
-  const picked = pickedList(filters);
   const labels: string[] = [];
-  if (favoritesOn(filters)) labels.push("Favorites");
-  else if (filters.rating) labels.push(RATING_LABELS[filters.rating]);
-  if (filters.maxMinutes !== null) {
+  if (filters.rating === "favorite") labels.push(quickFilterLabel(quick.favorites));
+  else if (filters.rating) labels.push(quickFilterLabel(quick.rating(filters.rating)));
+  const { maxMinutes, minServings, made } = filters;
+  if (maxMinutes !== null) {
     labels.push(
-      quickOn(filters) ? "30 minutes or less" : `Up to ${minutesLabel(filters.maxMinutes)}`,
+      TIME_CHOICES.includes(maxMinutes)
+        ? quickFilterLabel(quick.time(maxMinutes))
+        : `Up to ${minutesLabel(maxMinutes)}`,
     );
   }
   for (const item of filterLabels(filters, nameOf)) {
     if (item.id === "time") continue;
-    if (item.id === "made" && picked.kind === "made") continue;
-    labels.push(item.label);
+    if (item.id === "made" && made && QUICK_MADE.includes(made)) {
+      labels.push(quickFilterLabel(quick.made(made)));
+    } else if (
+      item.id === "serves" &&
+      minServings !== null &&
+      SERVING_CHOICES.includes(minServings)
+    ) {
+      labels.push(quickFilterLabel(quick.serves(minServings)));
+    } else labels.push(item.label);
   }
   return labels;
 }
