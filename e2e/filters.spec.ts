@@ -303,6 +303,7 @@ test("On a phone: search with Filters, a row of categories, their subcategories 
   await page.getByRole("button", { name: "All categories", exact: true }).click();
   await sheet.getByRole("link", { name: /^All recipes/ }).click();
   await expect(heading).toHaveText("All recipes");
+  await expect(page).toHaveURL(/\/$/);
   await expect(titles(page)).toHaveCount(4);
 
   // The quick searches are in Filters, and stay on with the category shown.

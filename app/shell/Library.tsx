@@ -17,7 +17,13 @@ import {
 } from "../categories/tree";
 import { CATEGORY_SEPARATOR as SEPARATOR } from "../../shared/recipe";
 import { parseSearch, searchKey, UNFILED } from "../recipes/filters";
-import { categoryCount, pickAll, pickCategory, pickedList } from "../recipes/library";
+import {
+  ALL_RECIPES,
+  categoryCount,
+  pickCategory,
+  pickedList,
+  showingEverything,
+} from "../recipes/library";
 import { useLibrary } from "../recipes/libraryContext";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
@@ -182,7 +188,8 @@ export function Library() {
   // One row is the list shown: a saved search when it's exactly that, else the list or category.
   const current = (kind: "all" | string) => {
     if (!onList || savedHere) return false;
-    if (kind === "all") return picked.kind === "all";
+    // "All recipes" starts fresh, so it's the list shown only when nothing is searched or on.
+    if (kind === "all") return showingEverything(query, filters);
     return picked.kind === "category" && picked.key === kind;
   };
 
@@ -366,15 +373,16 @@ export function Library() {
       <ul className={styles.list}>
         <li>
           <Link
-            href={library.hrefFor(query, pickAll(filters))}
+            href={library.hrefFor("", ALL_RECIPES)}
             className={styles.tile}
             aria-current={current("all") ? "page" : undefined}
+            onClick={() => library.setChosenSearch("")}
           >
             <span className={styles.icon}>
               <BookIcon />
             </span>
             <span className={styles.name}>All recipes</span>
-            <Count n={counts?.all} />
+            <Count n={counts?.total} />
           </Link>
         </li>
       </ul>

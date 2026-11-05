@@ -109,7 +109,9 @@ test.describe("On a computer", () => {
     await expect(searchBox(page)).toBeFocused();
     await expect(page).toHaveURL(/\?q=lime$/);
     await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
-    await expect(libraryRow(page, "All recipes")).toHaveAccessibleName(counted("All recipes", 1));
+    // "All recipes" always counts every recipe, since it starts fresh (owner's choice 2026-11-05).
+    await expect(libraryRow(page, "All recipes")).toHaveAccessibleName(counted("All recipes", 4));
+    await expect(libraryRow(page, "All recipes")).not.toHaveAttribute("aria-current", "page");
     await expect(libraryRow(page, "Mexican")).toHaveAccessibleName(counted("Mexican", 1));
     await expect(libraryRow(page, "Breakfast")).toHaveAccessibleName(counted("Breakfast", 0));
     await expect(libraryRow(page, "Breakfast")).toBeVisible();
@@ -128,6 +130,16 @@ test.describe("On a computer", () => {
     // The search box's ✕ takes the words away (there's no chip for them).
     await page.getByRole("button", { name: "Clear search" }).click();
     await expect(searchBox(page)).toHaveValue("");
+
+    // "All recipes" starts fresh: the words, the filters and the category all go.
+    await page.goto("/?q=lime&category=Mexican&time=30&rating=favorite");
+    await expect(heading(page)).toHaveText("Mexican");
+    await libraryRow(page, "All recipes").click();
+    await expect(page).toHaveURL(/\/$/);
+    await expect(heading(page)).toHaveText("All recipes");
+    await expect(searchBox(page)).toHaveValue("");
+    await expect(titles(page)).toHaveCount(4);
+    await expect(libraryRow(page, "All recipes")).toHaveAttribute("aria-current", "page");
     await expect(page).toHaveURL(/\/$/);
     await expect(titles(page)).toHaveCount(4);
 

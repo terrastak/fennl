@@ -12,11 +12,12 @@ import type { CategoryNode } from "../categories/tree";
 import { UNFILED } from "../recipes/filters";
 import {
   addressCategoryName,
+  ALL_RECIPES,
   categoryCount,
   listTitle,
-  pickAll,
   pickCategory,
   pickedList,
+  showingEverything,
 } from "../recipes/library";
 import { useLibrary } from "../recipes/libraryContext";
 import { useSearchString } from "../navigation";
@@ -399,9 +400,9 @@ function CategorySheet({ open, onClose }: { open: boolean; onClose: () => void }
             {row(
               "all",
               "All recipes",
-              library.hrefFor(query, pickAll(filters)),
-              counts?.all,
-              picked.kind === "all",
+              library.hrefFor("", ALL_RECIPES),
+              counts?.total,
+              showingEverything(query, filters),
               0,
             )}
             {tree.roots.map(categoryRow)}

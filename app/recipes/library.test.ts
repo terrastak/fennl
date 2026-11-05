@@ -10,6 +10,7 @@ import {
   pickAll,
   pickCategory,
   pickedList,
+  showingEverything,
   shownSentence,
 } from "./library";
 
@@ -123,6 +124,8 @@ describe("counts", () => {
 
     const searched = libraryCounts(list, f(), {}, TODAY, new Set(["cake"]));
     expect(searched?.all).toBe(1);
+    // The "All recipes" row counts every recipe, whatever is searched.
+    expect(searched?.total).toBe(list.length);
     expect(searched?.byKey.get("dessert")).toBe(1);
     expect(searched?.byKey.get("soup")).toBeUndefined();
   });
@@ -211,5 +214,17 @@ describe("what the list says it shows", () => {
     expect(shownSentence(2, "", f({ rating: "4", maxMinutes: 25, minServings: 6 }), nameOf)).toBe(
       "2 recipes · 4 stars and up · Up to 25 minutes · Serves 6 or more",
     );
+  });
+});
+
+describe("All recipes starts fresh (owner's choice 2026-11-05)", () => {
+  it("is the list shown only with nothing searched, filtered or picked", () => {
+    expect(showingEverything("", f())).toBe(true);
+    expect(showingEverything("  ", f())).toBe(true);
+    expect(showingEverything("cookie", f())).toBe(false);
+    expect(showingEverything("", f({ maxMinutes: 30 }))).toBe(false);
+    expect(showingEverything("", f({ rating: "favorite" }))).toBe(false);
+    expect(showingEverything("", f({ category: "dessert" }))).toBe(false);
+    expect(showingEverything("", f({ without: ["mushroom"] }))).toBe(false);
   });
 });
