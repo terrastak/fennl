@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
@@ -7,7 +7,7 @@ import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
-import { navigate } from "../navigation";
+import { navigate, useSearchString } from "../navigation";
 import { FiltersPanel } from "../recipes/FiltersPanel";
 import { ListMenu } from "../recipes/ListMenu";
 import { useSavedSearchControls } from "../recipes/savedSearchControls";
@@ -20,9 +20,11 @@ import {
   type RecipeFilters,
 } from "../recipes/filters";
 import {
+  addressCategoryName,
   favoritesOn,
   listTitle,
   pickAll,
+  outsideCount,
   pickedList,
   quickOn,
   shownSentence,
@@ -173,8 +175,15 @@ function RecipeCard({
           <span className={styles.cardMeta}>
             {recipe.categories.map((path, i) => (
               <span key={path}>
-                {i > 0 ? ", " : ""}
-                <span className={listStyles.nowrap}>{path}</span>
+                {i > 0 ? " " : ""}
+                {/* Kept whole on its line, its comma with it; one too long for the card ends in
+                    "…", the whole path shown on hover (and read out in full). */}
+                <span className={listStyles.nowrap}>
+                  <span className={listStyles.path} title={path}>
+                    {path}
+                  </span>
+                  {i < recipe.categories.length - 1 ? "," : ""}
+                </span>
               </span>
             ))}
           </span>
@@ -282,6 +291,35 @@ function unknownNote(unknown: { time: number; servings: number }, filters: Recip
   return parts.length > 0 ? ` Not shown: ${parts.join(" and ")}.` : "";
 }
 
+/**
+ * A heading that wraps onto two lines is as wide as its longest line, not the whole row, so
+ * what follows it (the ✕ and the count) sits beside the words rather than at the far edge.
+ * Measured again when the row changes size or the fonts arrive.
+ */
+function useFitToLines(ref: RefObject<HTMLElement | null>, text: string) {
+  useLayoutEffect(() => {
+    const heading = ref.current;
+    const row = heading?.parentElement?.parentElement;
+    if (!heading || !row) return;
+    const fit = () => {
+      heading.style.width = "";
+      const range = document.createRange();
+      range.selectNodeContents(heading);
+      const lines = [...range.getClientRects()];
+      if (new Set(lines.map((line) => Math.round(line.top))).size < 2) return;
+      const left = heading.getBoundingClientRect().left;
+      const right = Math.max(...lines.map((line) => line.right));
+      heading.style.width = `${Math.ceil(right - left) + 1}px`;
+    };
+    fit();
+    void document.fonts?.ready.then(fit);
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(fit);
+    observer.observe(row);
+    return () => observer.disconnect();
+  }, [ref, text]);
+}
+
 export function RecipesPage() {
   const status = useSyncStatus();
   const library = useLibrary();
@@ -333,7 +371,8 @@ export function RecipesPage() {
       ) {
         return;
       }
-      if (document.querySelector("dialog[open]")) return;
+      // Not while a dialog or a menu (the list's ⋯) is open: the letter is for that.
+      if (document.querySelector("dialog[open], [data-popup-open]")) return;
       const box = [...document.querySelectorAll<HTMLElement>("[data-type-to-search]")].find(
         (el) => el.getClientRects().length > 0,
       );
@@ -409,20 +448,32 @@ export function RecipesPage() {
   const print = (ids: string[]) => printRecipes(ids, `/${window.location.search}`);
 
   const busy = (searching && !search) || found.pending;
+  // On a phone the Filters panel also holds the quick lists, so all but the category count.
+  const phoneOn = filtering - (filters.category !== "" ? 1 : 0);
+  // On a phone a category on its own isn't offered as a search to save: the row of categories
+  // is one tap away already, and the button would sit alone between the header and the cards.
+  const phoneNarrowing = searching || phoneOn > 0;
   const saved = useSavedSearchControls({
     query,
     filters,
-    narrowing,
+    narrowing: wide ? narrowing : phoneNarrowing,
     currentText: filtersToParams(query, filters, (key) => tree?.byKey.get(key)?.path).toString(),
   });
 
-  // On a phone the Filters panel also holds the quick lists, so all but the category count.
-  const phoneOn = filtering - (filters.category !== "" ? 1 : 0);
-
   // What the header says (U17): what's shown, and in a sentence what narrows it.
   const picked = pickedList(filters);
-  const title = listTitle(filters, (key) => tree?.byKey.get(key)?.name ?? nameOf(key));
+  const address = useSearchString();
+  const title = listTitle(
+    filters,
+    (key) => tree?.byKey.get(key)?.name ?? addressCategoryName(address, key),
+  );
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  useFitToLines(titleRef, title);
+  // An address naming a category that no longer exists (an old bookmark, or one renamed).
+  const gone =
+    !!tree && picked.kind === "category" && picked.key !== UNFILED && !tree.byKey.has(picked.key);
   const sentence = busy ? "Searching…" : shownSentence(shown.length, query, filters, nameOf);
+  const showCount = recipes !== null && list.length > 0;
   // Filters only More filters shows (the left panel shows the rest).
   const moreOn =
     filtering -
@@ -433,7 +484,7 @@ export function RecipesPage() {
       picked.kind === "made",
     ].filter(Boolean).length;
   const outside =
-    searching && !busy && picked.kind === "category" && counts ? counts.all - shown.length : 0;
+    searching && !busy && counts ? outsideCount(filters, counts.all, shown.length) : 0;
 
   // The order: under the title on a computer, beside it on a phone, where its names are short.
   const sortChoice = (
@@ -478,49 +529,61 @@ export function RecipesPage() {
           <p className="hand-note">{greetingFor(new Date())}</p>
         ) : null}
         <div className={listStyles.titleRow}>
-          <div className={listStyles.what}>
-            <h1 tabIndex={-1} className={listStyles.title}>
-              {title}
-            </h1>
-            {picked.kind !== "all" ? (
-              <button
-                type="button"
-                className={listStyles.unpick}
-                aria-label={picked.kind === "made" ? "Show all recipes" : "Show all categories"}
-                title={picked.kind === "made" ? "Show all recipes" : "Show all categories"}
-                onClick={() => library.show(query, pickAll(filters))}
-              >
-                <svg
-                  width="9"
-                  height="9"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  aria-hidden="true"
-                >
-                  <path d="M6 6l12 12M18 6 6 18" />
-                </svg>
-              </button>
-            ) : null}
-            {recipes !== null && list.length > 0 ? (
-              <p className={listStyles.shown} aria-live="polite">
-                {sentence ?? (
-                  <>
-                    {shown.length}
-                    <span className="visually-hidden">
-                      {" "}
-                      {shown.length === 1 ? "recipe" : "recipes"}
+          <div className={`${listStyles.what} ${title.length > 18 ? listStyles.longName : ""}`}>
+            {/* The name, then its ✕ and the count kept together after its last line. */}
+            <div className={listStyles.nameRow}>
+              <h1 ref={titleRef} tabIndex={-1} className={listStyles.title}>
+                {title}
+              </h1>
+              {picked.kind !== "all" || (showCount && !sentence) ? (
+                <span className={listStyles.after}>
+                  {picked.kind !== "all" ? (
+                    <button
+                      type="button"
+                      className={listStyles.unpick}
+                      aria-label={
+                        picked.kind === "made" ? "Show all recipes" : "Show all categories"
+                      }
+                      title={picked.kind === "made" ? "Show all recipes" : "Show all categories"}
+                      onClick={() => library.show(query, pickAll(filters))}
+                    >
+                      <svg
+                        width="9"
+                        height="9"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3"
+                        strokeLinecap="round"
+                        aria-hidden="true"
+                      >
+                        <path d="M6 6l12 12M18 6 6 18" />
+                      </svg>
+                    </button>
+                  ) : null}
+                  {showCount && !sentence ? (
+                    <span className={listStyles.shown} aria-hidden="true">
+                      {shown.length}
                     </span>
-                  </>
-                )}
+                  ) : null}
+                </span>
+              ) : null}
+            </div>
+            {/* Said aloud as it changes: the sentence, or how many recipes the list shows. */}
+            {showCount ? (
+              <p
+                className={
+                  sentence ? `${listStyles.shown} ${listStyles.sentence}` : "visually-hidden"
+                }
+                aria-live="polite"
+              >
+                {sentence ?? `${shown.length} ${shown.length === 1 ? "recipe" : "recipes"}`}
               </p>
             ) : null}
           </div>
-          {list.length > 1 && !wide ? sortChoice : null}
           {list.length > 0 ? (
             <div className={listStyles.headActions}>
+              {list.length > 1 && !wide ? sortChoice : null}
               <button
                 type="button"
                 className={`${styles.primary} ${listStyles.add}`}
@@ -547,9 +610,23 @@ export function RecipesPage() {
         {list.length > 0 ? (
           <div className={listStyles.bar}>
             <p className={listStyles.hint}>
-              {outside > 0 ? (
+              {gone ? (
+                <>There&rsquo;s no category called &ldquo;{title}&rdquo; now. </>
+              ) : outside > 0 ? (
                 <>
-                  {outside} more {outside === 1 ? "matches" : "match"} outside {title}.{" "}
+                  {outside} more {outside === 1 ? "matches" : "match"}{" "}
+                  {filters.category === UNFILED ? (
+                    "in categories"
+                  ) : (
+                    <>
+                      outside{" "}
+                      {/* A very long name is shortened here; the heading says it in full. */}
+                      <span className={listStyles.outsideName} title={title}>
+                        {title}
+                      </span>
+                    </>
+                  )}
+                  .{" "}
                   <button
                     type="button"
                     className={listStyles.inlineLink}

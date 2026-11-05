@@ -10,8 +10,16 @@ import {
 } from "react";
 import type { CategoryNode } from "../categories/tree";
 import { UNFILED } from "../recipes/filters";
-import { listTitle, pickAll, pickCategory, pickedList } from "../recipes/library";
+import {
+  addressCategoryName,
+  categoryCount,
+  listTitle,
+  pickAll,
+  pickCategory,
+  pickedList,
+} from "../recipes/library";
 import { useLibrary } from "../recipes/libraryContext";
+import { useSearchString } from "../navigation";
 import { Link } from "../router";
 import { CheckIcon, LibrarySearch } from "./Library";
 import { keepOpen, rememberedOpen } from "./openCategories";
@@ -56,12 +64,15 @@ function Scroller({
   children,
   className,
   shown,
+  refresh,
   ...rest
 }: {
   children: ReactNode;
   className: string | undefined;
   /** What's shown: when it changes, its button is brought into view. */
   shown: string;
+  /** Changes when the buttons' sizes may have (new counts as the search changes). */
+  refresh: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
 }) {
@@ -80,35 +91,47 @@ function Scroller({
     setFade((was) => (was.start === start && was.end === end ? was : { start, end }));
   }, []);
 
+  // The one shown is brought into view, with a little of the one before it showing, or, when
+  // it's long, its start just after the left fade; left alone when it's in view already.
+  const bringIn = useCallback(() => {
+    const row = ref.current;
+    const on = row?.querySelector<HTMLElement>("[aria-current], [data-within]");
+    if (!row || !on) return false;
+    const left = on.offsetLeft;
+    const right = left + on.offsetWidth;
+    if (left < row.scrollLeft + 32 || right > row.scrollLeft + row.clientWidth - 32) {
+      const before = Math.max(
+        36,
+        Math.min(row.clientWidth * 0.2, row.clientWidth - on.offsetWidth - 40),
+      );
+      row.scrollLeft = Math.max(0, left - before);
+    }
+    return true;
+  }, []);
+
+  // When what's shown changes, or the buttons change size (the counts follow the search). With
+  // none shown the row starts at its beginning, its margin before the first button.
+  const seenShown = useRef<string | null>(null);
   useLayoutEffect(() => {
     const row = ref.current;
     if (!row) return;
-    const on = row.querySelector<HTMLElement>("[aria-current], [data-within]");
-    if (on) {
-      const left = on.offsetLeft;
-      const right = left + on.offsetWidth;
-      // Out of view, or under a fade: brought in, with a little of the one before it showing.
-      if (left < row.scrollLeft + 32 || right > row.scrollLeft + row.clientWidth - 32) {
-        row.scrollLeft = Math.max(0, left - row.clientWidth * 0.2);
-      }
-    } else {
-      // From the start; but if the edge only just catches a button, the row's own margin goes,
-      // so enough of it shows to see there's more.
-      row.scrollLeft = 0;
-      const cut = cutAtEnd(row);
-      const margin = parseFloat(getComputedStyle(row).paddingLeft) || 0;
-      if (cut && cut.showing < 40) row.scrollLeft = Math.min(margin, 40 - cut.showing);
-    }
+    if (!bringIn() && seenShown.current !== shown) row.scrollLeft = 0;
+    seenShown.current = shown;
     measure();
-  }, [shown, measure]);
+  }, [shown, refresh, bringIn, measure]);
 
+  // And when the row or its buttons change size: a larger text size, or the phone turned.
   useEffect(() => {
     const row = ref.current;
     if (!row || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(measure);
+    const observer = new ResizeObserver(() => {
+      bringIn();
+      measure();
+    });
     observer.observe(row);
+    for (const item of row.children) observer.observe(item);
     return () => observer.disconnect();
-  }, [measure]);
+  }, [bringIn, measure, refresh]);
 
   return (
     <ul
@@ -139,7 +162,8 @@ export function PhoneLibrary({
   const picked = pickedList(filters);
   const pickedNode =
     picked.kind === "category" && picked.key !== UNFILED ? tree?.byKey.get(picked.key) : undefined;
-  const nameOf = (key: string) => tree?.byKey.get(key)?.name ?? key;
+  const address = useSearchString();
+  const nameOf = (key: string) => tree?.byKey.get(key)?.name ?? addressCategoryName(address, key);
   const placeholder =
     picked.kind === "category"
       ? `Search in ${listTitle(filters, nameOf)}`
@@ -155,7 +179,7 @@ export function PhoneLibrary({
   const subParent =
     pickedNode && pickedNode.children.length > 0 ? pickedNode : (pickedNode?.parent ?? undefined);
 
-  const countOf = (node: CategoryNode) => (counts ? (counts.byKey.get(node.key) ?? 0) : undefined);
+  const countOf = (node: CategoryNode) => (counts ? categoryCount(counts, node.key) : undefined);
   const pill = (node: CategoryNode, sub = false) => {
     const n = countOf(node);
     const on = picked.kind === "category" && picked.key === node.key;
@@ -181,6 +205,8 @@ export function PhoneLibrary({
   };
 
   const hasCategories = !!tree && tree.roots.length > 0;
+  // The buttons' widths change with their counts, which follow the search.
+  const refresh = `${query}|${counts?.all ?? ""}|${counts?.byKey.size ?? ""}`;
 
   return (
     <div className={styles.box}>
@@ -201,7 +227,11 @@ export function PhoneLibrary({
       {hasCategories ? (
         <nav aria-label="Categories" className={styles.categories}>
           <div className={styles.rowWrap}>
-            <Scroller className={styles.row} shown={picked.kind === "category" ? picked.key : ""}>
+            <Scroller
+              className={styles.row}
+              shown={picked.kind === "category" ? picked.key : ""}
+              refresh={refresh}
+            >
               {tree.roots.map((node) => pill(node))}
             </Scroller>
             <button
@@ -222,6 +252,7 @@ export function PhoneLibrary({
               <Scroller
                 className={`${styles.row} ${styles.subList}`}
                 shown={picked.kind === "category" ? picked.key : ""}
+                refresh={refresh}
                 aria-labelledby={subLeadId}
               >
                 {subParent.children.map((node) => pill(node, true))}
@@ -336,7 +367,7 @@ function CategorySheet({ open, onClose }: { open: boolean; onClose: () => void }
       node.key,
       node.name,
       library.hrefFor(query, pickCategory(filters, node.key)),
-      counts ? (counts.byKey.get(node.key) ?? 0) : undefined,
+      counts ? categoryCount(counts, node.key) : undefined,
       picked.kind === "category" && picked.key === node.key,
       node.depth,
       { node },

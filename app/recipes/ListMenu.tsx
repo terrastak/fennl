@@ -51,7 +51,8 @@ export function ListMenu({
   };
 
   return (
-    <div ref={wrap} className={listStyles.menuWrap}>
+    // Marked while open, so typing on the list doesn't start a search behind it.
+    <div ref={wrap} className={listStyles.menuWrap} data-popup-open={open || undefined}>
       <button
         ref={button}
         type="button"

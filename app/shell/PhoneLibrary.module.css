@@ -85,12 +85,14 @@
   flex: 1;
   gap: var(--space-2);
   min-width: 0;
-  margin: 0;
-  padding: 0 0 0 var(--space-4);
+  /* Room above, below and after the buttons for the focus ring, which the sideways scrolling
+     would otherwise cut; the negative margin keeps the layout where it was. */
+  margin: -6px 0;
+  padding: 6px 6px 6px var(--space-4);
   overflow-x: auto;
   list-style: none;
   scrollbar-width: none;
-  scroll-padding-inline: var(--space-8);
+  scroll-padding-inline: var(--space-4);
   /* Fades at an edge with more to see (PhoneLibrary.tsx sets how far). */
   mask-image: linear-gradient(
     to right,
@@ -128,6 +130,15 @@
 .pill:hover {
   border-color: var(--color-border-strong);
   color: var(--color-text);
+}
+
+/* A very long name ends in "…", so its count still shows. */
+.pill > span:first-child {
+  /* At most the room the row has beside "All categories" (about 16.5rem goes to the button,
+     the chip's padding, its count and the fades), so the count is never under a fade. */
+  max-width: max(4rem, min(13rem, calc(100vw - 16.5rem)));
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pillCount {
@@ -201,7 +212,8 @@
 }
 
 .subList {
-  padding: 0 var(--space-4) 0 0;
+  margin-left: -6px;
+  padding: 6px var(--space-4) 6px 6px;
 }
 
 .sub {
@@ -227,8 +239,10 @@
   color: var(--color-text);
 }
 
+/* Only the list scrolls, never the sheet around it. */
 .sheet[open] {
   display: flex;
+  overflow: hidden;
 }
 
 .sheet::backdrop {
@@ -276,6 +290,8 @@
 }
 
 .sheetList {
+  /* The rows' hidden words ("6 recipes") stay inside the list's scrolling. */
+  position: relative;
   flex: 1;
   min-height: 0;
   margin: 0;
@@ -308,7 +324,8 @@
   gap: var(--space-2);
   min-width: 0;
   min-height: 2.9rem;
-  padding: 0 var(--space-3) 0 calc(var(--space-5) + var(--depth, 0) * var(--space-5));
+  padding: var(--space-1) var(--space-3) var(--space-1)
+    calc(var(--space-5) + var(--depth, 0) * var(--space-5));
   color: var(--color-text);
   font-size: var(--text-md);
   text-decoration: none;
@@ -329,11 +346,15 @@
   background: var(--color-accent-soft);
 }
 
+/* A long name takes a second line, then ends in "…". */
 .sheetName {
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .check {
@@ -355,6 +376,7 @@
   color: var(--color-accent-soft-text);
 }
 
+.sheetLink.none,
 .sheetLink.none .sheetCount {
   color: var(--color-text-subtle);
 }

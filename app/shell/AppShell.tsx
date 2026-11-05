@@ -155,7 +155,7 @@ function Frame({ path, title, children }: AppShellProps) {
 
       <header className={styles.topBar}>
         <Link href="/" className={styles.logoLink} aria-label="Fennl, go to recipes">
-          <Logo />
+          <Logo compact />
         </Link>
         <SyncStatusLine className={styles.topStatus} />
         <TimersButton className={styles.topTimers} compact />

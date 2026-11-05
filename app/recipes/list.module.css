@@ -19,25 +19,56 @@
    phone the order goes between them). */
 .titleRow {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-2) var(--space-3);
 }
 
+/* Takes the room the actions leave, so + Add recipe and ⋯ always stay on the first line. */
 .what {
   display: flex;
+  flex: 1 1 0;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2) var(--space-3);
   min-width: 0;
+  /* As tall as the buttons beside it, so a one-line title sits level with them. */
+  min-height: var(--tap-target);
 }
 
-.title {
+/* The name with its ✕ and count, which never wrap away from it: a long name takes the room
+   it has, and they follow its last line. */
+.nameRow {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: flex-end;
+  gap: var(--space-3);
   min-width: 0;
+}
+
+.after {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  /* One line of the title tall, so they sit level with its last line. */
+  min-height: calc(var(--text-3xl) * var(--leading-tight));
+}
+
+/* A long category name takes two lines at most, balanced, then "…" (the whole name is still
+   the heading's text, read out in full). */
+.title {
+  display: -webkit-box;
+  min-width: 0;
+  overflow: hidden;
+  text-wrap: balance;
+  padding-bottom: 0.08em;
   font-size: var(--text-3xl);
   line-height: var(--leading-tight);
   outline: none;
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 /* "Show all categories": a small round ✕ beside the category's name. */
@@ -73,6 +104,16 @@
   align-items: center;
   gap: var(--space-2);
   margin-left: auto;
+}
+
+/* "5 more match outside Dessert": a very long name is shortened here (the heading has it). */
+.outsideName {
+  display: inline-block;
+  max-width: 14em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 /* The line under the title: a hint or how many match elsewhere, then the tools. */
@@ -113,14 +154,32 @@
 /* On a phone (U17 mockup): one line with what's shown, the order, + and ⋯; under it only what
    has something to say (how many more match elsewhere, saving a search). */
 @media (max-width: 899px) {
+  /* With larger text the order, + and ⋯ go to their own line rather than squeeze the title. */
   .titleRow {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
+    align-items: center;
     gap: var(--space-2);
   }
 
   .what {
-    flex: 1;
+    flex: 1 1 8.5rem;
     gap: var(--space-1) var(--space-2);
+    min-height: 0;
+  }
+
+  /* A long name takes the whole line, so it isn't squeezed down to a word or two; the order,
+     + and ⋯ go under it. */
+  .longName {
+    flex-basis: 100%;
+  }
+
+  .nameRow,
+  .after {
+    gap: var(--space-2);
+  }
+
+  .after {
+    min-height: calc(var(--text-xl) * var(--leading-tight));
   }
 
   .title {
@@ -131,8 +190,14 @@
     font-size: var(--text-sm);
   }
 
+  /* The sentence ("6 recipes match “lemon”") has a line of its own under the title. */
+  .sentence {
+    flex-basis: 100%;
+  }
+
+  /* The order, + and ⋯ stay together, at the right even on a line of their own. */
   .headActions {
-    margin-left: 0;
+    margin-left: auto;
   }
 
   .titleRow .sortChip svg {
@@ -164,6 +229,15 @@
 
   .bar > .tools {
     margin-left: 0;
+  }
+
+  /* "Save this search" lines its star up with the words above it, and sits close to them. */
+  .bar > .tools > .tool:first-child {
+    margin-left: calc(var(--space-3) * -1);
+  }
+
+  .bar:has(> .hint:empty) {
+    margin-top: var(--space-1);
   }
 
   .tools:empty {
@@ -327,6 +401,9 @@
 }
 
 .sortChip select {
+  /* As wide as the order chosen, so the arrow follows its name (Chrome and Edge; Safari keeps
+     the longest name's width). */
+  field-sizing: content;
   min-height: 2.25rem;
   padding: 0 var(--space-8) 0 calc(var(--space-3) + 1.4rem);
   border: 0;
@@ -374,6 +451,17 @@
 
 .nowrap {
   white-space: nowrap;
+}
+
+/* A category path on a card: whole on one line, ending in "…" if it can't fit the card. */
+.path {
+  display: inline-block;
+  /* Room for the comma after it. */
+  max-width: calc(100% - 0.5em);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
 }
 
 /* A favorite's heart on its cover. */

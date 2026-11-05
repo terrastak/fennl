@@ -53,6 +53,34 @@ function countHint(n: number) {
   }
 }
 
+/**
+ * What scrolls the panel's rows: the panel itself, or on a short screen the whole left panel
+ * (Library.module.css lets it scroll as one column there).
+ */
+export function scrollParent(element: HTMLElement): HTMLElement {
+  for (let el: HTMLElement | null = element; el; el = el.parentElement) {
+    const { overflowY } = getComputedStyle(el);
+    if ((overflowY === "auto" || overflowY === "scroll") && el.scrollHeight > el.clientHeight) {
+      return el;
+    }
+  }
+  return element;
+}
+
+/** The part of the panel on screen: inside what scrolls it. */
+function visibleBox(panel: HTMLElement) {
+  const own = panel.getBoundingClientRect();
+  const box = scrollParent(panel);
+  const outer = box === panel ? own : box.getBoundingClientRect();
+  return {
+    box,
+    left: own.left,
+    right: own.right,
+    top: Math.max(own.top, outer.top),
+    bottom: Math.min(own.bottom, outer.bottom),
+  };
+}
+
 /** Stops the click that ends a drag from opening the category it was dropped on. */
 function swallowNextClick() {
   const swallow = (event: MouseEvent) => {
@@ -113,15 +141,20 @@ export function useCategoryDrag({
     let armed = false;
 
     const place = () => {
-      if (!state) return;
-      const panel = scroller.current?.getBoundingClientRect();
+      if (!state || cancelled) return;
+      const panel = scroller.current ? visibleBox(scroller.current) : null;
       const inPanel =
         !!panel &&
         pointer.x >= panel.left &&
         pointer.x <= panel.right &&
         pointer.y >= panel.top &&
         pointer.y <= panel.bottom;
-      const drop = inPanel ? dropAt(rows(), pointer.y) : null;
+      // The level the lifted row is at: its own, one further in for each step (the width of an
+      // indent) it's moved right, one out for each step left. At the end of a list of
+      // subcategories this chooses between "last inside it" and "next, a level out".
+      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const level = state.node.depth + Math.round((pointer.x - startX) / rem);
+      const drop = inPanel ? dropAt(rows(), pointer.y, level) : null;
       const current = latest.current.tree;
       const fresh = current?.byKey.get(state.node.key) ?? state.node;
       const check = drop && current ? checkDrop(current, fresh, drop) : null;
@@ -132,9 +165,10 @@ export function useCategoryDrag({
 
     // Held near the panel's top or bottom edge, the list scrolls on its own.
     const scroll = (time: number) => {
+      if (cancelled) return;
       const panel = scroller.current;
       if (state && panel) {
-        const rect = panel.getBoundingClientRect();
+        const rect = visibleBox(panel);
         const inside = pointer.x >= rect.left && pointer.x <= rect.right;
         const edge =
           pointer.y < rect.top + SCROLL_EDGE ? -1 : pointer.y > rect.bottom - SCROLL_EDGE ? 1 : 0;
@@ -144,9 +178,9 @@ export function useCategoryDrag({
         else if (atEdgeSince === 0) atEdgeSince = time;
         if (atEdgeSince !== 0 && time - atEdgeSince >= SCROLL_WAIT) {
           const step = edge * 6;
-          const before = panel.scrollTop;
-          panel.scrollTop += step;
-          if (panel.scrollTop !== before) place();
+          const before = rect.box.scrollTop;
+          rect.box.scrollTop += step;
+          if (rect.box.scrollTop !== before) place();
         }
       }
       frame = requestAnimationFrame(scroll);
@@ -186,10 +220,13 @@ export function useCategoryDrag({
       }
     };
 
+    // Escape puts it back: nothing moves, the list stops scrolling, and the release that
+    // follows still doesn't open the category under the mouse.
     const key = (e: KeyboardEvent) => {
-      if (e.key !== "Escape" || !state) return;
+      if (e.key !== "Escape" || !state || cancelled) return;
       e.preventDefault();
       cancelled = true;
+      cancelAnimationFrame(frame);
       setDrag(null);
       delete document.documentElement.dataset.categoryDrag;
     };

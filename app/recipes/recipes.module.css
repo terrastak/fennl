@@ -195,6 +195,8 @@
 
 .cardBody {
   display: grid;
+  /* Nothing in it (a long category path) can make it wider than the card. */
+  grid-template-columns: minmax(0, 1fr);
   align-content: start;
   gap: 0.15rem;
   padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
@@ -1328,15 +1330,6 @@ a.source:hover {
 
 /* --- Category filter and Select (phase C7) ---------------------------------------------- */
 
-.filterNote {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-1) var(--space-2);
-  margin: 0 0 var(--space-4);
-  color: var(--color-text-muted);
-}
-
 .bulk {
   display: grid;
   gap: var(--space-3);
@@ -1564,13 +1557,6 @@ label.card {
 }
 
 /* --- Saved searches (phase C13b) ---------------------------------------------------------- */
-
-.savedActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2) var(--space-3);
-}
 
 .savedForm {
   display: flex;

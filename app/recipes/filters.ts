@@ -282,11 +282,10 @@ export function applyFilters(
   return result;
 }
 
-/** One narrowing filter, as a label with a way to take it off (the chips under the toolbar). */
-export interface FilterChip {
+/** One narrowing filter in words, for the sentence saying what the list shows (library.ts). */
+export interface FilterLabel {
   id: string;
   label: string;
-  remove: (filters: RecipeFilters) => RecipeFilters;
 }
 
 export const MADE_LABELS: Record<Exclude<MadeFilter, "">, string> = {
@@ -315,78 +314,72 @@ export const minutesLabel = (minutes: number): string =>
     : `${minutes} minutes`;
 
 /**
- * The filters beyond the category and rating (which have their own boxes in the toolbar), each
- * as a chip. `nameOf` gives a category's full name from its key.
+ * The filters beyond the category and rating, each in words ("Without mushroom"). `nameOf` gives
+ * a category's full name from its key.
  */
-export function filterChips(filters: RecipeFilters, nameOf: (key: string) => string): FilterChip[] {
-  const chips: FilterChip[] = [];
+export function filterLabels(
+  filters: RecipeFilters,
+  nameOf: (key: string) => string,
+): FilterLabel[] {
+  const labels: FilterLabel[] = [];
   for (const key of filters.alsoIn) {
-    chips.push({
+    labels.push({
       id: `also:${key}`,
       label: `${filters.anyCategory ? "Or in" : "Also in"} ${nameOf(key)}`,
-      remove: (f) => ({ ...f, alsoIn: f.alsoIn.filter((k) => k !== key) }),
     });
   }
   for (const key of filters.notIn) {
-    chips.push({
+    labels.push({
       id: `notin:${key}`,
       label: `Not in ${nameOf(key)}`,
-      remove: (f) => ({ ...f, notIn: f.notIn.filter((k) => k !== key) }),
     });
   }
   if (filters.maxMinutes !== null) {
-    chips.push({
+    labels.push({
       id: "time",
       label: `Up to ${minutesLabel(filters.maxMinutes)}`,
-      remove: (f) => ({ ...f, maxMinutes: null }),
     });
   }
   if (filters.minServings !== null) {
-    chips.push({
+    labels.push({
       id: "serves",
       label: `Serves ${filters.minServings} or more`,
-      remove: (f) => ({ ...f, minServings: null }),
     });
   }
   if (filters.made) {
-    chips.push({
+    labels.push({
       id: "made",
       label: MADE_LABELS[filters.made],
-      remove: (f) => ({ ...f, made: "" }),
     });
   }
   if (filters.photo) {
-    chips.push({ id: "photo", label: "Has a photo", remove: (f) => ({ ...f, photo: false }) });
+    labels.push({ id: "photo", label: "Has a photo" });
   }
   if (filters.nutrition) {
-    chips.push({
+    labels.push({
       id: "nutrition",
       label: "Has nutrition",
-      remove: (f) => ({ ...f, nutrition: false }),
     });
   }
   if (filters.source.trim()) {
-    chips.push({
+    labels.push({
       id: "source",
       label: `From ${filters.source.trim()}`,
-      remove: (f) => ({ ...f, source: "" }),
     });
   }
   for (const word of filters.with) {
-    chips.push({
+    labels.push({
       id: `with:${word.toLocaleLowerCase()}`,
       label: `With ${word}`,
-      remove: (f) => ({ ...f, with: f.with.filter((w) => !sameWord(w, word)) }),
     });
   }
   for (const word of filters.without) {
-    chips.push({
+    labels.push({
       id: `without:${word.toLocaleLowerCase()}`,
       label: `Without ${word}`,
-      remove: (f) => ({ ...f, without: f.without.filter((w) => !sameWord(w, word)) }),
     });
   }
-  return chips;
+  return labels;
 }
 
 /** A saved search's text (shared/savedSearch.ts), read back into the words and filters it holds. */

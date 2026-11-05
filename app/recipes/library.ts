@@ -2,9 +2,8 @@ import { CATEGORY_SEPARATOR } from "../../shared/recipe";
 import { pathKey } from "../categories/tree";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import {
-  addDays,
   applyFilters,
-  filterChips,
+  filterLabels,
   minutesLabel,
   RATING_LABELS,
   UNFILED,
@@ -79,8 +78,13 @@ export interface LibraryCounts {
   favorites: number;
   /** What the list would show with "30 minutes or less" on (or shows). */
   quick: number;
-  /** By category key: recipes in it or anything inside it. A key not here has none. */
+  /**
+   * By category key: what clicking it would show (recipes in it or anything inside it, with
+   * More filters' "also in" kept). Read with `categoryCount`: a key not here has `otherwise`.
+   */
   byKey: Map<string, number>;
+  /** What a category not in `byKey` would show: none, unless "in any category" is on. */
+  otherwise: number;
   /** Recipes in no category. */
   unfiled: number;
 }
@@ -109,24 +113,67 @@ export function libraryCounts(
     return matching ? found.recipes.filter((r) => matching.has(r.id)) : found.recipes;
   };
   const base = count(pickAll(filters));
+  // What clicking "Made lately" would show: More filters' own "made" choice gives way to it.
+  const made = count(pickMadeLately(filters));
   const favorites = count({ ...filters, rating: "favorite" });
   const quick = count({ ...filters, maxMinutes: QUICK_MINUTES });
-  if (!base || !favorites || !quick) return null;
+  if (!base || !made || !favorites || !quick) return null;
 
-  const recent = addDays(today, -30);
+  // A category's count is what clicking it shows (pickCategory), so More filters' "also in"
+  // stays: the recipes in every one of those (each under the key is then counted), or, with "in
+  // any category", those in any of them plus the ones under the key.
+  const also = filters.alsoIn.length > 0;
+  const inAlso = also
+    ? count({ ...pickAll(filters), alsoIn: filters.alsoIn, anyCategory: filters.anyCategory })
+    : base;
+  const unfiled = also ? count(pickCategory(filters, UNFILED)) : null;
+  if (!inAlso || (also && !unfiled)) return null;
+  const either = also && filters.anyCategory;
+  const already = either ? new Set(inAlso.map((r) => r.id)) : null;
+  const otherwise = either ? inAlso.length : 0;
+
   const byKey = new Map<string, number>();
-  for (const recipe of base) {
+  for (const recipe of either ? base : inAlso) {
+    if (already?.has(recipe.id)) continue;
     const keys = new Set(recipe.categories.flatMap(keysOf));
-    for (const key of keys) byKey.set(key, (byKey.get(key) ?? 0) + 1);
+    for (const key of keys) byKey.set(key, (byKey.get(key) ?? otherwise) + 1);
   }
   return {
     all: base.length,
-    made: base.filter((r) => r.lastMadeOn !== null && r.lastMadeOn >= recent).length,
+    made: made.length,
     favorites: favorites.length,
     quick: quick.length,
     byKey,
-    unfiled: base.filter((r) => r.categories.length === 0).length,
+    otherwise,
+    unfiled: unfiled ? unfiled.length : base.filter((r) => r.categories.length === 0).length,
   };
+}
+
+/** How many recipes clicking a category would show. */
+export function categoryCount(counts: LibraryCounts, key: string): number {
+  return counts.byKey.get(key) ?? counts.otherwise;
+}
+
+/**
+ * How many more recipes match the search outside the category picked ("5 more match outside
+ * Dessert"): All recipes' count less those shown. Only when nothing else ties the list to
+ * categories: with More filters' "also in" or "in any category" on, All recipes would drop those
+ * too, so the difference wouldn't be what is outside the category alone.
+ */
+export function outsideCount(filters: RecipeFilters, all: number, shown: number): number {
+  if (!filters.category || filters.alsoIn.length > 0 || filters.anyCategory) return 0;
+  return Math.max(0, all - shown);
+}
+
+/**
+ * A category's name as the address writes it ("Diet › Vegetarian" gives "Vegetarian"), for while
+ * the categories aren't known yet, or for one the address names that no longer exists (an old
+ * bookmark): never the lowercased key.
+ */
+export function addressCategoryName(search: string, key: string): string {
+  const typed = new URLSearchParams(search).get("category") ?? "";
+  if (typed.toLocaleLowerCase() !== key) return key;
+  return typed.split(CATEGORY_SEPARATOR).pop()?.trim() || key;
 }
 
 /** The list's title: the category's name, "Made lately", or "All recipes". */
@@ -153,10 +200,10 @@ export function narrowingLabels(filters: RecipeFilters, nameOf: (key: string) =>
       quickOn(filters) ? "30 minutes or less" : `Up to ${minutesLabel(filters.maxMinutes)}`,
     );
   }
-  for (const chip of filterChips(filters, nameOf)) {
-    if (chip.id === "time") continue;
-    if (chip.id === "made" && picked.kind === "made") continue;
-    labels.push(chip.label);
+  for (const item of filterLabels(filters, nameOf)) {
+    if (item.id === "time") continue;
+    if (item.id === "made" && picked.kind === "made") continue;
+    labels.push(item.label);
   }
   return labels;
 }

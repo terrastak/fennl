@@ -70,6 +70,29 @@ describe("dropping a dragged category", () => {
     });
   });
 
+  it("goes last inside a list of subcategories when moved a level in at its end", () => {
+    const { tree, rows, node } = setup();
+    // Under Cakes, before Entrees, moved one level in: last inside Dessert.
+    const last = { place: { parent: node("dessert"), before: null }, y: 180, depth: 1 };
+    expect(dropAt(rows, 178, 1)).toMatchObject(last);
+    expect(dropAt(rows, 182, 4)).toMatchObject(last);
+    // Not moved in (or moved out): the top level, before Entrees.
+    expect(dropAt(rows, 178, -2)).toMatchObject({
+      place: { parent: null, before: node("entrees") },
+    });
+    // Elsewhere the level changes nothing: between Bars and Christmas is the top level.
+    expect(dropAt(rows, 119, 3)).toMatchObject({
+      place: { parent: null, before: node("christmas") },
+    });
+    // Below the last row, when that's a subcategory.
+    const open = rows.slice(0, 4);
+    expect(dropAt(open, 400, 1)).toMatchObject(last);
+    expect(dropAt(open, 400)).toMatchObject({ place: { parent: null, before: null }, depth: 0 });
+    // Cakes there already, so nothing changes; Bars can go there.
+    expect(checkDrop(tree, node("dessert › cakes"), dropAt(rows, 178, 1)!)).toBe("same");
+    expect(checkDrop(tree, node("bars"), dropAt(rows, 178, 1)!)).toBe("ok");
+  });
+
   it("goes first above every row and last below them", () => {
     const { rows, node } = setup();
     expect(dropAt(rows, 50)).toMatchObject({ place: { parent: null, before: node("bars") } });

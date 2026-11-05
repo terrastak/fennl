@@ -24,11 +24,12 @@ export function useUndoable(first: () => Done | null = () => null) {
     return ok;
   };
 
-  const undo = async () => {
-    if (!done) return;
+  const undo = async (): Promise<boolean> => {
+    if (!done) return false;
     const ok = await saveChanges(restamp(done.undo, Date.now()));
     setFailed(!ok);
     if (ok) setDone({ message: "Undone.", undo: [] });
+    return ok;
   };
 
   /** Forgets the last change (its Undo has stopped making sense where it's shown). */

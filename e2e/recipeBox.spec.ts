@@ -252,8 +252,22 @@ test.describe("On a computer", () => {
       "Vegetarian",
     ]);
 
-    // Undo puts the last move back.
-    await library(page).getByRole("button", { name: "Undo" }).click();
+    // Escape puts a drag back: nothing moves, and letting go doesn't open the category.
+    await dragCategory(page, "Soups", "Desserts", "middle");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("[data-drag-lifted]")).toHaveCount(0);
+    await page.mouse.move(640, 300, { steps: 3 });
+    await expect(page.locator("[data-drag-lifted]")).toHaveCount(0);
+    await expect(page.locator("html")).not.toHaveAttribute("data-category-drag");
+    await page.mouse.up();
+    await expect(moved).toHaveText("Moved Mexican to the top level.");
+    await expect(heading(page)).toHaveText("All recipes");
+
+    // Undo puts the last move back; from the keyboard the focus stays on the message.
+    await library(page).getByRole("button", { name: "Undo" }).focus();
+    await page.keyboard.press("Enter");
+    await expect(moved).toHaveText("Undone.");
+    await expect(moved).toBeFocused();
     await expect(panelCategories(page)).toHaveText([
       "Soups",
       "Breakfast",
@@ -275,6 +289,71 @@ test.describe("On a computer", () => {
       "Mexican",
       "Vegetarian",
     ]);
+
+    // A category moves with its subcategories, and stays open where it lands.
+    await dragCategory(page, "Diet", "Soups", "top");
+    await page.mouse.up();
+    await expect(moved).toHaveText("Moved Diet before Soups.");
+    await expect(panelCategories(page)).toHaveText([
+      "Diet",
+      "Mexican",
+      "Vegetarian",
+      "Soups",
+      "Breakfast",
+      "Desserts",
+    ]);
+
+    // At the end of a list of subcategories, moved a step right it goes last inside; not
+    // moved sideways, it stays at its own level.
+    await dragCategory(page, "Desserts", "Vegetarian", "bottom", 20);
+    await page.mouse.up();
+    await expect(moved).toHaveText("Moved Desserts into Diet.");
+    await expect(panelCategories(page)).toHaveText([
+      "Diet",
+      "Mexican",
+      "Vegetarian",
+      "Desserts",
+      "Soups",
+      "Breakfast",
+    ]);
+    await dragCategory(page, "Breakfast", "Desserts", "bottom");
+    await page.mouse.up();
+    await expect(moved).toHaveText("Moved Breakfast before Soups.");
+    await expect(panelCategories(page).nth(3)).toHaveText("Desserts");
+    await expect(panelCategories(page).nth(4)).toHaveText("Breakfast");
+
+    // Moving the category shown, or the one it's in, takes the list along to its new place,
+    // and Undo brings it back. An open category keeps its subcategories showing where it lands.
+    const category = () => new URL(page.url()).searchParams.get("category");
+    await libraryRow(page, "Vegetarian").click();
+    await expect(heading(page)).toHaveText("Vegetarian");
+    await dragCategory(page, "Diet", "Breakfast", "middle");
+    await page.mouse.up();
+    await expect(moved).toHaveText("Moved Diet into Breakfast.");
+    await expect(panelCategories(page)).toHaveText([
+      "Breakfast",
+      "Diet",
+      "Mexican",
+      "Vegetarian",
+      "Desserts",
+      "Soups",
+    ]);
+    await expect.poll(category).toBe("Breakfast › Diet › Vegetarian");
+    await expect(heading(page)).toHaveText("Vegetarian");
+    await expect(libraryRow(page, "Vegetarian")).toHaveAttribute("aria-current", "page");
+    await library(page).getByRole("button", { name: "Undo" }).click();
+    await expect(moved).toHaveText("Undone.");
+    await expect.poll(category).toBe("Diet › Vegetarian");
+    await expect(heading(page)).toHaveText("Vegetarian");
+
+    await libraryRow(page, "Soups").click();
+    await expect(heading(page)).toHaveText("Soups");
+    await dragCategory(page, "Soups", "Desserts", "middle");
+    await page.mouse.up();
+    await expect(moved).toHaveText("Moved Soups into Diet › Desserts.");
+    await expect.poll(category).toBe("Diet › Desserts › Soups");
+    await expect(heading(page)).toHaveText("Soups");
+    await expect(titles(page)).toHaveText(["Green Chile Stew"]);
   });
 });
 
@@ -353,11 +432,32 @@ test.describe("On a phone", () => {
     const mexican = row.getByRole("link", { name: /^Mexican/ });
     await expect(breakfast).toHaveAccessibleName(counted("Breakfast", 0));
     await expect(mexican).toHaveAccessibleName(counted("Mexican", 1));
-    expect(await colorOf(breakfast)).not.toBe(await colorOf(mexican));
     await page.getByRole("button", { name: "Search all recipes" }).click();
     await expect(heading(page)).toHaveText("All recipes");
     await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
+    // Neither picked now: the one with no match is fainter, its count too.
+    const countIn = (link: Locator) => link.locator("span[aria-hidden]");
+    expect(await colorOf(breakfast)).not.toBe(await colorOf(mexican));
+    expect(await colorOf(countIn(breakfast))).toBe(await colorOf(breakfast));
     await noAccessibilityProblems(page);
+
+    // In the sheet too, with every row the same width.
+    await page.getByRole("button", { name: "All categories", exact: true }).click();
+    const sheetBreakfast = sheet.getByRole("link", { name: /^Breakfast/ });
+    const sheetMexican = sheet.getByRole("link", { name: /^Mexican/ });
+    expect(await colorOf(sheetBreakfast)).not.toBe(await colorOf(sheetMexican));
+    const widths = await sheet
+      .getByRole("list")
+      .first()
+      .getByRole("link")
+      .evaluateAll((links) => links.map((link) => Math.round(link.getBoundingClientRect().right)));
+    expect(new Set(widths).size).toBe(1);
+    await sheet.getByRole("button", { name: "Done" }).click();
+
+    // The picked button's count is in the button's own colour, never grey on its blue.
+    await mexican.click();
+    await expect(mexican).toHaveAttribute("aria-current", "page");
+    expect(await colorOf(countIn(mexican))).toBe(await colorOf(mexican));
 
     // "/" (a phone-sized window with a keyboard) opens the list's search box from another page.
     await page.goto("/settings");

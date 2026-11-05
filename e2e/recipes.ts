@@ -187,6 +187,8 @@ export async function dragCategory(
   from: string,
   to: string,
   where: "top" | "middle" | "bottom",
+  /** How far right (or left, below 0) the mouse ends up from where it picked the row up. */
+  across = 0,
 ): Promise<void> {
   // Saving can change the status line's length above the panel, moving the list.
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
@@ -215,5 +217,5 @@ export async function dragCategory(
       : where === "bottom"
         ? target.y + target.height - 2
         : target.y + target.height / 2;
-  await page.mouse.move(x, y, { steps: 6 });
+  await page.mouse.move(x + across, y, { steps: 6 });
 }

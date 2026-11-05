@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { NO_FILTERS, UNFILED, type RecipeFilters } from "./filters";
 import {
+  categoryCount,
   libraryCounts,
   listTitle,
+  outsideCount,
   pickAll,
   pickCategory,
   pickedList,
@@ -120,6 +122,60 @@ describe("counts", () => {
     expect(searched?.all).toBe(1);
     expect(searched?.byKey.get("dessert")).toBe(1);
     expect(searched?.byKey.get("soup")).toBeUndefined();
+  });
+
+  it("counts Made lately as clicking it would show it, whatever More filters says", () => {
+    // More filters' "never made" gives way to Made lately when that is clicked.
+    const counts = libraryCounts(list, f({ made: "never" }), {}, TODAY, null);
+    expect(counts?.made).toBe(1);
+    expect(counts?.all).toBe(2);
+    const old = libraryCounts(list, f({ made: "old" }), {}, TODAY, null);
+    expect(old?.made).toBe(1);
+  });
+
+  it("counts what matches outside the category only when nothing else ties it to categories", () => {
+    const words = new Set(["a", "b", "c"]);
+    const three = [
+      recipe("a", { categories: ["Breakfast"] }),
+      recipe("b", { categories: ["Breakfast", "Mexican"] }),
+      recipe("c", { categories: ["Soups"] }),
+    ];
+    const picked = f({ category: "breakfast" });
+    const counts = libraryCounts(three, picked, {}, TODAY, words);
+    expect(outsideCount(picked, counts?.all ?? 0, 2)).toBe(1);
+    // "Also in Mexican" shows only b: All recipes would drop that filter too, so no number.
+    const alsoIn = f({ category: "breakfast", alsoIn: ["mexican"] });
+    const withAlso = libraryCounts(three, alsoIn, {}, TODAY, words);
+    expect(outsideCount(alsoIn, withAlso?.all ?? 0, 1)).toBe(0);
+    expect(outsideCount(f({ category: "breakfast", anyCategory: true }), 3, 1)).toBe(0);
+    expect(outsideCount(f(), 3, 1)).toBe(0);
+  });
+
+  it("counts each category as clicking it would show it, with More filters' also in", () => {
+    const four = [
+      recipe("stew", { categories: ["Mexican", "Soups"] }),
+      recipe("tacos", { categories: ["Mexican"] }),
+      recipe("eggs", { categories: ["Breakfast"] }),
+      recipe("broth", { categories: ["Soups"] }),
+      recipe("plain"),
+    ];
+    // Mexican, also in Soups: the list shows the stew, and so does Mexican's count.
+    const also = f({ category: "mexican", alsoIn: ["soups"] });
+    const counts = libraryCounts(four, also, {}, TODAY, null);
+    expect(counts && categoryCount(counts, "mexican")).toBe(1);
+    expect(counts && categoryCount(counts, "breakfast")).toBe(0);
+    expect(counts && categoryCount(counts, "soups")).toBe(2);
+    expect(counts?.unfiled).toBe(0);
+    // All recipes drops "also in", so it counts everything.
+    expect(counts?.all).toBe(5);
+
+    // In any of them: Breakfast or Soups gives the eggs and both soups.
+    const any = f({ category: "mexican", alsoIn: ["soups"], anyCategory: true });
+    const either = libraryCounts(four, any, {}, TODAY, null);
+    expect(either && categoryCount(either, "breakfast")).toBe(3);
+    expect(either && categoryCount(either, "mexican")).toBe(3);
+    expect(either && categoryCount(either, "desserts")).toBe(2);
+    expect(either?.unfiled).toBe(3);
   });
 
   it("waits for the ingredient answers", () => {

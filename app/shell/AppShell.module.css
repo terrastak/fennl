@@ -136,6 +136,24 @@
   }
 }
 
+/* A short screen (or larger text): the whole left panel scrolls as one column, so the
+   categories come straight after the quick lists (Library.module.css) and the links at the
+   bottom follow them, rather than squeezing them out of sight. */
+@media (min-width: 900px) and (max-height: 760px) {
+  .sidebar {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (min-width: 900px) and (max-height: 960px) {
+  :global(:root[data-text-size="larger"]) .sidebar,
+  :global(:root[data-text-size="largest"]) .sidebar {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
 .sideTop {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -300,6 +318,16 @@ button.navLink {
   color: var(--color-warm-text);
 }
 
+/* Timers and Feedback keep their size and a little room between them. */
+.topTimers,
+.topBarLink {
+  flex: none;
+}
+
+.topTimers + .topBarLink {
+  margin-left: var(--space-1);
+}
+
 /* On narrow phones Timers and Feedback are icons with their names small under them (U17
    mockup; the search box is on the Recipes tab, no longer in this bar). */
 @media (max-width: 599px) {
@@ -313,5 +341,30 @@ button.navLink {
     font-size: var(--text-xs);
     font-weight: var(--weight-semibold);
     line-height: 1;
+  }
+}
+
+/* Where even that doesn't fit (the narrowest phones, or larger text), they're icons alone;
+   their names stay for screen readers. A running timer still shows its time. */
+@media (max-width: 359px) {
+  .topBarLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 599px) {
+  :global(:root[data-text-size="larger"]) .topBarLabel,
+  :global(:root[data-text-size="largest"]) .topBarLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
   }
 }

@@ -1,8 +1,18 @@
-import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import { createPortal } from "react-dom";
 import type { Drop } from "../categories/drop";
 import {
   moveCategory,
+  pathKey,
   placeCategory,
   type CategoryNode,
   type PlanContext,
@@ -10,8 +20,10 @@ import {
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { usePath } from "../navigation";
+import { CATEGORY_SEPARATOR as SEPARATOR } from "../../shared/recipe";
 import { parseSearch, searchKey, UNFILED } from "../recipes/filters";
 import {
+  categoryCount,
   favoritesOn,
   pickAll,
   pickCategory,
@@ -26,9 +38,9 @@ import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useSyncStatus } from "../sync/useSync";
 import styles from "./Library.module.css";
-import { keepOpen, rememberedOpen } from "./openCategories";
+import { keepOpen, moveOpen, rememberedOpen } from "./openCategories";
 import { takeSearchFocus, TYPE_EVENT } from "./typeToSearch";
-import { useCategoryDrag, type DragState } from "./useCategoryDrag";
+import { scrollParent, useCategoryDrag, type DragState } from "./useCategoryDrag";
 
 // The recipe box in the left panel on a computer (U17, owner's choices 2026-11-04): search,
 // the quick lists, saved searches and every category with how many recipes it has, always in
@@ -50,6 +62,14 @@ function movedMessage(node: CategoryNode, drop: Drop): string {
     return `Moved ${node.name} ${parent ? `into ${parent.path}` : "to the top level"}.`;
   }
   return before ? `Moved ${node.name} before ${before.name}.` : `Moved ${node.name} to the end.`;
+}
+
+/** Shows a name cut short in full when the mouse is over it (the page reads it whole anyway). */
+function titleIfCut(event: ReactPointerEvent<HTMLElement>, name: string) {
+  const el = event.currentTarget;
+  const cut = el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+  if (cut) el.title = name;
+  else el.removeAttribute("title");
 }
 
 /** A row's count, said in full to screen readers ("6 recipes"). */
@@ -178,6 +198,8 @@ export function Library() {
   const panel = useRef<HTMLElement>(null);
   const editable = canEdit(useSyncStatus());
   const moves = useUndoable();
+  // Scrolled down: the top edge fades too, rather than cutting a row in half.
+  const [scrolled, setScrolled] = useState(false);
 
   // A move's Undo shows on the page it was made on; going to another page puts it away.
   const path = usePath();
@@ -203,20 +225,96 @@ export function Library() {
     return picked.kind === "category" && picked.key === kind;
   };
 
-  // The picked category's parents stay open, so it can be seen.
+  // The picked category is open, inside whatever it's in, so it and what's inside it can be
+  // seen, unless the person closes one while it's picked (kept until another is picked).
+  const pickedKey = picked.kind === "category" ? picked.key : "";
+  const [closedHere, setClosedHere] = useState<{ picked: string; keys: Set<string> }>({
+    picked: pickedKey,
+    keys: new Set(),
+  });
+  const closed = closedHere.picked === pickedKey ? closedHere.keys : new Set<string>();
   const shownOpen = new Set(open);
-  if (picked.kind === "category") {
-    for (let node = tree?.byKey.get(picked.key)?.parent; node; node = node.parent) {
-      shownOpen.add(node.key);
-    }
+  const pickedNode = pickedKey ? tree?.byKey.get(pickedKey) : undefined;
+  if (pickedNode && pickedNode.children.length > 0 && !closed.has(pickedNode.key)) {
+    shownOpen.add(pickedNode.key);
+  }
+  for (let node = pickedNode?.parent; node; node = node.parent) {
+    if (!closed.has(node.key)) shownOpen.add(node.key);
   }
   const toggleOpen = (key: string) => {
     const next = new Set(shownOpen);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
+    const nextClosed = new Set(closed);
+    if (next.has(key)) {
+      next.delete(key);
+      nextClosed.add(key);
+    } else {
+      next.add(key);
+      nextClosed.delete(key);
+    }
     setOpen(next);
     keepOpen(next);
+    setClosedHere({ picked: pickedKey, keys: nextClosed });
   };
+
+  // The row of the list shown is brought into the panel's view when it changes (and when the
+  // page opens), only if it's out of view, so nothing jumps.
+  const currentRow = !onList
+    ? ""
+    : savedHere
+      ? `saved:${savedHere.id}`
+      : picked.kind === "category"
+        ? picked.key
+        : picked.kind;
+  const hasTree = !!tree;
+  useEffect(() => {
+    const nav = panel.current;
+    const element = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !element) return;
+    const box = scrollParent(nav);
+    const view = box.getBoundingClientRect();
+    const row = element.getBoundingClientRect();
+    // Clear of the fades at the panel's top and bottom.
+    const fade = parseFloat(getComputedStyle(nav).scrollPaddingBottom) || 0;
+    const fadeTop = parseFloat(getComputedStyle(nav).scrollPaddingTop) || 0;
+    if (row.top < view.top + fadeTop) box.scrollTop -= view.top + fadeTop - row.top;
+    else if (row.bottom > view.bottom - fade) box.scrollTop += row.bottom - (view.bottom - fade);
+  }, [currentRow, hasTree]);
+
+  /**
+   * After a category moved from key `from` to `to`: what was open inside it stays open, and the
+   * list keeps showing it if it (or something inside it) was shown or filtered on: its path, and
+   * so the address, changed. The new address is made once the categories have the new path, as
+   * the address is written from them.
+   */
+  const lastMove = useRef<{ from: string; to: string } | null>(null);
+  const follow = useRef<{ from: string; to: string } | null>(null);
+  const followMove = (from: string, to: string, opened: Set<string> = shownOpen) => {
+    const next = moveOpen(opened, from, to);
+    setOpen(next);
+    keepOpen(next);
+    follow.current = { from, to };
+  };
+  // Checked after every render (setOpen above makes one), so it runs whichever comes first:
+  // the categories changing, or the move's save finishing.
+  useLayoutEffect(() => {
+    const move = follow.current;
+    if (!move || !tree?.byKey.has(move.to)) return;
+    follow.current = null;
+    const { from, to } = move;
+    const moved = (key: string) =>
+      key === from || key.startsWith(`${from}${SEPARATOR}`) ? to + key.slice(from.length) : key;
+    const next = {
+      ...filters,
+      category: filters.category === UNFILED ? UNFILED : moved(filters.category),
+      alsoIn: filters.alsoIn.map(moved),
+      notIn: filters.notIn.map(moved),
+    };
+    const changed =
+      next.category !== filters.category ||
+      next.alsoIn.some((key, i) => key !== filters.alsoIn[i]) ||
+      next.notIn.some((key, i) => key !== filters.notIn[i]);
+    if (onList && changed) library.show(query, next, { replace: true });
+  });
 
   const { drag, onPointerDown } = useCategoryDrag({
     tree,
@@ -231,12 +329,19 @@ export function Library() {
           : placeCategory(tree, node, drop.place, ctx);
       // Where it went is opened, so it can be seen there.
       const parent = drop.kind === "inside" ? drop.target : drop.place.parent;
-      if (parent && !shownOpen.has(parent.key)) toggleOpen(parent.key);
-      void moves.run(plan, movedMessage(node, drop));
+      const opened = new Set(shownOpen);
+      if (parent) opened.add(parent.key);
+      const from = node.key;
+      const to = pathKey([...(parent?.names ?? []), node.name]);
+      void moves.run(plan, movedMessage(node, drop)).then((ok) => {
+        if (!ok) return;
+        lastMove.current = { from, to };
+        followMove(from, to, opened);
+      });
     },
   });
 
-  const countOf = (node: CategoryNode) => (counts ? (counts.byKey.get(node.key) ?? 0) : undefined);
+  const countOf = (node: CategoryNode) => (counts ? categoryCount(counts, node.key) : undefined);
 
   const row = (node: CategoryNode): ReactNode => {
     const n = countOf(node);
@@ -275,7 +380,9 @@ export function Library() {
               if (kids && !isOpen) toggleOpen(node.key);
             }}
           >
-            <span className={styles.name}>{node.name}</span>
+            <span className={styles.name} onPointerEnter={(e) => titleIfCut(e, node.name)}>
+              {node.name}
+            </span>
             <Count n={n} />
           </Link>
         </div>
@@ -289,6 +396,8 @@ export function Library() {
       ref={panel}
       aria-label="Recipe box"
       className={`${styles.library} ${drag ? styles.dragging : ""}`}
+      data-scrolled={scrolled || undefined}
+      onScroll={(event) => setScrolled(event.currentTarget.scrollTop > 0)}
     >
       {onList && (library.recipes?.length ?? 0) > 0 ? (
         <a className={styles.skip} href="#recipe-results">
@@ -371,7 +480,9 @@ export function Library() {
                   <span className={styles.icon}>
                     <SearchIcon size={15} />
                   </span>
-                  <span className={styles.name}>{s.name}</span>
+                  <span className={styles.name} onPointerEnter={(e) => titleIfCut(e, s.name)}>
+                    {s.name}
+                  </span>
                 </Link>
               </li>
             ))}
@@ -391,7 +502,14 @@ export function Library() {
             <UndoBar
               done={moves.done}
               failed={moves.failed}
-              onUndo={() => void moves.undo()}
+              onUndo={() => {
+                const move = lastMove.current;
+                void moves.undo().then((ok) => {
+                  if (!ok || !move) return;
+                  lastMove.current = null;
+                  followMove(move.to, move.from);
+                });
+              }}
               disabled={!editable}
             />
           </div>

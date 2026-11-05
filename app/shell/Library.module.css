@@ -37,6 +37,8 @@
   color: var(--color-text);
   font: inherit;
   font-size: var(--text-sm);
+  /* A long "Search in <category>" ends in "…" rather than mid-letter. */
+  text-overflow: ellipsis;
 }
 
 .field:focus {
@@ -120,10 +122,48 @@
   overflow-y: auto;
   padding: var(--space-1) var(--space-4) var(--space-6);
   scrollbar-width: thin;
-  /* The list fades out at the bottom rather than stopping on a cut-off row. */
+  /* The list fades out at the bottom rather than stopping on a cut-off row; a row brought into
+     view (the one shown, or reached with Tab) stops clear of the fade. */
   mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-6)), transparent);
+  scroll-padding-top: var(--space-4);
+  scroll-padding-bottom: var(--space-6);
 }
 
+/* Scrolled down: the top fades as well, so no row is cut in half under the search box. */
+.library[data-scrolled] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 var(--space-4),
+    #000 calc(100% - var(--space-6)),
+    transparent
+  );
+}
+
+/* On a short screen (or with larger text) the left panel scrolls as one column instead
+   (AppShell.module.css), so the categories follow straight after the quick lists rather than
+   squeezed between them and the links at the bottom. */
+@media (max-height: 760px) {
+  .library,
+  .library[data-scrolled] {
+    flex: none;
+    overflow: visible;
+    mask-image: none;
+  }
+}
+
+@media (max-height: 960px) {
+  :global(:root[data-text-size="larger"]) .library,
+  :global(:root[data-text-size="largest"]) .library,
+  :global(:root[data-text-size="larger"]) .library[data-scrolled],
+  :global(:root[data-text-size="largest"]) .library[data-scrolled] {
+    flex: none;
+    overflow: visible;
+    mask-image: none;
+  }
+}
+
+/* Hidden until reached with Tab (clipped, so it never shows when the panel doesn't clip it). */
 .skip {
   position: absolute;
   top: var(--space-1);
@@ -136,11 +176,18 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
   text-decoration: none;
-  transform: translateY(-300%);
+}
+
+.skip:not(:focus) {
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .skip:focus {
-  transform: none;
   color: var(--color-on-accent);
 }
 
@@ -179,6 +226,12 @@
   color: var(--color-text);
 }
 
+/* On the hover background the faint count would drop under 4.5:1 in the light schemes. */
+.tile:not([aria-current]):hover .count,
+.cat:not([aria-current]):hover .count {
+  color: var(--color-text-muted);
+}
+
 .tile[aria-current="page"],
 .cat[aria-current="page"] {
   background: var(--color-accent-soft);
@@ -199,11 +252,15 @@
   color: var(--color-accent-soft-text);
 }
 
+/* A long name takes a second line, then ends in "…" (shown whole on hover: Library.tsx). */
 .name {
+  display: -webkit-box;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
 }
 
 .count {
@@ -221,7 +278,8 @@
   place-items: center;
   width: 1rem;
   height: 1rem;
-  border: 1.5px solid var(--color-border-strong);
+  /* text-subtle: an edge that stands out at least 3:1 in every scheme, light and dark. */
+  border: 1.5px solid var(--color-text-subtle);
   border-radius: 0.25rem;
   background: var(--color-surface);
   color: transparent;
@@ -285,7 +343,7 @@
 .cat {
   gap: var(--space-2);
   min-height: 1.625rem;
-  padding: 0 var(--space-2) 0 calc(2.125rem + var(--depth, 0) * 1rem);
+  padding: 0.1rem var(--space-2) 0.1rem calc(2.125rem + var(--depth, 0) * 1rem);
   /* Not text to select: a press that moves is a drag (putting categories in order). */
   user-select: none;
 }
@@ -326,6 +384,11 @@
 
 .caret:hover {
   color: var(--color-text);
+}
+
+/* The ring drawn inside the arrow, clear of the name beside it. */
+.caret:focus-visible {
+  outline-offset: -3px;
 }
 
 /* --- Putting categories in order by dragging (computer only) ------------------------------ */
@@ -453,7 +516,11 @@
   font-weight: var(--weight-medium);
 }
 
-/* The Undo for a move, fitted to the panel. */
+/* The Undo for a move, fitted to the panel; while there's nothing to say it takes no room. */
+.undo p {
+  margin: 0;
+}
+
 .undo > div[class] {
   margin: var(--space-1) 0 var(--space-2);
   padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);

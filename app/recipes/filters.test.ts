@@ -4,7 +4,7 @@ import {
   activeFilterCount,
   addDays,
   applyFilters,
-  filterChips,
+  filterLabels,
   filtersFromParams,
   filtersToParams,
   NO_FILTERS,
@@ -318,10 +318,10 @@ describe("chips", () => {
     without: ["Mushroom"],
   });
 
-  it("has one chip for each thing narrowing the list, except category and rating", () => {
-    const chips = filterChips(withFilters({ category: "x", rating: "4" }), nameOf);
+  it("has one label for each thing narrowing the list, except category and rating", () => {
+    const chips = filterLabels(withFilters({ category: "x", rating: "4" }), nameOf);
     expect(chips).toEqual([]);
-    expect(filterChips(filters, nameOf).map((c) => c.label)).toEqual([
+    expect(filterLabels(filters, nameOf).map((c) => c.label)).toEqual([
       "Also in VEGAN",
       "Not in DESSERT",
       "Up to 90 minutes",
@@ -335,20 +335,12 @@ describe("chips", () => {
   });
 
   it("says 'Or in' when any category will do", () => {
-    const [chip] = filterChips(withFilters({ alsoIn: ["vegan"], anyCategory: true }), nameOf);
+    const [chip] = filterLabels(withFilters({ alsoIn: ["vegan"], anyCategory: true }), nameOf);
     expect(chip?.label).toBe("Or in VEGAN");
   });
 
-  it("removing each chip leaves only that filter off", () => {
-    for (const chip of filterChips(filters, nameOf)) {
-      const left = filterChips(chip.remove(filters), nameOf).map((c) => c.id);
-      const before = filterChips(filters, nameOf).map((c) => c.id);
-      expect(left).toEqual(before.filter((id) => id !== chip.id));
-    }
-  });
-
   it("says hours in whole hours", () => {
-    const [chip] = filterChips(withFilters({ maxMinutes: 120 }), nameOf);
+    const [chip] = filterLabels(withFilters({ maxMinutes: 120 }), nameOf);
     expect(chip?.label).toBe("Up to 2 hours");
   });
 });
