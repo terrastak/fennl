@@ -5,18 +5,21 @@ import {
   dragCategory,
   library,
   libraryRow,
+  openFilters,
   panelCategories,
   recipeCard,
   syncStatus,
 } from "./recipes";
 import { useOwnAccount } from "./support";
 
-// U17: the recipe box. On a computer the left panel holds search, the quick lists, saved
-// searches and every category with its count, one click each, and categories are put in order
-// by dragging. On a phone the Recipes tab has the search box, a row of category buttons and a
-// sheet with every category. The four sample recipes are: Green Chile Stew (Mexican, Soups;
-// 125 min), Buttermilk Pancakes (Breakfast; 30), Black Bean Tacos with Lime Crema (Mexican,
-// Diet › Vegetarian; 30) and Lemon Olive Oil Cake (Desserts › Cakes; 60).
+// U17: the recipe box. On a computer the left panel holds search, the quick searches (U18: tick
+// lines and saved searches, chosen and ordered by the person, kept with the account) and every
+// category with its count, one click each, and categories are put in order by dragging. On a
+// phone the Recipes tab has the search box, a row of category buttons and a sheet with every
+// category (the quick searches are at the top of the Filters sheet). The four sample recipes are:
+// Green Chile Stew (Mexican, Soups; 125 min), Buttermilk Pancakes (Breakfast; 30), Black Bean
+// Tacos with Lime Crema (Mexican, Diet › Vegetarian; 30) and Lemon Olive Oil Cake (Desserts ›
+// Cakes; 60).
 
 async function addSamples(page: Page) {
   await page.goto("/");
@@ -51,6 +54,9 @@ const counted = (name: string, n: number) =>
   new RegExp(`^${name}\\s*,\\s*${n} ${n === 1 ? "recipe" : "recipes"}$`);
 const colorOf = (locator: Locator) => locator.evaluate((el) => getComputedStyle(el).color);
 const top = async (locator: Locator) => (await locator.boundingBox())!.y;
+/** The left panel's quick searches, top to bottom, by name (U18). */
+const quickLines = (page: Page) =>
+  library(page).locator("[data-quick-key] [data-quick-part=main] [class*=name]");
 
 test.describe("On a computer", () => {
   test.skip(({ isMobile }) => isMobile, "The left panel is a computer's");
@@ -179,7 +185,147 @@ test.describe("On a computer", () => {
     await expect(titles(page)).toHaveText(["Green Chile Stew"]);
   });
 
-  test("Categories put in order by dragging: between two, inside one, out again, never into itself, with Undo", async ({
+  test("Quick searches: the starting two, a time chosen with ▾, + Add, ✕, put in order, and added from Filters, kept with the account", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await useOwnAccount(context, baseURL!);
+    await addSamples(page);
+
+    // A new account starts with Favorites and 30 minutes or less, under the heading.
+    await expect(library(page).getByRole("heading", { name: "Quick searches" })).toBeVisible();
+    await expect(quickLines(page)).toHaveText(["Favorites", "30 minutes or less"]);
+
+    // A tick line stays on with a category.
+    await libraryRow(page, "30 minutes or less").click();
+    await expect(titles(page)).toHaveCount(2);
+    await libraryRow(page, "Mexican").click();
+    await expect(heading(page)).toHaveText("Mexican");
+    await expect(libraryRow(page, "30 minutes or less")).toHaveAttribute("aria-pressed", "true");
+    await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
+
+    // ▾ changes the time, the line's and the list's; the choice is kept with the account.
+    await library(page).getByRole("button", { name: "Change 30 minutes or less" }).click();
+    const choices = page.getByRole("menu", { name: "Choices for 30 minutes or less" });
+    await expect(
+      choices.getByRole("menuitemradio", { name: "30 minutes or less" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await expect(choices.getByRole("menuitemradio", { name: "30 minutes or less" })).toBeFocused();
+    await choices.getByRole("menuitemradio", { name: "2 hours or less" }).click();
+    await expect(choices).toBeHidden();
+    await expect(quickLines(page)).toHaveText(["Favorites", "2 hours or less"]);
+    await expect(libraryRow(page, "2 hours or less")).toHaveAttribute("aria-pressed", "true");
+    await expect(page).toHaveURL(/time=120/);
+    await page.getByRole("button", { name: "Show all categories" }).click();
+    await expect(titles(page)).toHaveCount(3);
+    await library(page).getByRole("button", { name: "Change 2 hours or less" }).click();
+    await page
+      .getByRole("menu", { name: "Choices for 2 hours or less" })
+      .getByRole("menuitemradio", { name: "45 minutes or less" })
+      .click();
+    await expect(quickLines(page)).toHaveText(["Favorites", "45 minutes or less"]);
+    await expect(titles(page)).toHaveCount(2);
+    await expect(page).toHaveURL(/time=45/);
+    await page.goto("/");
+    await expect(quickLines(page)).toHaveText(["Favorites", "45 minutes or less"]);
+    await expect(libraryRow(page, "45 minutes or less")).toHaveAttribute("aria-pressed", "false");
+    await expect(libraryRow(page, "45 minutes or less")).toHaveAccessibleName(
+      counted("45 minutes or less", 2),
+    );
+
+    // + Add: the common ones, ticked when there; ticking adds at the end, unticking removes.
+    const add = library(page).getByRole("button", { name: "Add a quick search" });
+    await add.click();
+    const menu = page.getByRole("menu", { name: "Add a quick search" });
+    // Any time line counts as "30 minutes or less" being there.
+    await expect(
+      menu.getByRole("menuitemcheckbox", { name: "30 minutes or less" }),
+    ).toHaveAttribute("aria-checked", "true");
+    const madeLately = menu.getByRole("menuitemcheckbox", { name: "Made lately" });
+    await expect(madeLately).toHaveAttribute("aria-checked", "false");
+    await expect(page.getByText("Anything in Filters can be added too")).toBeVisible();
+    await noAccessibilityProblems(page);
+    await madeLately.click();
+    await expect(madeLately).toHaveAttribute("aria-checked", "true");
+    await expect(quickLines(page)).toHaveText(["Favorites", "45 minutes or less", "Made lately"]);
+    await madeLately.click();
+    await expect(quickLines(page)).toHaveText(["Favorites", "45 minutes or less"]);
+    await menu.getByRole("menuitemcheckbox", { name: "Has a photo" }).click();
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(add).toBeFocused();
+    await expect(quickLines(page)).toHaveText(["Favorites", "45 minutes or less", "Has a photo"]);
+
+    // Alt and the arrows put a line in order, said aloud; kept with the account.
+    await libraryRow(page, "Favorites").focus();
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(quickLines(page)).toHaveText(["45 minutes or less", "Favorites", "Has a photo"]);
+    await expect(libraryRow(page, "Favorites")).toBeFocused();
+    await expect(library(page).getByText("Moved Favorites down.")).toBeAttached();
+    await page.keyboard.press("Alt+ArrowDown");
+    await expect(quickLines(page)).toHaveText(["45 minutes or less", "Has a photo", "Favorites"]);
+    await page.reload();
+    await expect(quickLines(page)).toHaveText(["45 minutes or less", "Has a photo", "Favorites"]);
+
+    // ✕, shown where the count was while the line is pointed at, removes it at once.
+    await libraryRow(page, "Has a photo").hover();
+    await library(page)
+      .getByRole("button", { name: "Remove Has a photo from quick searches" })
+      .click();
+    await expect(quickLines(page)).toHaveText(["45 minutes or less", "Favorites"]);
+    // The focus goes on to the next line.
+    await expect(libraryRow(page, "Favorites")).toBeFocused();
+
+    // Filters: a filter that is set has a button to add it, saying when it's there.
+    const filters = await openFilters(page);
+    const time = filters.getByRole("group", { name: "Total time, up to" });
+    await expect(time.getByRole("button", { name: /quick searches/ })).toHaveCount(0);
+    await time.getByRole("button", { name: "1 hr", exact: true }).click();
+    const addTime = time.getByRole("button", { name: /quick searches: 1 hour or less$/ });
+    await expect(addTime).toHaveText(/^\+?Add to quick searches$/);
+    await expect(addTime).toHaveAttribute("aria-pressed", "false");
+    await addTime.click();
+    await expect(addTime).toHaveText(/^In quick searches$/);
+    await expect(addTime).toHaveAttribute("aria-pressed", "true");
+    await page.keyboard.press("Escape");
+    await expect(filters).toBeHidden();
+    await expect(quickLines(page)).toHaveText([
+      "45 minutes or less",
+      "Favorites",
+      "1 hour or less",
+    ]);
+    await expect(libraryRow(page, "1 hour or less")).toHaveAttribute("aria-pressed", "true");
+
+    // Save as quick search adds a search line; its ✕ deletes the saved search.
+    await page.getByRole("button", { name: "Save as quick search" }).click();
+    const saved = page.getByRole("region", { name: "Saved searches" });
+    await saved.getByLabel("Name this search").fill("Under an hour");
+    await saved.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(quickLines(page)).toHaveText([
+      "45 minutes or less",
+      "Favorites",
+      "1 hour or less",
+      "Under an hour",
+    ]);
+    await libraryRow(page, "Under an hour").hover();
+    await library(page)
+      .getByRole("button", { name: "Delete the saved search Under an hour" })
+      .click();
+    await expect(quickLines(page)).toHaveText([
+      "45 minutes or less",
+      "Favorites",
+      "1 hour or less",
+    ]);
+    await page.reload();
+    await expect(quickLines(page)).toHaveText([
+      "45 minutes or less",
+      "Favorites",
+      "1 hour or less",
+    ]);
+  });
+
+  test("Categories put in order by dragging: between two, inside one, out again, never into itself", async ({
     page,
     context,
     baseURL,
@@ -195,13 +341,10 @@ test.describe("On a computer", () => {
       "Mexican",
       "Soups",
     ]);
-    const moved = library(page).getByRole("status");
 
-    // Between two moves it there; the hint says how the first times.
+    // Between two moves it there (no hint, message or Undo since U18).
     await dragCategory(page, "Soups", "Breakfast", "top");
-    await expect(library(page).getByText("puts it inside.")).toBeVisible();
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Soups before Breakfast.");
     await expect(panelCategories(page)).toHaveText([
       "Soups",
       "Breakfast",
@@ -214,7 +357,6 @@ test.describe("On a computer", () => {
     // Onto one puts it inside, with its recipes, and opens it to show where it went.
     await dragCategory(page, "Mexican", "Diet", "middle");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Mexican into Diet.");
     await expect(panelCategories(page)).toHaveText([
       "Soups",
       "Breakfast",
@@ -228,7 +370,6 @@ test.describe("On a computer", () => {
     // And out again, to the top level.
     await dragCategory(page, "Mexican", "Soups", "top");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Mexican to the top level.");
     await expect(panelCategories(page)).toHaveText([
       "Mexican",
       "Soups",
@@ -238,11 +379,11 @@ test.describe("On a computer", () => {
       "Vegetarian",
     ]);
 
-    // Never into itself or its own subcategories: refused, and nothing changes.
+    // Never into itself or its own subcategories: the cursor says no, and nothing changes.
     await dragCategory(page, "Diet", "Vegetarian", "middle");
-    await expect(page.getByText("Can’t go inside itself")).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("data-category-drag", "refused");
+    await expect(page.getByText("Can’t go inside itself")).toHaveCount(0);
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Mexican to the top level.");
     await expect(panelCategories(page)).toHaveText([
       "Mexican",
       "Soups",
@@ -260,14 +401,12 @@ test.describe("On a computer", () => {
     await expect(page.locator("[data-drag-lifted]")).toHaveCount(0);
     await expect(page.locator("html")).not.toHaveAttribute("data-category-drag");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Mexican to the top level.");
     await expect(heading(page)).toHaveText("All recipes");
 
-    // Undo puts the last move back; from the keyboard the focus stays on the message.
-    await library(page).getByRole("button", { name: "Undo" }).focus();
-    await page.keyboard.press("Enter");
-    await expect(moved).toHaveText("Undone.");
-    await expect(moved).toBeFocused();
+    // A move is taken back by dragging it back; there's no Undo after a drag.
+    await expect(library(page).getByRole("button", { name: "Undo" })).toHaveCount(0);
+    await dragCategory(page, "Mexican", "Diet", "bottom");
+    await page.mouse.up();
     await expect(panelCategories(page)).toHaveText([
       "Soups",
       "Breakfast",
@@ -293,7 +432,6 @@ test.describe("On a computer", () => {
     // A category moves with its subcategories, and stays open where it lands.
     await dragCategory(page, "Diet", "Soups", "top");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Diet before Soups.");
     await expect(panelCategories(page)).toHaveText([
       "Diet",
       "Mexican",
@@ -307,7 +445,6 @@ test.describe("On a computer", () => {
     // moved sideways, it stays at its own level.
     await dragCategory(page, "Desserts", "Vegetarian", "bottom", 20);
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Desserts into Diet.");
     await expect(panelCategories(page)).toHaveText([
       "Diet",
       "Mexican",
@@ -318,18 +455,16 @@ test.describe("On a computer", () => {
     ]);
     await dragCategory(page, "Breakfast", "Desserts", "bottom");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Breakfast before Soups.");
     await expect(panelCategories(page).nth(3)).toHaveText("Desserts");
     await expect(panelCategories(page).nth(4)).toHaveText("Breakfast");
 
-    // Moving the category shown, or the one it's in, takes the list along to its new place,
-    // and Undo brings it back. An open category keeps its subcategories showing where it lands.
+    // Moving the category shown, or the one it's in, takes the list along to its new place, and
+    // back again. An open category keeps its subcategories showing where it lands.
     const category = () => new URL(page.url()).searchParams.get("category");
     await libraryRow(page, "Vegetarian").click();
     await expect(heading(page)).toHaveText("Vegetarian");
     await dragCategory(page, "Diet", "Breakfast", "middle");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Diet into Breakfast.");
     await expect(panelCategories(page)).toHaveText([
       "Breakfast",
       "Diet",
@@ -341,8 +476,8 @@ test.describe("On a computer", () => {
     await expect.poll(category).toBe("Breakfast › Diet › Vegetarian");
     await expect(heading(page)).toHaveText("Vegetarian");
     await expect(libraryRow(page, "Vegetarian")).toHaveAttribute("aria-current", "page");
-    await library(page).getByRole("button", { name: "Undo" }).click();
-    await expect(moved).toHaveText("Undone.");
+    await dragCategory(page, "Diet", "Breakfast", "top");
+    await page.mouse.up();
     await expect.poll(category).toBe("Diet › Vegetarian");
     await expect(heading(page)).toHaveText("Vegetarian");
 
@@ -350,7 +485,6 @@ test.describe("On a computer", () => {
     await expect(heading(page)).toHaveText("Soups");
     await dragCategory(page, "Soups", "Desserts", "middle");
     await page.mouse.up();
-    await expect(moved).toHaveText("Moved Soups into Diet › Desserts.");
     await expect.poll(category).toBe("Diet › Desserts › Soups");
     await expect(heading(page)).toHaveText("Soups");
     await expect(titles(page)).toHaveText(["Green Chile Stew"]);
@@ -464,5 +598,68 @@ test.describe("On a phone", () => {
     await expect(heading(page)).toHaveText("Settings");
     await page.keyboard.press("/");
     await expect(searchBox(page)).toBeFocused();
+  });
+
+  test("Quick searches at the top of the Filters sheet: on and off, ▾, + Add, and Edit with ✕", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await useOwnAccount(context, baseURL!);
+    await addSamples(page);
+
+    const sheet = await openFilters(page);
+    const quick = sheet.getByRole("group", { name: "Quick searches" });
+    const chip = (name: string) => quick.getByRole("button", { name, exact: true });
+    // First in the sheet, starting with Favorites and 30 minutes or less.
+    expect(await top(quick)).toBeLessThan(
+      await top(sheet.getByRole("group", { name: "Total time, up to" })),
+    );
+    await expect(chip("Favorites")).toHaveAttribute("aria-pressed", "false");
+    await chip("30 minutes or less").click();
+    await expect(chip("30 minutes or less")).toHaveAttribute("aria-pressed", "true");
+    await expect(page).toHaveURL(/time=30/);
+
+    // ▾ beside a chip changes its choice, and the list's while it's on.
+    await quick.getByRole("button", { name: "Change 30 minutes or less" }).click();
+    await quick
+      .getByRole("menu", { name: "Choices for 30 minutes or less" })
+      .getByRole("menuitemradio", { name: "1 hour or less" })
+      .click();
+    await expect(chip("1 hour or less")).toHaveAttribute("aria-pressed", "true");
+    await expect(page).toHaveURL(/time=60/);
+
+    // + Add opens the same menu in place; Escape closes it and leaves the sheet open.
+    await quick.getByRole("button", { name: "Add a quick search" }).click();
+    const menu = quick.getByRole("menu", { name: "Add a quick search" });
+    await menu.getByRole("menuitemcheckbox", { name: "Made lately" }).click();
+    await expect(chip("Made lately")).toBeVisible();
+    // Opened from a chip near the edge, it stays inside the sheet, never scrolling it sideways.
+    const scrolledSideways = () =>
+      sheet.evaluate((el) => [el, ...el.querySelectorAll("*")].some((e) => e.scrollLeft > 0));
+    expect(await scrolledSideways()).toBe(false);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    await expect(sheet).toBeVisible();
+    await noAccessibilityProblems(page);
+
+    // Edit shows a ✕ on each; one tap removes it at once. Done goes back.
+    await quick.getByRole("button", { name: "Edit quick searches" }).click();
+    await quick.getByRole("button", { name: "Remove Favorites from quick searches" }).click();
+    await expect(quick.getByText("Favorites", { exact: true })).toHaveCount(0);
+    await quick.getByRole("button", { name: "Done editing quick searches" }).click();
+    await expect(quick.getByRole("button", { name: /^(1 hour or less|Made lately)$/ })).toHaveText([
+      "1 hour or less",
+      "Made lately",
+    ]);
+
+    // Kept with the account.
+    await page.reload();
+    const again = await openFilters(page);
+    await expect(
+      again
+        .getByRole("group", { name: "Quick searches" })
+        .getByRole("button", { name: /^(Favorites|1 hour or less|Made lately)$/ }),
+    ).toHaveText(["1 hour or less", "Made lately"]);
   });
 });

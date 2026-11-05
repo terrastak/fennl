@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_QUICK_SEARCHES, quick } from "../../shared/quickSearches";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { NO_FILTERS, UNFILED, type RecipeFilters } from "./filters";
 import {
@@ -9,10 +10,7 @@ import {
   pickAll,
   pickCategory,
   pickedList,
-  pickMadeLately,
   shownSentence,
-  toggleFavorites,
-  toggleQuick,
 } from "./library";
 
 const TODAY = "2026-11-04";
@@ -45,37 +43,37 @@ const f = (over: Partial<RecipeFilters> = {}): RecipeFilters => ({ ...NO_FILTERS
 const nameOf = (key: string) => (key === "dessert" ? "Dessert" : key);
 
 describe("picking a list", () => {
-  it("is all recipes, made lately or a category, one at a time", () => {
+  it("is all recipes or a category, one at a time", () => {
     expect(pickedList(f())).toEqual({ kind: "all" });
-    expect(pickedList(f({ made: "recent" }))).toEqual({ kind: "made" });
+    // Made lately is a tick line now (U18), not a list.
+    expect(pickedList(f({ made: "recent" }))).toEqual({ kind: "all" });
     expect(pickedList(f({ category: "dessert", made: "recent" }))).toEqual({
       kind: "category",
       key: "dessert",
     });
   });
 
-  it("keeps the search's switches when switching lists", () => {
-    const on = f({ rating: "favorite", maxMinutes: 30, category: "bread", alsoIn: ["soup"] });
+  it("keeps the search's tick lines when switching lists", () => {
+    const on = f({
+      rating: "favorite",
+      maxMinutes: 30,
+      made: "recent",
+      category: "bread",
+      alsoIn: ["soup"],
+    });
     expect(pickCategory(on, "dessert")).toMatchObject({
       category: "dessert",
       rating: "favorite",
       maxMinutes: 30,
+      made: "recent",
       alsoIn: ["soup"],
     });
-    expect(pickAll(on)).toMatchObject({ category: "", alsoIn: [], rating: "favorite" });
-    expect(pickMadeLately(on)).toMatchObject({ category: "", made: "recent", maxMinutes: 30 });
-    // A category replaces Made lately, but not "never made" from More filters.
-    expect(pickCategory(f({ made: "recent" }), "dessert").made).toBe("");
-    expect(pickCategory(f({ made: "never" }), "dessert").made).toBe("never");
-  });
-
-  it("turns the switches on and off", () => {
-    expect(toggleFavorites(f()).rating).toBe("favorite");
-    expect(toggleFavorites(f({ rating: "favorite" })).rating).toBe("");
-    expect(toggleFavorites(f({ rating: "4" })).rating).toBe("favorite");
-    expect(toggleQuick(f()).maxMinutes).toBe(30);
-    expect(toggleQuick(f({ maxMinutes: 30 })).maxMinutes).toBe(null);
-    expect(toggleQuick(f({ maxMinutes: 60 })).maxMinutes).toBe(30);
+    expect(pickAll(on)).toMatchObject({
+      category: "",
+      alsoIn: [],
+      rating: "favorite",
+      made: "recent",
+    });
   });
 });
 
@@ -88,11 +86,15 @@ describe("counts", () => {
   ];
 
   it("counts every category with what is inside it, once a recipe", () => {
-    const counts = libraryCounts(list, f(), {}, TODAY, null);
+    const items = [...DEFAULT_QUICK_SEARCHES, quick.made("recent"), quick.search("abc")];
+    const counts = libraryCounts(list, f(), {}, TODAY, null, items);
     expect(counts?.all).toBe(4);
-    expect(counts?.made).toBe(1);
-    expect(counts?.favorites).toBe(1);
-    expect(counts?.quick).toBe(3);
+    // Each tick line, by its key; search lines aren't counted.
+    expect(Object.fromEntries(counts?.quick ?? [])).toEqual({
+      favorites: 1,
+      "time:30": 3,
+      "made:recent": 1,
+    });
     expect(counts?.unfiled).toBe(0);
     expect(Object.fromEntries(counts?.byKey ?? [])).toEqual({
       dessert: 3,
@@ -109,14 +111,15 @@ describe("counts", () => {
       {},
       TODAY,
       new Set(["curd", "cake", "bars", "soup"]),
+      DEFAULT_QUICK_SEARCHES,
     );
     // Picked: Soup. All recipes counts every category's quick recipes.
     expect(counts?.all).toBe(3);
     expect(counts?.byKey.get("dessert")).toBe(2);
     expect(counts?.byKey.get("bars")).toBeUndefined();
-    // The switches count what the list would show, in Soup.
-    expect(counts?.favorites).toBe(0);
-    expect(counts?.quick).toBe(1);
+    // The tick lines count what the list would show, in Soup.
+    expect(counts?.quick.get("favorites")).toBe(0);
+    expect(counts?.quick.get("time:30")).toBe(1);
 
     const searched = libraryCounts(list, f(), {}, TODAY, new Set(["cake"]));
     expect(searched?.all).toBe(1);
@@ -124,13 +127,13 @@ describe("counts", () => {
     expect(searched?.byKey.get("soup")).toBeUndefined();
   });
 
-  it("counts Made lately as clicking it would show it, whatever More filters says", () => {
-    // More filters' "never made" gives way to Made lately when that is clicked.
-    const counts = libraryCounts(list, f({ made: "never" }), {}, TODAY, null);
-    expect(counts?.made).toBe(1);
+  it("counts a tick line as turning it on would show it, in place of its own part", () => {
+    // "Never made" from Filters gives way to Made lately when that is turned on.
+    const items = [quick.made("recent"), quick.made("never")];
+    const counts = libraryCounts(list, f({ made: "never" }), {}, TODAY, null, items);
+    expect(counts?.quick.get("made:recent")).toBe(1);
+    expect(counts?.quick.get("made:never")).toBe(2);
     expect(counts?.all).toBe(2);
-    const old = libraryCounts(list, f({ made: "old" }), {}, TODAY, null);
-    expect(old?.made).toBe(1);
   });
 
   it("counts what matches outside the category only when nothing else ties it to categories", () => {
@@ -186,7 +189,7 @@ describe("counts", () => {
 describe("what the list says it shows", () => {
   it("names the list", () => {
     expect(listTitle(f(), nameOf)).toBe("All recipes");
-    expect(listTitle(f({ made: "recent" }), nameOf)).toBe("Made lately");
+    expect(listTitle(f({ made: "recent" }), nameOf)).toBe("All recipes");
     expect(listTitle(f({ category: "dessert" }), nameOf)).toBe("Dessert");
     expect(listTitle(f({ category: UNFILED }), nameOf)).toBe("Not in a category");
   });
@@ -201,8 +204,12 @@ describe("what the list says it shows", () => {
     expect(shownSentence(4, "", f({ rating: "favorite", without: ["mushroom"] }), nameOf)).toBe(
       "4 recipes · Favorites · Without mushroom",
     );
+    // Choices a tick line can hold are said as the line says them.
     expect(shownSentence(2, "", f({ made: "recent", maxMinutes: 60 }), nameOf)).toBe(
-      "2 recipes · Up to 1 hour",
+      "2 recipes · 1 hour or less · Made lately",
+    );
+    expect(shownSentence(2, "", f({ rating: "4", maxMinutes: 25, minServings: 6 }), nameOf)).toBe(
+      "2 recipes · 4 stars and up · Up to 25 minutes · Serves 6 or more",
     );
   });
 });

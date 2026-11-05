@@ -41,7 +41,7 @@ async function setTime(page: Page, label: string) {
 
 /** Saves what the list shows under a name. */
 async function saveAs(page: Page, name: string) {
-  await page.getByRole("button", { name: "Save this search" }).click();
+  await page.getByRole("button", { name: "Save as quick search" }).click();
   await saved(page).getByLabel("Name this search").fill(name);
   await saved(page).getByRole("button", { name: "Save", exact: true }).click();
   await expect(saved(page).getByText(`Saved “${name}”.`)).toBeVisible();
@@ -56,7 +56,7 @@ test("Save a search, use it again, update it, rename it and remove it", async ({
   await addSamples(page);
 
   // Nothing to save until the list is narrowed.
-  await expect(page.getByRole("button", { name: "Save this search" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Save as quick search" })).toHaveCount(0);
 
   await toggleQuick(page);
   await expect(titles(page)).toHaveCount(2);
@@ -115,7 +115,7 @@ test("A name can't be used twice, and says why", async ({ page, context, baseURL
   await saveAs(page, "Quick");
 
   await setTime(page, "1 hr");
-  await page.getByRole("button", { name: "Save this search" }).click();
+  await page.getByRole("button", { name: "Save as quick search" }).click();
   await saved(page).getByLabel("Name this search").fill("  quick ");
   await saved(page).getByRole("button", { name: "Save", exact: true }).click();
   await expect(saved(page).getByRole("alert")).toHaveText(

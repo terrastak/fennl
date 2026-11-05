@@ -167,9 +167,7 @@ export function PhoneLibrary({
   const placeholder =
     picked.kind === "category"
       ? `Search in ${listTitle(filters, nameOf)}`
-      : picked.kind === "made"
-        ? "Search recipes made lately"
-        : `Search ${recipes?.length ?? 0} ${recipes?.length === 1 ? "recipe" : "recipes"}`;
+      : `Search ${recipes?.length ?? 0} ${recipes?.length === 1 ? "recipe" : "recipes"}`;
 
   // The top-level category the one shown is in, marked in the first row.
   let rootKey = "";

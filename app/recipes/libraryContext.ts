@@ -4,6 +4,7 @@ import type { RecipeSummary } from "../sync/dbProtocol";
 import type { SearchResults } from "../sync/search";
 import type { RecipeFilters } from "./filters";
 import type { LibraryCounts } from "./library";
+import type { QuickSearches } from "./quickSearches";
 import type { useSavedSearches } from "./savedSearches";
 
 // The recipe box shared by the left panel and the recipe list (U17); LibraryProvider.tsx fills it.
@@ -22,6 +23,8 @@ export interface Library {
   /** How many recipes each row of the left panel would show; null until it's known. */
   counts: LibraryCounts | null;
   saved: ReturnType<typeof useSavedSearches>;
+  /** The person's quick searches (U18): the left panel's lines, and the phone's in Filters. */
+  quick: QuickSearches;
   /** The saved search chosen last, for "Update" once the list has been changed. */
   chosenSearch: string;
   setChosenSearch: (id: string) => void;

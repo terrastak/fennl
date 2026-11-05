@@ -32,11 +32,5 @@ export function useUndoable(first: () => Done | null = () => null) {
     return ok;
   };
 
-  /** Forgets the last change (its Undo has stopped making sense where it's shown). */
-  const clear = () => {
-    setDone(null);
-    setFailed(false);
-  };
-
-  return { done, failed, run, undo, clear };
+  return { done, failed, run, undo };
 }

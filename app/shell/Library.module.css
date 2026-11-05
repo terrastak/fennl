@@ -1,6 +1,6 @@
 /*
  * The recipe box in the left panel (U17, owner's choices 2026-11-04): the search box, the quick
- * lists, saved searches and the categories with their counts. Tokens only
+ * searches (U18) and the categories with their counts. Tokens only
  * (docs/design/design-direction.md); the approved mockup is the guide for sizes.
  */
 
@@ -272,7 +272,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* On/off quick lists: a box that fills with a check when on. */
+/* On/off tick lines: a box that fills with a check when on. */
 .box {
   display: grid;
   place-items: center;
@@ -299,7 +299,7 @@
   color: var(--color-text-muted);
 }
 
-/* --- Saved searches and categories ------------------------------------------------------- */
+/* --- Quick searches (U18) and categories --------------------------------------------------- */
 
 .headingRow {
   display: flex;
@@ -336,6 +336,201 @@
   color: var(--color-text);
 }
 
+/* "+ Add" beside the quick searches' heading: a button that looks like Edit. */
+button.edit {
+  padding: 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* A quick search: the line (its whole row is the click), its ▾ after the name, the count, and
+   the ✕ that takes the count's place while the line is pointed at or has the focus. */
+.quickList {
+  position: relative;
+}
+
+.quickRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.quickRow:hover {
+  background: var(--color-surface-sunken);
+}
+
+.quickRow:has(.quickMain[aria-current="page"]) {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+.quickMain {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  /* Not text to select: a press that moves is a drag (putting the lines in order). */
+  user-select: none;
+}
+
+.quickMain:hover {
+  color: var(--color-text);
+}
+
+.quickMain[aria-current="page"] {
+  color: var(--color-accent-soft-text);
+  font-weight: var(--weight-semibold);
+}
+
+/* The whole row answers a click on the line. */
+.quickMain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius-sm);
+}
+
+.quickMain:focus-visible {
+  outline: none;
+}
+
+.quickMain:focus-visible::after {
+  outline: 3px solid var(--color-focus);
+  outline-offset: -3px;
+}
+
+.quickMore,
+.quickRemove {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+
+.quickMore:hover,
+.quickMore[aria-expanded="true"] {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.quickCount {
+  padding-left: var(--space-1);
+}
+
+/* The ✕ sits where the count is, unseen until the line is pointed at or has the focus. */
+.quickRemove {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  border-radius: var(--radius-full);
+  opacity: 0;
+  transform: translateY(-50%);
+}
+
+/* Reached with the keyboard (not merely clicked), the ✕ shows too. */
+.quickRow:hover .quickRemove,
+.quickRow:has(:focus-visible) .quickRemove {
+  opacity: 1;
+}
+
+.quickRow:hover .quickCount,
+.quickRow:has(:focus-visible) .quickCount {
+  visibility: hidden;
+}
+
+.quickRemove:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.quickRemove:focus-visible {
+  outline-offset: 0;
+}
+
+/* With no way to point (a touch screen), the ✕ is always there, after the count. */
+@media (hover: none) {
+  .quickRemove {
+    position: relative;
+    top: auto;
+    right: auto;
+    opacity: 1;
+    transform: none;
+  }
+
+  .quickCount {
+    margin-left: auto;
+  }
+
+  .quickRow:hover .quickCount,
+  .quickRow:has(:focus-visible) .quickCount {
+    visibility: visible;
+  }
+}
+
+/* A save that didn't go through, said under the heading until the next change. */
+.quickProblem {
+  margin: 0 var(--space-2) var(--space-1);
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.quickProblem:empty {
+  display: none;
+}
+
+/* Dragging a line: it stays in its place, hatched, and a line shows where it would go. */
+:global(html[data-quick-drag]) * {
+  cursor: grabbing !important;
+}
+
+.quickFrom {
+  outline: 1.5px dashed var(--color-border-strong);
+  outline-offset: -1.5px;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    var(--color-surface-sunken) 5px 7px
+  );
+}
+
+.quickLine {
+  position: absolute;
+  right: var(--space-1);
+  left: var(--space-2);
+  height: 3px;
+  margin-top: -1.5px;
+  border-radius: 2px;
+  background: var(--color-accent);
+  pointer-events: none;
+}
+
 .catRow {
   position: relative;
 }
@@ -346,10 +541,6 @@
   padding: 0.1rem var(--space-2) 0.1rem calc(2.125rem + var(--depth, 0) * 1rem);
   /* Not text to select: a press that moves is a drag (putting categories in order). */
   user-select: none;
-}
-
-.saved {
-  padding-left: var(--space-2);
 }
 
 /* Recipes in no category: last, set a little apart and in italics, as it isn't a category. */
@@ -427,27 +618,6 @@
   color: var(--color-accent-soft-text);
 }
 
-/* Shown the first few drags. */
-.dragHint {
-  margin: 0.15rem 0 var(--space-2);
-  padding: var(--space-1) var(--space-3);
-  border: 1px dashed var(--color-accent);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-  color: var(--color-text-muted);
-  font-size: var(--text-xs);
-  line-height: var(--leading-snug);
-}
-
-.dragHint p {
-  margin: 0;
-}
-
-.dragHint b {
-  color: var(--color-text);
-  font-weight: var(--weight-semibold);
-}
-
 /* The insertion line: from the level it goes to, with a ring at its start. */
 .dropLine {
   position: fixed;
@@ -508,28 +678,4 @@
 .liftedName {
   display: grid;
   min-width: 0;
-}
-
-.liftedNo {
-  color: var(--color-danger);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-}
-
-/* The Undo for a move, fitted to the panel; while there's nothing to say it takes no room. */
-.undo p {
-  margin: 0;
-}
-
-.undo > div[class] {
-  margin: var(--space-1) 0 var(--space-2);
-  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
-  font-size: var(--text-xs);
-  line-height: var(--leading-snug);
-}
-
-.undo button {
-  min-height: 1.5rem;
-  padding: 0 var(--space-1);
-  font-size: var(--text-xs);
 }

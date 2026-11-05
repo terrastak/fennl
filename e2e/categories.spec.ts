@@ -228,7 +228,7 @@ test("Premium: category changes sync between devices", async ({
   await premium(context, baseURL!);
   await page.goto("/categories");
   await page.getByLabel("New category").fill("Holidays > Thanksgiving");
-  await page.getByRole("button", { name: "Add" }).click();
+  await page.getByRole("button", { name: "Add", exact: true }).click();
   // Saved here first (the bar says so), then sent.
   await expect(undoStatus(page)).toHaveText("Added Holidays › Thanksgiving.");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
@@ -306,19 +306,16 @@ test("Categories put in order by dragging in the left panel, and with Move up an
   // A to Z to start with.
   await expect(panelCategories(page)).toHaveText(["Bars", "Christmas", "Desserts", "Entrees"]);
 
-  // Between two moves it there; the hint says so the first few times.
+  // Between two moves it there (with no hint or message since U18).
   await dragCategory(page, "Entrees", "Christmas", "top");
-  await expect(library(page).getByText("moves it there.")).toBeVisible();
   await page.mouse.up();
   await expect(panelCategories(page)).toHaveText(["Bars", "Entrees", "Christmas", "Desserts"]);
-  await expect(library(page).getByRole("status")).toHaveText("Moved Entrees before Christmas.");
   // The drop didn't also open the category it ended on.
   await expect(page).toHaveURL(/\/$/);
 
   // Onto one puts it inside (and opens it, to show where it went).
   await dragCategory(page, "Christmas", "Desserts", "middle");
   await page.mouse.up();
-  await expect(library(page).getByRole("status")).toHaveText("Moved Christmas into Desserts.");
   await expect(panelCategories(page)).toHaveText([
     "Bars",
     "Entrees",
@@ -327,11 +324,10 @@ test("Categories put in order by dragging in the left panel, and with Move up an
     "Christmas",
   ]);
 
-  // Never into itself or its own subcategories.
+  // Never into itself or its own subcategories: the cursor says no, and nothing moves.
   await dragCategory(page, "Desserts", "Cakes", "middle");
-  await expect(page.getByText("Can’t go inside itself")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("data-category-drag", "refused");
   await page.mouse.up();
-  await expect(library(page).getByRole("status")).toHaveText("Moved Christmas into Desserts.");
   // Escape puts it back down where it was.
   await dragCategory(page, "Bars", "Cakes", "top");
   await page.keyboard.press("Escape");
@@ -344,8 +340,10 @@ test("Categories put in order by dragging in the left panel, and with Move up an
     "Christmas",
   ]);
 
-  // Undo takes the last move back.
-  await library(page).getByRole("button", { name: "Undo" }).click();
+  // A move is taken back by dragging it back (there's no Undo after a drag since U18).
+  await expect(library(page).getByRole("button", { name: "Undo" })).toHaveCount(0);
+  await dragCategory(page, "Christmas", "Desserts", "top");
+  await page.mouse.up();
   await expect(panelCategories(page)).toHaveText([
     "Bars",
     "Entrees",

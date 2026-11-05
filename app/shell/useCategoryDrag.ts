@@ -10,13 +10,11 @@ import type { CategoryNode, CategoryTree, PlaceCheck } from "../categories/tree"
 
 // Dragging a category in the left panel to put it in order (U17, owner's choices 2026-11-04):
 // between two rows moves it there, onto one puts it inside, never into itself or its own
-// subcategories. Only with a mouse: on a phone, or with the keyboard, the Categories page has
+// subcategories (the drop does nothing, and the cursor says so; U18 took away the hint, the
+// message and the Undo after a drag). Only with a mouse: on a phone, or with the keyboard, the Categories page has
 // Move, Move up and Move down. The rows carry `data-cat-key` so a drop can be worked out from
 // where they are on screen (drop.ts).
 
-/** How many drags show the hint ("Between two moves it there..."), counted on this device. */
-const HINT_KEY = "fennl:category-drag-hint";
-const HINT_TIMES = 3;
 /** How far the mouse moves, pressed, before a click becomes a drag. */
 const THRESHOLD = 5;
 /** How close to the panel's top or bottom edge the list scrolls, once the mouse waits there. */
@@ -34,23 +32,6 @@ export interface DragState {
   /** The rows' left edge and width, for the insertion line. */
   left: number;
   span: number;
-  hint: boolean;
-}
-
-function hintCount(): number {
-  try {
-    return Number(localStorage.getItem(HINT_KEY) ?? "0") || 0;
-  } catch {
-    return HINT_TIMES;
-  }
-}
-
-function countHint(n: number) {
-  try {
-    localStorage.setItem(HINT_KEY, String(n));
-  } catch {
-    // Not kept; the hint shows again next time.
-  }
 }
 
 /**
@@ -81,8 +62,8 @@ function visibleBox(panel: HTMLElement) {
   };
 }
 
-/** Stops the click that ends a drag from opening the category it was dropped on. */
-function swallowNextClick() {
+/** Stops the click that ends a drag from opening what it was dropped on. */
+export function swallowNextClick() {
   const swallow = (event: MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -191,8 +172,6 @@ export function useCategoryDrag({
       if (cancelled) return;
       if (!state) {
         if (Math.hypot(e.clientX - startX, e.clientY - startY) < THRESHOLD) return;
-        const seen = hintCount();
-        countHint(seen + 1);
         state = {
           node,
           x: e.clientX,
@@ -202,7 +181,6 @@ export function useCategoryDrag({
           check: null,
           left: row.left,
           span: row.width,
-          hint: seen < HINT_TIMES,
         };
         frame = requestAnimationFrame(scroll);
       }

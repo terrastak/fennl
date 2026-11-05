@@ -8,9 +8,10 @@ import styles from "./recipes.module.css";
 
 // Saved searches on the recipe list (phase C13b): choose one to see its recipes, save what the
 // list is showing under a name, and rename, update or remove one. A saved search is a rule, so
-// the list it shows stays current as recipes change. Since U17 they are listed in the left panel
-// (app/shell/Library.tsx), one click each; the list's header keeps the buttons to save, update,
-// rename or remove one, and the box for a name opens under it.
+// the list it shows stays current as recipes change. Since U18 they are search lines among the
+// quick searches (app/shell/QuickSearches.tsx, and at the top of a phone's Filters), one click
+// each, so saving one is "Save as quick search"; the list's header keeps the buttons to save,
+// update, rename or remove one, and the box for a name opens under it.
 
 type Mode = "idle" | "saving" | "renaming" | "removing";
 
@@ -103,7 +104,7 @@ export function useSavedSearchControls({
       {narrowing && !same && currentText ? (
         <button type="button" className={listStyles.tool} onClick={startSaving}>
           {STAR_ICON}
-          Save this search
+          Save as quick search
         </button>
       ) : null}
       {active && changedSinceChosen ? (

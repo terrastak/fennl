@@ -10,6 +10,7 @@ import { useUndoable } from "../categories/useUndoable";
 import { navigate, useSearchString } from "../navigation";
 import { FiltersPanel } from "../recipes/FiltersPanel";
 import { ListMenu } from "../recipes/ListMenu";
+import { turnOffQuickFilter } from "../recipes/quickSearchFilters";
 import { useSavedSearchControls } from "../recipes/savedSearchControls";
 import {
   activeFilterCount,
@@ -21,12 +22,10 @@ import {
 } from "../recipes/filters";
 import {
   addressCategoryName,
-  favoritesOn,
   listTitle,
   pickAll,
   outsideCount,
   pickedList,
-  quickOn,
   shownSentence,
 } from "../recipes/library";
 import { today, useLibrary } from "../recipes/libraryContext";
@@ -474,15 +473,14 @@ export function RecipesPage() {
     !!tree && picked.kind === "category" && picked.key !== UNFILED && !tree.byKey.has(picked.key);
   const sentence = busy ? "Searching…" : shownSentence(shown.length, query, filters, nameOf);
   const showCount = recipes !== null && list.length > 0;
-  // Filters only More filters shows (the left panel shows the rest).
-  const moreOn =
-    filtering -
-    [
-      filters.category !== "",
-      favoritesOn(filters),
-      quickOn(filters),
-      picked.kind === "made",
-    ].filter(Boolean).length;
+  // Filters only More filters shows: the left panel shows the category and the quick searches'
+  // tick lines that are on (U18).
+  const moreOn = activeFilterCount(
+    library.quick.items.reduce(
+      (left, item) => (item.type === "filter" ? turnOffQuickFilter(left, item) : left),
+      { ...filters, category: "" },
+    ),
+  );
   const outside =
     searching && !busy && counts ? outsideCount(filters, counts.all, shown.length) : 0;
 
@@ -541,10 +539,8 @@ export function RecipesPage() {
                     <button
                       type="button"
                       className={listStyles.unpick}
-                      aria-label={
-                        picked.kind === "made" ? "Show all recipes" : "Show all categories"
-                      }
-                      title={picked.kind === "made" ? "Show all recipes" : "Show all categories"}
+                      aria-label="Show all categories"
+                      title="Show all categories"
                       onClick={() => library.show(query, pickAll(filters))}
                     >
                       <svg

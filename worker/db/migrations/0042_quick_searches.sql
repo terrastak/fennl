@@ -1,0 +1,1 @@
+ALTER TABLE `user` ADD `quick_searches` text;
