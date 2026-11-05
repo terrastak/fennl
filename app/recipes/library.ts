@@ -9,7 +9,15 @@ import {
 import { CATEGORY_SEPARATOR } from "../../shared/recipe";
 import { pathKey } from "../categories/tree";
 import type { RecipeSummary } from "../sync/dbProtocol";
-import { applyFilters, filterLabels, minutesLabel, UNFILED, type RecipeFilters } from "./filters";
+import {
+  applyFilters,
+  filterLabels,
+  minutesLabel,
+  NO_FILTERS,
+  searchKey,
+  UNFILED,
+  type RecipeFilters,
+} from "./filters";
 import { quickSearchCounts } from "./quickSearchFilters";
 
 // The recipe box in the left panel (U17, owner's choices 2026-11-04), as plain data: which list
@@ -17,7 +25,9 @@ import { quickSearchCounts } from "./quickSearchFilters";
 // and the filters that are on.
 //
 // "All recipes" and the categories are lists: one is picked at a time. The quick searches' tick
-// lines (U18, quickSearchFilters.ts) are on/off and stay on together with whatever is picked.
+// lines (U18, quickSearchFilters.ts) are on/off and stay on together with a category. Clicking
+// "All recipes" starts fresh (owner's choice 2026-11-05): no words, no filters, no category, so
+// it also closes a saved search; its count is every recipe.
 // Everything is still kept in the address (filters.ts), so back, forward and saved searches keep
 // working.
 
@@ -29,7 +39,18 @@ export function pickedList(filters: RecipeFilters): Picked {
   return { kind: "all" };
 }
 
-/** All recipes: no category; the search and the tick lines stay. */
+/** "All recipes" as the left panel's row and the phone's sheet show it: everything, nothing on. */
+export const ALL_RECIPES: RecipeFilters = NO_FILTERS;
+
+/** Whether the list shows every recipe, with nothing searched or filtered. */
+export function showingEverything(query: string, filters: RecipeFilters): boolean {
+  return searchKey(query, filters) === searchKey("", ALL_RECIPES);
+}
+
+/**
+ * No category; the search and the filters stay. For "Show all categories" and "Search all
+ * recipes", which drop only the category; the "All recipes" row starts fresh (ALL_RECIPES).
+ */
 export function pickAll(filters: RecipeFilters): RecipeFilters {
   return { ...filters, category: "", alsoIn: [], anyCategory: false };
 }
@@ -39,6 +60,8 @@ export function pickCategory(filters: RecipeFilters, key: string): RecipeFilters
 }
 
 export interface LibraryCounts {
+  /** Every recipe: what the "All recipes" row shows, whatever is searched or filtered. */
+  total: number;
   /** Every recipe the search and filters leave, whatever is picked. */
   all: number;
   /**
@@ -106,6 +129,7 @@ export function libraryCounts(
     for (const key of keys) byKey.set(key, (byKey.get(key) ?? otherwise) + 1);
   }
   return {
+    total: recipes.length,
     all: base.length,
     quick: quickCounts,
     byKey,
