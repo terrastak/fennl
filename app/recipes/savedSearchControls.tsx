@@ -1,15 +1,16 @@
 import { useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { MAX_SAVED_NAME_LENGTH } from "../../shared/savedSearch";
 import { parseSearch, searchKey, type RecipeFilters } from "./filters";
-import { problemText, useSavedSearches, type Outcome } from "./savedSearches";
+import { useLibrary } from "./libraryContext";
+import { problemText, type Outcome } from "./savedSearches";
 import listStyles from "./list.module.css";
 import styles from "./recipes.module.css";
 
 // Saved searches on the recipe list (phase C13b): choose one to see its recipes, save what the
 // list is showing under a name, and rename, update or remove one. A saved search is a rule, so
-// the list it shows stays current as recipes change. Since U13 the list shows them in two
-// places: a "Saved searches" chip among the quick filters, and a line under them to save, update,
-// rename or remove one.
+// the list it shows stays current as recipes change. Since U17 they are listed in the left panel
+// (app/shell/Library.tsx), one click each; the list's header keeps the buttons to save, update,
+// rename or remove one, and the box for a name opens under it.
 
 type Mode = "idle" | "saving" | "renaming" | "removing";
 
@@ -18,7 +19,6 @@ export function useSavedSearchControls({
   filters,
   narrowing,
   currentText,
-  onApply,
 }: {
   /** The words typed in search, and the filters chosen. */
   query: string;
@@ -27,10 +27,11 @@ export function useSavedSearchControls({
   narrowing: boolean;
   /** The search as an address query, to save. */
   currentText: string;
-  onApply: (q: string, filters: RecipeFilters) => void;
-}): { chip: ReactNode; actions: ReactNode } {
-  const { searches, save, rename, update, remove } = useSavedSearches();
-  const [activeId, setActiveId] = useState("");
+}): { buttons: ReactNode; panel: ReactNode } {
+  const library = useLibrary();
+  const { searches, save, rename, update, remove } = library.saved;
+  const activeId = library.chosenSearch;
+  const setActiveId = library.setChosenSearch;
   const [mode, setMode] = useState<Mode>("idle");
   const [name, setName] = useState("");
   const [message, setMessage] = useState<{ text: string; problem: boolean } | null>(null);
@@ -38,7 +39,7 @@ export function useSavedSearchControls({
   const nameId = useId();
   const nameBox = useRef<HTMLInputElement>(null);
 
-  if (searches === null) return { chip: null, actions: null };
+  if (searches === null) return { buttons: null, panel: null };
   const active = searches.find((s) => s.id === activeId) ?? null;
   const here = searchKey(query, filters);
   const same = searches.find((s) => {
@@ -49,7 +50,7 @@ export function useSavedSearchControls({
   // one, or on the one chosen last if the filters have been changed since.
   const changedSinceChosen = active !== null && narrowing && same?.id !== active.id;
   const shownSearch = same ?? (changedSinceChosen ? active : null);
-  if (searches.length === 0 && !narrowing) return { chip: null, actions: null };
+  if (searches.length === 0 && !narrowing) return { buttons: null, panel: null };
 
   const finish = async (run: () => Promise<Outcome>, done: (o: Outcome) => string) => {
     setBusy(true);
@@ -62,17 +63,6 @@ export function useSavedSearchControls({
     }
     setMessage({ text: problemText(outcome.error), problem: true });
     return outcome;
-  };
-
-  const choose = (id: string) => {
-    setMessage(null);
-    setMode("idle");
-    setActiveId(id);
-    const chosen = searches.find((s) => s.id === id);
-    if (chosen) {
-      const parsed = parseSearch(chosen.query);
-      onApply(parsed.q, parsed.filters);
-    }
   };
 
   const startSaving = () => {
@@ -105,72 +95,54 @@ export function useSavedSearchControls({
     }
   };
 
-  const chip =
-    searches.length > 0 ? (
-      <span className={same ? `${listStyles.chipSelect} ${listStyles.on}` : listStyles.chipSelect}>
-        <select
-          aria-label="Saved searches"
-          value={same?.id ?? ""}
-          onChange={(e) => choose(e.target.value)}
-          disabled={busy}
-        >
-          <option value="">★ Saved searches</option>
-          {searches.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-      </span>
-    ) : null;
-
   const offers =
     mode === "idle" &&
     ((narrowing && !same && currentText) || (active && changedSinceChosen) || shownSearch);
-  const actions = (
-    <section className={listStyles.saved} aria-label="Saved searches">
-      {offers ? (
-        <div className={styles.savedActions}>
-          {narrowing && !same && currentText ? (
-            <button type="button" className={styles.textButton} onClick={startSaving}>
-              Save this search
-            </button>
-          ) : null}
-          {active && changedSinceChosen ? (
-            <button
-              type="button"
-              className={styles.textButton}
-              disabled={busy}
-              onClick={() =>
-                void finish(
-                  () => update(active.id, currentText),
-                  () => `Updated “${active.name}”.`,
-                )
-              }
-            >
-              Update “{active.name}”
-            </button>
-          ) : null}
-          {shownSearch ? (
-            <>
-              <button type="button" className={styles.textButton} onClick={startRenaming}>
-                Rename “{shownSearch.name}”
-              </button>
-              <button
-                type="button"
-                className={styles.textButton}
-                onClick={() => {
-                  setMessage(null);
-                  setMode("removing");
-                }}
-              >
-                Remove
-              </button>
-            </>
-          ) : null}
-        </div>
+  const buttons = offers ? (
+    <>
+      {narrowing && !same && currentText ? (
+        <button type="button" className={listStyles.tool} onClick={startSaving}>
+          {STAR_ICON}
+          Save this search
+        </button>
       ) : null}
+      {active && changedSinceChosen ? (
+        <button
+          type="button"
+          className={listStyles.tool}
+          disabled={busy}
+          onClick={() =>
+            void finish(
+              () => update(active.id, currentText),
+              () => `Updated “${active.name}”.`,
+            )
+          }
+        >
+          Update “{active.name}”
+        </button>
+      ) : null}
+      {shownSearch ? (
+        <>
+          <button type="button" className={listStyles.tool} onClick={startRenaming}>
+            Rename “{shownSearch.name}”
+          </button>
+          <button
+            type="button"
+            className={listStyles.tool}
+            onClick={() => {
+              setMessage(null);
+              setMode("removing");
+            }}
+          >
+            Remove
+          </button>
+        </>
+      ) : null}
+    </>
+  ) : null;
 
+  const panel = (
+    <section className={listStyles.saved} aria-label="Saved searches">
       {mode === "saving" || mode === "renaming" ? (
         <form className={styles.savedForm} onSubmit={(e) => void submitName(e)}>
           <label htmlFor={nameId} className={styles.sort}>
@@ -230,5 +202,21 @@ export function useSavedSearchControls({
       </p>
     </section>
   );
-  return { chip, actions };
+  return { buttons, panel };
 }
+
+const STAR_ICON = (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.9"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8 6.6 19.7l1.1-6.1L3.2 9.4l6.1-.8z" />
+  </svg>
+);

@@ -69,7 +69,7 @@
   --duration-base: 200ms;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --sidebar-width: 15.5rem;
+  --sidebar-width: 16rem;
   --content-max: 72rem;
   --tap-target: 2.75rem;
   /* The phone's top bar (app/shell/AppShell.module.css), which stays at the top as the page scrolls. */

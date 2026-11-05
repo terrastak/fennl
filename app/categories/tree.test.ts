@@ -4,12 +4,17 @@ import type { CategoryChange, RecipeCategoryChange } from "../../shared/sync";
 import {
   canMove,
   categoryTree,
+  checkInside,
+  checkPlace,
   createCategory,
   deleteCategory,
   fileRecipeUnder,
   fileRecipes,
   moveCategory,
+  ORDER_BASE,
+  ORDER_STEP,
   parsePath,
+  placeCategory,
   renameCategory,
   unfileRecipes,
   underPath,
@@ -24,13 +29,19 @@ let n = 0;
 const id = (label: string) =>
   `00000000-0000-4000-8000-${label.padStart(12, "0").replace(/[^0-9a-f]/g, "a")}`;
 
-function cat(label: string, name: string, parent: string | null, owner = ME): Category {
+function cat(
+  label: string,
+  name: string,
+  parent: string | null,
+  owner = ME,
+  sortOrder = 0,
+): Category {
   return {
     id: id(label),
     ownerUserId: owner,
     parentId: parent ? id(parent) : null,
     name,
-    sortOrder: 0,
+    sortOrder,
     updatedAt: "2026-10-08T00:00:00Z",
     deletedAt: null,
     serverSeq: 1,
@@ -213,5 +224,181 @@ describe("filing recipes", () => {
     );
     expect(plan.removed.sort()).toEqual(["r-cake", "r-torte"]);
     expect(plan.undo.every((c) => (c as RecipeCategoryChange).deleted === false)).toBe(true);
+  });
+});
+
+describe("the person's own order", () => {
+  const placed = (i: number) => ORDER_BASE + i * ORDER_STEP;
+  /** Top level: Bars, Bread, Christmas, Dessert (with Cakes, Pies), Entrees; all A to Z. */
+  function levels(orders: Record<string, number> = {}): CategoryData {
+    const o = (label: string) => orders[label] ?? 0;
+    return {
+      categories: [
+        cat("b1", "Bread", null, ME, o("b1")),
+        cat("b2", "Bars", null, ME, o("b2")),
+        cat("c1", "Christmas", null, ME, o("c1")),
+        cat("d1", "Dessert", null, ME, o("d1")),
+        cat("d2", "Pies", "d1", ME, o("d2")),
+        cat("d3", "Cakes", "d1", ME, o("d3")),
+        cat("e1", "Entrees", null, ME, o("e1")),
+        // My partner's Dessert, shown as one with mine.
+        cat("d9", "dessert", null, PARTNER, o("d9")),
+      ],
+      links: [],
+      recipeOwners: {},
+    };
+  }
+  const names = (data: CategoryData) => categoryTree(data, ME).nodes.map((n) => n.path);
+  /** Applies a plan's category changes to the data, as syncing them would. */
+  function apply(data: CategoryData, changes: unknown[]): CategoryData {
+    const categories = data.categories.map((c) => {
+      const change = (changes as CategoryChange[]).find((x) => x.id === c.id);
+      return change ? { ...c, ...change.fields } : c;
+    });
+    return { ...data, categories };
+  }
+
+  it("starts A to Z, and the small orders sample categories got still read A to Z", () => {
+    expect(names(levels())).toEqual([
+      "Bars",
+      "Bread",
+      "Christmas",
+      "Dessert",
+      "Dessert › Cakes",
+      "Dessert › Pies",
+      "Entrees",
+    ]);
+    expect(names(levels({ e1: 1, d1: 2, c1: 3, b1: 4, b2: 5 }))[0]).toBe("Bars");
+  });
+
+  it("shows placed categories in their order, then any others A to Z", () => {
+    const data = levels({ e1: placed(0), b1: placed(1) });
+    expect(categoryTree(data, ME).roots.map((n) => n.name)).toEqual([
+      "Entrees",
+      "Bread",
+      "Bars",
+      "Christmas",
+      "Dessert",
+    ]);
+  });
+
+  it("places a category between two, numbering the whole level once", () => {
+    const data = levels();
+    const tree = categoryTree(data, ME);
+    const christmas = tree.byKey.get("christmas")!;
+    const plan = placeCategory(
+      tree,
+      christmas,
+      { parent: null, before: tree.byKey.get("bars")! },
+      ctx(),
+    );
+    const after = apply(data, plan.changes);
+    expect(categoryTree(after, ME).roots.map((n) => n.name)).toEqual([
+      "Christmas",
+      "Bars",
+      "Bread",
+      "Dessert",
+      "Entrees",
+    ]);
+    // Both people's Dessert get the same place.
+    const changes = plan.changes as CategoryChange[];
+    expect(changes.find((c) => c.id === id("d1"))?.fields).toEqual({ sortOrder: placed(3) });
+    expect(changes.find((c) => c.id === id("d9"))?.fields).toEqual({ sortOrder: placed(3) });
+    // Undo puts every order back, so the level reads A to Z again.
+    expect(names(apply(after, plan.undo))).toEqual(names(data));
+  });
+
+  it("changes only the orders that move once a level is arranged", () => {
+    const data = levels({
+      b2: placed(0),
+      b1: placed(1),
+      c1: placed(2),
+      d1: placed(3),
+      d9: placed(3),
+      e1: placed(4),
+    });
+    const tree = categoryTree(data, ME);
+    const plan = placeCategory(
+      tree,
+      tree.byKey.get("bread")!,
+      { parent: null, before: tree.byKey.get("dessert")! },
+      ctx(),
+    );
+    expect((plan.changes as CategoryChange[]).map((c) => c.id).sort()).toEqual(
+      [id("b1"), id("c1")].sort(),
+    );
+  });
+
+  it("brings a subcategory out to the top level, with a place there", () => {
+    const data = levels();
+    const tree = categoryTree(data, ME);
+    const plan = placeCategory(
+      tree,
+      tree.byKey.get("dessert › pies")!,
+      { parent: null, before: tree.byKey.get("entrees")! },
+      ctx(),
+    );
+    const pies = (plan.changes as CategoryChange[]).find((c) => c.id === id("d2"));
+    expect(pies?.fields).toEqual({ parentId: null, sortOrder: placed(4) });
+    expect(categoryTree(apply(data, plan.changes), ME).roots.map((n) => n.name)).toEqual([
+      "Bars",
+      "Bread",
+      "Christmas",
+      "Dessert",
+      "Pies",
+      "Entrees",
+    ]);
+    expect(plan.undo.find((c) => (c as CategoryChange).id === id("d2"))).toMatchObject({
+      fields: { parentId: id("d1"), sortOrder: 0 },
+    });
+  });
+
+  it("puts a category inside another last when that level is arranged, by name when not", () => {
+    const tree = categoryTree(levels(), ME);
+    const plan = moveCategory(
+      tree,
+      tree.byKey.get("christmas")!,
+      tree.byKey.get("dessert")!,
+      ctx(),
+    );
+    expect((plan.changes as CategoryChange[]).find((c) => c.id === id("c1"))?.fields).toEqual({
+      parentId: id("d1"),
+    });
+
+    const arranged = categoryTree(levels({ d2: placed(0), d3: placed(1), c1: placed(5) }), ME);
+    const again = moveCategory(
+      arranged,
+      arranged.byKey.get("christmas")!,
+      arranged.byKey.get("dessert")!,
+      ctx(),
+    );
+    expect((again.changes as CategoryChange[]).find((c) => c.id === id("c1"))?.fields).toEqual({
+      parentId: id("d1"),
+      sortOrder: placed(2),
+    });
+  });
+
+  it("never places a category in itself or inside its own subcategories", () => {
+    const tree = categoryTree(levels(), ME);
+    const dessert = tree.byKey.get("dessert")!;
+    const cakes = tree.byKey.get("dessert › cakes")!;
+    expect(checkPlace(tree, dessert, { parent: dessert, before: null })).toBe("refused");
+    expect(checkPlace(tree, dessert, { parent: dessert, before: cakes })).toBe("refused");
+    expect(checkInside(dessert, cakes)).toBe("refused");
+    expect(checkInside(dessert, dessert)).toBe("refused");
+    expect(placeCategory(tree, dessert, { parent: dessert, before: cakes }, ctx()).changes).toEqual(
+      [],
+    );
+  });
+
+  it("knows a drop where the category already is changes nothing", () => {
+    const tree = categoryTree(levels(), ME);
+    const christmas = tree.byKey.get("christmas")!;
+    const dessert = tree.byKey.get("dessert")!;
+    expect(checkPlace(tree, christmas, { parent: null, before: christmas })).toBe("same");
+    expect(checkPlace(tree, christmas, { parent: null, before: dessert })).toBe("same");
+    expect(checkPlace(tree, christmas, { parent: null, before: null })).toBe("ok");
+    expect(checkInside(tree.byKey.get("dessert › cakes")!, dessert)).toBe("same");
+    expect(checkInside(christmas, dessert)).toBe("ok");
   });
 });

@@ -1,6 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { openFilters, recipeCard, syncStatus } from "./recipes";
+import {
+  categorySheet,
+  clearFilters,
+  filtersButton,
+  library,
+  openFilters,
+  recipeCard,
+  showCategory,
+  syncStatus,
+  toggleQuick,
+} from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C13a: more filters on the recipe list (a Filters panel since U13). The four sample recipes are:
@@ -74,14 +84,13 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   await choose(page, "Total time, up to", "Any");
   await showRecipes(page, 2);
   await expect(titles(page)).toHaveText(["Green Chile Stew", "Lemon Olive Oil Cake"]);
-  await expect(page.getByRole("button", { name: "Filters 1 on" })).toBeVisible();
-  await page.getByRole("button", { name: "Remove filter: Serves 6 or more" }).click();
+  await expect(filtersButton(page, 1)).toBeVisible();
+  await expect(page.getByText("2 recipes · Serves 6 or more")).toBeVisible();
+  await clearFilters(page);
   await expect(titles(page)).toHaveCount(4);
 
   // Two categories at once ("Mexican" and "Vegetarian"), then either of them.
-  await page.getByRole("combobox", { name: "Category", exact: true }).selectOption({
-    label: "Mexican (2)",
-  });
+  await showCategory(page, "Mexican");
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema", "Green Chile Stew"]);
   await openFilters(page);
   await pickCategory(page, "Also in category", "vegetarian");
@@ -90,17 +99,14 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   await showRecipes(page, 2);
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema", "Green Chile Stew"]);
 
-  // Leaving a category out.
-  await page
-    .getByRole("combobox", { name: "Category", exact: true })
-    .selectOption({ label: "Category" });
-  await expect(page.getByRole("list", { name: "Filters on" })).toBeVisible();
-  await page.getByRole("button", { name: /^Remove filter: Or in/ }).click();
+  // Leaving a category out. Showing all categories again leaves "or in" too.
+  await page.getByRole("button", { name: "Show all categories" }).click();
+  await expect(titles(page)).toHaveCount(4);
   await openFilters(page);
   await pickCategory(page, "Not in category", "mexican");
   await showRecipes(page, 2);
   await expect(titles(page)).toHaveText(["Buttermilk Pancakes", "Lemon Olive Oil Cake"]);
-  await page.getByRole("button", { name: /^Remove filter: Not in/ }).click();
+  await clearFilters(page);
 
   // Ingredients: with and without.
   await openFilters(page);
@@ -116,7 +122,7 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
     "Buttermilk Pancakes",
     "Lemon Olive Oil Cake",
   ]);
-  await page.getByRole("button", { name: "Remove filter: Without cumin" }).click();
+  await clearFilters(page);
   await expect(titles(page)).toHaveCount(4);
 
   // Nutrition, and the source.
@@ -141,7 +147,7 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   ).toHaveAttribute("aria-pressed", "true");
   await page.keyboard.press("Escape");
   await expect(panel(page)).toBeHidden();
-  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible();
+  await expect(filtersButton(page)).toBeVisible();
   await noAccessibilityProblems(page);
 });
 
@@ -164,20 +170,22 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await expect(page).toHaveURL(/time=60/);
   await expect(page).toHaveURL(/without=cumin/);
 
-  // A reload keeps them, the Filters button counting them and the chips showing.
+  // A reload keeps them, More filters counting them and the header saying them.
   await page.reload();
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
-  await expect(page.getByRole("button", { name: "Filters 2 on" })).toBeVisible();
-  await expect(page.getByRole("combobox", { name: "Time" })).toHaveValue("60");
-  await expect(page.getByRole("button", { name: "Remove filter: Without cumin" })).toBeVisible();
+  await expect(filtersButton(page, 2)).toBeVisible();
+  await expect(
+    page.getByText("2 recipes match “lemon” · Up to 1 hour · Without cumin"),
+  ).toBeVisible();
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake", "Buttermilk Pancakes"]);
 
-  // One button puts everything back.
-  await page.getByRole("button", { name: "Clear all" }).click();
+  // The panel's Clear filters and the search box's ✕ put everything back.
+  await clearFilters(page);
+  await page.getByRole("button", { name: "Clear search" }).click();
   await expect(titles(page)).toHaveCount(4);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("");
-  await expect(page.getByRole("button", { name: "Filters", exact: true })).toBeVisible();
+  await expect(filtersButton(page)).toBeVisible();
 });
 
 test("A recipe with no time written down is left out of a time filter, and the list says so", async ({
@@ -194,8 +202,8 @@ test("A recipe with no time written down is left out of a time filter, and the l
   await page.goto("/");
   await expect(recipeCard(page, "Mystery Soup")).toBeVisible();
 
-  // The quick Time filter.
-  await page.getByRole("combobox", { name: "Time" }).selectOption({ label: "Up to 30 min" });
+  // 30 minutes or less.
+  await toggleQuick(page);
   await expect(titles(page)).toHaveText([
     "Black Bean Tacos with Lime Crema",
     "Buttermilk Pancakes",
@@ -217,7 +225,7 @@ test("The ⋯ menu opens and closes, and the list's top fits the screen", async 
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
 
-  // Nothing wider than the screen, however many quick filters there are.
+  // Nothing wider than the screen.
   const fits = () =>
     page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -235,14 +243,87 @@ test("The ⋯ menu opens and closes, and the list's top fits the screen", async 
   await expect(menu).toHaveCount(0);
   await expect(more).toBeFocused();
   await more.click();
-  await page.getByRole("heading", { level: 1, name: "Your recipes" }).click();
+  await page.getByRole("heading", { level: 1, name: "All recipes" }).click();
   await expect(menu).toHaveCount(0);
 
   // With filters on, it still fits.
-  await page.getByRole("combobox", { name: "Time", exact: true }).selectOption("30");
+  await toggleQuick(page);
   await openFilters(page);
   await choose(page, "Serves at least", "4");
   await showRecipes(page, 2);
-  await expect(page.getByRole("list", { name: "Filters on" })).toBeVisible();
+  await expect(page.getByText("2 recipes · 30 minutes or less · Serves 4 or more")).toBeVisible();
   expect(await fits()).toBe(true);
+});
+
+test("On a phone: search with Filters, a row of categories, their subcategories and the sheet of every category", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await addSamples(page);
+  // A computer has the left panel instead (U17).
+  test.skip(await library(page).isVisible(), "Phone layout only");
+
+  const search = page.getByRole("searchbox", { name: "Search recipes" });
+  const row = page.getByRole("navigation", { name: "Categories" });
+  const heading = page.getByRole("heading", { level: 1 });
+  await expect(search).toHaveAttribute("placeholder", "Search 4 recipes");
+  // The search icon left the top bar: the Recipes tab is where to search.
+  await expect(page.getByRole("button", { name: "Search", exact: true })).toHaveCount(0);
+
+  // One tap on a category; what's inside it shows in a second row.
+  await row.getByRole("link", { name: /^Desserts\s*, 1 recipe$/ }).click();
+  await expect(heading).toHaveText("Desserts");
+  await expect(search).toHaveAttribute("placeholder", "Search in Desserts");
+  await expect(row.getByRole("link", { name: /^Desserts/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await row
+    .getByRole("list", { name: "In Desserts:" })
+    .getByRole("link", { name: /^Cakes/ })
+    .click();
+  await expect(heading).toHaveText("Cakes");
+  await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake"]);
+
+  // Every category in a sheet: the one shown checked; one tap each.
+  await page.getByRole("button", { name: "All categories", exact: true }).click();
+  const sheet = categorySheet(page);
+  await expect(sheet.getByRole("link", { name: /^Cakes/ })).toHaveAttribute("aria-current", "page");
+  await sheet.getByRole("button", { name: "Show what's in Diet" }).click();
+  await expect(sheet.getByRole("button", { name: "Hide what's in Diet" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
+  await noAccessibilityProblems(page);
+  await sheet.getByRole("link", { name: /^Vegetarian\s*, 1 recipe$/ }).click();
+  await expect(sheet).toBeHidden();
+  await expect(heading).toHaveText("Vegetarian");
+  await page.getByRole("button", { name: "All categories", exact: true }).click();
+  await sheet.getByRole("link", { name: /^All recipes/ }).click();
+  await expect(heading).toHaveText("All recipes");
+  await expect(titles(page)).toHaveCount(4);
+
+  // The quick lists are in Filters, and stay on with the category shown.
+  await showCategory(page, "Mexican");
+  await openFilters(page);
+  const quick = panel(page).getByRole("group", { name: "Quick lists" });
+  await quick.getByRole("button", { name: "30 minutes or less" }).click();
+  await expect(quick.getByRole("button", { name: "30 minutes or less" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await showRecipes(page, 1);
+  await expect(heading).toHaveText("Mexican");
+  await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
+  await expect(filtersButton(page, 1)).toBeVisible();
+
+  // Nothing wider than the screen.
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+  await noAccessibilityProblems(page);
 });

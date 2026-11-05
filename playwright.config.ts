@@ -20,6 +20,7 @@ const PHONE_TESTS = [
   "navigation",
   "photos",
   "print",
+  "recipeBox",
   "recipes",
   "scan",
   "scanCamera",

@@ -1,12 +1,16 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { CategoryCombobox } from "../categories/CategoryCombobox";
+import { Link } from "../router";
+import { useWide } from "../shell/useWide";
 import { pathKey, type CategoryTree } from "../categories/tree";
 import categoryStyles from "../categories/categories.module.css";
 import {
   cleanWords,
   MADE_LABELS,
   NO_FILTERS,
+  parseSearch,
   RATING_LABELS,
+  searchKey,
   SERVING_CHOICES,
   shortMinutes,
   TIME_CHOICES,
@@ -14,6 +18,8 @@ import {
   type RatingFilter,
   type RecipeFilters,
 } from "./filters";
+import { favoritesOn, quickOn, toggleFavorites, toggleQuick } from "./library";
+import { useLibrary } from "./libraryContext";
 import { useHideNutrition } from "./nutritionSetting";
 import listStyles from "./list.module.css";
 import styles from "./recipes.module.css";
@@ -21,7 +27,8 @@ import styles from "./recipes.module.css";
 // The list's Filters (phase C13a; a panel since U13, owner's choices 2026-11-04): every way to
 // narrow the list, grouped, most of them one tap each. It slides in from the side on a computer
 // and up from the bottom on a phone; the list behind it follows each choice at once, and the
-// button at the bottom says how many recipes are left.
+// button at the bottom says how many recipes are left. On a phone, which has no left panel
+// (U17), it starts with the quick lists and the saved searches, one tap each.
 
 /** One choice from a few, as a row of buttons (the one chosen pressed). */
 function Choices<T extends string | number | null>({
@@ -194,6 +201,7 @@ export function FiltersPanel({
   const [hideNutrition] = useHideNutrition();
   const mainCategory =
     filters.category && filters.category !== "__unfiled" ? [filters.category] : [];
+  const phone = !useWide();
 
   useEffect(() => {
     const element = dialog.current;
@@ -231,6 +239,7 @@ export function FiltersPanel({
           </div>
 
           <div className={listStyles.panelBody}>
+            {phone ? <PhoneLists filters={filters} onChange={onChange} onClose={onClose} /> : null}
             {tree && tree.nodes.length > 0 ? (
               <div className={listStyles.group}>
                 <h3 className={listStyles.groupTitle}>Categories</h3>
@@ -391,5 +400,85 @@ export function FiltersPanel({
         </>
       ) : null}
     </dialog>
+  );
+}
+
+/**
+ * A phone's quick lists and saved searches (U17), which a computer has in the left panel. The
+ * quick lists stay on together with the category shown, as filters do.
+ */
+function PhoneLists({
+  filters,
+  onChange,
+  onClose,
+}: {
+  filters: RecipeFilters;
+  onChange: (filters: RecipeFilters) => void;
+  onClose: () => void;
+}) {
+  const library = useLibrary();
+  const quickId = useId();
+  const savedId = useId();
+  const searches = library.saved.searches ?? [];
+  const here = searchKey(library.query, filters);
+  const madeLately = filters.made === "recent";
+  const quick: { label: string; on: boolean; toggle: () => RecipeFilters }[] = [
+    { label: "Favorites", on: favoritesOn(filters), toggle: () => toggleFavorites(filters) },
+    {
+      label: "Made lately",
+      on: madeLately,
+      toggle: () => ({ ...filters, made: madeLately ? "" : "recent" }),
+    },
+    { label: "30 minutes or less", on: quickOn(filters), toggle: () => toggleQuick(filters) },
+  ];
+  return (
+    <>
+      <div className={listStyles.group} role="group" aria-labelledby={quickId}>
+        <h3 id={quickId} className={listStyles.groupTitle}>
+          Quick lists
+        </h3>
+        <div className={listStyles.options}>
+          {quick.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              className={listStyles.option}
+              aria-pressed={item.on}
+              onClick={() => onChange(item.toggle())}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+      {searches.length > 0 ? (
+        <div className={listStyles.group}>
+          <h3 id={savedId} className={listStyles.groupTitle}>
+            Saved searches
+          </h3>
+          <ul className={listStyles.savedList} aria-labelledby={savedId}>
+            {searches.map((s) => {
+              const parsed = parseSearch(s.query);
+              const shown = searchKey(parsed.q, parsed.filters) === here;
+              return (
+                <li key={s.id}>
+                  <Link
+                    href={s.query ? `/?${s.query.replace(/^\?/, "")}` : "/"}
+                    className={listStyles.savedLink}
+                    aria-current={shown ? "page" : undefined}
+                    onClick={() => {
+                      library.setChosenSearch(s.id);
+                      onClose();
+                    }}
+                  >
+                    {s.name}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
+    </>
   );
 }

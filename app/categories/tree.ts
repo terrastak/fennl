@@ -44,6 +44,11 @@ export interface CategoryNode {
   recipeIds: Set<string>;
   /** Recipes under it or anything inside it. */
   count: number;
+  /**
+   * Where the person put it among the categories beside it (U17): its stored sort order, mine
+   * where people's differ. Below ORDER_BASE it was never placed, and goes by name.
+   */
+  order: number;
 }
 
 export interface CategoryTree {
@@ -55,6 +60,8 @@ export interface CategoryTree {
   byId: Map<string, CategoryNode>;
   /** Who owns each category. */
   owners: Map<string, string>;
+  /** Each category's stored sort order, for undoing a move. */
+  orders: Map<string, number>;
   recipeOwners: Record<string, string>;
   links: CategoryLink[];
 }
@@ -63,6 +70,28 @@ export const pathKey = (names: string[]) => names.join(CATEGORY_SEPARATOR).toLoc
 
 const byName = (a: CategoryNode, b: CategoryNode) =>
   a.name.localeCompare(b.name, undefined, { sensitivity: "base", numeric: true });
+
+/**
+ * Categories are in the person's own order (U17, owner's choice 2026-11-04), starting A to Z.
+ * A category someone placed (by dragging, or Move up / Move down) has a sort order of at least
+ * ORDER_BASE; anything below it (0 for a new category, the small numbers sample categories got)
+ * was never placed. So a level nobody arranged reads A to Z, and a category added to an arranged
+ * level comes after the placed ones, with any others not placed in A to Z order.
+ */
+export const ORDER_BASE = 1_000_000;
+/** The gap between placed categories' sort orders. */
+export const ORDER_STEP = 1_000;
+
+export const isPlaced = (node: CategoryNode) => node.order >= ORDER_BASE;
+
+/** How categories beside each other are shown: placed ones in their order, then the rest A to Z. */
+export function byOrder(a: CategoryNode, b: CategoryNode): number {
+  const placedA = isPlaced(a);
+  const placedB = isPlaced(b);
+  if (placedA && placedB) return a.order - b.order || byName(a, b);
+  if (placedA !== placedB) return placedA ? -1 : 1;
+  return byName(a, b);
+}
 
 /** The tree, with the signed-in person's own names preferred where people spell them differently. */
 export function categoryTree(data: CategoryData, me: string): CategoryTree {
@@ -81,6 +110,7 @@ export function categoryTree(data: CategoryData, me: string): CategoryTree {
   const byKey = new Map<string, CategoryNode>();
   const byId = new Map<string, CategoryNode>();
   const owners = new Map<string, string>();
+  const orders = new Map<string, number>();
   const node = (names: string[]): CategoryNode => {
     const key = pathKey(names);
     let found = byKey.get(key);
@@ -97,6 +127,7 @@ export function categoryTree(data: CategoryData, me: string): CategoryTree {
         children: [],
         recipeIds: new Set(),
         count: 0,
+        order: 0,
       };
       byKey.set(key, found);
       parent?.children.push(found);
@@ -113,6 +144,9 @@ export function categoryTree(data: CategoryData, me: string): CategoryTree {
     found.ids.push(category.id);
     byId.set(category.id, found);
     owners.set(category.id, category.ownerUserId);
+    orders.set(category.id, category.sortOrder);
+    // Mine come first, so where we differ the node goes where I put it.
+    if (found.ids.length === 1) found.order = category.sortOrder;
   }
   const links = data.links.filter((link) => byId.has(link.categoryId));
   for (const link of links) byId.get(link.categoryId)?.recipeIds.add(link.recipeId);
@@ -121,7 +155,7 @@ export function categoryTree(data: CategoryData, me: string): CategoryTree {
   const nodes: CategoryNode[] = [];
   const walk = (list: CategoryNode[]): Set<string> => {
     const all = new Set<string>();
-    for (const n of list.sort(byName)) {
+    for (const n of list.sort(byOrder)) {
       nodes.push(n);
       const inside = new Set([...n.recipeIds, ...walk(n.children)]);
       n.count = inside.size;
@@ -130,7 +164,7 @@ export function categoryTree(data: CategoryData, me: string): CategoryTree {
     return all;
   };
   walk(roots);
-  return { roots, nodes, byKey, byId, owners, recipeOwners: data.recipeOwners, links };
+  return { roots, nodes, byKey, byId, owners, orders, recipeOwners: data.recipeOwners, links };
 }
 
 /** The node and everything inside it. */
@@ -251,6 +285,7 @@ export function canMove(node: CategoryNode, target: CategoryNode | null): boolea
   return !within(node).includes(target);
 }
 
+/** Puts a category inside another (null: the top level), where it goes there on its own. */
 export function moveCategory(
   tree: CategoryTree,
   node: CategoryNode,
@@ -258,15 +293,92 @@ export function moveCategory(
   ctx: PlanContext,
 ): Plan {
   if (!canMove(node, target)) return { changes: [], undo: [] };
+  const siblings = (target ? target.children : tree.roots).filter((n) => n !== node);
+  // In a level someone arranged it goes last; in one nobody did, it takes its place by name.
+  const last = siblings.filter(isPlaced).at(-1);
+  const order = last ? last.order + ORDER_STEP : 0;
+  return relocate(tree, node, target, new Map([[node, order]]), ctx);
+}
+
+/** Where a category is dropped: in a level (null: the top level), before one (null: at the end). */
+export interface Place {
+  parent: CategoryNode | null;
+  before: CategoryNode | null;
+}
+
+/**
+ * Whether a category can go there: "refused" into itself or anything inside it (owner's choice
+ * 2026-11-04), "same" where it already is.
+ */
+export function checkPlace(tree: CategoryTree, node: CategoryNode, place: Place): PlaceCheck {
+  if (place.parent && within(node).includes(place.parent)) return "refused";
+  if (place.before === node) return "same";
+  if (place.before && place.before.parent !== place.parent) return "refused";
+  if (node.parent !== place.parent) return "ok";
+  const siblings = place.parent ? place.parent.children : tree.roots;
+  const next = siblings[siblings.indexOf(node) + 1] ?? null;
+  return next === place.before ? "same" : "ok";
+}
+
+export type PlaceCheck = "ok" | "same" | "refused";
+
+/** Whether a category can be dropped onto another, to go inside it. */
+export function checkInside(node: CategoryNode, target: CategoryNode): PlaceCheck {
+  if (within(node).includes(target)) return "refused";
+  return target === node.parent ? "same" : "ok";
+}
+
+/**
+ * Puts a category at a place among others (dragged between two, or Move up / Move down), with
+ * everything inside it. The level becomes arranged: every category in it gets its place.
+ */
+export function placeCategory(
+  tree: CategoryTree,
+  node: CategoryNode,
+  place: Place,
+  ctx: PlanContext,
+): Plan {
+  if (checkPlace(tree, node, place) !== "ok") return { changes: [], undo: [] };
+  const siblings = (place.parent ? place.parent.children : tree.roots).filter((n) => n !== node);
+  const at = place.before ? siblings.indexOf(place.before) : siblings.length;
+  siblings.splice(at < 0 ? siblings.length : at, 0, node);
+  const orders = new Map(siblings.map((n, i) => [n, ORDER_BASE + i * ORDER_STEP]));
+  return relocate(tree, node, place.parent, orders, ctx);
+}
+
+/**
+ * The changes that put a node under a parent and give categories their sort orders, for every
+ * person's category of each node (only what changes), and the changes that put them back.
+ */
+function relocate(
+  tree: CategoryTree,
+  node: CategoryNode,
+  parent: CategoryNode | null,
+  orders: Map<CategoryNode, number>,
+  ctx: PlanContext,
+): Plan {
   const changes: SyncChange[] = [];
   const undo: SyncChange[] = [];
   const made = new Map<string, string>();
-  for (const id of node.ids) {
-    const owner = tree.owners.get(id) ?? ctx.me;
-    const parentId = target ? ensurePath(tree, owner, target.names, ctx, changes, made) : null;
-    const before = node.parent?.ids.find((p) => tree.owners.get(p) === owner) ?? null;
-    changes.push(category(ctx, id, { parentId }));
-    undo.push(category(ctx, id, { parentId: before }));
+  const moving = node.parent !== parent;
+  for (const [each, order] of orders) {
+    for (const id of each.ids) {
+      const fields: CategoryChange["fields"] = {};
+      const before: CategoryChange["fields"] = {};
+      const owner = tree.owners.get(id) ?? ctx.me;
+      if (each === node && moving) {
+        fields.parentId = parent ? ensurePath(tree, owner, parent.names, ctx, changes, made) : null;
+        before.parentId = node.parent?.ids.find((p) => tree.owners.get(p) === owner) ?? null;
+      }
+      const was = tree.orders.get(id) ?? 0;
+      if (was !== order) {
+        fields.sortOrder = order;
+        before.sortOrder = was;
+      }
+      if (Object.keys(fields).length === 0) continue;
+      changes.push(category(ctx, id, fields));
+      undo.push(category(ctx, id, before));
+    }
   }
   return { changes, undo };
 }

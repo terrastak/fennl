@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { EmailNotice } from "../account/EmailNotice";
 import { ActingBanner } from "../acting/ActingBanner";
+import { LibraryProvider } from "../recipes/LibraryProvider";
+import { navigate } from "../navigation";
 import { Link } from "../router";
 import { SyncNotices } from "../sync/SyncNotices";
 import { SyncStatusLine } from "../sync/SyncStatusLine";
@@ -12,12 +14,12 @@ import {
   FeedbackIcon,
   ImportIcon,
   RecipesIcon,
-  SearchIcon,
   SettingsIcon,
   TimerIcon,
 } from "./icons";
+import { Library, LibrarySearch } from "./Library";
 import { Logo } from "./Logo";
-import { ShellSearch } from "./ShellSearch";
+import { askSearchFocus } from "./typeToSearch";
 
 interface NavItem {
   href: string;
@@ -25,10 +27,9 @@ interface NavItem {
   icon: () => ReactNode;
 }
 
-const PRIMARY_NAV: NavItem[] = [
-  { href: "/", label: "Recipes", icon: RecipesIcon },
-  { href: "/import", label: "Import", icon: ImportIcon },
-];
+const RECIPES_NAV: NavItem = { href: "/", label: "Recipes", icon: RecipesIcon };
+const IMPORT_NAV: NavItem = { href: "/import", label: "Import", icon: ImportIcon };
+const PRIMARY_NAV: NavItem[] = [RECIPES_NAV, IMPORT_NAV];
 
 const SECONDARY_NAV: NavItem[] = [
   { href: "/settings", label: "Settings", icon: SettingsIcon },
@@ -53,13 +54,20 @@ interface AppShellProps {
 /**
  * The frame around every page: a sidebar on wide screens, a top bar and bottom tabs on phones.
  * Only one navigation is visible at a time (CSS hides the other), so screen readers see one.
+ * Since U17 the sidebar holds the recipe box (search, quick lists, saved searches, categories),
+ * with Import and Timers just above Send feedback, Settings and Account.
  */
-export function AppShell({ path, title, children }: AppShellProps) {
+export function AppShell(props: AppShellProps) {
+  return (
+    <LibraryProvider>
+      <Frame {...props} />
+    </LibraryProvider>
+  );
+}
+
+function Frame({ path, title, children }: AppShellProps) {
   const mainRef = useRef<HTMLElement>(null);
   const firstRender = useRef(true);
-  // The phone's search field, opened from the top bar.
-  const [searchOpen, setSearchOpen] = useState(false);
-
   // "/" jumps to search from anywhere that isn't a place you type (phase C13c).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -73,9 +81,16 @@ export function AppShell({ path, title, children }: AppShellProps) {
         return;
       }
       event.preventDefault();
-      const side = document.querySelector<HTMLInputElement>('[data-shell-search="side"]');
-      if (side && side.getClientRects().length > 0) side.focus();
-      else setSearchOpen(true);
+      // The left panel's box on a computer; on a phone the recipe list's own, opening the list
+      // from another page (U17: the Recipes tab is where a phone searches).
+      const box = [...document.querySelectorAll<HTMLInputElement>("[data-type-to-search]")].find(
+        (el) => el.getClientRects().length > 0,
+      );
+      if (box) box.focus();
+      else {
+        askSearchFocus();
+        navigate("/");
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -87,6 +102,9 @@ export function AppShell({ path, title, children }: AppShellProps) {
       firstRender.current = false;
       return;
     }
+    // Typing in the left panel's search box from another page opens the recipe list: the
+    // typing carries on there.
+    if (document.activeElement?.hasAttribute("data-shell-search")) return;
     // After switching pages, move focus to the new page's heading so keyboard and
     // screen-reader users start at the top of the new content.
     const heading = mainRef.current?.querySelector<HTMLElement>("h1");
@@ -100,16 +118,19 @@ export function AppShell({ path, title, children }: AppShellProps) {
       </a>
 
       <aside className={styles.sidebar}>
-        <Link href="/" className={styles.logoLink} aria-label="Fennl, go to recipes">
-          <Logo />
-        </Link>
-        <SyncStatusLine className={styles.sideStatus} />
-        <ShellSearch variant="side" />
+        <div className={styles.sideTop}>
+          <div className={styles.brandRow}>
+            <Link href="/" className={styles.logoLink} aria-label="Fennl, go to recipes">
+              <Logo />
+            </Link>
+            <SyncStatusLine className={styles.sideStatus} />
+          </div>
+          <LibrarySearch />
+        </div>
+        <Library />
         <nav aria-label="Main" className={styles.sideNav}>
           <ul className={styles.navList}>
-            {PRIMARY_NAV.map((item) => (
-              <NavLink key={item.href} item={item} path={path} />
-            ))}
+            <NavLink item={IMPORT_NAV} path={path} />
             <li>
               <TimersButton className={styles.navLink} />
             </li>
@@ -137,16 +158,6 @@ export function AppShell({ path, title, children }: AppShellProps) {
           <Logo />
         </Link>
         <SyncStatusLine className={styles.topStatus} />
-        <button
-          type="button"
-          className={styles.topSearchButton}
-          aria-expanded={searchOpen}
-          onClick={() => setSearchOpen(!searchOpen)}
-        >
-          <SearchIcon />
-          <span className="visually-hidden">Search</span>
-        </button>
-        {searchOpen ? <ShellSearch variant="top" onDone={() => setSearchOpen(false)} /> : null}
         <TimersButton className={styles.topTimers} compact />
         <Link
           href={feedbackHref(path)}
@@ -215,11 +226,12 @@ function TimersButton({
     >
       <TimerIcon />
       {compact ? (
-        text ? (
+        // On a phone the icon has its name under it (U17 mockup), or the soonest one's time.
+        text || ringing ? (
           <span className={styles.timerTime}>{ringing ? "Done!" : text}</span>
-        ) : ringing ? (
-          <span className={styles.timerTime}>Done!</span>
-        ) : null
+        ) : (
+          <span className={styles.topBarLabel}>Timers</span>
+        )
       ) : (
         <>
           Timers

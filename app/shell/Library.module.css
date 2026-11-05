@@ -1,0 +1,468 @@
+/*
+ * The recipe box in the left panel (U17, owner's choices 2026-11-04): the search box, the quick
+ * lists, saved searches and the categories with their counts. Tokens only
+ * (docs/design/design-direction.md); the approved mockup is the guide for sizes.
+ */
+
+/* --- The search box --------------------------------------------------------------------- */
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+}
+
+.search:focus-within {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.search > svg {
+  flex: none;
+}
+
+.field {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.25rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.field:focus {
+  outline: none;
+}
+
+.field::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+/* The box's own ✕ does this (the browser's is hidden so there is only one). */
+.field::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.clear {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.clear:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+/* The "/" key, drawn like a key. */
+.key {
+  flex: none;
+  min-width: 1.25rem;
+  padding: 0 var(--space-1);
+  border: 1px solid var(--color-border-strong);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  background: var(--color-sidebar);
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.5;
+  text-align: center;
+}
+
+/* On a phone the search box sits at the top of the recipe list, Filters beside it
+   (PhoneLibrary.tsx). */
+.phoneSearch {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap-target);
+}
+
+.phoneSearch .field {
+  font-size: var(--text-md);
+}
+
+.phoneSearch .key {
+  display: none;
+}
+
+@media (min-width: 900px) {
+  .phoneSearch {
+    display: none;
+  }
+}
+
+/* --- The recipe box --------------------------------------------------------------------- */
+
+.library {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-1) var(--space-4) var(--space-6);
+  scrollbar-width: thin;
+  /* The list fades out at the bottom rather than stopping on a cut-off row. */
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--space-6)), transparent);
+}
+
+.skip {
+  position: absolute;
+  top: var(--space-1);
+  left: var(--space-4);
+  z-index: 2;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  transform: translateY(-300%);
+}
+
+.skip:focus {
+  transform: none;
+  color: var(--color-on-accent);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tile,
+.cat {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tile {
+  gap: var(--space-2);
+  min-height: 1.75rem;
+  padding: 0 var(--space-2);
+}
+
+.tile:hover,
+.cat:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+.tile[aria-current="page"],
+.cat[aria-current="page"] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+  font-weight: var(--weight-semibold);
+}
+
+.icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 1rem;
+  color: var(--color-text-subtle);
+}
+
+[aria-current="page"] .icon,
+[aria-current="page"] .count {
+  color: var(--color-accent-soft-text);
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  flex: none;
+  margin-left: auto;
+  padding-left: var(--space-2);
+  color: var(--color-text-subtle);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* On/off quick lists: a box that fills with a check when on. */
+.box {
+  display: grid;
+  place-items: center;
+  width: 1rem;
+  height: 1rem;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 0.25rem;
+  background: var(--color-surface);
+  color: transparent;
+}
+
+.switch[aria-pressed="true"] {
+  font-weight: var(--weight-semibold);
+}
+
+.switch[aria-pressed="true"] .box {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.switch[aria-pressed="true"] .count {
+  color: var(--color-text-muted);
+}
+
+/* --- Saved searches and categories ------------------------------------------------------- */
+
+.headingRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: var(--space-3) var(--space-2) 0.15rem;
+}
+
+.heading {
+  margin: var(--space-3) var(--space-2) 0.15rem;
+  color: var(--color-text-subtle);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.05em;
+  line-height: var(--leading-snug);
+  text-transform: uppercase;
+}
+
+.headingRow .heading {
+  margin: 0;
+}
+
+.edit {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.edit:hover {
+  color: var(--color-text);
+}
+
+.catRow {
+  position: relative;
+}
+
+.cat {
+  gap: var(--space-2);
+  min-height: 1.625rem;
+  padding: 0 var(--space-2) 0 calc(2.125rem + var(--depth, 0) * 1rem);
+  /* Not text to select: a press that moves is a drag (putting categories in order). */
+  user-select: none;
+}
+
+.saved {
+  padding-left: var(--space-2);
+}
+
+/* Recipes in no category: last, set a little apart and in italics, as it isn't a category. */
+.unfiled {
+  margin-top: var(--space-1);
+  font-style: italic;
+}
+
+/* No match for the search: faint but still readable (text-subtle passes AA on the sidebar). */
+.none,
+.none .count {
+  color: var(--color-text-subtle);
+}
+
+/* Open or close a category's subcategories. */
+.caret {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(0.5rem + var(--depth, 0) * 1rem);
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-subtle);
+  cursor: pointer;
+}
+
+.caret:hover {
+  color: var(--color-text);
+}
+
+/* --- Putting categories in order by dragging (computer only) ------------------------------ */
+
+/* While dragging, the mouse shows it's holding something (or that it can't go there). */
+:global(html[data-category-drag]) * {
+  cursor: grabbing !important;
+}
+
+:global(html[data-category-drag="refused"]) * {
+  cursor: not-allowed !important;
+}
+
+.dragging .cat:hover {
+  background: none;
+}
+
+/* The row being moved stays in its place, hatched, until it's dropped. */
+.from .cat {
+  outline: 1.5px dashed var(--color-border-strong);
+  outline-offset: -1.5px;
+  background: repeating-linear-gradient(
+    135deg,
+    transparent 0 5px,
+    var(--color-surface-sunken) 5px 7px
+  );
+  color: var(--color-text-subtle);
+}
+
+/* Dropping here puts it inside this one. */
+.into .cat,
+.dragging .into .cat:hover {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+  background: var(--color-accent-soft);
+  color: var(--color-accent-soft-text);
+}
+
+/* Shown the first few drags. */
+.dragHint {
+  margin: 0.15rem 0 var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  border: 1px dashed var(--color-accent);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.dragHint p {
+  margin: 0;
+}
+
+.dragHint b {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+/* The insertion line: from the level it goes to, with a ring at its start. */
+.dropLine {
+  position: fixed;
+  z-index: 60;
+  height: 0;
+  pointer-events: none;
+}
+
+.dropLine::before {
+  content: "";
+  position: absolute;
+  top: -1.5px;
+  right: var(--space-1);
+  left: calc(0.875rem + var(--depth, 0) * 1rem);
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-accent);
+}
+
+.dropLine::after {
+  content: "";
+  position: absolute;
+  top: -5px;
+  left: calc(0.375rem + var(--depth, 0) * 1rem);
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  border: 2.5px solid var(--color-accent);
+  border-radius: var(--radius-full);
+  background: var(--color-sidebar);
+}
+
+/* The category lifted under the mouse. */
+.lifted {
+  position: fixed;
+  z-index: 61;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2rem;
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  pointer-events: none;
+  transform: rotate(-1.5deg);
+}
+
+.lifted > svg {
+  flex: none;
+  color: var(--color-text-subtle);
+}
+
+.liftedName {
+  display: grid;
+  min-width: 0;
+}
+
+.liftedNo {
+  color: var(--color-danger);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+/* The Undo for a move, fitted to the panel. */
+.undo > div[class] {
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+.undo button {
+  min-height: 1.5rem;
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+}

@@ -1,6 +1,13 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus, fromListMenu } from "./recipes";
+import {
+  editorStatus,
+  fromListMenu,
+  library,
+  recipeCard,
+  syncStatus,
+  toggleQuick,
+} from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C13c: search from any screen, "Surprise me", and category suggestions in the editor.
@@ -26,15 +33,7 @@ async function noAccessibilityProblems(page: Page) {
 const titles = (page: Page) =>
   page.getByRole("region", { name: /^\d+ recipes?$/ }).locator("[id^=card-title-]");
 const listSearch = (page: Page) => page.getByRole("searchbox", { name: "Search recipes" });
-const shellSearch = (page: Page) => page.getByRole("searchbox", { name: "Find a recipe" });
 const suggestion = (page: Page) => page.getByRole("region", { name: "A suggestion" });
-
-/** Opens the phone's search field when there is one to open (the sidebar's is always there). */
-async function openShellSearch(page: Page) {
-  const button = page.getByRole("button", { name: "Search", exact: true });
-  if (await button.isVisible()) await button.click();
-  await expect(shellSearch(page)).toBeVisible();
-}
 
 test("Search from a recipe page, from the keyboard, and while already on the list", async ({
   page,
@@ -47,33 +46,42 @@ test("Search from a recipe page, from the keyboard, and while already on the lis
   // From a recipe page.
   await recipeCard(page, "Green Chile Stew").getByRole("link").click();
   await expect(page.getByRole("heading", { level: 1, name: "Green Chile Stew" })).toBeVisible();
-  await openShellSearch(page);
-  await shellSearch(page).fill("lime");
-  await shellSearch(page).press("Enter");
-  await expect(page).toHaveURL(/\?q=lime$/);
-  await expect(listSearch(page)).toHaveValue("lime");
-  await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
+  if (await library(page).isVisible()) {
+    // On a computer the left panel's box searches as you type, from any page (U17).
+    await listSearch(page).fill("lime");
+    await expect(page).toHaveURL(/\?q=lime$/);
+    await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
+    await expect(listSearch(page)).toBeFocused();
+    await listSearch(page).fill("pancakes");
+    await expect(titles(page)).toHaveText(["Buttermilk Pancakes"]);
 
-  // While already on the list: the list follows.
-  await openShellSearch(page);
-  await shellSearch(page).fill("pancakes");
-  await shellSearch(page).press("Enter");
-  await expect(listSearch(page)).toHaveValue("pancakes");
-  await expect(titles(page)).toHaveText(["Buttermilk Pancakes"]);
+    // "/" from a page that isn't a place to type; and never while typing.
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+    await page.keyboard.press("/");
+    await expect(listSearch(page)).toBeFocused();
+    await page.keyboard.type("cumin");
+    await expect(titles(page)).toHaveText(["Green Chile Stew"]);
+  } else {
+    // On a phone the Recipes tab is where to search (U17): its box is at the top of the list.
+    await page
+      .getByRole("navigation", { name: "Main" })
+      .getByRole("link", { name: "Recipes" })
+      .click();
+    await listSearch(page).fill("lime");
+    await expect(page).toHaveURL(/\?q=lime$/);
+    await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
+    await listSearch(page).fill("pancakes");
+    await expect(titles(page)).toHaveText(["Buttermilk Pancakes"]);
 
-  // The back button goes back to the earlier search.
-  await page.goBack();
-  await expect(listSearch(page)).toHaveValue("lime");
-  await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
-
-  // "/" from a page that isn't a place to type; and never while typing.
-  await page.goto("/settings");
-  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
-  await page.keyboard.press("/");
-  await expect(shellSearch(page)).toBeFocused();
-  await shellSearch(page).fill("cumin");
-  await shellSearch(page).press("Enter");
-  await expect(titles(page)).toHaveText(["Green Chile Stew"]);
+    // "/" from another page (a phone-sized window with a keyboard) opens the list's box.
+    await page.goto("/settings");
+    await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+    await page.keyboard.press("/");
+    await expect(listSearch(page)).toBeFocused();
+    await page.keyboard.type("cumin");
+    await expect(titles(page)).toHaveText(["Green Chile Stew"]);
+  }
   await listSearch(page).fill("a");
   await page.keyboard.type("/b");
   await expect(listSearch(page)).toHaveValue("a/b");
@@ -120,7 +128,7 @@ test("Surprise me follows the filters and search", async ({ page, context, baseU
   await addSamples(page);
 
   // Only the two 30-minute recipes can come up.
-  await page.getByRole("combobox", { name: "Time", exact: true }).selectOption("30");
+  await toggleQuick(page);
   await expect(titles(page)).toHaveCount(2);
   await fromListMenu(page, "Surprise me");
   for (let i = 0; i < 6; i++) {

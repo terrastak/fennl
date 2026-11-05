@@ -92,8 +92,15 @@
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
   margin-left: auto;
+}
+
+/* Move up and Move down: square, an arrow each. */
+.arrow {
+  width: var(--tap-target);
+  padding: 0;
 }
 
 .inline {

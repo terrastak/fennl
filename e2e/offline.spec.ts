@@ -28,7 +28,7 @@ test("Premium: opens with no connection, and changes made then sync later", asyn
 
   await context.setOffline(true);
   await page.reload();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
   await expect(recipe(page, "Pozole verde")).toBeVisible();
   await expect(status(page)).toHaveText("Offline");
 

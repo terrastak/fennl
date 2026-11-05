@@ -42,7 +42,7 @@ test("create an account, verify the email, sign out and sign back in", async ({ 
   await page.goto(await linkFromLatestEmail(page.request, email));
   await expect(page.getByRole("heading", { name: "Your email is verified" })).toBeVisible();
   await page.getByRole("link", { name: "Go to your recipes" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 
   await page.goto("/account");
   await expect(page.getByText(email)).toBeVisible();
@@ -60,7 +60,7 @@ test("create an account, verify the email, sign out and sign back in", async ({ 
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(PASSWORD);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 });
 
 test("a wrong password gets a clear message", async ({ page, baseURL }) => {
@@ -144,7 +144,7 @@ test("a mistyped sign-up address is fixed in place, and the account keeps its na
   await page.goto(await linkFromLatestEmail(page.request, fixed));
   await expect(page.getByRole("heading", { name: "Your email is verified" })).toBeVisible();
   await page.getByRole("link", { name: "Go to your recipes" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
   await page.goto("/account");
   await expect(page.getByText(fixed)).toBeVisible();
   await expect(page.getByText("Rose's kitchen")).toBeVisible();
@@ -244,7 +244,7 @@ test("reset a forgotten password", async ({ page, baseURL }) => {
   await page.getByLabel("Email").fill(email);
   await page.getByLabel("Password").fill(newPassword);
   await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
 });
 
 test("old or broken email links explain what to do", async ({ page }) => {

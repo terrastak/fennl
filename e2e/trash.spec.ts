@@ -67,14 +67,14 @@ test("Moved to Trash, then put back: from the list's Undo, and from Trash", asyn
   await noAccessibilityProblems(page);
   await page.getByRole("button", { name: "Put back" }).click();
   await expect(page.getByRole("button", { name: "Move to Trash" })).toBeVisible();
-  await page.getByRole("link", { name: "All recipes" }).click();
+  await page.getByRole("link", { name: "← All recipes" }).click();
   await expect(recipeCard(page, "Buttermilk Pancakes")).toBeVisible();
 
   // Put back from the Trash page too.
   await moveToTrash(page, "Lemon Olive Oil Cake");
   await page.goto("/trash");
   await trashList(page).getByRole("button", { name: "Put back Lemon Olive Oil Cake" }).click();
-  await expect(page.getByRole("status")).toHaveText(
+  await expect(page.getByRole("main").getByRole("status")).toHaveText(
     "Put “Lemon Olive Oil Cake” back in your recipes.",
   );
   await expect(page.getByText("Trash is empty.")).toBeVisible();
@@ -96,7 +96,7 @@ test("Deleted for good, one or all, after a question", async ({ page, context, b
     page.getByText("Delete “Green Chile Stew” for good? This can’t be undone."),
   ).toBeVisible();
   await page.getByRole("button", { name: "Delete for good", exact: true }).click();
-  await expect(page.getByRole("status")).toHaveText("Deleted 1 recipe for good.");
+  await expect(page.getByRole("main").getByRole("status")).toHaveText("Deleted 1 recipe for good.");
   await expect(trashList(page).getByRole("listitem")).toHaveCount(1);
 
   // All: Cancel changes nothing; then it empties.

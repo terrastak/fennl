@@ -36,7 +36,7 @@ test("Premium: a recipe added on one device appears on another, and edits come b
 
   // Moved to Trash on the phone: gone from the laptop's list.
   await phone.getByRole("button", { name: "Move to Trash" }).click();
-  await expect(phone.getByRole("heading", { level: 1, name: "Your recipes" })).toBeVisible();
+  await expect(phone.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
   await expect(status(phone)).toHaveText("Saved to cloud");
   await page.goto("/");
   await expect(

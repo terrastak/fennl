@@ -139,7 +139,24 @@
   list-style: none;
 }
 
+/* The recipe list on a narrow phone: two cards side by side (U17 mockup). */
+@media (max-width: 599px) {
+  .twoUp {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .twoUp .cardBody {
+    padding: var(--space-2) var(--space-3) var(--space-3);
+  }
+
+  .twoUp .cardTitle {
+    font-size: var(--text-sm);
+  }
+}
+
 .card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -178,15 +195,16 @@
 
 .cardBody {
   display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3) var(--space-4) var(--space-4);
+  align-content: start;
+  gap: 0.15rem;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
 }
 
+/* The recipe box's cards (U17 mockup): the title in the interface's own type, semibold. */
 .cardTitle {
-  font-family: var(--font-display);
-  font-variation-settings: var(--font-display-settings);
-  font-size: var(--text-lg);
-  line-height: var(--leading-snug);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 

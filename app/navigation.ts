@@ -23,6 +23,15 @@ export function usePath(): string {
   );
 }
 
+/** The address's query string ("?q=lemon"), kept current like the path. */
+export function useSearchString(): string {
+  return useSyncExternalStore(
+    subscribe,
+    () => window.location.search,
+    () => "",
+  );
+}
+
 const here = () => `${window.location.pathname}${window.location.search}`;
 
 /**
