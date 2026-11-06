@@ -407,7 +407,8 @@ test("A long name on two lines: renaming it moves nothing below (U20)", async ({
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
   await toggleQuick(page);
-  const long = "Weeknight dinners for the whole family in under thirty mins";
+  // Wide letters, so it takes two lines even with the laptop's narrower page margins (U23).
+  const long = "Warm weeknight dinners for the whole family, made in minutes";
   await saveAs(page, long);
   // Two lines of the heading, so the box (one line) has a taller row to keep.
   const lineHeight = await heading(page).evaluate((el) =>

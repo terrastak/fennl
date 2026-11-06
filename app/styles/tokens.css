@@ -101,6 +101,9 @@
   --chip: 2.5rem; /* chips and the parts of a segmented choice */
   --row: var(--tap-target); /* menu rows, option lists, the left panel's rows */
   --icon: 1.25rem; /* icons in controls and menus */
+  --read-text: var(--text-md); /* a recipe's own words: ingredients, steps, notes */
+  --recipe-title-size: var(--text-4xl); /* a recipe page's title on a wide screen */
+  --signature-size: var(--text-xl); /* a handwritten name signing a note */
   --radius-control: var(--radius-md); /* buttons, fields, chips, menu rows */
   --radius-pop: var(--radius-lg); /* menus, popovers, cards, panels */
   --radius-tag: var(--radius-sm); /* tags, tick boxes */
@@ -143,6 +146,9 @@
     --chip: var(--chip-height);
     --row: var(--menu-row);
     --icon: 1rem;
+    --read-text: 0.9375rem;
+    --recipe-title-size: 2rem;
+    --signature-size: 1.25rem;
     --radius-control: 0.375rem;
     --radius-pop: var(--radius-sm);
     --radius-tag: 0.25rem;

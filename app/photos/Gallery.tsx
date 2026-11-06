@@ -57,7 +57,12 @@ export function Gallery({
             <circle cx="9" cy="10" r="1.5" />
             <path d="m21 16-5-5-8 8" />
           </svg>
-          All {photos.length} photos
+          {/* On a laptop (U23) a small "1 of 3" in the corner; elsewhere "All 3 photos". */}
+          <span className={styles.allWords}>All {photos.length} photos</span>
+          <span className={styles.countWords}>
+            1 of {photos.length}
+            <span className="visually-hidden"> photos: see them all</span>
+          </span>
         </button>
       ) : null}
       {open !== null ? (

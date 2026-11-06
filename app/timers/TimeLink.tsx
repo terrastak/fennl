@@ -47,6 +47,20 @@ export function TimeLink({
       <span aria-hidden="true" className={styles.timeIcon}>
         ⏱
       </span>
+      {/* On a laptop (U23) a line clock in place of the ⏱ character. */}
+      <svg
+        className={styles.timeClock}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l2 2M10 2h4" />
+      </svg>
       {time.text}
     </button>
   );

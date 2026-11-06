@@ -55,6 +55,11 @@
   background: var(--color-surface);
 }
 
+/* "All 4 photos" everywhere but a laptop, where the corner says "1 of 4" (U23). */
+.countWords {
+  display: none;
+}
+
 @media (min-width: 900px) {
   .coverButton {
     border-radius: var(--radius-xl);
@@ -170,4 +175,52 @@
   max-width: none;
   width: auto;
   height: auto;
+}
+
+/* The laptop look (U23, owner's choice 2026-11-06): the cover in a 4:5 frame with 8px corners and
+   a hairline, and a small "1 of 3" in its corner. Touch screens and narrower windows keep the
+   sizes above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .coverButton {
+    border-radius: var(--radius-pop);
+    box-shadow:
+      0 0 0 1px var(--color-border-soft),
+      0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent);
+  }
+
+  .cover {
+    aspect-ratio: 4 / 5;
+  }
+
+  .allPhotos {
+    right: var(--space-2);
+    bottom: var(--space-2);
+    gap: var(--space-1);
+    min-height: 1.5rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    box-shadow: none;
+    font-size: var(--ui-text-label);
+    line-height: 1;
+  }
+
+  .allPhotos svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .allWords {
+    display: none;
+  }
+
+  .countWords {
+    display: inline;
+  }
+}
+
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .coverButton,
+  .allPhotos {
+    border: 1px solid;
+  }
 }

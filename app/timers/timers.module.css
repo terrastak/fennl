@@ -847,3 +847,49 @@
   margin-right: 0.15em;
   font-size: 0.85em;
 }
+
+/* The laptop's line clock (below); hidden elsewhere. */
+.timeClock {
+  display: none;
+}
+
+/* On a laptop (U23, owner's choice 2026-11-06) a time in a step is a soft highlighted button with
+   its clock, so it reads as something to press; in Windows contrast themes, which draw no fill,
+   it keeps its underline. Touch screens and narrower windows keep the quiet underline above. */
+@media (min-width: 900px) and (pointer: fine) {
+  /* 1px above and below brings it to 24px tall without moving the line; the small negative
+     margin keeps a comma or full stop close after it. */
+  .timeLink {
+    margin: 0 -1px;
+    padding: 1px 0.25rem;
+    border-radius: var(--radius-tag);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .timeLink:hover {
+    background: color-mix(in srgb, var(--color-accent-soft) 70%, var(--color-accent) 14%);
+  }
+
+  .timeIcon {
+    display: none;
+  }
+
+  .timeClock {
+    display: inline-block;
+    width: 0.8125rem;
+    height: 0.8125rem;
+    margin-right: 0.1875rem;
+    vertical-align: -0.125rem;
+  }
+}
+
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .timeLink {
+    text-decoration: underline dashed;
+  }
+}
