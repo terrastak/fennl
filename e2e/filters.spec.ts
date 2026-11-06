@@ -1,10 +1,15 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
+  barMenu,
   categorySheet,
+  chooseInBar,
   clearFilters,
+  countLine,
+  filterBar,
   filtersButton,
   library,
+  openBarMenu,
   openFilters,
   recipeCard,
   showCategory,
@@ -13,7 +18,8 @@ import {
 } from "./recipes";
 import { useOwnAccount } from "./support";
 
-// Phase C13a: more filters on the recipe list (a Filters panel since U13). The four sample recipes are:
+// Phase C13a: more filters on the recipe list (a Filters panel since U13; on a computer a filter
+// bar under the heading since U22, a phone keeping the sheet). The four sample recipes are:
 //   Green Chile Stew (Mexican, Soups; 125 min; serves 6; from Nana; has cumin)
 //   Buttermilk Pancakes (Breakfast; 30 min; serves 4; has nutrition)
 //   Black Bean Tacos with Lime Crema (Mexican, Diet › Vegetarian; 30 min; serves 4)
@@ -63,11 +69,13 @@ async function pickCategory(page: Page, box: string, typed: string) {
   await input.press("Enter");
 }
 
-test("Narrow the list by time, servings, categories, ingredients and more", async ({
+test("On a phone: narrow the list by time, servings, categories, ingredients and more", async ({
   page,
   context,
   baseURL,
+  isMobile,
 }) => {
+  test.skip(!isMobile, "A computer has the filter bar");
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
   await openFilters(page);
@@ -151,11 +159,13 @@ test("Narrow the list by time, servings, categories, ingredients and more", asyn
   await noAccessibilityProblems(page);
 });
 
-test("Filters are kept in the address, work with search, and can all be cleared", async ({
+test("On a phone: filters are kept in the address, work with search, and can all be cleared", async ({
   page,
   context,
   baseURL,
+  isMobile,
 }) => {
+  test.skip(!isMobile, "A computer has the filter bar");
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
   await openFilters(page);
@@ -188,6 +198,225 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await expect(filtersButton(page)).toBeVisible();
 });
 
+/** The chips in the filter bar, as they read (a set chip's words; "Rating" for a group not set). */
+const chips = (page: Page) => filterBar(page).locator("[data-chips] > *");
+
+test("The filter bar: chips for what's set, each with its menu and ✕, and Clear all (U22)", async ({
+  page,
+  context,
+  baseURL,
+  isMobile,
+}) => {
+  test.skip(isMobile, "A phone keeps the Filters sheet");
+  await useOwnAccount(context, baseURL!);
+  await addSamples(page);
+  const bar = filterBar(page);
+  const button = filtersButton(page);
+
+  // Nothing set: no bar until Filters shows the groups; pressed again, it hides them.
+  await expect(bar).toHaveCount(0);
+  await expect(button).toHaveAttribute("aria-expanded", "false");
+  await button.click();
+  await expect(button).toHaveAttribute("aria-expanded", "true");
+  await expect(chips(page)).toHaveText([
+    "Time",
+    "Rating",
+    "Last made",
+    "Serves",
+    "Ingredients",
+    "Categories",
+    "More",
+  ]);
+  await expect(bar.getByRole("button", { name: "Clear all" })).toHaveCount(0);
+  await noAccessibilityProblems(page);
+  await button.click();
+  await expect(bar).toHaveCount(0);
+
+  // A choice applies at once and closes the menu; the focus goes back to its chip, which now
+  // says the choice; the line under the heading is just the count.
+  await chooseInBar(page, "time", "30 min or less");
+  await expect(page).toHaveURL(/time=30/);
+  await expect(countLine(page)).toHaveText("2 recipes");
+  const time = bar.getByRole("button", { name: "30 min or less", exact: true });
+  await expect(time).toBeFocused();
+  await expect(time).toHaveAttribute("aria-expanded", "false");
+  await expect(filtersButton(page, 1)).toHaveAttribute("aria-expanded", "true");
+
+  // Together with servings, nothing is left; the ✕ takes away just the time.
+  await chooseInBar(page, "serves", "6 or more");
+  await expect(countLine(page)).toHaveText("0 recipes");
+  await expect(chips(page).first()).toHaveText("30 min or less");
+  await bar.getByRole("button", { name: "Remove 30 min or less" }).click();
+  await expect(titles(page)).toHaveText(["Green Chile Stew", "Lemon Olive Oil Cake"]);
+  await expect(page).not.toHaveURL(/time=/);
+
+  // Escape closes a menu and goes back to its chip; the arrow keys move through its choices.
+  const serves = bar.getByRole("button", { name: "Serves 6 or more", exact: true });
+  await serves.click();
+  await expect(serves).toHaveAttribute("aria-expanded", "true");
+  await expect(barMenu(page).getByRole("menuitemradio", { name: "6 or more" })).toBeFocused();
+  await expect(
+    barMenu(page).getByRole("button", { name: /^Add to quick searches: Serves 6 or more$/ }),
+  ).toBeVisible();
+  await noAccessibilityProblems(page);
+  await page.keyboard.press("ArrowDown");
+  await expect(barMenu(page).getByRole("menuitemradio", { name: "8 or more" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(barMenu(page)).toHaveCount(0);
+  await expect(serves).toBeFocused();
+  await expect(titles(page)).toHaveCount(2);
+
+  // Clear all takes everything but the category; the bar stays, showing the groups.
+  await bar.getByRole("button", { name: "Clear all" }).click();
+  await expect(titles(page)).toHaveCount(4);
+  await expect(bar).toBeVisible();
+  await expect(chips(page).first()).toHaveText("Time");
+
+  // Categories: in Mexican and also Vegetarian, then either. The chips wait while the menu is
+  // open; the list doesn't.
+  await showCategory(page, "Mexican");
+  let menu = await openBarMenu(page, "categories");
+  await menu.getByRole("combobox", { name: "Also in category" }).fill("vegetarian");
+  await menu.getByRole("combobox", { name: "Also in category" }).press("Enter");
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await menu.getByLabel("any of these categories").check();
+  await expect(countLine(page)).toHaveText("2 recipes");
+  await expect(bar.getByRole("button", { name: /^Also in/ })).toHaveCount(0);
+  await page.keyboard.press("Escape");
+  await expect(
+    bar.getByRole("button", { name: "Also in Diet › Vegetarian", exact: true }),
+  ).toBeVisible();
+  await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema", "Green Chile Stew"]);
+
+  // Leaving a category out. Showing all categories again leaves "also in" too.
+  await page.getByRole("button", { name: "Show all categories" }).click();
+  await expect(titles(page)).toHaveCount(4);
+  menu = await openBarMenu(page, "categories");
+  await menu.getByRole("combobox", { name: "Not in category" }).fill("mexican");
+  await menu.getByRole("combobox", { name: "Not in category" }).press("Enter");
+  await page.keyboard.press("Escape");
+  await expect(titles(page)).toHaveText(["Buttermilk Pancakes", "Lemon Olive Oil Cake"]);
+  await expect(bar.getByRole("button", { name: "Not in Mexican", exact: true })).toBeVisible();
+  await clearFilters(page);
+
+  // Ingredients: each word is its own chip, with its own ✕.
+  menu = await openBarMenu(page, "ingredients");
+  await menu.getByRole("textbox", { name: "With these ingredients" }).fill("cumin");
+  await menu.getByRole("textbox", { name: "With these ingredients" }).press("Enter");
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await menu.getByRole("button", { name: "Remove cumin" }).click();
+  await menu.getByRole("textbox", { name: "Without these ingredients" }).fill("cumin");
+  await menu.getByRole("button", { name: "Add", exact: true }).last().click();
+  await menu.getByRole("textbox", { name: "Without these ingredients" }).fill("nutmeg");
+  await menu.getByRole("textbox", { name: "Without these ingredients" }).press("Enter");
+  await page.keyboard.press("Escape");
+  await expect(bar.getByRole("button", { name: /^Without / })).toHaveText([
+    "Without cumin",
+    "Without nutmeg",
+  ]);
+  await expect(titles(page)).toHaveCount(3);
+  await bar.getByRole("button", { name: "Remove Without cumin" }).click();
+  await expect(bar.getByRole("button", { name: /^Without / })).toHaveText(["Without nutmeg"]);
+  await clearFilters(page);
+
+  // More: the source and nutrition.
+  menu = await openBarMenu(page, "more");
+  await menu.getByRole("checkbox", { name: "Has nutrition" }).check();
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await menu.getByRole("checkbox", { name: "Has nutrition" }).uncheck();
+  await menu.getByLabel("Source").fill("nana");
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await page.keyboard.press("Escape");
+  await expect(bar.getByRole("button", { name: "From nana", exact: true })).toBeVisible();
+
+  // Last made: nothing has been made yet.
+  await chooseInBar(page, "made", "Made in the last 30 days");
+  await expect(countLine(page)).toHaveText("0 recipes");
+  await clearFilters(page);
+  await expect(titles(page)).toHaveCount(4);
+  await noAccessibilityProblems(page);
+});
+
+test("The filter bar keeps to two lines: + Add filter, + N more and long words (U22)", async ({
+  page,
+  context,
+  baseURL,
+  isMobile,
+}) => {
+  test.skip(isMobile, "A phone keeps the Filters sheet");
+  await useOwnAccount(context, baseURL!);
+  await addSamples(page);
+  const bar = filterBar(page);
+  /** How many lines of chips the bar shows. */
+  const lines = () =>
+    chips(page).evaluateAll(
+      (elements) => new Set(elements.map((e) => Math.round(e.getBoundingClientRect().top))).size,
+    );
+
+  // A long word ends in "…" on its chip, its whole words in its title and its name.
+  const long = "Mexican-style shredded four-cheese blend";
+  await page.goto(`/?with=${encodeURIComponent(long)}`);
+  const chip = bar.getByRole("button", { name: `With ${long}`, exact: true });
+  await expect(chip).toHaveAttribute("title", `With ${long}`);
+  expect(
+    await chip
+      .locator("span")
+      .last()
+      .evaluate((e) => e.scrollWidth > e.clientWidth),
+  ).toBe(true);
+  // Its menu shows it in full.
+  await chip.click();
+  await expect(barMenu(page).getByText(long, { exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
+
+  // Many filters on a small window: never a third line; what doesn't fit is in + N more.
+  await page.setViewportSize({ width: 1000, height: 800 });
+  await page.goto(
+    "/?time=45&rating=4&made=old&serves=4&with=Demerara%20brown%20sugar&without=fresh%20cilantro" +
+      "&without=mushrooms&also=Mexican&notin=Breakfast&photo=1",
+  );
+  await expect(bar.getByRole("button", { name: "Clear all" })).toBeVisible();
+  const more = bar.getByRole("button", { name: /^\d+ more filters?$/ });
+  await expect(more).toBeVisible();
+  expect(await lines()).toBe(2);
+  const before = Number((await more.textContent())!.match(/\d+/)![0]);
+  await more.click();
+  const menu = barMenu(page);
+  await expect(menu.getByRole("listitem")).toHaveCount(before);
+  await expect(menu.getByRole("button", { name: "Has a photo", exact: true })).toBeVisible();
+  await noAccessibilityProblems(page);
+  // Its ✕ takes one away at once.
+  await menu.getByRole("button", { name: "Remove Has a photo" }).click();
+  await expect(menu.getByRole("listitem")).toHaveCount(before - 1);
+  await expect(page).not.toHaveURL(/photo=/);
+  await page.keyboard.press("Escape");
+  await expect(more).toBeFocused();
+
+  // Nothing wider than the screen.
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+
+  // With room, the groups not set show in full when they add no line, or fold into
+  // + Add filter, which offers them.
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/?time=45&made=old&with=lime&photo=1");
+  await expect(bar.getByRole("button", { name: "45 min or less", exact: true })).toBeVisible();
+  expect(await lines()).toBe(1);
+  const addFilter = bar.getByRole("button", { name: "Add filter" });
+  if (await addFilter.isVisible()) {
+    await addFilter.click();
+    await barMenu(page).getByRole("menuitem", { name: "Serves" }).click();
+  } else {
+    await bar.getByRole("button", { name: "Serves", exact: true }).click();
+  }
+  await barMenu(page).getByRole("menuitemradio", { name: "4 or more" }).click();
+  await expect(bar.getByRole("button", { name: "Serves 4 or more", exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/serves=4/);
+});
+
 test("A recipe with no time written down is left out of a time filter, with no extra note", async ({
   page,
   context,
@@ -208,12 +437,18 @@ test("A recipe with no time written down is left out of a time filter, with no e
     "Black Bean Tacos with Lime Crema",
     "Buttermilk Pancakes",
   ]);
-  // The line is the count and the filters only (U21): no note of the recipes left out.
-  await expect(page.getByText("2 recipes · 30 minutes or less", { exact: true })).toBeVisible();
+  // The line is the count and the filters only (U21; with the computer's bar, just the count):
+  // no note of the recipes left out.
+  const wide = await library(page).isVisible();
+  await expect(countLine(page)).toHaveText(wide ? "2 recipes" : "2 recipes · 30 minutes or less");
   await expect(page.getByText(/Not shown/)).toHaveCount(0);
-  await openFilters(page);
-  await choose(page, "Serves at least", "4");
-  await showRecipes(page, 2);
+  if (wide) await chooseInBar(page, "serves", "4 or more");
+  else {
+    await openFilters(page);
+    await choose(page, "Serves at least", "4");
+    await showRecipes(page, 2);
+  }
+  await expect(titles(page)).toHaveCount(2);
   await expect(page.getByText(/Not shown/)).toHaveCount(0);
 });
 
@@ -261,10 +496,15 @@ test("The ⋯ menu opens and closes, and the list's top fits the screen", async 
 
   // With filters on, it still fits.
   await toggleQuick(page);
-  await openFilters(page);
-  await choose(page, "Serves at least", "4");
-  await showRecipes(page, 2);
-  await expect(page.getByText("2 recipes · 30 minutes or less · Serves 4 or more")).toBeVisible();
+  if (isMobile) {
+    await openFilters(page);
+    await choose(page, "Serves at least", "4");
+    await showRecipes(page, 2);
+    await expect(page.getByText("2 recipes · 30 minutes or less · Serves 4 or more")).toBeVisible();
+  } else {
+    await chooseInBar(page, "serves", "4 or more");
+    await expect(countLine(page)).toHaveText("2 recipes");
+  }
   expect(await fits()).toBe(true);
 });
 

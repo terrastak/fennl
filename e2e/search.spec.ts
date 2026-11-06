@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { openFilters, premium, recipeCard, showCategory, syncStatus } from "./recipes";
+import { chooseInBar, premium, recipeCard, showCategory, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C8: search.
@@ -100,16 +100,12 @@ test("Search finds changes straight away, and works with the filters", async ({
   // With the rating filter: only recipes you rated.
   await searchBox(page).fill("lemon");
   await expect(titles(page)).toHaveCount(2);
-  const panel = await openFilters(page);
-  await panel.getByRole("button", { name: "4 stars and up" }).click();
-  await page.keyboard.press("Escape");
+  await chooseInBar(page, "rating", "4 stars and up");
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake"]);
   await expect(page).toHaveURL(/rating=4/);
 
   // With a category: the one match outside it is offered.
-  await openFilters(page);
-  await panel.getByRole("button", { name: "Any" }).nth(1).click();
-  await page.keyboard.press("Escape");
+  await chooseInBar(page, "rating", "Any");
   await showCategory(page, "Breakfast");
   await expect(titles(page)).toHaveText(["Buttermilk Pancakes"]);
   await expect(page.getByText("1 more matches outside Breakfast.")).toBeVisible();

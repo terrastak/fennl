@@ -1,6 +1,7 @@
 /*
  * The recipe list (U17, owner's choices 2026-11-04; U13 before it): a slim header saying what's
- * shown, with + Add recipe and ⋯, a line with Filters and the order, and the Filters panel. The
+ * shown, with + Add recipe and ⋯, and a line with Filters and the order; under it the filter
+ * bar (U22, filterBar.module.css). Below 900px the Filters panel takes the bar's place. The
  * search, quick lists and categories are in the left panel (app/shell/Library.tsx).
  * Tokens only (docs/design/design-direction.md).
  */
@@ -335,6 +336,18 @@
   margin-top: var(--space-3);
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border-soft);
+}
+
+/* With the filter bar under it (U22), the bar's own line closes the header. */
+.barAbove {
+  padding-bottom: var(--space-2);
+  border-bottom: 0;
+}
+
+/* Then the line is just the count, so it keeps only its own width: the tools stay beside it in
+   a small window instead of dropping to a row of their own. */
+.barAbove > .hint {
+  flex-basis: auto;
 }
 
 .hint {
@@ -752,7 +765,8 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* The Filters panel: from the side on a computer, up from the bottom on a phone. */
+/* The Filters panel (below 900px; a computer has the filter bar): in from the side on a
+   tablet-sized window, up from the bottom on a phone. */
 .panel {
   display: none;
   flex-direction: column;

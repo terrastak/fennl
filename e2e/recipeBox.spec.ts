@@ -5,6 +5,7 @@ import {
   dragCategory,
   library,
   libraryRow,
+  openBarMenu,
   openFilters,
   panelCategories,
   recipeCard,
@@ -170,14 +171,15 @@ test.describe("On a computer", () => {
     await quick.click();
     await expect(titles(page)).toHaveCount(2);
 
-    // Never while typing in a box: letters typed in Filters stay there.
-    await page.getByRole("button", { name: /^Filters/ }).click();
-    const filters = page.getByRole("dialog", { name: "Filters" });
-    await filters.getByLabel("Without ingredient").fill("");
+    // Never while typing in a box: letters typed in the filter bar's menus stay there.
+    const filters = await openBarMenu(page, "ingredients");
+    await filters.getByRole("textbox", { name: "Without these ingredients" }).fill("");
     await page.keyboard.type("mush");
-    await expect(filters.getByLabel("Without ingredient")).toHaveValue("mush");
-    await filters.getByRole("button", { name: "Close filters" }).click();
-    await expect(filters).toBeHidden();
+    await expect(filters.getByRole("textbox", { name: "Without these ingredients" })).toHaveValue(
+      "mush",
+    );
+    await page.keyboard.press("Escape");
+    await expect(filters).toHaveCount(0);
     await expect(searchBox(page)).toHaveValue("");
 
     // Only on the recipe list: letters typed on a recipe's page stay there.
@@ -290,11 +292,13 @@ test.describe("On a computer", () => {
     // The focus goes on to the next line.
     await expect(libraryRow(page, "Favorites")).toBeFocused();
 
-    // Filters: a filter that is set has a button to add it, saying when it's there.
-    const filters = await openFilters(page);
-    const time = filters.getByRole("group", { name: "Total time, up to" });
+    // The filter bar (U22): a filter that is set has a button in its menu to add it, saying
+    // when it's there.
+    let time = await openBarMenu(page, "time");
     await expect(time.getByRole("button", { name: /quick searches/ })).toHaveCount(0);
-    await time.getByRole("button", { name: "1 hr", exact: true }).click();
+    await time.getByRole("menuitemradio", { name: "1 hr or less", exact: true }).click();
+    await expect(time).toHaveCount(0);
+    time = await openBarMenu(page, "time");
     const addTime = time.getByRole("button", { name: /quick searches: 1 hour or less$/ });
     await expect(addTime).toHaveText(/^\+?Add to quick searches$/);
     await expect(addTime).toHaveAttribute("aria-pressed", "false");
@@ -302,7 +306,7 @@ test.describe("On a computer", () => {
     await expect(addTime).toHaveText(/^In quick searches$/);
     await expect(addTime).toHaveAttribute("aria-pressed", "true");
     await page.keyboard.press("Escape");
-    await expect(filters).toBeHidden();
+    await expect(time).toHaveCount(0);
     await expect(quickLines(page)).toHaveText([
       "45 minutes or less",
       "Favorites",

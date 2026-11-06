@@ -1,8 +1,10 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
+  chooseInBar,
+  countLine,
+  filterBar,
   libraryRow,
-  openFilters,
   premium,
   recipeCard,
   signInElsewhere,
@@ -35,16 +37,25 @@ const editedTag = (page: Page) => page.getByText("Edited", { exact: true });
 const quickLabel = (page: Page) => page.getByText("Quick search", { exact: true });
 /** A saved search in the left panel (U17). */
 const savedRow = (page: Page, name: string) => libraryRow(page, name);
-/** The total time chosen in the Filters panel ("30 min", "1 hr", or "Any"). */
+/** The total time chosen in the filter bar (U22): "30 min", "1 hr", or "Any". */
 async function setTime(page: Page, label: string) {
-  const panel = await openFilters(page);
-  await panel
-    .getByRole("group", { name: "Total time, up to" })
-    .getByRole("button", { name: label, exact: true })
-    .click();
-  await page.keyboard.press("Escape");
-  await expect(panel).toBeHidden();
+  await chooseInBar(page, "time", label === "Any" ? "Any" : `${label} or less`);
 }
+
+/** A chip in the filter bar, by its words ("1 hr or less", "My favorites (added)"). */
+const chip = (page: Page, name: string) =>
+  filterBar(page).getByRole("button", { name, exact: true });
+
+/**
+ * How far under the header's last line something starts: that line is the filter bar's when it
+ * shows (U22, a row of its own once a filter is set), else the count line's.
+ */
+const underHeader = (page: Page, selector: string) =>
+  page.locator(selector).evaluate((el) => {
+    const bar = document.querySelector('header [role="group"][aria-label="Filters"]');
+    const line = bar ?? document.querySelector("header [aria-live=polite]")?.closest("div");
+    return el.getBoundingClientRect().top - (line ? line.getBoundingClientRect().bottom : NaN);
+  });
 
 /** Saves what the list shows under a name, named in the heading's box. */
 async function saveAs(page: Page, name: string) {
@@ -57,9 +68,11 @@ async function saveAs(page: Page, name: string) {
   await expect(heading(page)).toBeFocused();
 }
 
-/** Where the recipes start, to check that nothing below the heading moves. */
-const resultsTop = (page: Page) =>
-  page.locator("#recipe-results").evaluate((el) => el.getBoundingClientRect().top);
+/**
+ * Where the recipes start, to check that nothing below the heading moves: under the header's
+ * last line, as the filter bar adds its own row when a filter is set (U22).
+ */
+const resultsTop = (page: Page) => underHeader(page, "#recipe-results");
 
 test("Save a search, use it again, update it, rename it and save it as new", async ({
   page,
@@ -77,11 +90,13 @@ test("Save a search, use it again, update it, rename it and save it as new", asy
 
   await toggleQuick(page);
   await expect(titles(page)).toHaveCount(2);
-  await expect(page.getByText("2 recipes · 30 minutes or less")).toBeVisible();
+  // With the filter bar, the line under the heading is just the count (U22).
+  await expect(countLine(page)).toHaveText("2 recipes");
+  await expect(chip(page, "30 min or less")).toBeVisible();
   await saveAs(page, "Quick dinners");
   await expect(savedRow(page, "Quick dinners")).toHaveAttribute("aria-current", "page");
   await expect(quickLabel(page)).toBeVisible();
-  await expect(page.getByText("2 recipes · 30 minutes or less")).toBeVisible();
+  await expect(countLine(page)).toHaveText("2 recipes");
   // As saved: no buttons to save it, no Edited tag, a pencil and a ✕ beside the name.
   await expect(page.getByRole("button", { name: /^Update|Save as/ })).toHaveCount(0);
   await expect(editedTag(page)).toHaveCount(0);
@@ -107,14 +122,15 @@ test("Save a search, use it again, update it, rename it and save it as new", asy
   await expect(savedRow(page, "Quick dinners")).toBeVisible();
   await expect(heading(page)).toHaveText("Quick dinners");
 
-  // Change the filters: the name stays the heading, marked Edited, the change is marked in the
-  // line, and no buttons are added to the bar (U21).
+  // Change the filters: the name stays the heading, marked Edited, the change is marked on its
+  // chip (U22), and no buttons are added to the bar (U21).
   await setTime(page, "1 hr");
   await expect(titles(page)).toHaveCount(3);
   await expect(heading(page)).toHaveText("Quick dinners");
   await expect(quickLabel(page)).toHaveCount(0);
   await expect(editedTag(page)).toBeVisible();
-  await expect(page.getByText("3 recipes · + 1 hour or less (added)")).toBeVisible();
+  await expect(countLine(page)).toHaveText("3 recipes");
+  await expect(chip(page, "1 hr or less (added)")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Update “|^Save as new/ })).toHaveCount(0);
   expect(await resultsTop(page)).toBe(top);
   // A reload keeps the name: it was the search chosen in this tab.
@@ -132,7 +148,8 @@ test("Save a search, use it again, update it, rename it and save it as new", asy
   await expect(quickLabel(page)).toBeVisible();
   await expect(editedTag(page)).toHaveCount(0);
   await expect(heading(page)).toBeFocused();
-  await expect(page.getByText("3 recipes · 1 hour or less", { exact: true })).toBeVisible();
+  await expect(countLine(page)).toHaveText("3 recipes");
+  await expect(chip(page, "1 hr or less")).toBeVisible();
   await expect(page.getByRole("button", { name: /^Update/ })).toHaveCount(0);
   await setTime(page, "Any");
   await expect(heading(page)).toHaveText("All recipes");
@@ -202,9 +219,6 @@ async function favorite(page: Page, title: string) {
   await page.goto("/");
 }
 
-/** The count line under the heading (U20), as one text. */
-const countLine = (page: Page) => page.locator("header [aria-live=polite]").first();
-
 /**
  * Where the heading (or the box naming it), the count line and the first recipe start, to check
  * that nothing moves between lists (U20).
@@ -213,10 +227,16 @@ async function positions(page: Page) {
   return page.evaluate(() => {
     const topOf = (el: Element | null) => (el ? el.getBoundingClientRect().top : NaN);
     const header = document.querySelector("header h1, header input")!;
+    // The recipes, under the header's last line: the filter bar's when it shows (U22, a row of
+    // its own once a filter is set), else the count line's.
+    const filterBar = document.querySelector('header [role="group"][aria-label="Filters"]');
+    const line = filterBar ?? document.querySelector("header [aria-live=polite]")?.closest("div");
     return {
       heading: topOf(header),
       bar: topOf(document.querySelector("header [aria-live=polite]")),
-      card: topOf(document.querySelector("#recipe-results [id^=card-title-]")),
+      card:
+        topOf(document.querySelector("#recipe-results [id^=card-title-]")) -
+        (line ? line.getBoundingClientRect().bottom : NaN),
     };
   });
 }
@@ -256,12 +276,13 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   await expect(titles(page)).toHaveCount(4);
   await expectSteady(page, before);
 
-  // Clicking it: its name is the heading under QUICK SEARCH, the count line says what narrows
-  // it, and nothing moved.
+  // Clicking it: its name is the heading under QUICK SEARCH, the count line is just the count
+  // (the filter bar's chips say what narrows it, U22), and nothing moved.
   await savedRow(page, "Weeknight lime").click();
   await expect(heading(page)).toHaveText("Weeknight lime");
   await expect(quickLabel(page)).toBeVisible();
-  await expect(countLine(page)).toHaveText("1 recipe · matching “lime” · 30 minutes or less");
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await expect(chip(page, "30 min or less")).toBeVisible();
   await expect(countLine(page).locator("strong")).toHaveText("1 recipe");
   await expectSteady(page, before);
 
@@ -270,12 +291,12 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   await libraryRow(page, "Mexican").click();
   await expect(heading(page)).toHaveText("Mexican");
   await expect(quickLabel(page)).toHaveCount(0);
-  await expect(countLine(page)).toHaveText("1 recipe · matching “lime” · 30 minutes or less");
+  await expect(countLine(page)).toHaveText("1 recipe");
   await expect(page.getByRole("button", { name: /^Update/ })).toHaveCount(0);
   await expectSteady(page, before);
 
-  // Ticking Favorites changes it: the name stays, the label goes, "+ Favorites" is marked in the
-  // line (in words too), and the name is marked Edited (U21).
+  // Ticking Favorites changes it: the name stays, the label goes, its chip is marked "+" (in
+  // words too, U22), and the name is marked Edited (U21).
   await savedRow(page, "Weeknight lime").click();
   await expect(heading(page)).toHaveText("Weeknight lime");
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("");
@@ -283,7 +304,9 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   await expect(titles(page)).toHaveCount(1);
   await expect(heading(page)).toHaveText("Weeknight lime");
   await expect(quickLabel(page)).toHaveCount(0);
-  await expect(countLine(page)).toHaveText("1 recipe · 30 minutes or less · + Favorites (added)");
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await expect(chip(page, "My favorites (added)")).toBeVisible();
+  await expect(chip(page, "30 min or less")).toBeVisible();
   await expect(editedTag(page)).toBeVisible();
   await expectSteady(page, before);
   // The highlight is readable (contrast) and the page has no accessibility problems.
@@ -306,7 +329,8 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   await expect(page).toHaveURL(/rating=favorite/);
   await expect(page).not.toHaveURL(/q=lime/);
   await expect(quickLabel(page)).toBeVisible();
-  await expect(countLine(page)).toHaveText("1 recipe · Favorites · 30 minutes or less");
+  await expect(countLine(page)).toHaveText("1 recipe");
+  await expect(chip(page, "My favorites")).toBeVisible();
 
   // The pencil: nothing below moves while the name is being edited.
   await page.getByRole("button", { name: "Rename this search" }).click();
