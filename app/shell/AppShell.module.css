@@ -380,3 +380,61 @@ button.navLink {
     white-space: nowrap;
   }
 }
+
+/* The laptop look (U23, owner's choice 2026-11-06): with a mouse on a wide screen the left panel
+   is tighter: a smaller logo, rows of the shared laptop height, regular-weight names and quiet
+   icons. Touch screens and narrower windows keep the sizes above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .sideTop {
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-3) 0;
+  }
+
+  .brandRow {
+    --logo-gap: var(--space-2);
+    --logo-wordmark-size: var(--text-lg);
+  }
+
+  .brandRow .logoLink {
+    border-radius: var(--radius-control);
+  }
+
+  .brandRow .logoLink svg {
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+
+  .sideNav {
+    padding: var(--space-1) var(--space-3) var(--space-2);
+  }
+
+  .navList {
+    gap: 0;
+  }
+
+  .sidebar .navLink {
+    gap: var(--space-2);
+    min-height: var(--row);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-regular);
+    line-height: var(--ui-leading);
+  }
+
+  .sidebar .navLink[aria-current="page"] {
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar .navLink svg {
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  .sidebar .navLink[aria-current="page"] svg {
+    color: inherit;
+  }
+
+  .navCount {
+    font-size: var(--ui-text-label);
+  }
+}

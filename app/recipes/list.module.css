@@ -931,3 +931,384 @@
   background: var(--color-accent-soft);
   color: var(--color-accent-soft-text);
 }
+
+/* ---------- On a laptop or desktop (U23, owner's choice 2026-11-06) ---------- */
+/* A wide window with a mouse or trackpad: a 28px title under a smaller greeting, + Add recipe
+   the one filled button at 32px, ⋯ and the tools as quiet buttons with a soft fill when pointed
+   at, and a tighter ⋯ menu. Phones, touch screens and windows under 900px keep the sizes above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .head {
+    margin-bottom: var(--space-4);
+  }
+
+  /* The greeting's height, now smaller; still always kept, so nothing moves between lists. */
+  .above {
+    min-height: var(--text-xl);
+    margin-bottom: 0;
+  }
+
+  .above :global(.hand-note) {
+    margin-left: calc(var(--space-1) * -1);
+    font-size: var(--text-xl);
+  }
+
+  .kind {
+    padding-bottom: var(--space-1);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.06em;
+  }
+
+  .kind svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .titleRow {
+    align-items: center;
+    margin-top: var(--space-1);
+  }
+
+  .what {
+    min-height: var(--control);
+    gap: var(--space-2);
+  }
+
+  .nameRow {
+    gap: var(--space-2);
+  }
+
+  .after {
+    gap: var(--space-1);
+    min-height: calc(var(--title-size) * var(--leading-tight));
+  }
+
+  .title {
+    font-size: var(--title-size);
+  }
+
+  .titleButton {
+    border-radius: var(--radius-control);
+  }
+
+  .titleButton:focus-visible {
+    outline-width: var(--focus-width);
+  }
+
+  .edited {
+    margin-left: var(--space-1);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-tag);
+    font-size: var(--ui-text-label);
+    line-height: 1.7;
+  }
+
+  .nameBox {
+    padding: 0 var(--space-2) 0.08em;
+    border-radius: var(--radius-control);
+    box-shadow: inset 0 0 0 1px var(--color-border-strong);
+    font-size: var(--title-size);
+  }
+
+  .nameBox::placeholder {
+    color: var(--color-text-muted);
+  }
+
+  .nameBox:focus {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 1px;
+  }
+
+  .nameActions {
+    gap: var(--space-1);
+  }
+
+  .nameSubmit {
+    gap: var(--space-2);
+    min-height: var(--control);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .nameSubmit:hover {
+    background: color-mix(in srgb, var(--color-accent-soft) 82%, var(--color-accent));
+  }
+
+  .key {
+    padding: 0 var(--space-1);
+    border: 0;
+    border-radius: var(--radius-tag);
+    box-shadow:
+      inset 0 0 0 1px var(--color-border),
+      inset 0 -1px 0 var(--color-border);
+    background: var(--color-surface);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* A narrow heading: the box's words a size smaller, still the heading's height. */
+  @container heading (max-width: 48rem) {
+    .nameBox {
+      font-size: var(--text-xl);
+      line-height: calc(var(--title-size) * var(--leading-tight));
+    }
+  }
+
+  /* The pencil and ✕ beside a saved search's or category's name: quiet icon buttons, no ring
+     around the ✕, a soft fill when pointed at. */
+  .rename,
+  .unpick {
+    width: var(--control-sm);
+    height: var(--control-sm);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-muted);
+  }
+
+  .rename svg {
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  .unpick svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    stroke-width: 2.25;
+  }
+
+  .rename:hover,
+  .unpick:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .headActions {
+    gap: var(--space-2);
+  }
+
+  /* + Add recipe: the screen's one filled button. */
+  .headActions .add {
+    gap: var(--space-2);
+    min-height: var(--control);
+    padding: 0 var(--space-4) 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    box-shadow: var(--shadow-sm);
+    font-size: var(--ui-text);
+    line-height: 1;
+  }
+
+  .headActions .add > span:first-child {
+    font-size: var(--text-lg);
+    font-weight: var(--weight-regular);
+  }
+
+  /* ⋯: no outline, a soft fill when pointed at or open. */
+  .iconButton {
+    min-width: var(--control);
+    min-height: var(--control);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-muted);
+    font-size: var(--text-lg);
+    font-weight: var(--weight-regular);
+  }
+
+  .iconButton:hover,
+  .iconButton[aria-expanded="true"] {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .menu {
+    top: calc(100% + var(--space-1));
+    min-width: 14.75rem;
+    padding: var(--space-1) calc(var(--space-1) + 0.125rem);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: var(--shadow-pop);
+  }
+
+  .menuHeading {
+    padding: var(--space-2) var(--space-2) var(--space-1);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.06em;
+  }
+
+  .menuItem {
+    gap: var(--space-3);
+    min-height: var(--row);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .menuItem:hover {
+    background: var(--hover-fill);
+  }
+
+  .menuItem:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .menuItem:hover .menuIcon {
+    color: var(--color-text);
+  }
+
+  .menuIcon {
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  /* Turned off: muted words, still readable; the side says why in words. */
+  .menuItem:disabled {
+    color: var(--color-text-muted);
+    background: none;
+  }
+
+  .menuItem:disabled .menuIcon {
+    color: var(--color-border-strong);
+  }
+
+  .menuSide {
+    padding-left: var(--space-4);
+    font-size: var(--ui-text-label);
+  }
+
+  /* A line right across the menu before Find duplicates. */
+  .menuSeparator {
+    margin: var(--space-1) calc((var(--space-1) + 0.125rem) * -1) 0;
+    padding: var(--space-1) calc(var(--space-1) + 0.125rem) 0;
+  }
+
+  /* The line under the title: the count, then Filters and the order as quiet words. */
+  .bar {
+    gap: var(--space-2) var(--space-3);
+    min-height: 2.25rem;
+    margin-top: var(--space-1);
+    padding-bottom: var(--space-1);
+  }
+
+  .barAbove {
+    padding-bottom: var(--space-1);
+  }
+
+  .hint {
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+  }
+
+  .tools {
+    gap: var(--space-1);
+    margin-right: calc(var(--space-2) * -1);
+  }
+
+  .tool {
+    gap: var(--space-2);
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+  }
+
+  .tool svg {
+    width: var(--icon);
+    height: var(--icon);
+    color: var(--color-text-muted);
+  }
+
+  .tool:hover,
+  .tool[aria-expanded="true"] {
+    background: var(--hover-fill);
+  }
+
+  .tool:hover svg {
+    color: var(--color-text);
+  }
+
+  .count {
+    min-width: 1.125rem;
+    padding: 0 var(--space-1);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+    line-height: 1.125rem;
+    text-align: center;
+  }
+
+  .sortChip {
+    color: var(--color-text);
+  }
+
+  .sortChip > svg {
+    left: var(--space-2);
+    width: var(--icon);
+    height: var(--icon);
+    color: var(--color-text-muted);
+  }
+
+  .sortChip select {
+    min-height: var(--control-sm);
+    padding: 0 calc(var(--space-2) + 0.875rem) 0 calc(var(--space-2) + var(--icon) + var(--space-2));
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .sortChip select:hover {
+    background: var(--hover-fill);
+  }
+
+  .sortChip::after {
+    right: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: 0.625rem;
+  }
+
+  .results {
+    margin-top: 0;
+  }
+
+  /* A card's facts and categories on small lines (the card itself is in recipes.module.css). */
+  .cardFacts {
+    font-size: var(--ui-text-label);
+    line-height: 1.45;
+  }
+
+  .stars {
+    font-size: var(--ui-text-label);
+    letter-spacing: 0.5px;
+  }
+
+  .heart {
+    top: var(--space-2);
+    right: var(--space-2);
+    width: var(--space-6);
+    height: var(--space-6);
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+  }
+
+  .heart svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+}
+
+/* Windows contrast themes draw no shadows and no fills, so on a laptop the edges the rules above
+   take away (or leave to a shadow) come back there: the ⋯ menu, + Add recipe, Update, and the
+   buttons that had an outline before. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .menu,
+  .headActions .add,
+  .nameSubmit,
+  .iconButton,
+  .unpick,
+  .tool {
+    border: 1px solid;
+  }
+}

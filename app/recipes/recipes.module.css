@@ -2228,3 +2228,286 @@ button.stepNumber:focus-visible::after {
 .fromStep:focus-visible {
   outline-offset: 0;
 }
+
+/* --- The recipe list on a laptop or desktop (U23, owner's choice 2026-11-06) ---------------- */
+/* A wide window with a mouse or trackpad: a denser grid of smaller cards with a hairline edge
+   and 8px corners, small facts lines, and a quieter empty state and footnote. Phones, touch
+   screens and windows under 900px keep the cards above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 9.5rem), 1fr));
+    gap: var(--space-4);
+  }
+
+  .card {
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow:
+      0 0 0 1px var(--color-border-soft),
+      var(--shadow-sm);
+  }
+
+  .card:hover {
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      var(--shadow-md);
+  }
+
+  .grid .cover,
+  .grid .coverPhoto {
+    aspect-ratio: 4 / 3;
+  }
+
+  .grid .cover {
+    font-size: var(--text-2xl);
+  }
+
+  .cardBody {
+    gap: 0.125rem;
+    padding: var(--space-2) var(--space-3) var(--space-3);
+  }
+
+  /* Two lines at most, and room for two, so the facts line up across a row. */
+  .grid .cardTitle {
+    display: -webkit-box;
+    min-height: calc(2em * 1.3);
+    overflow: hidden;
+    margin-bottom: 0.125rem;
+    font-size: var(--ui-text);
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .cardMeta,
+  .cardHit {
+    font-size: var(--ui-text-label);
+    line-height: 1.45;
+  }
+
+  .cardBy {
+    font-size: var(--text-lg);
+  }
+
+  .cardCheck {
+    top: var(--space-2);
+    left: var(--space-2);
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  .cardSelected {
+    outline-width: 2px;
+  }
+
+  /* No recipes yet: smaller words and buttons, Add recipe still the one filled. */
+  .empty {
+    min-height: 20rem;
+    padding: var(--space-6) 0;
+  }
+
+  .ghosts {
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  }
+
+  .ghost {
+    height: 9rem;
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+
+  .emptyText {
+    gap: var(--space-2);
+    max-width: 26rem;
+    padding: var(--space-6);
+  }
+
+  .emptyText h2 {
+    font-size: var(--heading-size);
+  }
+
+  .emptyText p {
+    font-size: var(--ui-text);
+  }
+
+  .buttons {
+    gap: var(--space-2);
+    margin-top: var(--space-2);
+  }
+
+  .emptyText .primary,
+  .emptyText .secondary,
+  .more .secondary {
+    min-height: var(--control);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .emptyText .primary {
+    border: 0;
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* The second choice reads as a button without a line around it: a soft fill. */
+  .emptyText .secondary,
+  .more .secondary {
+    border-color: transparent;
+    background: var(--color-surface-sunken);
+    font-weight: var(--weight-medium);
+  }
+
+  .emptyText .secondary:hover,
+  .more .secondary:hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  }
+
+  .emptyText .textButton {
+    min-height: var(--control-sm);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .more {
+    gap: var(--space-2) var(--space-3);
+    margin-top: var(--space-5);
+  }
+
+  .more .hint {
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* "Deleted recipes stay in Trash for 30 days": small and quiet. */
+  .footnote {
+    margin-top: var(--space-6);
+    font-size: var(--ui-text-label);
+  }
+
+  /* Surprise me and Select: cards like the recipe cards, with laptop-sized buttons. The main
+     choice in each is a soft accent button, so + Add recipe stays the screen's one filled button,
+     and the others are a soft fill with no line around them. */
+  .surprise,
+  .bulk {
+    margin-bottom: var(--space-5);
+    padding: var(--space-3) var(--space-4);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow:
+      0 0 0 1px var(--color-border-soft),
+      var(--shadow-sm);
+  }
+
+  .surprise {
+    gap: var(--space-3) var(--space-4);
+  }
+
+  .bulk {
+    gap: var(--space-2);
+  }
+
+  /* The suggestion's photo or letter as a small picture beside its name, not a banner. */
+  .surprise .cover,
+  .surprise .coverPhoto {
+    flex: none;
+    width: 7.5rem;
+    height: auto;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius-control);
+  }
+
+  .surprise .cover {
+    font-size: var(--text-2xl);
+  }
+
+  .surpriseBody {
+    gap: 0.125rem;
+  }
+
+  .surpriseBody .hint {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .surpriseTitle {
+    font-size: var(--heading-size);
+  }
+
+  .surpriseActions,
+  .bulkHead {
+    gap: var(--space-2);
+  }
+
+  .bulkHead p {
+    font-size: var(--ui-text);
+  }
+
+  .surprise .primary,
+  .surprise .secondary,
+  .bulk .primary,
+  .bulk .secondary {
+    min-height: var(--control);
+    padding: 0 var(--space-4);
+    border-color: transparent;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .surprise .primary,
+  .bulk .primary {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+  }
+
+  .surprise .primary:hover,
+  .bulk .primary:hover {
+    background: color-mix(in srgb, var(--color-accent-soft) 82%, var(--color-accent));
+    color: var(--color-accent-soft-text);
+  }
+
+  .surprise .secondary,
+  .bulk .secondary {
+    background: var(--color-surface-sunken);
+    font-weight: var(--weight-medium);
+  }
+
+  .surprise .secondary:hover,
+  .bulk .secondary:hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  }
+
+  .surprise .textButton,
+  .bulk .textButton {
+    min-height: var(--control-sm);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .bulk .sort {
+    font-size: var(--ui-text-label);
+  }
+
+  .bulk .select {
+    min-height: var(--control);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+}
+
+/* Windows contrast themes draw no shadows and no fills, so on a laptop the edges the rules above
+   leave to a shadow, or take away, come back there: the cards, the Surprise me and Select boxes,
+   and their buttons. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .card,
+  .ghost,
+  .surprise,
+  .bulk,
+  .emptyText .primary,
+  .emptyText .secondary,
+  .more .secondary,
+  .surprise .primary,
+  .surprise .secondary,
+  .bulk .primary,
+  .bulk .secondary {
+    border: 1px solid;
+  }
+}
