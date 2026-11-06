@@ -2,7 +2,6 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode } f
 import { isQuickSearchItem, quickSearchKey, type QuickFilter } from "../../shared/quickSearches";
 import { CategoryCombobox } from "../categories/CategoryCombobox";
 import { Link } from "../router";
-import { useWide } from "../shell/useWide";
 import { pathKey, type CategoryTree } from "../categories/tree";
 import categoryStyles from "../categories/categories.module.css";
 import { AddToQuick } from "./AddToQuick";
@@ -30,11 +29,12 @@ import quickStyles from "./quickSearches.module.css";
 import styles from "./recipes.module.css";
 
 // The list's Filters (phase C13a; a panel since U13, owner's choices 2026-11-04): every way to
-// narrow the list, grouped, most of them one tap each. It slides in from the side on a computer
-// and up from the bottom on a phone; the list behind it follows each choice at once, and the
-// button at the bottom says how many recipes are left. On a phone, which has no left panel
-// (U17), it starts with the quick searches (U18), one tap each. Each filter that is set has a
-// button to add it to the quick searches (U18, owner's choice 3); categories don't.
+// narrow the list, grouped, most of them one tap each. Since U22 it is the phone's (a computer
+// has the filter bar, FilterBar.tsx): it comes up from the bottom, or in from the side on a
+// tablet-sized window; the list behind it follows each choice at once, and the button at the
+// bottom says how many recipes are left. With no left panel (U17), it starts with the quick
+// searches (U18), one tap each. Each filter that is set has a button to add it to the quick
+// searches (U18, owner's choice 3); categories don't.
 
 /** One choice from a few, as a row of buttons (the one chosen pressed). */
 function Choices<T extends string | number | null>({
@@ -148,7 +148,7 @@ function WordsField({
 }
 
 /** Categories for one of the category filters: chips, and a box to find another to add. */
-function CategoriesField({
+export function CategoriesField({
   label,
   tree,
   keys,
@@ -217,7 +217,6 @@ export function FiltersPanel({
   const [hideNutrition] = useHideNutrition();
   const mainCategory =
     filters.category && filters.category !== "__unfiled" ? [filters.category] : [];
-  const phone = !useWide();
   // A change to the quick searches that didn't save, said at the top of the panel.
   const [problem, setProblem] = useState("");
   // Each filter that is set, as the tick line it would add (one a line can't hold, such as a
@@ -272,14 +271,12 @@ export function FiltersPanel({
             <p className={quickStyles.problem} role="alert">
               {problem}
             </p>
-            {phone ? (
-              <PhoneQuick
-                filters={filters}
-                onChange={onChange}
-                onClose={onClose}
-                onProblem={setProblem}
-              />
-            ) : null}
+            <PhoneQuick
+              filters={filters}
+              onChange={onChange}
+              onClose={onClose}
+              onProblem={setProblem}
+            />
             {tree && tree.nodes.length > 0 ? (
               <div className={listStyles.group}>
                 <h3 className={listStyles.groupTitle}>Categories</h3>

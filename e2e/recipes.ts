@@ -100,16 +100,16 @@ export async function fromListMenu(page: Page, item: string) {
 }
 
 /**
- * The button that opens the Filters panel: "Filters" in the list's bar on a computer (called
- * "More filters" from U17 to U21), and beside the search box on a phone; `on` is how many filters
- * it says are on.
+ * The Filters button: in the list's bar on a computer (called "More filters" from U17 to U21),
+ * where it shows the filter bar (U22), and beside the search box on a phone, where it opens the
+ * Filters sheet; `on` is how many filters it says are on.
  */
 export const filtersButton = (page: Page, on = 0) =>
   page.getByRole("button", {
     name: new RegExp(`^Filters${on ? ` ${on} on` : ""}$`),
   });
 
-/** Opens the recipe list's Filters panel (U13). */
+/** Opens the Filters sheet (U13): a phone's. A computer has the filter bar (`openBarMenu`). */
 export async function openFilters(page: Page) {
   await page.getByRole("button", { name: /^Filters/ }).click();
   const panel = page.getByRole("dialog", { name: "Filters" });
@@ -117,13 +117,69 @@ export async function openFilters(page: Page) {
   return panel;
 }
 
-/** Takes off every filter in the Filters panel and closes it. */
+/** Takes off every filter: the sheet's Clear filters on a phone, the bar's Clear all on a computer. */
 export async function clearFilters(page: Page) {
+  if (await library(page).isVisible()) {
+    await filterBar(page).getByRole("button", { name: "Clear all" }).click();
+    await expect(filterBar(page).getByRole("button", { name: /^Remove / })).toHaveCount(0);
+    return;
+  }
   const panel = await openFilters(page);
   await panel.getByRole("button", { name: "Clear filters" }).click();
   await page.keyboard.press("Escape");
   await expect(panel).toBeHidden();
 }
+
+/** The filter bar under the list's heading on a computer (U22). */
+export const filterBar = (page: Page) => page.getByRole("group", { name: "Filters", exact: true });
+
+/** The filter bar's open menu or panel. */
+export const barMenu = (page: Page) => filterBar(page).locator("[data-popup-open]");
+
+const GROUP_NAMES = {
+  time: "Time",
+  rating: "Rating",
+  made: "Last made",
+  serves: "Serves",
+  ingredients: "Ingredients",
+  categories: "Categories",
+  more: "More",
+} as const;
+
+/**
+ * Opens one group's menu in the filter bar ("time", "ingredients"...): from its chip, set or
+ * not, or from "+ Add filter" when the groups not set are folded there. With nothing set, Filters
+ * shows the bar first.
+ */
+export async function openBarMenu(page: Page, group: keyof typeof GROUP_NAMES) {
+  const bar = filterBar(page);
+  // The bar comes with the Filters button, once the list is there.
+  await expect(page.getByRole("button", { name: /^Filters/ })).toBeVisible();
+  if (!(await bar.isVisible())) await filtersButton(page).click();
+  await expect(bar).toBeVisible();
+  const chip = bar.locator(`[data-chips] button[data-bar-group="${group}"]`).first();
+  if ((await chip.count()) > 0) await chip.click();
+  else {
+    await bar.getByRole("button", { name: "Add filter" }).click();
+    await barMenu(page).getByRole("menuitem", { name: GROUP_NAMES[group], exact: true }).click();
+  }
+  await expect(barMenu(page)).toBeVisible();
+  return barMenu(page);
+}
+
+/** Chooses one of a filter bar list's choices ("30 min or less"); the menu closes. */
+export async function chooseInBar(
+  page: Page,
+  group: "time" | "rating" | "made" | "serves",
+  choice: string,
+) {
+  const menu = await openBarMenu(page, group);
+  await menu.getByRole("menuitemradio", { name: choice, exact: true }).click();
+  await expect(barMenu(page)).toHaveCount(0);
+}
+
+/** The count line under the list's heading ("2 recipes", or with what narrows it). */
+export const countLine = (page: Page) => page.locator("header [aria-live=polite]").first();
 
 /** The recipe box in the left panel (U17), shown on a computer. */
 export const library = (page: Page) => page.getByRole("navigation", { name: "Recipe box" });

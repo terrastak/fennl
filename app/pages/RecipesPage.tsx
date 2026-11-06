@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useLayoutEffect,
   useRef,
   useState,
@@ -15,16 +16,18 @@ import { useAddBlocked, useUsage } from "../limits/useLimits";
 import { UndoBar } from "../categories/UndoBar";
 import { useUndoable } from "../categories/useUndoable";
 import { navigate, useSearchString } from "../navigation";
+import { FilterBar } from "../recipes/FilterBar";
+import { barFiltersOn } from "../recipes/filterBar";
 import { FiltersPanel } from "../recipes/FiltersPanel";
 import { ListMenu } from "../recipes/ListMenu";
 import { RemoveIcon } from "../recipes/QuickMenu";
-import { turnOffQuickFilter } from "../recipes/quickSearchFilters";
 import { useSavedSearchControls } from "../recipes/savedSearchControls";
 import {
   activeFilterCount,
   applyFilters,
   filtersToParams,
   pickSurprise,
+  searchKey,
   UNFILED,
   type RecipeFilters,
 } from "../recipes/filters";
@@ -68,7 +71,8 @@ import { greetingFor } from "./greeting";
 // (app/shell/Library.tsx); the list keeps a slim header saying what's shown, with Filters (called
 // More filters until U21), the order, Add recipe and a ⋯ menu for the rest. A phone has the
 // search box, Filters and a row of categories at the top of the list instead
-// (app/shell/PhoneLibrary.tsx).
+// (app/shell/PhoneLibrary.tsx). U22: on a computer, Filters is a bar of chips under the count
+// line (app/recipes/FilterBar.tsx); a phone keeps the Filters sheet.
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -88,6 +92,9 @@ const SORTS: { value: SortBy; label: string; short: string }[] = [
 ];
 
 const SORT_KEY = "fennl:recipe-sort";
+
+/** The filters the filter bar shows, as one text (the category isn't one of them). */
+const barKey = (filters: RecipeFilters) => searchKey("", { ...filters, category: "" });
 
 function savedSort(): SortBy {
   try {
@@ -342,6 +349,12 @@ export function RecipesPage() {
   };
   const [sortBy, setSortBy] = useState<SortBy>(savedSort);
   const [panelOpen, setPanelOpen] = useState(false);
+  // The filter bar shows on its own whenever something beyond the category is set (U22); with
+  // nothing set, after pressing Filters, or once emptied from the bar itself, so nothing moves
+  // under the pointer. Kept as the filters it was opened for: changed from elsewhere (a quick
+  // search, All recipes, closing a saved search), it goes when nothing is set.
+  const [barOpenFor, setBarOpenFor] = useState<string | null>(null);
+  const barId = useId();
   const [limit, setLimit] = useState(PAGE);
   const [addingSamples, setAddingSamples] = useState(false);
   const [surprise, setSurprise] = useState<string | null>(null);
@@ -357,6 +370,11 @@ export function RecipesPage() {
     setSeen({ query, filters });
     setLimit(PAGE);
     setSurprise(null);
+    // Filters changed from elsewhere (not by the bar, which remembers what it changed them to):
+    // the bar no longer stays open on its own, so it goes once nothing is set.
+    if (seen.filters !== filters && barOpenFor !== null && barOpenFor !== barKey(filters)) {
+      setBarOpenFor(null);
+    }
   }
 
   // Typing on the list goes straight into the search box (U17), unless it's typed into
@@ -479,15 +497,14 @@ export function RecipesPage() {
   const everything = picked.kind === "all" && !narrowing;
   // Categories in the line are said with what they're in ("Also in Dessert › Cakes").
   const pathOf = (key: string) => tree?.byKey.get(key)?.path ?? addressCategoryName(address, key);
-  const parts = countLineParts(query, filters, pathOf, saved.savedShape);
-  // Filters only the Filters panel shows: the left panel shows the category and the quick searches'
-  // tick lines that are on (U18).
-  const moreOn = activeFilterCount(
-    library.quick.items.reduce(
-      (left, item) => (item.type === "filter" ? turnOffQuickFilter(left, item) : left),
-      { ...filters, category: "" },
-    ),
-  );
+  // With the filter bar the line is just the count (U22): the chips say what narrows the list.
+  const barShown =
+    wide && list.length > 0 && (barFiltersOn(filters) || barOpenFor === barKey(filters));
+  const parts = barShown ? [] : countLineParts(query, filters, pathOf, saved.savedShape);
+  // Filters' badge: what the filter bar shows (U22), everything set beyond the category, the
+  // quick searches' tick lines included (until U22 it left those out, as the left panel shows
+  // them).
+  const moreOn = activeFilterCount({ ...filters, category: "" });
   const outside =
     searching && !busy && counts ? outsideCount(filters, counts.all, shown.length) : 0;
 
@@ -653,7 +670,7 @@ export function RecipesPage() {
         </div>
 
         {list.length > 0 ? (
-          <div className={listStyles.bar}>
+          <div className={`${listStyles.bar} ${barShown ? listStyles.barAbove : ""}`}>
             <p className={listStyles.hint}>
               {/* How many recipes and what narrows them (U20), said aloud in full as it
                   changes. */}
@@ -705,8 +722,18 @@ export function RecipesPage() {
                 <button
                   type="button"
                   className={listStyles.tool}
-                  aria-haspopup="dialog"
-                  onClick={() => setPanelOpen(true)}
+                  aria-expanded={barShown}
+                  aria-controls={barShown ? barId : undefined}
+                  onClick={() => {
+                    // With something set the bar stays, and the focus goes to its first chip;
+                    // with nothing set, Filters shows or hides the bar's groups.
+                    if (barFiltersOn(filters)) {
+                      document
+                        .getElementById(barId)
+                        ?.querySelector<HTMLElement>("button[data-chip-anchor]")
+                        ?.focus();
+                    } else setBarOpenFor(barShown ? null : barKey(filters));
+                  }}
                 >
                   <svg
                     width="15"
@@ -734,6 +761,19 @@ export function RecipesPage() {
               {list.length > 1 && wide ? sortChoice : null}
             </div>
           </div>
+        ) : null}
+        {barShown ? (
+          <FilterBar
+            id={barId}
+            filters={filters}
+            tree={tree}
+            pathOf={pathOf}
+            saved={saved.shown && !saved.exact ? (saved.savedShape?.filters ?? null) : null}
+            onChange={(next) => {
+              setBarOpenFor(barKey(next));
+              changeFilters(next);
+            }}
+          />
         ) : null}
         {saved.status}
       </header>
@@ -782,7 +822,7 @@ export function RecipesPage() {
         ) : null}
       </div>
 
-      {list.length > 0 ? (
+      {list.length > 0 && !wide ? (
         <FiltersPanel
           open={panelOpen}
           onClose={() => setPanelOpen(false)}
