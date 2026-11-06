@@ -625,6 +625,17 @@ function listTrash(): TrashItem[] {
     .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
 }
 
+/** How many recipes are in Trash (U21): counted in SQLite, without reading each recipe. */
+function countTrash(): number {
+  return Number(
+    database().selectValue(
+      `select count(*) from record where kind = 'recipe' and data is not null
+         and json_extract(data, '$.deletedAt') is not null
+         and json_extract(data, '$.expungedAt') is null`,
+    ) ?? 0,
+  );
+}
+
 /** Empties the copy, leaving nothing of it in the file either. */
 function wipe() {
   database().exec(
@@ -677,6 +688,9 @@ scope.onmessage = (event) => {
           break;
         case "listTrash":
           value = listTrash();
+          break;
+        case "countTrash":
+          value = countTrash();
           break;
         case "findDuplicates":
           value = duplicatesOf(request.query);

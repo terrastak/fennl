@@ -364,6 +364,11 @@ export class SyncEngine {
     return this.db.call({ op: "listTrash" });
   }
 
+  /** How many recipes are in Trash (U21). */
+  countTrash(): Promise<number> {
+    return this.db.call({ op: "countTrash" });
+  }
+
   importedRecipes(source: ImportSource): Promise<ImportedRecipe[]> {
     return this.db.call({ op: "importedRecipes", source });
   }

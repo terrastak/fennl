@@ -59,7 +59,11 @@ test("Search by an ingredient, a word in the notes, and part of a title", async 
   await searchBox(page).fill("mexican lime");
   await expect(titles(page)).toHaveText(["Black Bean Tacos with Lime Crema"]);
   await searchBox(page).fill("nothing like this");
-  await expect(page.getByText("No recipes found.")).toBeVisible();
+  // Just the count and the words, nothing more (U21).
+  await expect(
+    page.getByText("0 recipes · matching “nothing like this”", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("No recipes found.")).toHaveCount(0);
   await noAccessibilityProblems(page);
 
   // Kept in the address, so a reload keeps it.

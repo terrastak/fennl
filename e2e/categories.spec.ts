@@ -111,7 +111,7 @@ test("Many recipes filed at once, with a preview, a count and undo; the list fil
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
 
-  await fromListMenu(page, "Select recipes");
+  await fromListMenu(page, "Select recipes…");
   const bulk = page.getByRole("region", { name: "Selected recipes" });
   await expect(bulk).toContainText("0 of 4 selected");
   await page.getByRole("checkbox", { name: "Green Chile Stew" }).check();
@@ -154,12 +154,15 @@ test("Many recipes filed at once, with a preview, a count and undo; the list fil
   // Every recipe is filed, so the left panel offers no "Not in a category"; the address still can.
   await expect(libraryRow(page, "Not in a category")).toHaveCount(0);
   await page.goto("/?category=__unfiled");
-  await expect(page.getByText("Every recipe is in a category.")).toBeVisible();
+  // Just the count, nothing more (U21).
+  await expect(page.locator("header [aria-live=polite]").first()).toHaveText(/^0 recipes( ·.*)?$/);
+  await expect(page.getByText("Every recipe is in a category.")).toHaveCount(0);
+  await expect(page.getByText("No recipes found.")).toHaveCount(0);
   await page.getByRole("button", { name: "Show all categories" }).click();
   await expect(cardTitles(page)).toHaveCount(4);
 
   // Taken out again, many at once.
-  await fromListMenu(page, "Select recipes");
+  await fromListMenu(page, "Select recipes…");
   await bulk.getByRole("button", { name: "Select all shown" }).click();
   await bulk.getByRole("button", { name: "Take out of a category" }).click();
   await bulk.getByLabel("Take the selected recipes out of").selectOption({

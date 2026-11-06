@@ -6,6 +6,7 @@ import { navigate } from "../navigation";
 import { Link } from "../router";
 import { SyncNotices } from "../sync/SyncNotices";
 import { SyncStatusLine } from "../sync/SyncStatusLine";
+import { useTrashCount } from "../sync/useSync";
 import { FloatingTimers, TimersDialog } from "../timers/Timers";
 import { openTimers, useSoonest } from "../timers/timersView";
 import styles from "./AppShell.module.css";
@@ -16,6 +17,7 @@ import {
   RecipesIcon,
   SettingsIcon,
   TimerIcon,
+  TrashIcon,
 } from "./icons";
 import { Library, LibrarySearch } from "./Library";
 import { Logo } from "./Logo";
@@ -55,7 +57,7 @@ interface AppShellProps {
  * The frame around every page: a sidebar on wide screens, a top bar and bottom tabs on phones.
  * Only one navigation is visible at a time (CSS hides the other), so screen readers see one.
  * Since U17 the sidebar holds the recipe box (search, quick lists, saved searches, categories),
- * with Import and Timers just above Send feedback, Settings and Account.
+ * with Import, Timers and Trash (U21) just above Send feedback, Settings and Account.
  */
 export function AppShell(props: AppShellProps) {
   return (
@@ -134,6 +136,7 @@ function Frame({ path, title, children }: AppShellProps) {
             <li>
               <TimersButton className={styles.navLink} />
             </li>
+            <TrashLink path={path} />
           </ul>
           <ul className={`${styles.navList} ${styles.navListBottom}`}>
             <li>
@@ -239,6 +242,33 @@ function TimersButton({
         </>
       )}
     </button>
+  );
+}
+
+/**
+ * Trash in the left panel (U21, moved from the recipe list's ⋯), with how many recipes are in it.
+ * A phone keeps Trash in the ⋯ menu.
+ */
+function TrashLink({ path }: { path: string }) {
+  const count = useTrashCount();
+  return (
+    <li>
+      <Link
+        href="/trash"
+        className={styles.navLink}
+        aria-current={path === "/trash" ? "page" : undefined}
+        // Said as the left panel's rows say their counts ("Trash, 3 recipes").
+        aria-label={count ? `Trash, ${count} ${count === 1 ? "recipe" : "recipes"}` : undefined}
+      >
+        <TrashIcon />
+        Trash
+        {count ? (
+          <span className={styles.navCount} aria-hidden="true">
+            {count}
+          </span>
+        ) : null}
+      </Link>
+    </li>
   );
 }
 

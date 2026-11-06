@@ -170,7 +170,7 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await expect(page).toHaveURL(/time=60/);
   await expect(page).toHaveURL(/without=cumin/);
 
-  // A reload keeps them, More filters counting them and the header saying them.
+  // A reload keeps them, Filters counting them and the header saying them.
   await page.reload();
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
   await expect(filtersButton(page, 2)).toBeVisible();
@@ -188,7 +188,7 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await expect(filtersButton(page)).toBeVisible();
 });
 
-test("A recipe with no time written down is left out of a time filter, and the list says so", async ({
+test("A recipe with no time written down is left out of a time filter, with no extra note", async ({
   page,
   context,
   baseURL,
@@ -208,19 +208,20 @@ test("A recipe with no time written down is left out of a time filter, and the l
     "Black Bean Tacos with Lime Crema",
     "Buttermilk Pancakes",
   ]);
-  await expect(page.getByText("Not shown: 1 with no time written down.")).toBeVisible();
+  // The line is the count and the filters only (U21): no note of the recipes left out.
+  await expect(page.getByText("2 recipes · 30 minutes or less", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Not shown/)).toHaveCount(0);
   await openFilters(page);
   await choose(page, "Serves at least", "4");
   await showRecipes(page, 2);
-  await expect(
-    page.getByText("Not shown: 1 with no time written down and 1 with no number served."),
-  ).toBeVisible();
+  await expect(page.getByText(/Not shown/)).toHaveCount(0);
 });
 
 test("The ⋯ menu opens and closes, and the list's top fits the screen", async ({
   page,
   context,
   baseURL,
+  isMobile,
 }) => {
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
@@ -236,7 +237,19 @@ test("The ⋯ menu opens and closes, and the list's top fits the screen", async 
   const menu = page.getByRole("list", { name: "More actions" });
   await more.click();
   await expect(more).toHaveAttribute("aria-expanded", "true");
-  await expect(menu.getByRole("link")).toHaveText(["Categories", "Find duplicates", "Trash"]);
+  // What acts on the recipes shown, under how many, then Find duplicates (U21); Categories went,
+  // and Trash is here only on a phone (a computer has it in the left panel).
+  await expect(page.getByText("These 4 recipes", { exact: true })).toBeVisible();
+  await expect(menu.getByRole("button")).toHaveCount(3);
+  for (const name of ["Select recipes…", "Print these", "Surprise me"]) {
+    await expect(menu.getByRole("button", { name, exact: true })).toBeEnabled();
+  }
+  // Print these says how many it would print.
+  await expect(menu.getByRole("button", { name: "Print these", exact: true })).toContainText("4");
+  await expect(menu.getByRole("link")).toHaveText(
+    isMobile ? ["Find duplicates", "Trash"] : ["Find duplicates"],
+  );
+  await expect(menu.getByRole("link", { name: "Categories" })).toHaveCount(0);
   await noAccessibilityProblems(page);
   // Escape closes it and goes back to the button; so does a tap elsewhere.
   await page.keyboard.press("Escape");

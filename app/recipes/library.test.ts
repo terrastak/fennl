@@ -159,7 +159,7 @@ describe("counts", () => {
     expect(outsideCount(f(), 3, 1)).toBe(0);
   });
 
-  it("counts each category as clicking it would show it, with More filters' also in", () => {
+  it("counts each category as clicking it would show it, with Filters' also in", () => {
     const four = [
       recipe("stew", { categories: ["Mexican", "Soups"] }),
       recipe("tacos", { categories: ["Mexican"] }),
@@ -294,11 +294,17 @@ describe("a saved search changed since it was chosen (U20)", () => {
   });
 });
 
-describe("a name for Save as new (U20)", () => {
+describe("a name for Save new quick search (U21)", () => {
   it("adds the first free number", () => {
     expect(nextFreeName("Quick", ["Quick"], 60)).toBe("Quick 2");
     expect(nextFreeName("Quick", ["Quick", "quick 2", "Quick 3"], 60)).toBe("Quick 4");
     expect(nextFreeName(" Quick ", [], 60)).toBe("Quick 2");
+  });
+
+  it("counts on from a number the name already ends in", () => {
+    expect(nextFreeName("Quick 2", ["Quick", "Quick 2"], 60)).toBe("Quick 3");
+    expect(nextFreeName("Quick 2", ["Quick 2", "Quick 3"], 60)).toBe("Quick 4");
+    expect(nextFreeName("Quick 1", ["Quick 1"], 60)).toBe("Quick 2");
   });
 
   it("stays within the longest name allowed", () => {

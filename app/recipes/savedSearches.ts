@@ -166,9 +166,16 @@ export function useSavedSearches() {
       change("PUT", `/api/saved-searches/${id}`, { name }, (before, search) =>
         sorted(before.map((s) => (s.id === id && search ? search : s))),
       ),
-    update: (id: string, query: string) =>
-      change("PUT", `/api/saved-searches/${id}`, { query }, (before, search) =>
-        before.map((s) => (s.id === id && search ? search : s)),
+    /** Saves the list's search into a saved search, renaming it at the same time when `name` is given (U21). */
+    update: (id: string, query: string, name?: string) =>
+      change(
+        "PUT",
+        `/api/saved-searches/${id}`,
+        name === undefined ? { query } : { query, name },
+        (before, search) => {
+          const next = before.map((s) => (s.id === id && search ? search : s));
+          return name === undefined ? next : sorted(next);
+        },
       ),
     remove: (id: string) =>
       change("DELETE", `/api/saved-searches/${id}`, undefined, (before) =>

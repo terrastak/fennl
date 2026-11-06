@@ -226,7 +226,7 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
 
   // Ticked one by one in Select.
   await page.getByRole("button", { name: "Clear search" }).click();
-  await fromListMenu(page, "Select recipes");
+  await fromListMenu(page, "Select recipes…");
   await page.getByRole("checkbox", { name: TACOS }).check();
   await page.getByRole("checkbox", { name: "Green Chile Stew" }).check();
   await page.getByRole("button", { name: "Print these recipes" }).click();

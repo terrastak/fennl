@@ -259,6 +259,32 @@ export function useTrash(): TrashItem[] | null {
   return items;
 }
 
+/** How many recipes are in Trash (U21), counted again whenever the local copy changes. */
+export function useTrashCount(): number | null {
+  const client = activeSyncClient();
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .countTrash()
+        .then((value) => {
+          if (call === latest) setCount(value);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client]);
+  return count;
+}
+
 /** Every recipe's linked recipes (phase F3), read again whenever the local copy changes. */
 export function useRecipeLinks(): Record<string, string[]> | null {
   const client = activeSyncClient();
