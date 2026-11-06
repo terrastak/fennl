@@ -62,12 +62,13 @@ import { greetingFor } from "./greeting";
 // docs/design/design-direction.md, and sample recipes to try. "Add recipe" opens the editor
 // (phase C6) on a new recipe. Phase C7 adds the category filter and Select, for filing many
 // recipes at once. Phase C8 adds search (app/sync/search.ts) and the rating filter. Phase C13a
-// adds "More filters" (app/recipes/filters.ts). The search and filters are kept in the address
+// adds the Filters panel (app/recipes/filters.ts). The search and filters are kept in the address
 // (?q=, ?category=, ?rating=, and the others filtersToParams writes). U17 (owner's choices
 // 2026-11-04) moves the search, quick lists, saved searches and categories into the left panel
-// (app/shell/Library.tsx); the list keeps a slim header saying what's shown, with More filters,
-// the order, Add recipe and a ⋯ menu for the rest. A phone has the search box, Filters and a row
-// of categories at the top of the list instead (app/shell/PhoneLibrary.tsx).
+// (app/shell/Library.tsx); the list keeps a slim header saying what's shown, with Filters (called
+// More filters until U21), the order, Add recipe and a ⋯ menu for the rest. A phone has the
+// search box, Filters and a row of categories at the top of the list instead
+// (app/shell/PhoneLibrary.tsx).
 
 async function save(change: SyncChange): Promise<boolean> {
   try {
@@ -289,18 +290,6 @@ function EmptyState({
 /** Recipes shown at a time; more on request, so a big recipe box stays quick. */
 const PAGE = 100;
 
-/** Recipes a time or servings filter left out because they don't say (CLAUDE.md: never guess). */
-function unknownNote(unknown: { time: number; servings: number }, filters: RecipeFilters): string {
-  const parts: string[] = [];
-  if (filters.maxMinutes !== null && unknown.time > 0) {
-    parts.push(`${unknown.time} with no time written down`);
-  }
-  if (filters.minServings !== null && unknown.servings > 0) {
-    parts.push(`${unknown.servings} with no number served`);
-  }
-  return parts.length > 0 ? `Not shown: ${parts.join(" and ")}.` : "";
-}
-
 /**
  * A heading that wraps onto two lines is as wide as its longest line, not the whole row, so
  * what follows it (the ✕ and the count) sits beside the words rather than at the far edge.
@@ -314,7 +303,9 @@ function useFitToLines(ref: RefObject<HTMLElement | null>, text: string) {
     const fit = () => {
       heading.style.width = "";
       const range = document.createRange();
-      range.selectNodeContents(heading);
+      // The words alone: a saved search's name is a button inside the heading (U21), whose
+      // own box would be as wide as the row.
+      range.selectNodeContents(heading.querySelector("button") ?? heading);
       const lines = [...range.getClientRects()];
       if (new Set(lines.map((line) => Math.round(line.top))).size < 2) return;
       const left = heading.getBoundingClientRect().left;
@@ -403,7 +394,7 @@ export function RecipesPage() {
     }
   };
 
-  /** Filters chosen here (More filters, the title's ✕) replace the address, as typing does. */
+  /** Filters chosen here (Filters, the title's ✕) replace the address, as typing does. */
   const changeFilters = (next: RecipeFilters) => library.show(query, next, { replace: true });
 
   const addSamples = async () => {
@@ -489,7 +480,7 @@ export function RecipesPage() {
   // Categories in the line are said with what they're in ("Also in Dessert › Cakes").
   const pathOf = (key: string) => tree?.byKey.get(key)?.path ?? addressCategoryName(address, key);
   const parts = countLineParts(query, filters, pathOf, saved.savedShape);
-  // Filters only More filters shows: the left panel shows the category and the quick searches'
+  // Filters only the Filters panel shows: the left panel shows the category and the quick searches'
   // tick lines that are on (U18).
   const moreOn = activeFilterCount(
     library.quick.items.reduce(
@@ -500,7 +491,9 @@ export function RecipesPage() {
   const outside =
     searching && !busy && counts ? outsideCount(filters, counts.all, shown.length) : 0;
 
-  // What else the line under the heading says, after the count.
+  // What else the line under the heading says, after the count. With nothing matching it says
+  // just "0 recipes" and what narrows the list (U21: no "No recipes found.", and no note of
+  // recipes a time or servings filter leaves out for not saying).
   const extra: ReactNode = gone ? (
     <>There&rsquo;s no category called &ldquo;{listName}&rdquo; now.</>
   ) : outside > 0 ? (
@@ -525,14 +518,7 @@ export function RecipesPage() {
         Search all recipes
       </button>
     </>
-  ) : !busy && shown.length === 0 ? (
-    filters.category === UNFILED && !searching && filtering === 1 ? (
-      "Every recipe is in a category."
-    ) : (
-      "No recipes found."
-    )
   ) : null;
-  const note = busy ? "" : unknownNote(found.unknown, filters);
 
   // The order: under the title on a computer, beside it on a phone, where its names are short.
   const sortChoice = (
@@ -602,10 +588,12 @@ export function RecipesPage() {
               ) : (
                 <>
                   <h1 ref={titleRef} tabIndex={-1} className={listStyles.title}>
-                    {title}
+                    {saved.titleContent ?? title}
                   </h1>
                   {saved.shown || picked.kind !== "all" ? (
                     <span className={listStyles.after}>
+                      {/* A changed saved search can be saved (U21): in words, not colour. */}
+                      {saved.edited ? <span className={listStyles.edited}>Edited</span> : null}
                       {saved.pencil}
                       {saved.shown ? (
                         <button
@@ -657,7 +645,8 @@ export function RecipesPage() {
                 onSurprise={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
                 onPrint={() => print(shown.map((recipe) => recipe.id))}
                 canSurprise={shown.length > 0}
-                canPrint={shown.length > 0 && !busy}
+                shown={busy ? null : shown.length}
+                trash={!wide}
               />
             </div>
           ) : null}
@@ -700,11 +689,10 @@ export function RecipesPage() {
                   {extra}
                 </>
               ) : null}
-              {note ? `${extra ? " " : ". "}${note}` : null}
               {/* What went wrong naming or updating a saved search, after the count. */}
               {saved.problem ? (
                 <>
-                  {busy || extra || note ? " " : ". "}
+                  {busy || extra ? " " : ". "}
                   <span id={saved.problemId} className={listStyles.problem} role="alert">
                     {saved.problem}
                   </span>
@@ -716,7 +704,7 @@ export function RecipesPage() {
               {wide ? (
                 <button
                   type="button"
-                  className={`${listStyles.tool} ${listStyles.toolOutlined}`}
+                  className={listStyles.tool}
                   aria-haspopup="dialog"
                   onClick={() => setPanelOpen(true)}
                 >
@@ -734,7 +722,7 @@ export function RecipesPage() {
                     <circle cx="16" cy="7" r="2" />
                     <circle cx="10" cy="17" r="2" />
                   </svg>
-                  More filters
+                  Filters
                   {moreOn > 0 ? (
                     <span className={listStyles.count}>
                       {moreOn}

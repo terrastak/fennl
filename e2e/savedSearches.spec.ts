@@ -29,6 +29,8 @@ const titles = (page: Page) =>
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 /** The box that names a saved search in the heading's place (U20). */
 const nameBox = (page: Page) => page.getByLabel("Name of this search");
+/** "Edited" after a changed saved search's name (U21). */
+const editedTag = (page: Page) => page.getByText("Edited", { exact: true });
 /** The label above the heading when the list is exactly a saved search. */
 const quickLabel = (page: Page) => page.getByText("Quick search", { exact: true });
 /** A saved search in the left panel (U17). */
@@ -80,8 +82,9 @@ test("Save a search, use it again, update it, rename it and save it as new", asy
   await expect(savedRow(page, "Quick dinners")).toHaveAttribute("aria-current", "page");
   await expect(quickLabel(page)).toBeVisible();
   await expect(page.getByText("2 recipes · 30 minutes or less")).toBeVisible();
-  // As saved: no buttons to save it, a pencil and a ✕ beside the name.
+  // As saved: no buttons to save it, no Edited tag, a pencil and a ✕ beside the name.
   await expect(page.getByRole("button", { name: /^Update|Save as/ })).toHaveCount(0);
+  await expect(editedTag(page)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Rename this search" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Close this search" })).toBeVisible();
   // Nothing moved: the greeting's line is the label's now.
@@ -104,19 +107,30 @@ test("Save a search, use it again, update it, rename it and save it as new", asy
   await expect(savedRow(page, "Quick dinners")).toBeVisible();
   await expect(heading(page)).toHaveText("Quick dinners");
 
-  // Change the filters: the name stays the heading, the change is marked, and it can be
-  // updated to match.
+  // Change the filters: the name stays the heading, marked Edited, the change is marked in the
+  // line, and no buttons are added to the bar (U21).
   await setTime(page, "1 hr");
   await expect(titles(page)).toHaveCount(3);
   await expect(heading(page)).toHaveText("Quick dinners");
   await expect(quickLabel(page)).toHaveCount(0);
+  await expect(editedTag(page)).toBeVisible();
   await expect(page.getByText("3 recipes · + 1 hour or less (added)")).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Update “|^Save as new/ })).toHaveCount(0);
   expect(await resultsTop(page)).toBe(top);
   // A reload keeps the name: it was the search chosen in this tab.
   await page.reload();
   await expect(heading(page)).toHaveText("Quick dinners");
-  await page.getByRole("button", { name: "Update “Quick dinners”" }).click();
+  // Clicking the name opens the box: Update, Save new quick search and Cancel; Enter updates.
+  await heading(page).getByRole("button", { name: "Quick dinners" }).click();
+  await expect(nameBox(page)).toBeFocused();
+  await expect(nameBox(page)).toHaveValue("Quick dinners");
+  await expect(page.getByRole("button", { name: "Update", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save new quick search" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel", exact: true })).toBeVisible();
+  expect(await resultsTop(page)).toBe(top);
+  await page.keyboard.press("Enter");
   await expect(quickLabel(page)).toBeVisible();
+  await expect(editedTag(page)).toHaveCount(0);
   await expect(heading(page)).toBeFocused();
   await expect(page.getByText("3 recipes · 1 hour or less", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Update/ })).toHaveCount(0);
@@ -143,13 +157,21 @@ test("Save a search, use it again, update it, rename it and save it as new", asy
   await expect(savedRow(page, "Under an hour")).toBeVisible();
   await expect(savedRow(page, "Quick dinners")).toHaveCount(0);
 
-  // Save as new keeps the saved search as it was and saves the change as another.
+  // Save new quick search keeps the saved search as it was and saves the change as another; the
+  // name already used takes the next number.
   await setTime(page, "30 min");
   await expect(titles(page)).toHaveCount(2);
-  await page.getByRole("button", { name: "Save as new" }).click();
-  await expect(nameBox(page)).toHaveValue("Under an hour 2");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Update or save as new" }).click();
+  await expect(nameBox(page)).toHaveValue("Under an hour");
+  // Escape cancels from the box's buttons too, not only from the box.
+  await page.getByRole("button", { name: "Save new quick search" }).focus();
+  await page.keyboard.press("Escape");
+  await expect(nameBox(page)).toHaveCount(0);
+  await page.getByRole("button", { name: "Update or save as new" }).click();
+  await expect(nameBox(page)).toHaveValue("Under an hour");
+  await page.getByRole("button", { name: "Save new quick search" }).click();
   await expect(heading(page)).toHaveText("Under an hour 2");
+  await expect(page.getByText("Saved as “Under an hour 2”.")).toBeAttached();
   await expect(quickLabel(page)).toBeVisible();
   await expect(savedRow(page, "Under an hour 2")).toHaveAttribute("aria-current", "page");
   await savedRow(page, "Under an hour").click();
@@ -253,7 +275,7 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   await expectSteady(page, before);
 
   // Ticking Favorites changes it: the name stays, the label goes, "+ Favorites" is marked in the
-  // line (in words too), and Update and Save as new are offered.
+  // line (in words too), and the name is marked Edited (U21).
   await savedRow(page, "Weeknight lime").click();
   await expect(heading(page)).toHaveText("Weeknight lime");
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("");
@@ -262,8 +284,7 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   await expect(heading(page)).toHaveText("Weeknight lime");
   await expect(quickLabel(page)).toHaveCount(0);
   await expect(countLine(page)).toHaveText("1 recipe · 30 minutes or less · + Favorites (added)");
-  await expect(page.getByRole("button", { name: "Update “Weeknight lime”" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Save as new" })).toBeVisible();
+  await expect(editedTag(page)).toBeVisible();
   await expectSteady(page, before);
   // The highlight is readable (contrast) and the page has no accessibility problems.
   const axe = await new AxeBuilder({ page })
@@ -272,7 +293,9 @@ test("The heading names the saved search, nothing moves, and a change is marked 
   expect(axe.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
 
   // Update saves it: after a reload the search gives the new list, and the label is back.
-  await page.getByRole("button", { name: "Update “Weeknight lime”" }).click();
+  await page.getByRole("button", { name: "Update or save as new" }).click();
+  await expectSteady(page, before);
+  await page.getByRole("button", { name: "Update", exact: true }).click();
   await expect(quickLabel(page)).toBeVisible();
   await page.reload();
   await expect(heading(page)).toHaveText("Weeknight lime");
@@ -387,26 +410,40 @@ test("A name can't be empty or used twice, and says why", async ({ page, context
   await addSamples(page);
   await toggleQuick(page);
   await saveAs(page, "Quick");
+  await page.getByRole("button", { name: "Close this search" }).click();
+  await page.getByRole("searchbox", { name: "Search recipes" }).fill("lemon");
+  await saveAs(page, "Lemon");
 
+  // Changed, its box offers Update (which renames too) and Save new quick search (U21).
   await setTime(page, "1 hr");
-  await page.getByRole("button", { name: "Save as new" }).click();
-  await expect(nameBox(page)).toHaveValue("Quick 2");
+  await page.getByRole("button", { name: "Update or save as new" }).click();
+  await expect(nameBox(page)).toHaveValue("Lemon");
   await nameBox(page).fill("");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Save new quick search" }).click();
   await expect(page.getByText("Give it a name of up to 60 letters.")).toHaveAttribute(
     "role",
     "alert",
   );
   await nameBox(page).fill("  quick ");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByRole("button", { name: "Update", exact: true }).click();
   const problem = page.getByText("You already have a saved search with that name.");
   await expect(problem).toHaveAttribute("role", "alert");
   // The box stays open to try another name, and says what's wrong.
   await expect(nameBox(page)).toHaveAttribute("aria-invalid", "true");
-  await nameBox(page).fill("Under an hour");
-  await page.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(heading(page)).toHaveText("Under an hour");
+  // Save new quick search with a name already used takes the next number.
+  await nameBox(page).fill("Quick");
+  await page.getByRole("button", { name: "Save new quick search" }).click();
+  await expect(heading(page)).toHaveText("Quick 2");
+  await expect(page.getByText("Saved as “Quick 2”.")).toBeAttached();
   await expect(problem).toHaveCount(0);
+  await expect(savedRow(page, "Lemon")).toBeVisible();
+  // A name already ending in a number counts on from it: "Quick 3", never "Quick 2 2".
+  await setTime(page, "30 min");
+  await page.getByRole("button", { name: "Update or save as new" }).click();
+  await expect(nameBox(page)).toHaveValue("Quick 2");
+  await page.getByRole("button", { name: "Save new quick search" }).click();
+  await expect(heading(page)).toHaveText("Quick 3");
+  await expect(page.getByText("Saved as “Quick 3”.")).toBeAttached();
 
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])

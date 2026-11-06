@@ -13,31 +13,40 @@ import { nextFreeName, type SavedShape } from "./library";
 import { useLibrary } from "./libraryContext";
 import { problemText, type Outcome } from "./savedSearches";
 import listStyles from "./list.module.css";
-import styles from "./recipes.module.css";
 
 // Saved searches on the recipe list (phase C13b): a saved search is a rule, so the list it shows
 // stays current as recipes change. Since U18 they are search lines among the quick searches
 // (app/shell/QuickSearches.tsx, and at the top of a phone's Filters), one click each; their ✕
 // deletes one. U20 (owner's choices 2026-11-05) makes the saved search's name the list's
 // heading: a pencil beside it renames it in place, the heading becoming a box with Save and
-// Cancel; once the list is changed the name stays, with "Update “name”" and "Save as new"; and
-// "Save as quick search" names a new one in the same box. No panel opens under the header.
+// Cancel; once the list is changed the name stays; and "Save as quick search" names a new one in
+// the same box. No panel opens under the header. U21 (owner's choices 2026-11-06): clicking the
+// name opens the box too; a changed search shows "Edited" after its name, and its box offers
+// Update (Enter), Save new quick search and Cancel (Escape) in place of the bar's buttons.
 
 /** What the box in the heading is naming, and the button that opened it (for Cancel's focus). */
 interface Naming {
-  kind: "rename" | "new" | "copy";
+  /**
+   * "rename": an unchanged saved search (Save, Cancel); "change": a changed one (Update, Save new
+   * quick search, Cancel); "new": Save as quick search (Save, Cancel).
+   */
+  kind: "rename" | "change" | "new";
   name: string;
-  /** The saved search being renamed. */
+  /** The saved search being renamed or updated. */
   id: string;
 }
 
-type FocusTarget = "pencil" | "save" | "copy" | "update" | "heading";
+type FocusTarget = "pencil" | "name" | "save" | "heading";
 
 export interface SavedSearchControls {
   /** The saved search whose name is the heading: the list is it exactly, or it changed since. */
   shown: SavedSearch | null;
   /** The list is exactly that saved search (the QUICK SEARCH label shows). */
   exact: boolean;
+  /** The saved search was changed since it was picked: "Edited" shows after its name (U21). */
+  edited: boolean;
+  /** The heading's words for a saved search: its name as a button opening the name box (U21). */
+  titleContent: ReactNode;
   /** The heading's saved search's words and filters, for the count line to mark what's added. */
   savedShape: SavedShape | null;
   /** Whether the heading is a box for a name just now. */
@@ -48,7 +57,7 @@ export interface SavedSearchControls {
   nameBox: ReactNode;
   /** The pencil beside a saved search's name. */
   pencil: ReactNode;
-  /** The bar's buttons: Update and Save as new, or Save as quick search. */
+  /** The bar's button: Save as quick search, for a list that isn't a saved search. */
   buttons: ReactNode;
   /** What went wrong naming or updating, for the line under the heading; "" when nothing. */
   problem: string;
@@ -92,9 +101,8 @@ export function useSavedSearchControls({
   const problemId = useId();
   const box = useRef<HTMLInputElement>(null);
   const pencilRef = useRef<HTMLButtonElement>(null);
+  const nameRef = useRef<HTMLButtonElement>(null);
   const saveRef = useRef<HTMLButtonElement>(null);
-  const copyRef = useRef<HTMLButtonElement>(null);
-  const updateRef = useRef<HTMLButtonElement>(null);
   const opener = useRef<FocusTarget>("heading");
   const focusNext = useRef<FocusTarget | null>(null);
 
@@ -120,8 +128,12 @@ export function useSavedSearchControls({
   const namingKind = naming?.kind ?? null;
   useEffect(() => {
     if (!namingKind) return;
-    box.current?.focus();
-    box.current?.select();
+    const input = box.current;
+    if (!input) return;
+    input.focus();
+    // Chosen to type over, selected from the end back to the start, so a name longer than the
+    // box shows its beginning rather than its end.
+    input.setSelectionRange(0, input.value.length, "backward");
   }, [namingKind]);
 
   // Where the focus goes once the box closes or a button goes: the heading after saving, the
@@ -133,9 +145,8 @@ export function useSavedSearchControls({
     const element = {
       heading: headingRef,
       pencil: pencilRef,
+      name: nameRef,
       save: saveRef,
-      copy: copyRef,
-      update: updateRef,
     }[target].current;
     (element ?? headingRef.current)?.focus();
   });
@@ -148,7 +159,7 @@ export function useSavedSearchControls({
     if (naming && naming.kind !== "rename") setNaming(null);
     if (problem) setProblem("");
   }
-  if (searches !== null && naming?.kind === "rename" && naming.id !== shown?.id) {
+  if (searches !== null && naming && naming.kind !== "new" && naming.id !== shown?.id) {
     setNaming(null);
     if (problem) setProblem("");
   }
@@ -157,6 +168,8 @@ export function useSavedSearchControls({
     return {
       shown: null,
       exact: false,
+      edited: false,
+      titleContent: null,
       savedShape: null,
       naming: false,
       rowHeight: undefined,
@@ -178,65 +191,103 @@ export function useSavedSearchControls({
     setNaming({ kind, name, id });
   };
 
+  /** The pencil and the name both open the box: Update and the rest once it changed. */
+  const edit = (from: FocusTarget) => {
+    if (!shown) return;
+    open(changed ? "change" : "rename", shown.name, from, shown.id);
+  };
+
   const cancel = () => {
     setNaming(null);
     setProblem("");
     focusNext.current = opener.current;
   };
 
-  const submit = async () => {
-    if (!naming || busy) return;
-    const name = naming.name.trim();
+  /** The name typed, or null (and the problem said) when it can't be a name. */
+  const typedName = (): string | null => {
+    const name = (naming?.name ?? "").trim();
     if (!name || name.length > MAX_SAVED_NAME_LENGTH) {
       setProblem(problemText("invalid_name"));
       box.current?.focus();
-      return;
+      return null;
     }
-    const renaming = naming.kind === "rename" ? list.find((s) => s.id === naming.id) : undefined;
-    if (naming.kind === "rename" && !renaming) {
+    return name;
+  };
+
+  /** What went wrong, said under the heading, the box keeping the focus; or the box closing. */
+  const finish = (outcome: Outcome, said: string) => {
+    if (!outcome.ok) {
+      setProblem(problemText(outcome.error));
+      box.current?.focus();
+      return false;
+    }
+    setStatus(said);
+    setProblem("");
+    setNaming(null);
+    focusNext.current = "heading";
+    return true;
+  };
+
+  /** Save (renaming, or naming a new search), or Update for a changed one: what Enter does. */
+  const submit = async () => {
+    if (!naming || busy) return;
+    const name = typedName();
+    if (name === null) return;
+    const target = naming.kind === "new" ? undefined : list.find((s) => s.id === naming.id);
+    if (naming.kind !== "new" && !target) {
       setNaming(null);
       return;
     }
-    if (renaming && name === renaming.name) {
+    if (naming.kind === "rename" && target && name === target.name) {
       cancel();
       return;
     }
     setBusy(true);
     let outcome: Outcome;
-    if (renaming) outcome = await rename(renaming.id, name);
+    if (naming.kind === "change" && target) {
+      // Update saves the list into the search, and the name typed with it (U21).
+      outcome = await update(target.id, currentText, name === target.name ? undefined : name);
+    } else if (target) outcome = await rename(target.id, name);
     else outcome = await save(name, currentText);
     setBusy(false);
-    if (!outcome.ok) {
-      setProblem(problemText(outcome.error));
-      box.current?.focus();
-      return;
-    }
-    const final = outcome.search?.name ?? name;
+    const final = outcome.ok ? (outcome.search?.name ?? name) : name;
     // A new saved search is the one shown now, so its name is the heading.
-    if (naming.kind !== "rename" && outcome.search) setChosenSearch(outcome.search.id);
-    setStatus(naming.kind === "rename" ? `Renamed to “${final}”.` : `Saved “${final}”.`);
-    setProblem("");
-    setNaming(null);
-    focusNext.current = "heading";
-  };
-
-  const updateShown = async () => {
-    if (!active || busy) return;
-    setBusy(true);
-    setStatus("");
-    const outcome = await update(active.id, currentText);
-    setBusy(false);
-    if (!outcome.ok) {
-      setProblem(problemText(outcome.error));
-      return;
+    if (outcome.ok && naming.kind === "new" && outcome.search) {
+      setChosenSearch(outcome.search.id);
     }
-    setProblem("");
-    setStatus(`Updated “${active.name}”.`);
-    // The button goes once the list is the saved search again.
-    focusNext.current = "heading";
+    finish(
+      outcome,
+      naming.kind === "new"
+        ? `Saved “${final}”.`
+        : naming.kind === "rename"
+          ? `Renamed to “${final}”.`
+          : target && final !== target.name
+            ? `Updated and renamed to “${final}”.`
+            : `Updated “${final}”.`,
+    );
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+  /**
+   * Save new quick search (U21): the list as another saved search, with the name typed; a name
+   * already used (the unchanged one, most often) takes the next free number ("Quick dinners 2").
+   */
+  const saveNew = async () => {
+    if (!naming || busy) return;
+    const typed = typedName();
+    if (typed === null) return;
+    const names = list.map((s) => s.name);
+    const taken = names.some((n) => n.trim().toLocaleLowerCase() === typed.toLocaleLowerCase());
+    const name = taken ? nextFreeName(typed, names, MAX_SAVED_NAME_LENGTH) : typed;
+    setBusy(true);
+    const outcome = await save(name, currentText);
+    setBusy(false);
+    const final = outcome.ok ? (outcome.search?.name ?? name) : name;
+    if (outcome.ok && outcome.search) setChosenSearch(outcome.search.id);
+    finish(outcome, taken ? `Saved as “${final}”.` : `Saved “${final}”.`);
+  };
+
+  // On the form, so Escape cancels from the buttons too, not only the box.
+  const onKeyDown = (event: KeyboardEvent<HTMLFormElement>) => {
     if (event.key === "Escape") {
       event.preventDefault();
       event.stopPropagation();
@@ -244,9 +295,11 @@ export function useSavedSearchControls({
     }
   };
 
+  const updating = naming?.kind === "change";
   const nameBox = naming ? (
     <form
       className={listStyles.nameForm}
+      onKeyDown={onKeyDown}
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -268,79 +321,67 @@ export function useSavedSearchControls({
           const name = event.target.value;
           setNaming((was) => (was ? { ...was, name } : was));
         }}
-        onKeyDown={onKeyDown}
       />
       <span className={listStyles.nameActions}>
-        <button
-          type="submit"
-          className={`${styles.primary} ${listStyles.nameButton}`}
-          aria-disabled={busy || undefined}
-        >
-          Save
+        <button type="submit" className={listStyles.nameSubmit} aria-disabled={busy || undefined}>
+          {updating ? CHECK_ICON : null}
+          {updating ? "Update" : "Save"}
+          <kbd className={listStyles.key} aria-hidden="true">
+            ↵
+          </kbd>
         </button>
-        <button
-          type="button"
-          className={`${styles.secondary} ${listStyles.nameButton}`}
-          onClick={cancel}
-        >
+        {updating ? (
+          <button
+            type="button"
+            className={listStyles.tool}
+            aria-disabled={busy || undefined}
+            onClick={() => void saveNew()}
+          >
+            {PLUS_ICON}
+            Save new quick search
+          </button>
+        ) : null}
+        <button type="button" className={listStyles.tool} onClick={cancel}>
           Cancel
+          <kbd className={listStyles.key} aria-hidden="true">
+            Esc
+          </kbd>
         </button>
       </span>
     </form>
   ) : null;
 
+  const editLabel = changed ? "Update or save as new" : "Rename this search";
   const pencil =
     shown && !naming ? (
       <button
         ref={pencilRef}
         type="button"
         className={listStyles.rename}
-        aria-label="Rename this search"
-        title="Rename this search"
-        onClick={() => open("rename", shown.name, "pencil", shown.id)}
+        aria-label={editLabel}
+        title={editLabel}
+        onClick={() => edit("pencil")}
       >
         {PENCIL_ICON}
       </button>
     ) : null;
 
-  let buttons: ReactNode = null;
-  if (changed && active) {
-    buttons = (
-      <>
-        <button
-          ref={updateRef}
-          type="button"
-          className={`${listStyles.tool} ${listStyles.toolStrong}`}
-          disabled={naming !== null}
-          aria-disabled={busy || undefined}
-          onClick={() => void updateShown()}
-        >
-          Update “{active.name}”
-        </button>
-        <button
-          ref={copyRef}
-          type="button"
-          className={listStyles.tool}
-          disabled={naming !== null}
-          onClick={() =>
-            open(
-              "copy",
-              nextFreeName(
-                active.name,
-                list.map((s) => s.name),
-                MAX_SAVED_NAME_LENGTH,
-              ),
-              "copy",
-            )
-          }
-        >
-          {STAR_ICON}
-          Save as new
-        </button>
-      </>
-    );
-  } else if (!shown && offerSave && currentText) {
-    buttons = (
+  // The name itself opens the box too (U21), still read as the heading's words.
+  const titleContent =
+    shown && !naming ? (
+      <button
+        ref={nameRef}
+        type="button"
+        className={listStyles.titleButton}
+        title={changed ? "Update or save as new" : "Rename"}
+        onClick={() => edit("name")}
+      >
+        {shown.name}
+      </button>
+    ) : null;
+
+  const buttons: ReactNode =
+    !shown && offerSave && currentText ? (
       <button
         ref={saveRef}
         type="button"
@@ -351,12 +392,13 @@ export function useSavedSearchControls({
         {STAR_ICON}
         Save as quick search
       </button>
-    );
-  }
+    ) : null;
 
   return {
     shown,
     exact: same !== null,
+    edited: changed,
+    titleContent,
     savedShape: shown ? parseSearch(shown.query) : null,
     naming: naming !== null,
     rowHeight: naming ? rowHeight : undefined,
@@ -403,5 +445,38 @@ const STAR_ICON = (
     focusable="false"
   >
     <path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8 6.6 19.7l1.1-6.1L3.2 9.4l6.1-.8z" />
+  </svg>
+);
+
+const CHECK_ICON = (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="m5 12.5 4.5 4.5L19 7.5" />
+  </svg>
+);
+
+const PLUS_ICON = (
+  <svg
+    width="15"
+    height="15"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    aria-hidden="true"
+    focusable="false"
+  >
+    <path d="M12 5v14M5 12h14" />
   </svg>
 );

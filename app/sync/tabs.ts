@@ -27,6 +27,7 @@ interface Calls {
   ingredientMatches: { args: [string[]]; result: Record<string, string[]> };
   suggestCategories: { args: [string]; result: string[] };
   listTrash: { args: []; result: TrashItem[] };
+  countTrash: { args: []; result: number };
   photoHashes: { args: []; result: string[] };
   findDuplicates: { args: [DuplicateQuery]; result: DuplicateMatch[] };
   findDuplicatePairs: { args: []; result: DuplicatePair[] };
@@ -149,6 +150,10 @@ export class SyncClient {
     return this.call("listTrash", []);
   }
 
+  countTrash() {
+    return this.call("countTrash", []);
+  }
+
   /** Every image a photo in the household shows (phase D2). */
   photoHashes() {
     return this.call("photoHashes", []);
@@ -251,6 +256,8 @@ export class SyncClient {
         return engine.suggestCategories(args[0] as string);
       case "listTrash":
         return engine.listTrash();
+      case "countTrash":
+        return engine.countTrash();
       case "photoHashes":
         return engine.photoHashes();
       case "findDuplicates":

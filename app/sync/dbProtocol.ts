@@ -145,6 +145,7 @@ export type DbRequest =
   | { op: "ingredientMatches"; words: string[] }
   | { op: "suggestCategories"; recipeId: string }
   | { op: "listTrash" }
+  | { op: "countTrash" }
   | { op: "photoHashes" }
   | { op: "findDuplicates"; query: DuplicateQuery }
   | { op: "findDuplicatePairs" }
@@ -168,6 +169,8 @@ export interface DbResults {
   /** Category paths worth suggesting for a recipe (phase C13c). */
   suggestCategories: string[];
   listTrash: TrashItem[];
+  /** How many recipes are in Trash, for the left panel's Trash link (U21). */
+  countTrash: number;
   /** Every image a photo here shows (phase D2), so each device can keep their small copies. */
   photoHashes: string[];
   /** Recipes an import may duplicate (phase E4). */

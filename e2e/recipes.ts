@@ -89,7 +89,7 @@ export async function adjust(page: Page, act: (panel: Locator) => Promise<unknow
   await expect(panel).toBeHidden();
 }
 
-/** Chooses something from the recipe list's ⋯ menu (U13): Select recipes, Surprise me, Print these, Categories... */
+/** Chooses something from the recipe list's ⋯ menu (U13, U21): Select recipes…, Print these, Surprise me, Find duplicates (and Trash on a phone). */
 export async function fromListMenu(page: Page, item: string) {
   await page.getByRole("button", { name: "More actions" }).click();
   const menu = page.getByRole("list", { name: "More actions" });
@@ -100,17 +100,18 @@ export async function fromListMenu(page: Page, item: string) {
 }
 
 /**
- * The button that opens the Filters panel: "More filters" on a computer, "Filters" beside the
- * search box on a phone (U17); `on` is how many filters it says are on.
+ * The button that opens the Filters panel: "Filters" in the list's bar on a computer (called
+ * "More filters" from U17 to U21), and beside the search box on a phone; `on` is how many filters
+ * it says are on.
  */
 export const filtersButton = (page: Page, on = 0) =>
   page.getByRole("button", {
-    name: new RegExp(`^(More filters|Filters)${on ? ` ${on} on` : ""}$`),
+    name: new RegExp(`^Filters${on ? ` ${on} on` : ""}$`),
   });
 
-/** Opens the recipe list's Filters panel (U13; "More filters" on a computer since U17). */
+/** Opens the recipe list's Filters panel (U13). */
 export async function openFilters(page: Page) {
-  await page.getByRole("button", { name: /^(More filters|Filters)/ }).click();
+  await page.getByRole("button", { name: /^Filters/ }).click();
   const panel = page.getByRole("dialog", { name: "Filters" });
   await expect(panel).toBeVisible();
   return panel;

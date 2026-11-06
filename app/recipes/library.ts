@@ -71,7 +71,7 @@ export interface LibraryCounts {
   quick: Map<string, number>;
   /**
    * By category key: what clicking it would show (recipes in it or anything inside it, with
-   * More filters' "also in" kept). Read with `categoryCount`: a key not here has `otherwise`.
+   * Filters' "also in" kept). Read with `categoryCount`: a key not here has `otherwise`.
    */
   byKey: Map<string, number>;
   /** What a category not in `byKey` would show: none, unless "in any category" is on. */
@@ -109,7 +109,7 @@ export function libraryCounts(
   const quickCounts = quickSearchCounts(items, recipes, filters, ingredients, today, matching);
   if (!base || !quickCounts) return null;
 
-  // A category's count is what clicking it shows (pickCategory), so More filters' "also in"
+  // A category's count is what clicking it shows (pickCategory), so Filters' "also in"
   // stays: the recipes in every one of those (each under the key is then counted), or, with "in
   // any category", those in any of them plus the ones under the key.
   const also = filters.alsoIn.length > 0;
@@ -146,7 +146,7 @@ export function categoryCount(counts: LibraryCounts, key: string): number {
 /**
  * How many more recipes match the search outside the category picked ("5 more match outside
  * Dessert"): All recipes' count less those shown. Only when nothing else ties the list to
- * categories: with More filters' "also in" or "in any category" on, All recipes would drop those
+ * categories: with Filters' "also in" or "in any category" on, All recipes would drop those
  * too, so the difference wouldn't be what is outside the category alone.
  */
 export function outsideCount(filters: RecipeFilters, all: number, shown: number): number {
@@ -273,13 +273,16 @@ export function countLineText(shown: number, parts: CountPart[]): string {
 }
 
 /**
- * A name for "Save as new" (U20): the saved search's name with the first number after it that no
- * saved search uses yet ("Quick dinners 2", then 3), kept within the name's length.
+ * A name for Save new quick search (U21) when the name is already used: the name with the first
+ * free number after it ("Quick dinners 2", then 3), kept within the name's length. A name that
+ * already ends in a number counts on from it ("Quick 2" gives "Quick 3", never "Quick 2 2").
  */
 export function nextFreeName(name: string, taken: string[], maxLength: number): string {
   const used = new Set(taken.map((t) => t.trim().toLocaleLowerCase()));
-  const base = name.trim();
-  for (let n = 2; ; n++) {
+  const numbered = /^(.*\S)\s+(\d{1,3})$/.exec(name.trim());
+  const base = numbered?.[1] ?? name.trim();
+  const from = numbered ? Math.max(2, Number(numbered[2]) + 1) : 2;
+  for (let n = from; ; n++) {
     const end = ` ${n}`;
     const candidate = `${base.slice(0, Math.max(0, maxLength - end.length)).trimEnd()}${end}`;
     if (!used.has(candidate.toLocaleLowerCase())) return candidate;

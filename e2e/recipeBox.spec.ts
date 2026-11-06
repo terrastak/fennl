@@ -170,8 +170,8 @@ test.describe("On a computer", () => {
     await quick.click();
     await expect(titles(page)).toHaveCount(2);
 
-    // Never while typing in a box: letters typed in More filters stay there.
-    await page.getByRole("button", { name: "More filters" }).click();
+    // Never while typing in a box: letters typed in Filters stay there.
+    await page.getByRole("button", { name: /^Filters/ }).click();
     const filters = page.getByRole("dialog", { name: "Filters" });
     await filters.getByLabel("Without ingredient").fill("");
     await page.keyboard.type("mush");
@@ -336,6 +336,41 @@ test.describe("On a computer", () => {
       "Favorites",
       "1 hour or less",
     ]);
+  });
+
+  test("Trash is in the left panel with how many it holds, not in the ⋯ menu (U21)", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await useOwnAccount(context, baseURL!);
+    await addSamples(page);
+    const main = page.getByRole("navigation", { name: "Main" }).filter({ visible: true });
+    // Between Timers and Send feedback, with no number while it's empty.
+    const trash = main.getByRole("link", { name: /^Trash/ });
+    await expect(trash).toHaveAccessibleName("Trash");
+    expect(await top(trash)).toBeGreaterThan(
+      await top(main.getByRole("button", { name: "Timers" })),
+    );
+    expect(await top(main.getByRole("link", { name: "Send feedback" }))).toBeGreaterThan(
+      await top(trash),
+    );
+    // A recipe moved to Trash is counted.
+    await recipeCard(page, "Buttermilk Pancakes").getByRole("link").click();
+    await page.getByRole("button", { name: "Move to Trash" }).click();
+    await expect(page.getByRole("status").filter({ hasText: "to Trash." })).toHaveText(
+      "Moved “Buttermilk Pancakes” to Trash.",
+    );
+    await expect(trash).toHaveAccessibleName("Trash, 1 recipe");
+    await trash.click();
+    await expect(page.getByRole("heading", { level: 1, name: "Trash" })).toBeVisible();
+    await expect(trash).toHaveAttribute("aria-current", "page");
+    // The ⋯ menu has no Trash (nor Categories) on a computer.
+    await page.goto("/");
+    await page.getByRole("button", { name: "More actions" }).click();
+    const menu = page.getByRole("list", { name: "More actions" });
+    await expect(menu.getByRole("link")).toHaveText(["Find duplicates"]);
+    await noAccessibilityProblems(page);
   });
 
   test("Categories put in order by dragging: between two, inside one, out again, never into itself", async ({
@@ -716,5 +751,19 @@ test.describe("On a phone", () => {
     await expect(heading(page)).toHaveText("All recipes");
     await expect(titles(page)).toHaveCount(4);
     await noAccessibilityProblems(page);
+  });
+
+  test("Trash stays in the ⋯ menu on a phone, with no Categories (U21)", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await useOwnAccount(context, baseURL!);
+    await addSamples(page);
+    await page.getByRole("button", { name: "More actions" }).click();
+    const menu = page.getByRole("list", { name: "More actions" });
+    await expect(menu.getByRole("link")).toHaveText(["Find duplicates", "Trash"]);
+    await menu.getByRole("link", { name: "Trash" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Trash" })).toBeVisible();
   });
 });
