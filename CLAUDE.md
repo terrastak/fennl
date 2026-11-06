@@ -180,6 +180,7 @@ Notes:
 The look is recorded in `docs/design/design-direction.md` and implemented as CSS variables in `app/styles/tokens.css`. Screens use the tokens and never hardcode colors, fonts or sizes.
 
 - Headings: Commissioner (flair axis 80, weight 540). Body: Instrument Sans. Handwritten touches: Caveat, used sparingly (names, greetings, captions, family notes); a recipe's source is just the person's name.
+- Laptop sizes (U23) live in `app/styles/tokens.css` under `@media (min-width: 900px) and (pointer: fine)`, each beside a touch value equal to the old size; screens adopt them one by one (so far the left panel and the recipe list), and phones and touch screens keep their touch sizes.
 - Two color schemes, Harbor and Heirloom, each with light and dark. **The color scheme is an account-level setting** (it follows the user to every device; store it server-side with the user's account). Light/Dark/Match my device is also offered.
 
 ## Data model rules (sync-ready)

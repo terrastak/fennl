@@ -38,8 +38,9 @@ a:hover {
   color: var(--color-accent-hover);
 }
 
+/* 3px on phones and touch screens, 2px on a laptop (--focus-width, tokens.css). */
 :focus-visible {
-  outline: 3px solid var(--color-focus);
+  outline: var(--focus-width) solid var(--color-focus);
   outline-offset: 2px;
 }
 

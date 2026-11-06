@@ -109,6 +109,20 @@ describe("design tokens", () => {
     }
   });
 
+  it("gives every laptop size (U23) a phone default, so phones never change", () => {
+    const query = "@media (min-width: 900px) and (pointer: fine) {";
+    const start = css.indexOf(query);
+    expect(start).toBeGreaterThan(-1);
+    const open = css.indexOf("{", start + query.length);
+    const laptop = css.slice(open + 1, css.indexOf("}", open));
+    const names = (text: string) => [...text.matchAll(/(--[a-z0-9-]+):/g)].map((m) => m[1]);
+    const phone = new Set(names(block(":root")));
+    const laptopNames = names(laptop);
+    expect(laptopNames.length).toBeGreaterThan(0);
+    for (const name of laptopNames)
+      expect(phone.has(name), `${name} has a phone default`).toBe(true);
+  });
+
   it("recognises valid appearance values", () => {
     expect(isColorScheme("heirloom")).toBe(true);
     expect(isColorScheme("paprika")).toBe(false);

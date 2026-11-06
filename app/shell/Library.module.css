@@ -412,8 +412,8 @@ button.edit {
 }
 
 .quickMain:focus-visible::after {
-  outline: 3px solid var(--color-focus);
-  outline-offset: -3px;
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: calc(-1 * var(--focus-width));
 }
 
 .quickMore,
@@ -678,4 +678,151 @@ button.edit {
 .liftedName {
   display: grid;
   min-width: 0;
+}
+
+/* --- The laptop look (U23, owner's choice 2026-11-06) ------------------------------------- */
+
+/* With a mouse on a wide screen: a slimmer search box with a small "/" key, rows of the shared
+   laptop height, quiet section words ("+ Add", "Edit") that fill softly when pointed at, and
+   counts and icons in the muted text colour (which keeps 4.5:1 on the hover fill). Touch
+   screens and narrower windows keep the sizes above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .search {
+    min-height: var(--control);
+    padding: 0 var(--space-1) 0 var(--space-3);
+    /* Today's edge colour, so the box stays as easy to see as before. */
+    border-radius: var(--radius-control);
+  }
+
+  .search > svg {
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  .field {
+    min-height: calc(var(--control) - 2px);
+    font-size: var(--ui-text);
+  }
+
+  .clear {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .key {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    margin-right: var(--space-1);
+    padding: 0 var(--space-1);
+    border: 0;
+    border-radius: var(--radius-tag);
+    box-shadow:
+      inset 0 0 0 1px var(--color-border),
+      inset 0 -1px 0 var(--color-border);
+    background: var(--color-surface);
+    font-size: var(--ui-text-eyebrow);
+    line-height: 1;
+  }
+
+  .library {
+    padding: var(--space-3) var(--space-3) var(--space-6);
+  }
+
+  .skip {
+    left: var(--space-3);
+  }
+
+  .tile,
+  .cat {
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .tile {
+    min-height: var(--row);
+  }
+
+  .cat {
+    min-height: var(--row);
+  }
+
+  .icon {
+    color: var(--color-text-muted);
+  }
+
+  .count {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  .box {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: var(--radius-tag);
+  }
+
+  .headingRow {
+    align-items: center;
+    min-height: 1.75rem;
+    margin: var(--space-3) var(--space-2) 0;
+  }
+
+  .heading {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.06em;
+  }
+
+  /* "+ Add" and "Edit": quiet words, a soft fill when pointed at, no underline. */
+  .edit,
+  button.edit {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 1.5rem;
+    margin-right: calc(-1 * var(--space-2));
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text-label);
+    text-decoration: none;
+  }
+
+  .edit:hover {
+    background: var(--hover-fill);
+  }
+
+  .quickRow {
+    min-height: var(--row);
+    border-radius: var(--radius-control);
+  }
+
+  .quickMain {
+    font-size: var(--ui-text);
+  }
+
+  .quickMain::after {
+    border-radius: var(--radius-control);
+  }
+
+  /* The ▾ and the ✕: 24 px to press, drawn small. */
+  .quickMore,
+  .quickRemove {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: var(--color-text-muted);
+  }
+
+  .quickMore {
+    margin-left: calc(-1 * var(--space-1));
+  }
+
+  .quickRemove {
+    right: var(--space-1);
+  }
+
+  .caret {
+    color: var(--color-text-muted);
+  }
 }

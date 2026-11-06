@@ -1,14 +1,15 @@
 .logo {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  /* The left panel sets these smaller on a laptop (U23, AppShell.module.css). */
+  gap: var(--logo-gap, var(--space-3));
   color: var(--color-text);
 }
 
 .wordmark {
   font-family: var(--font-display);
   font-variation-settings: var(--font-display-settings);
-  font-size: 1.7rem;
+  font-size: var(--logo-wordmark-size, 1.7rem);
   letter-spacing: -0.01em;
   line-height: 1;
 }
