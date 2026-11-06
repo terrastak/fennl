@@ -1230,7 +1230,7 @@ a.source:hover {
 
 .signature {
   font-family: var(--font-hand);
-  font-size: var(--text-xl);
+  font-size: var(--signature-size);
   color: var(--color-hand);
 }
 
@@ -2509,5 +2509,735 @@ button.stepNumber:focus-visible::after {
   .bulk .primary,
   .bulk .secondary {
     border: 1px solid;
+  }
+}
+
+/* The recipe page's article (and a recipe in Trash), which the laptop rules below are scoped to,
+   since the editor and other pages share some of these classes. */
+.recipePage {
+  min-width: 0;
+}
+
+/* Icons that join words on a laptop only (U23): Start cooking's play, Made it's tick, the notes'
+   pencil and plus. Hidden elsewhere, so phones look as before. */
+.laptopIcon {
+  display: none;
+}
+
+/* --- The recipe page on a laptop or desktop (U23 slice 2, owner's choice 2026-11-06) ---------- */
+/* A wide window with a mouse or trackpad: quiet Edit, Print and Trash; the cover in a smaller 4:5
+   frame beside the title; stars, heart and source on one small line; the facts on one line
+   without rules; Start cooking the one filled button, Made it a soft grey one with Last made
+   beside it; the amounts a small switch; step numbers small pills; times soft highlighted
+   buttons; the recipe's own words at 15px. Phones, touch screens and windows under 900px keep
+   the page above. */
+@media (min-width: 900px) and (pointer: fine) {
+  /* The painting reaches the edges of the tighter page margins (AppShell.module.css). */
+  .painting {
+    top: calc(-1 * var(--space-5));
+    left: calc(-1 * var(--space-8));
+    right: calc(-1 * var(--space-8));
+  }
+
+  .laptopIcon {
+    display: block;
+    flex: none;
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  /* All recipes, Edit, Print and Trash: plain words, small icons, a soft fill when pointed at. */
+  .recipeTop {
+    margin: 0 calc(-1 * var(--space-2)) var(--space-3);
+  }
+
+  .recipePage .back,
+  .topAction {
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+  }
+
+  .recipePage .back:hover,
+  .topAction:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .topActions {
+    gap: var(--space-1);
+  }
+
+  .topAction svg {
+    width: var(--icon);
+    height: var(--icon);
+    color: var(--color-text-muted);
+  }
+
+  .topAction:hover svg {
+    color: var(--color-text);
+  }
+
+  button.topAction:disabled svg {
+    color: inherit;
+  }
+
+  .hero {
+    grid-template-columns: min(14.5rem, 40%) minmax(0, 1fr);
+    gap: calc(var(--space-6) + var(--space-1));
+    margin-bottom: calc(var(--space-6) + var(--space-1));
+  }
+
+  /* The title block, with the source beside the stars: its parts stack, except those two. */
+  .recipeHeader {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 40rem;
+    margin-bottom: calc(var(--space-6) + var(--space-1));
+    padding-top: 2px;
+  }
+
+  .recipeHeader > * {
+    flex: 0 0 100%;
+    order: 3;
+  }
+
+  .recipeHeader > .categoryLine,
+  .recipeHeader > .recipeTitle {
+    order: 0;
+  }
+
+  .recipeHeader > .meta {
+    flex: 0 1 auto;
+    order: 1;
+  }
+
+  .recipeHeader > .byPerson {
+    flex: 0 1 auto;
+    order: 2;
+  }
+
+  .categoryLine {
+    gap: 0 var(--space-2);
+    margin: 0;
+  }
+
+  .eyebrow {
+    font-size: var(--ui-text-eyebrow);
+    line-height: 1.5rem;
+  }
+
+  .categoryChange {
+    gap: var(--space-1);
+    min-height: 1.5rem;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text-label);
+  }
+
+  .categoryChange:hover {
+    background: var(--hover-fill);
+    text-decoration: none;
+  }
+
+  .categoryChange svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .recipePage .recipeTitle {
+    margin-top: var(--space-1);
+    font-size: var(--recipe-title-size);
+    line-height: 1.1;
+    letter-spacing: -0.015em;
+  }
+
+  /* The person the recipe came from, handwritten, after the stars and heart (in the header only:
+     a recipe in Trash shows it on its own line above the title). */
+  .recipeHeader > .byPerson {
+    margin: var(--space-2) 0 0 var(--space-3);
+    padding-left: var(--space-3);
+    border-left: 1px solid var(--color-border);
+    font-size: var(--text-xl);
+    transform: none;
+  }
+
+  .meta {
+    gap: var(--space-1) var(--space-3);
+    margin-top: var(--space-2);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .meta .ratingStars {
+    margin-left: calc(-1 * var(--space-1));
+  }
+
+  /* Each star 24px wide; one not given has a darker outline (over 3:1 against the page). */
+  .meta .starOn,
+  .meta .starOff {
+    min-width: 1.5rem;
+    min-height: 1.5rem;
+    border-radius: var(--radius-tag);
+    font-size: var(--text-lg);
+    line-height: 1;
+  }
+
+  .meta .starOff {
+    color: transparent;
+    -webkit-text-stroke: 1.25px var(--color-text-subtle);
+  }
+
+  .meta .starOff:hover {
+    color: var(--color-warm-text);
+    -webkit-text-stroke: 0;
+  }
+
+  .heart {
+    min-width: 1.75rem;
+    min-height: 1.75rem;
+    margin-left: calc(-1 * var(--space-2));
+    border-radius: var(--radius-control);
+    font-size: var(--text-lg);
+  }
+
+  .heart:hover {
+    background: var(--hover-fill);
+  }
+
+  .heart:has(input:focus-visible),
+  .meta .ratingStars label:has(input:focus-visible) {
+    outline-width: var(--focus-width);
+  }
+
+  /* A link to where the recipe came from: a thin underline before it's pointed at. */
+  a.source {
+    font-weight: var(--weight-medium);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    text-decoration-color: color-mix(in srgb, var(--color-accent) 45%, transparent);
+  }
+
+  a.source:hover {
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+  }
+
+  .headnote {
+    margin-top: 0.625rem;
+    font-size: var(--read-text);
+    line-height: 1.5;
+  }
+
+  .headnote + .moreButton {
+    min-height: var(--control-sm);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* Prep, Cook, Total, Difficulty: one compact line, a hairline between them, no rules. */
+  .facts {
+    margin-top: var(--space-4);
+    padding: 0;
+    border: 0;
+  }
+
+  .facts div {
+    gap: 1px;
+    padding: 0 1.125rem;
+  }
+
+  .facts dt {
+    font-size: var(--ui-text-eyebrow);
+  }
+
+  .facts dd {
+    font-size: var(--read-text);
+    white-space: nowrap;
+  }
+
+  /* Start cooking, the page's one filled button; Made it today a soft grey one beside it. */
+  .recipeHeader .actions {
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: 1.125rem;
+  }
+
+  .startCooking,
+  .made .secondary {
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 0.875rem 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+  }
+
+  .startCooking {
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent);
+  }
+
+  .startCooking .laptopIcon {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .made {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+  }
+
+  .made .secondary {
+    background: var(--color-surface-sunken);
+    font-weight: var(--weight-medium);
+  }
+
+  .made .secondary:hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  }
+
+  .made .secondary .laptopIcon {
+    color: var(--color-text-muted);
+  }
+
+  .made p {
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* The ingredients beside the method: a narrower white panel with a hairline. */
+  .columns {
+    grid-template-columns: min(21.25rem, 40%) minmax(0, 1fr);
+    gap: calc(var(--space-6) + var(--space-1));
+  }
+
+  .panel {
+    position: relative;
+    container-type: inline-size;
+    padding: 0.875rem var(--space-4) var(--space-2);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .panel h2,
+  .method h2,
+  .recipePage .section h2 {
+    margin-bottom: var(--space-2);
+    font-size: var(--heading-size);
+    line-height: 1.75rem;
+    letter-spacing: -0.01em;
+  }
+
+  .panel > h2 {
+    margin: 0;
+  }
+
+  /* How many it serves, then the amount as a small switch; Adjust in the heading's row. */
+  .serves {
+    gap: 0.625rem;
+    margin: 0.375rem 0 0;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  .servesSaid {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .servesLabel {
+    color: var(--color-text);
+  }
+
+  .panel .adjustButton {
+    gap: 0.375rem;
+    min-height: 1.75rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+  }
+
+  .panel .adjustButton svg {
+    width: var(--icon);
+    height: var(--icon);
+    color: var(--color-text-muted);
+  }
+
+  .adjustButton:hover {
+    background: var(--hover-fill);
+  }
+
+  /* Adjust in the heading's row when the panel has room for both (rem, so it follows the text
+     size); in a narrow panel at a large text size it stays in the Serves row instead of covering
+     the heading. */
+  @container (min-width: 14rem) {
+    .panel:has(.adjustButton) > h2 {
+      padding-right: 6.5rem;
+    }
+
+    .panel .adjustButton {
+      position: absolute;
+      top: 0.875rem;
+      right: var(--space-2);
+    }
+  }
+
+  /* The chosen amount is raised on white and semibold, not shown by colour alone. */
+  .quickScale {
+    display: inline-flex;
+    flex-wrap: wrap;
+    max-width: 100%;
+    justify-self: start;
+    gap: 2px;
+    padding: 2px;
+    border-radius: calc(var(--radius-control) + 1px);
+    background: var(--color-surface-sunken);
+  }
+
+  .quickChoice {
+    min-height: var(--chip);
+    padding: 0 0.625rem;
+    border: 0;
+    border-radius: 0.3125rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+  }
+
+  .quickChoice:hover {
+    background: color-mix(in srgb, var(--color-border) 55%, transparent);
+    color: var(--color-text);
+  }
+
+  .quickChoice[aria-pressed="true"] {
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-text) 14%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  }
+
+  .scaleNote {
+    margin: var(--space-2) 0 0;
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* The recipe's own words, a little bigger than the controls (15px). */
+  .ingredients,
+  .steps,
+  .notes {
+    font-size: var(--read-text);
+  }
+
+  .ingredients {
+    gap: 0;
+    margin-top: 0.625rem;
+  }
+
+  .ingredients > li {
+    padding: 0.375rem 0;
+    border-top: 1px solid var(--color-border-soft);
+    border-bottom: 0;
+    line-height: 1.4;
+  }
+
+  .recipePage .subheading {
+    margin-top: var(--space-3);
+    font-size: var(--subheading-size);
+  }
+
+  .recipePage .group + .group {
+    margin-top: var(--space-4);
+  }
+
+  /* The method: a small heading row, the hint under it, steps a little closer together. */
+  .methodHead {
+    margin-bottom: 0;
+  }
+
+  .allUses {
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .allUses:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .allUses::before {
+    inset: calc((1lh - 1.5rem) / 2) 0;
+  }
+
+  .stepHint {
+    margin: var(--space-1) 0 0;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .steps {
+    gap: 0.625rem;
+    margin-top: var(--space-3);
+  }
+
+  .steps > li {
+    grid-template-columns: 2.5rem minmax(0, 1fr);
+    column-gap: 0;
+    line-height: 1.55;
+  }
+
+  /* A step's number: a small pill, with a little arrow when it opens the step's ingredients. */
+  .stepNumber {
+    display: inline-flex;
+    gap: 1px;
+    width: auto;
+    min-width: 2.125rem;
+    height: 1.5rem;
+    padding: 0 0.375rem;
+    border: 0;
+    background: none;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+  }
+
+  button.stepNumber {
+    padding: 0 0.375rem 0 var(--space-2);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+  }
+
+  button.stepNumber::before {
+    inset: 0;
+  }
+
+  button.stepNumber:not([aria-expanded="true"]):hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  }
+
+  button.stepNumber[aria-expanded="true"] {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+  }
+
+  button.stepNumber:focus-visible::after {
+    inset: 0;
+    outline-width: var(--focus-width);
+  }
+
+  .stepCaret {
+    position: static;
+    width: 0.625rem;
+    height: 0.625rem;
+    border: 0;
+    background: none;
+    color: var(--color-text-muted);
+  }
+
+  .stepCaret svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .stepNumber[aria-expanded="true"] .stepCaret {
+    color: inherit;
+  }
+
+  /* The step's ingredients: a soft block under its words, a size down from the step. */
+  .stepUses {
+    gap: 2px;
+    margin: 0.375rem 0 2px;
+    padding: 0.375rem 0.625rem;
+    border-left: 2px solid var(--color-accent-soft);
+    border-radius: 0 var(--radius-control) var(--radius-control) 0;
+    background: color-mix(in srgb, var(--color-surface-sunken) 55%, transparent);
+    font-size: var(--ui-text);
+    list-style: none;
+  }
+
+  .recipePage .suggestion {
+    border-radius: var(--radius-pop);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .subRecipe {
+    font-size: var(--read-text);
+  }
+
+  /* Show the linked recipe and Open it: apart, each at least 24px tall. */
+  .subRecipeLink {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .subRecipeLink .textButton {
+    min-height: 1.5rem;
+    padding: 0;
+  }
+
+  .subRecipeLink a {
+    display: inline-block;
+    min-height: 1.5rem;
+    line-height: 1.5rem;
+  }
+
+  .subRecipeLink > .textButton + a {
+    margin-left: var(--space-3);
+  }
+
+  /* Notes: smaller, each Edit a quiet button with a pencil. */
+  .recipePage .section {
+    max-width: 41.25rem;
+    margin-top: var(--space-8);
+    margin-bottom: var(--space-6);
+  }
+
+  .noteList {
+    margin-top: 0.625rem;
+  }
+
+  .noteEntry {
+    padding: 0.625rem 0;
+    border-top: 1px solid var(--color-border-soft);
+    border-bottom: 0;
+  }
+
+  .noteEntry:first-child {
+    padding-top: var(--space-1);
+    border-top: 0;
+  }
+
+  .notes {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  .noteLine {
+    gap: 0 var(--space-2);
+    margin-top: var(--space-1);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .noteBy,
+  .noteSource {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .noteSource {
+    font-weight: var(--weight-regular);
+  }
+
+  .noteLine .signature {
+    line-height: 1;
+  }
+
+  .noteLine .noteEdit {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 1.5rem;
+    padding: 0 0.375rem 0 0.3125rem;
+    border-radius: var(--radius-control);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .noteLine .noteEdit:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .noteLine .noteEdit:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .noteEdit .laptopIcon {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+
+  /* + Add a note: a quiet button with a plus, in the place of the circled one. */
+  .recipePage .section > .moreButton {
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin: var(--space-2) 0 0 calc(-1 * var(--space-3));
+    padding: 0 var(--space-3) 0 0.625rem;
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .recipePage .section > .moreButton:hover {
+    background: var(--hover-fill);
+    text-decoration: none;
+  }
+
+  .recipePage .section > .moreButton:disabled {
+    background: none;
+    color: var(--color-text-subtle);
+  }
+
+  .recipePage .section > .moreButton .plus {
+    display: none;
+  }
+
+  .recipePage .section > .moreButton .laptopIcon {
+    color: var(--color-text-muted);
+  }
+
+  .recipePage .composer {
+    border-radius: var(--radius-pop);
+  }
+
+  .recipePage .nutrition dt {
+    font-size: var(--ui-text-secondary);
+  }
+}
+
+/* Windows contrast themes draw no fills or shadows: on a laptop the recipe page's buttons, the
+   ingredients panel, the amount switch's chosen part and a step's number keep an edge there. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .startCooking,
+  .made .secondary,
+  .panel,
+  .quickScale,
+  button.stepNumber,
+  .noteLine .noteEdit {
+    border: 1px solid;
+  }
+
+  .quickChoice[aria-pressed="true"] {
+    outline: 2px solid;
+    outline-offset: -2px;
+  }
+
+  /* The empty star stays an outline: the theme would otherwise fill it with its text colour. */
+  .meta .starOff {
+    forced-color-adjust: none;
+    color: Canvas;
+    -webkit-text-stroke: 1.25px CanvasText;
+  }
+
+  .meta .starOff:hover {
+    color: Highlight;
+    -webkit-text-stroke: 0;
   }
 }

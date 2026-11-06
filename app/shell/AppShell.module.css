@@ -437,4 +437,9 @@ button.navLink {
   .navCount {
     font-size: var(--ui-text-label);
   }
+
+  /* The page margins beside the left panel (U23 slice 2): tighter, as in the mockups. */
+  .main {
+    padding: var(--space-5) var(--space-8) var(--space-10);
+  }
 }

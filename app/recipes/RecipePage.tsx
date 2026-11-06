@@ -109,6 +109,45 @@ function useWide(): boolean {
   );
 }
 
+/** A laptop or desktop with a mouse or trackpad (U23): the same query as tokens.css. */
+const POINTER = "(min-width: 900px) and (pointer: fine)";
+
+/** Whether the laptop look applies, so words can say "click" there and "tap" elsewhere. */
+function usePointer(): boolean {
+  return useSyncExternalStore(
+    (changed) => {
+      const query = window.matchMedia(POINTER);
+      query.addEventListener("change", changed);
+      return () => query.removeEventListener("change", changed);
+    },
+    () => window.matchMedia(POINTER).matches,
+    () => false,
+  );
+}
+
+/** A small icon shown only on a laptop (U23), beside words that say the same thing. */
+function LaptopIcon({ path, fill = false }: { path: string; fill?: boolean }) {
+  return (
+    <svg
+      className={styles.laptopIcon}
+      viewBox="0 0 24 24"
+      fill={fill ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={fill ? 1.5 : 2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={path} />
+    </svg>
+  );
+}
+
+const PLAY = "M7 5v14l11-7z";
+const CHECK = "m5 12.5 4.5 4.5L19 7.5";
+const PEN = "M4 20h4L19 9l-4-4L4 16z";
+const PLUS = "M12 5v14M5 12h14";
+
 /**
  * The painting of the cover behind the top of the page, on wide screens only (owner's choice
  * 2026-10-24: on a phone the photo itself fades into the page instead). It fades out gently, so
@@ -445,6 +484,7 @@ function MadeIt({ detail, name, shared, me, editable }: Props & { me: string; ed
         </button>
       ) : (
         <button type="button" className={styles.secondary} onClick={madeIt} disabled={!editable}>
+          <LaptopIcon path={CHECK} />
           Made it today
         </button>
       )}
@@ -544,6 +584,8 @@ function Method({
 }) {
   const groups = sections(recipe.directions);
   const listIds = useId();
+  // On a laptop the hint says "Click" (U23, owner's choice 2026-11-06); elsewhere "Tap".
+  const pointer = usePointer();
   // Opened at a step (a timer's notification): that step in view, and marked for a moment.
   useEffect(() => {
     if (/^#step-\d+$/.test(window.location.hash)) markStep(window.location.hash.slice(1));
@@ -581,7 +623,9 @@ function Method({
         ) : null}
       </div>
       {withUses.length > 0 ? (
-        <p className={styles.stepHint}>Tap a step’s number to see the ingredients it uses.</p>
+        <p className={styles.stepHint}>
+          {pointer ? "Click" : "Tap"} a step’s number to see the ingredients it uses.
+        </p>
       ) : null}
       {recipe.directions.length === 0 ? <p className={styles.hint}>None written yet.</p> : null}
       {groups.map((group, i) => (
@@ -800,12 +844,13 @@ function Notes({
                     {readOnly ? null : (
                       <button
                         type="button"
-                        className={styles.textButton}
+                        className={`${styles.textButton} ${styles.noteEdit}`}
                         disabled={!editable || writing !== null}
                         onClick={() =>
                           start({ kind: "recipe", initial: recipe.notes, text: recipe.notes })
                         }
                       >
+                        <LaptopIcon path={PEN} />
                         Edit<span className="visually-hidden"> the recipe&rsquo;s note</span>
                       </button>
                     )}
@@ -826,12 +871,13 @@ function Notes({
                     {!readOnly && note.userId === me ? (
                       <button
                         type="button"
-                        className={styles.textButton}
+                        className={`${styles.textButton} ${styles.noteEdit}`}
                         disabled={!editable || writing !== null}
                         onClick={() =>
                           start({ kind: "note", id: note.id, initial: note.text, text: note.text })
                         }
                       >
+                        <LaptopIcon path={PEN} />
                         Edit
                         <span className="visually-hidden">
                           {" "}
@@ -858,6 +904,7 @@ function Notes({
           <span aria-hidden="true" className={styles.plus}>
             +
           </span>
+          <LaptopIcon path={PLUS} />
           Add a note
         </button>
       )}
@@ -1095,7 +1142,7 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
         );
   };
   return (
-    <article>
+    <article className={styles.recipePage}>
       <Link href="/trash" className={styles.back}>
         ← Trash
       </Link>
@@ -1225,7 +1272,7 @@ export function RecipePage({ id }: { id: string }) {
   const cover = gallery[0] ?? null;
 
   return (
-    <article className={cover ? styles.recipeWithPhoto : styles.recipe}>
+    <article className={`${cover ? styles.recipeWithPhoto : styles.recipe} ${styles.recipePage}`}>
       {cover ? <Painting hash={cover.imageHash} /> : null}
       <div className={styles.recipeTop}>
         <Link href="/" className={styles.back}>
@@ -1333,6 +1380,7 @@ export function RecipePage({ id }: { id: string }) {
           <div className={styles.actions}>
             {recipe.directions.some((step) => !step.heading) ? (
               <Link href={`/recipes/${id}/cook`} className={styles.startCooking}>
+                <LaptopIcon path={PLAY} fill />
                 Start cooking
               </Link>
             ) : null}

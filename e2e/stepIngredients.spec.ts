@@ -34,7 +34,12 @@ const METHOD = [
   "Leave to cool.",
 ];
 
-test("Each step's number opens the ingredients it uses", async ({ page, context, baseURL }) => {
+test("Each step's number opens the ingredients it uses", async ({
+  page,
+  context,
+  baseURL,
+  isMobile,
+}) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
   await page.getByRole("button", { name: "Add recipe" }).click();
@@ -47,7 +52,10 @@ test("Each step's number opens the ingredients it uses", async ({ page, context,
   const method = page.getByRole("region", { name: "Method" });
   const number = (n: number) => method.getByRole("button", { name: `Ingredients for step ${n}` });
   const list = (n: number) => page.locator(`#step-${n}`).getByRole("list");
-  await expect(method).toContainText("Tap a step’s number to see the ingredients it uses.");
+  // A computer with a mouse says "Click" (U23, owner's choice 2026-11-06); a phone says "Tap".
+  await expect(method).toContainText(
+    `${isMobile ? "Tap" : "Click"} a step’s number to see the ingredients it uses.`,
+  );
 
   // All closed when the recipe opens; a step with nothing found has no button.
   for (const n of [1, 2, 3, 4, 5]) {

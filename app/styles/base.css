@@ -67,6 +67,13 @@ a:hover {
   }
 }
 
+/* The laptop's page margins are narrower (U23), so the note hangs left a little less there. */
+@media (min-width: 900px) and (pointer: fine) {
+  .hand-note {
+    margin-left: -0.75rem;
+  }
+}
+
 /* Read by screen readers, invisible on screen. */
 .visually-hidden {
   position: absolute;
