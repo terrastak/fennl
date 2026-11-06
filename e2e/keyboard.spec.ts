@@ -88,7 +88,7 @@ test("on the recipe list, typing searches, and a link skips past the recipe box"
   await page.keyboard.type("pan");
   await expect(search).toBeFocused();
   await expect(search).toHaveValue("pan");
-  await expect(page.getByText(/match(es)? “pan”/)).toBeVisible();
+  await expect(page.getByText(/recipes? · matching “pan”/)).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(search).toHaveValue("");
 

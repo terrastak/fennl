@@ -195,6 +195,8 @@ export function PhoneLibrary({
           ].join(" ")}
           aria-current={on ? "page" : undefined}
           data-within={within || undefined}
+          // A category ends the saved search the heading named (U20).
+          onClick={() => library.setChosenSearch("")}
         >
           <span>{node.name}</span>
           <Count n={n} className={styles.pillCount} />
@@ -330,7 +332,11 @@ function CategorySheet({ open, onClose }: { open: boolean; onClose: () => void }
               extra.className ?? "",
             ].join(" ")}
             aria-current={on ? "page" : undefined}
-            onClick={onClose}
+            onClick={() => {
+              // A category, or All recipes, ends the saved search the heading named (U20).
+              library.setChosenSearch("");
+              onClose();
+            }}
           >
             <span className={styles.sheetName}>{name}</span>
             {on ? (

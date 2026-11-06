@@ -206,23 +206,82 @@ export function narrowingLabels(filters: RecipeFilters, nameOf: (key: string) =>
   return labels;
 }
 
-const recipesText = (n: number) => `${n} ${n === 1 ? "recipe" : "recipes"}`;
+/** "1 recipe", "6 recipes". */
+export const recipesText = (n: number) => `${n} ${n === 1 ? "recipe" : "recipes"}`;
+
+/** A part of the count line after the count ("matching “lemon”", "30 minutes or less"). */
+export interface CountPart {
+  text: string;
+  /**
+   * Not in the saved search the heading names (U20): the person added it since choosing that
+   * search, so it's shown as "+ Favorites", marked in words as well as colour.
+   */
+  added: boolean;
+}
+
+/** A saved search's words and filters, read back from its text (filters.ts parseSearch). */
+export interface SavedShape {
+  q: string;
+  filters: RecipeFilters;
+}
+
+const same = (a: string, b: string) =>
+  a.trim().toLocaleLowerCase() === b.trim().toLocaleLowerCase();
 
 /**
- * A sentence saying what the list shows ("6 recipes match “lemon” · 30 minutes or less"), or
- * null when nothing narrows it beyond what is picked (the heading's count says it then).
+ * What the count line says after the count (U20, owner's choices 2026-11-05): the words typed
+ * ("matching “lemon”"), then what else narrows the list, as narrowingLabels says it. With a
+ * saved search's name as the heading (`saved`), its category is said too ("in Dessert", since the
+ * heading no longer names it), and anything the saved search doesn't have is marked `added` and
+ * put last; what it had and the list no longer does simply isn't there.
  */
-export function shownSentence(
-  shown: number,
+export function countLineParts(
   query: string,
   filters: RecipeFilters,
   nameOf: (key: string) => string,
-): string | null {
+  saved: SavedShape | null = null,
+): CountPart[] {
+  const parts: CountPart[] = [];
   const words = query.trim();
-  const labels = narrowingLabels(filters, nameOf);
-  if (!words && labels.length === 0) return null;
-  const start = words
-    ? `${recipesText(shown)} ${shown === 1 ? "matches" : "match"} “${words}”`
-    : recipesText(shown);
-  return [start, ...labels].join(" · ");
+  if (words) {
+    parts.push({ text: `matching “${words}”`, added: saved !== null && !same(saved.q, words) });
+  }
+  if (saved && filters.category) {
+    parts.push({
+      text: filters.category === UNFILED ? "not in a category" : `in ${nameOf(filters.category)}`,
+      added: saved.filters.category !== filters.category,
+    });
+  }
+  const had = saved ? narrowingLabels(saved.filters, nameOf) : [];
+  for (const label of narrowingLabels(filters, nameOf)) {
+    parts.push({ text: label, added: saved !== null && !had.some((h) => same(h, label)) });
+  }
+  // What was added comes last, after what the saved search already had; the words stay first.
+  const [first, ...rest] = parts;
+  if (!words || !first) return [...parts.filter((p) => !p.added), ...parts.filter((p) => p.added)];
+  return [first, ...rest.filter((p) => !p.added), ...rest.filter((p) => p.added)];
+}
+
+/**
+ * The count line as one text, for tests and anything that can't show the marks: "4 recipes ·
+ * matching “lemon” · Favorites (added)".
+ */
+export function countLineText(shown: number, parts: CountPart[]): string {
+  return [recipesText(shown), ...parts.map((p) => (p.added ? `${p.text} (added)` : p.text))].join(
+    " · ",
+  );
+}
+
+/**
+ * A name for "Save as new" (U20): the saved search's name with the first number after it that no
+ * saved search uses yet ("Quick dinners 2", then 3), kept within the name's length.
+ */
+export function nextFreeName(name: string, taken: string[], maxLength: number): string {
+  const used = new Set(taken.map((t) => t.trim().toLocaleLowerCase()));
+  const base = name.trim();
+  for (let n = 2; ; n++) {
+    const end = ` ${n}`;
+    const candidate = `${base.slice(0, Math.max(0, maxLength - end.length)).trimEnd()}${end}`;
+    if (!used.has(candidate.toLocaleLowerCase())) return candidate;
+  }
 }

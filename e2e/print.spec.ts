@@ -208,7 +208,7 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
 
   // Narrowed by a search: Print these.
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("lemon");
-  await expect(page.getByText("2 recipes match “lemon”")).toBeVisible();
+  await expect(page.getByText("2 recipes · matching “lemon”")).toBeVisible();
   await fromListMenu(page, "Print these");
   await expect(page.getByRole("heading", { level: 1, name: "Print: 2 recipes" })).toBeVisible();
   await expect(page.getByRole("article")).toHaveCount(2);
@@ -266,7 +266,7 @@ test("A booklet of 200 recipes is ready quickly", async ({ page, context, baseUR
   }
   await page.reload();
   await page.getByRole("searchbox", { name: "Search recipes" }).fill("booklet");
-  await expect(page.getByText("200 recipes match “booklet”")).toBeVisible();
+  await expect(page.getByText("200 recipes · matching “booklet”")).toBeVisible();
 
   await page.getByRole("button", { name: "More actions" }).click();
   const started = Date.now();

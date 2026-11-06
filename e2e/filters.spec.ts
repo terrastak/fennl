@@ -175,7 +175,7 @@ test("Filters are kept in the address, work with search, and can all be cleared"
   await expect(page.getByRole("searchbox", { name: "Search recipes" })).toHaveValue("lemon");
   await expect(filtersButton(page, 2)).toBeVisible();
   await expect(
-    page.getByText("2 recipes match “lemon” · 1 hour or less · Without cumin"),
+    page.getByText("2 recipes · matching “lemon” · 1 hour or less · Without cumin"),
   ).toBeVisible();
   await expect(titles(page)).toHaveText(["Lemon Olive Oil Cake", "Buttermilk Pancakes"]);
 

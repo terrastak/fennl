@@ -10,8 +10,10 @@ import {
   pickAll,
   pickCategory,
   pickedList,
+  countLineParts,
+  countLineText,
+  nextFreeName,
   showingEverything,
-  shownSentence,
 } from "./library";
 
 const TODAY = "2026-11-04";
@@ -197,23 +199,112 @@ describe("what the list says it shows", () => {
     expect(listTitle(f({ category: UNFILED }), nameOf)).toBe("Not in a category");
   });
 
-  it("says the words searched for and what else narrows it, never ending on a dot", () => {
-    expect(shownSentence(12, "", f(), nameOf)).toBeNull();
-    expect(shownSentence(12, "", f({ category: "dessert" }), nameOf)).toBeNull();
-    expect(shownSentence(6, " lemon ", f({ category: "dessert", maxMinutes: 30 }), nameOf)).toBe(
-      "6 recipes match “lemon” · 30 minutes or less",
+  it("counts in words, then the words searched for and what else narrows it (U20)", () => {
+    const line = (n: number, q: string, filters: RecipeFilters) =>
+      countLineText(n, countLineParts(q, filters, nameOf));
+    expect(line(12, "", f())).toBe("12 recipes");
+    expect(line(1, "", f())).toBe("1 recipe");
+    // The category is the heading, so it isn't said again.
+    expect(line(12, "", f({ category: "dessert" }))).toBe("12 recipes");
+    expect(line(6, " lemon ", f({ category: "dessert", maxMinutes: 30 }))).toBe(
+      "6 recipes · matching “lemon” · 30 minutes or less",
     );
-    expect(shownSentence(1, "lemon", f(), nameOf)).toBe("1 recipe matches “lemon”");
-    expect(shownSentence(4, "", f({ rating: "favorite", without: ["mushroom"] }), nameOf)).toBe(
+    expect(line(1, "lemon", f())).toBe("1 recipe · matching “lemon”");
+    expect(line(0, "zzz", f())).toBe("0 recipes · matching “zzz”");
+    expect(line(4, "", f({ rating: "favorite", without: ["mushroom"] }))).toBe(
       "4 recipes · Favorites · Without mushroom",
     );
     // Choices a tick line can hold are said as the line says them.
-    expect(shownSentence(2, "", f({ made: "recent", maxMinutes: 60 }), nameOf)).toBe(
+    expect(line(2, "", f({ made: "recent", maxMinutes: 60 }))).toBe(
       "2 recipes · 1 hour or less · Made lately",
     );
-    expect(shownSentence(2, "", f({ rating: "4", maxMinutes: 25, minServings: 6 }), nameOf)).toBe(
+    expect(line(2, "", f({ rating: "4", maxMinutes: 25, minServings: 6 }))).toBe(
       "2 recipes · 4 stars and up · Up to 25 minutes · Serves 6 or more",
     );
+    expect(countLineParts("", f(), nameOf).length).toBe(0);
+  });
+});
+
+describe("a saved search changed since it was chosen (U20)", () => {
+  const saved = { q: "lemon", filters: f({ maxMinutes: 30 }) };
+
+  it("marks nothing while the list is the saved search", () => {
+    const parts = countLineParts("lemon", f({ maxMinutes: 30 }), nameOf, saved);
+    expect(parts).toEqual([
+      { text: "matching “lemon”", added: false },
+      { text: "30 minutes or less", added: false },
+    ]);
+  });
+
+  it("marks what was added, and simply leaves out what was taken off", () => {
+    expect(
+      countLineParts("lemon", f({ maxMinutes: 30, rating: "favorite" }), nameOf, saved),
+    ).toEqual([
+      { text: "matching “lemon”", added: false },
+      { text: "30 minutes or less", added: false },
+      { text: "Favorites", added: true },
+    ]);
+    // Without words, what was added still comes after what the search had.
+    expect(
+      countLineText(
+        2,
+        countLineParts("", f({ maxMinutes: 30, rating: "favorite" }), nameOf, {
+          q: "",
+          filters: f({ maxMinutes: 30 }),
+        }),
+      ),
+    ).toBe("2 recipes · 30 minutes or less · Favorites (added)");
+    expect(countLineParts("lemon", f(), nameOf, saved)).toEqual([
+      { text: "matching “lemon”", added: false },
+    ]);
+    // A different time is a change: the new one is marked.
+    expect(countLineParts("lemon", f({ maxMinutes: 60 }), nameOf, saved)).toEqual([
+      { text: "matching “lemon”", added: false },
+      { text: "1 hour or less", added: true },
+    ]);
+    expect(
+      countLineText(1, countLineParts("lemon", f({ maxMinutes: 30, photo: true }), nameOf, saved)),
+    ).toBe("1 recipe · matching “lemon” · 30 minutes or less · Has a photo (added)");
+  });
+
+  it("marks changed words, ignoring case and spaces", () => {
+    expect(countLineParts(" Lemon ", f({ maxMinutes: 30 }), nameOf, saved)[0]).toEqual({
+      text: "matching “Lemon”",
+      added: false,
+    });
+    expect(countLineParts("lime", f({ maxMinutes: 30 }), nameOf, saved)[0]).toEqual({
+      text: "matching “lime”",
+      added: true,
+    });
+    // Words typed where the saved search had none.
+    expect(countLineParts("cake", f(), nameOf, { q: "", filters: f() })[0]).toEqual({
+      text: "matching “cake”",
+      added: true,
+    });
+  });
+
+  it("says the category, since the heading names the search", () => {
+    const inDessert = { q: "", filters: f({ category: "dessert" }) };
+    expect(countLineParts("", f({ category: "dessert" }), nameOf, inDessert)).toEqual([
+      { text: "in Dessert", added: false },
+    ]);
+    expect(countLineParts("", f({ category: UNFILED }), nameOf, inDessert)).toEqual([
+      { text: "not in a category", added: true },
+    ]);
+  });
+});
+
+describe("a name for Save as new (U20)", () => {
+  it("adds the first free number", () => {
+    expect(nextFreeName("Quick", ["Quick"], 60)).toBe("Quick 2");
+    expect(nextFreeName("Quick", ["Quick", "quick 2", "Quick 3"], 60)).toBe("Quick 4");
+    expect(nextFreeName(" Quick ", [], 60)).toBe("Quick 2");
+  });
+
+  it("stays within the longest name allowed", () => {
+    const long = "x".repeat(60);
+    expect(nextFreeName(long, [long], 60)).toBe(`${"x".repeat(58)} 2`);
+    expect(nextFreeName(long, [long], 60).length).toBe(60);
   });
 });
 

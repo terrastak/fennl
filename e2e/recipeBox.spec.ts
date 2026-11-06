@@ -9,6 +9,7 @@ import {
   panelCategories,
   recipeCard,
   syncStatus,
+  toggleQuick,
 } from "./recipes";
 import { useOwnAccount } from "./support";
 
@@ -311,9 +312,9 @@ test.describe("On a computer", () => {
 
     // Save as quick search adds a search line; its ✕ deletes the saved search.
     await page.getByRole("button", { name: "Save as quick search" }).click();
-    const saved = page.getByRole("region", { name: "Saved searches" });
-    await saved.getByLabel("Name this search").fill("Under an hour");
-    await saved.getByRole("button", { name: "Save", exact: true }).click();
+    await page.getByLabel("Name of this search").fill("Under an hour");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(heading(page)).toHaveText("Under an hour");
     await expect(quickLines(page)).toHaveText([
       "45 minutes or less",
       "Favorites",
@@ -673,5 +674,47 @@ test.describe("On a phone", () => {
         .getByRole("group", { name: "Quick searches" })
         .getByRole("button", { name: /^(Favorites|1 hour or less|Made lately)$/ }),
     ).toHaveText(["1 hour or less", "Made lately"]);
+  });
+  test("A saved search's name is the heading, with its pencil and ✕ (U20)", async ({
+    page,
+    context,
+    baseURL,
+  }) => {
+    await useOwnAccount(context, baseURL!);
+    await addSamples(page);
+    // The count line, under the heading.
+    await expect(page.locator("strong", { hasText: /^4 recipes$/ })).toBeVisible();
+
+    // Save as quick search names it in the heading's place.
+    await toggleQuick(page);
+    await page.getByRole("button", { name: "Save as quick search" }).click();
+    await page.getByLabel("Name of this search").fill("Quick");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(heading(page)).toHaveText("Quick");
+    await expect(page.getByText("2 recipes · 30 minutes or less")).toBeVisible();
+
+    // Renamed in place with the pencil.
+    await page.getByRole("button", { name: "Rename this search" }).click();
+    await expect(page.getByLabel("Name of this search")).toHaveValue("Quick");
+    await page.getByLabel("Name of this search").fill("Weeknights");
+    await page.keyboard.press("Enter");
+    await expect(heading(page)).toHaveText("Weeknights");
+
+    // A category from the row ends it; the ✕ closes it back to All recipes.
+    await page
+      .getByRole("navigation", { name: "Categories" })
+      .getByRole("link", { name: /^Mexican/ })
+      .click();
+    await expect(heading(page)).toHaveText("Mexican");
+    const sheet = await openFilters(page);
+    await sheet
+      .getByRole("group", { name: "Quick searches" })
+      .getByRole("link", { name: "Weeknights" })
+      .click();
+    await expect(heading(page)).toHaveText("Weeknights");
+    await page.getByRole("button", { name: "Close this search" }).click();
+    await expect(heading(page)).toHaveText("All recipes");
+    await expect(titles(page)).toHaveCount(4);
+    await noAccessibilityProblems(page);
   });
 });
