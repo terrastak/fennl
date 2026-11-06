@@ -10,13 +10,35 @@
   margin-bottom: var(--space-4);
 }
 
-.head > :global(.hand-note) {
-  justify-self: start;
+/* The line above the heading (U20): always the greeting's height on a computer, so nothing
+   below moves between All recipes, a category and a saved search. It holds the greeting, the
+   QUICK SEARCH label, or nothing. */
+.above {
+  display: flex;
+  align-items: flex-end;
+  min-height: var(--text-hand);
   margin-bottom: calc(var(--space-2) * -1);
 }
 
-/* The title (what's shown), its ✕, the count or the sentence, then + Add recipe and ⋯ (on a
-   phone the order goes between them). */
+/* "QUICK SEARCH" with a magnifier, like the left panel's headings. */
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  /* Clear of the heading, and of the box that takes its place when naming. */
+  padding-bottom: calc(var(--space-2) + var(--space-1));
+  color: var(--color-text-subtle);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+/* The title (what's shown) with its pencil and ✕, then + Add recipe and ⋯ (on a phone the
+   order goes between them). */
 .titleRow {
   display: flex;
   align-items: flex-start;
@@ -35,7 +57,7 @@
   min-height: var(--tap-target);
 }
 
-/* The name with its ✕ and count, which never wrap away from it: a long name takes the room
+/* The name with its pencil and ✕, which never wrap away from it: a long name takes the room
    it has, and they follow its last line. */
 .nameRow {
   display: flex;
@@ -71,7 +93,82 @@
   line-clamp: 2;
 }
 
-/* "Show all categories": a small round ✕ beside the category's name. */
+/* Naming a saved search (U20): the box takes the heading's place, at its size, so nothing below
+   moves; Save and Cancel follow it. */
+.naming {
+  flex: 1 1 auto;
+}
+
+.nameForm {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-width: 0;
+}
+
+.nameBox {
+  flex: 1 1 18rem;
+  /* No width of its own (an input's would push Save and Cancel off a phone's screen). */
+  width: 0;
+  min-width: 6rem;
+  max-width: 32rem;
+  /* The heading's own font, size and line, so the box is no taller than the heading. */
+  margin: 0 0 0 calc(var(--space-2) * -1);
+  padding: 0 var(--space-2) 0.08em;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--text-3xl);
+  font-variation-settings: var(--font-display-settings);
+  letter-spacing: -0.015em;
+  line-height: var(--leading-tight);
+}
+
+.nameBox::placeholder {
+  color: var(--color-text-subtle);
+}
+
+.nameBox:focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 1px;
+}
+
+.nameActions {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-2);
+}
+
+.nameButton {
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-4);
+}
+
+/* The pencil beside a saved search's name. */
+.rename {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.rename:hover {
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+}
+
+/* "Show all categories" and "Close this search": a small round ✕ beside the name. */
 .unpick {
   display: grid;
   flex: none;
@@ -89,13 +186,6 @@
 .unpick:hover {
   background: var(--color-surface-sunken);
   color: var(--color-text);
-}
-
-.shown {
-  min-width: 0;
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--text-md);
 }
 
 .headActions {
@@ -137,6 +227,28 @@
 
 .hint:empty {
   flex-basis: 0;
+}
+
+/* "4 recipes · matching “lemon” · 30 minutes or less" (U20). */
+.countWord {
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+}
+
+/* Something added since the saved search was chosen: "+ Favorites", in words as well as colour. */
+.added {
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--color-warm-soft);
+  color: var(--color-text);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+/* What went wrong naming or updating a saved search, in the line under the heading. */
+.problem {
+  color: var(--color-danger);
+  font-weight: var(--weight-medium);
 }
 
 .inlineLink {
@@ -186,13 +298,25 @@
     font-size: var(--text-xl);
   }
 
-  .shown {
-    font-size: var(--text-sm);
+  .nameBox {
+    flex: 1 1 0;
+    min-width: 4rem;
+    font-size: var(--text-xl);
   }
 
-  /* The sentence ("6 recipes match “lemon”") has a line of its own under the title. */
-  .sentence {
+  .nameButton {
+    padding: var(--space-1) var(--space-3);
+  }
+
+  /* Naming a saved search, the box, Save and Cancel have the line to themselves, as tall as it
+     was, so the name has room and nothing below moves. */
+  .namingRow .what {
     flex-basis: 100%;
+    min-height: var(--tap-target);
+  }
+
+  .namingRow .headActions {
+    display: none;
   }
 
   /* The order, + and ⋯ stay together, at the right even on a line of their own. */
@@ -277,6 +401,12 @@
 
 .toolOutlined {
   border-color: var(--color-border);
+}
+
+/* "Update “name”": the change's main choice. */
+.toolStrong {
+  color: var(--color-accent);
+  font-weight: var(--weight-semibold);
 }
 
 .results {
@@ -477,17 +607,6 @@
   background: var(--color-surface);
   color: var(--color-warm);
   box-shadow: var(--shadow-sm);
-}
-
-/* Naming a search to save it, and what happened, under the header. */
-.saved {
-  display: grid;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-2);
-}
-
-.saved p[aria-live]:empty {
-  display: none;
 }
 
 /* The Filters panel: from the side on a computer, up from the bottom on a phone. */

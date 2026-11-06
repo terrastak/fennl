@@ -1556,20 +1556,6 @@ label.card {
   gap: var(--space-1) var(--space-6);
 }
 
-/* --- Saved searches (phase C13b) ---------------------------------------------------------- */
-
-.savedForm {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--space-3);
-  margin: 0;
-}
-
-.savedForm .sort {
-  min-width: min(100%, 18rem);
-}
-
 /* --- Surprise me (phase C13c) ------------------------------------------------------------- */
 
 .surprise {

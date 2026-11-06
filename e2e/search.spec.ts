@@ -40,7 +40,7 @@ test("Search by an ingredient, a word in the notes, and part of a title", async 
     "Ingredients: 1 teaspoon ground cumin",
   );
   await expect(recipeCard(page, "Green Chile Stew").locator("mark")).toHaveText("cumin");
-  await expect(page.getByText("1 recipe matches “cumin”")).toBeVisible();
+  await expect(page.getByText("1 recipe · matching “cumin”")).toBeVisible();
 
   // A word in the notes.
   await searchBox(page).fill("freezes");

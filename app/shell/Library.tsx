@@ -184,10 +184,13 @@ export function Library() {
         return searchKey(parsed.q, parsed.filters) === here;
       })
     : undefined;
+  // The saved search the heading names (U20): exactly this list, or chosen and changed since.
+  const shownSearch =
+    savedHere ?? (onList ? searches.find((s) => s.id === library.chosenSearch) : undefined);
   const picked = pickedList(filters);
-  // One row is the list shown: a saved search when it's exactly that, else the list or category.
+  // One row is the list shown: a saved search the heading names, else the list or category.
   const current = (kind: "all" | string) => {
-    if (!onList || savedHere) return false;
+    if (!onList || shownSearch) return false;
     // "All recipes" starts fresh, so it's the list shown only when nothing is searched or on.
     if (kind === "all") return showingEverything(query, filters);
     return picked.kind === "category" && picked.key === kind;
@@ -228,8 +231,8 @@ export function Library() {
   // page opens), only if it's out of view, so nothing jumps.
   const currentRow = !onList
     ? ""
-    : savedHere
-      ? `saved:${savedHere.id}`
+    : shownSearch
+      ? `saved:${shownSearch.id}`
       : picked.kind === "category"
         ? picked.key
         : picked.kind;
@@ -342,6 +345,8 @@ export function Library() {
             draggable={false}
             onPointerDown={(event) => onPointerDown(event, node)}
             onClick={() => {
+              // A category ends the saved search the heading named (U20).
+              library.setChosenSearch("");
               // Picking a category shows what's inside it too.
               if (kids && !isOpen) toggleOpen(node.key);
             }}
@@ -387,7 +392,7 @@ export function Library() {
         </li>
       </ul>
 
-      <QuickSearches savedHere={savedHere?.id ?? null} />
+      <QuickSearches shownSearch={shownSearch?.id ?? null} />
 
       {tree && tree.roots.length > 0 ? (
         <>
@@ -405,6 +410,7 @@ export function Library() {
                   href={library.hrefFor(query, pickCategory(filters, UNFILED))}
                   className={`${styles.cat} ${styles.unfiled}`}
                   aria-current={current(UNFILED) ? "page" : undefined}
+                  onClick={() => library.setChosenSearch("")}
                 >
                   <span className={styles.name}>Not in a category</span>
                   <Count n={counts?.unfiled} />

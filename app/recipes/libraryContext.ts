@@ -25,7 +25,10 @@ export interface Library {
   saved: ReturnType<typeof useSavedSearches>;
   /** The person's quick searches (U18): the left panel's lines, and the phone's in Filters. */
   quick: QuickSearches;
-  /** The saved search chosen last, for "Update" once the list has been changed. */
+  /**
+   * The saved search chosen last (U20): its name stays the heading, with "Update", once the
+   * list has been changed. Cleared by a category, All recipes or the heading's ✕.
+   */
   chosenSearch: string;
   setChosenSearch: (id: string) => void;
   /** The recipe list's address for a search and its filters. */

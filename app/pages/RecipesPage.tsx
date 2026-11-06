@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import type { SyncChange } from "../../shared/sync";
 import { BulkFile } from "../categories/BulkFile";
 import { addBlockedText, NOTHING_LOST } from "../limits/limitText";
@@ -10,6 +17,7 @@ import { useUndoable } from "../categories/useUndoable";
 import { navigate, useSearchString } from "../navigation";
 import { FiltersPanel } from "../recipes/FiltersPanel";
 import { ListMenu } from "../recipes/ListMenu";
+import { RemoveIcon } from "../recipes/QuickMenu";
 import { turnOffQuickFilter } from "../recipes/quickSearchFilters";
 import { useSavedSearchControls } from "../recipes/savedSearchControls";
 import {
@@ -22,11 +30,13 @@ import {
 } from "../recipes/filters";
 import {
   addressCategoryName,
+  ALL_RECIPES,
+  countLineParts,
   listTitle,
   pickAll,
   outsideCount,
   pickedList,
-  shownSentence,
+  recipesText,
 } from "../recipes/library";
 import { today, useLibrary } from "../recipes/libraryContext";
 import { minutesText } from "../recipes/format";
@@ -42,6 +52,7 @@ import type { RecipeSummary } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import type { SearchHit } from "../sync/search";
 import { activeSyncClient, useSyncStatus } from "../sync/useSync";
+import { SearchIcon } from "../shell/Library";
 import { PhoneLibrary } from "../shell/PhoneLibrary";
 import { typeIntoSearch } from "../shell/typeToSearch";
 import { useWide } from "../shell/useWide";
@@ -287,7 +298,7 @@ function unknownNote(unknown: { time: number; servings: number }, filters: Recip
   if (filters.minServings !== null && unknown.servings > 0) {
     parts.push(`${unknown.servings} with no number served`);
   }
-  return parts.length > 0 ? ` Not shown: ${parts.join(" and ")}.` : "";
+  return parts.length > 0 ? `Not shown: ${parts.join(" and ")}.` : "";
 }
 
 /**
@@ -442,7 +453,6 @@ export function RecipesPage() {
     setSelecting(false);
     setSelected(new Set());
   };
-  const nameOf = (key: string) => tree?.byKey.get(key)?.path ?? key;
   // Printing several at once (phase F6), coming back to the list as it was.
   const print = (ids: string[]) => printRecipes(ids, `/${window.location.search}`);
 
@@ -452,27 +462,33 @@ export function RecipesPage() {
   // On a phone a category on its own isn't offered as a search to save: the row of categories
   // is one tap away already, and the button would sit alone between the header and the cards.
   const phoneNarrowing = searching || phoneOn > 0;
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleRowRef = useRef<HTMLDivElement>(null);
   const saved = useSavedSearchControls({
     query,
     filters,
-    narrowing: wide ? narrowing : phoneNarrowing,
+    narrowing,
+    offerSave: wide ? narrowing : phoneNarrowing,
     currentText: filtersToParams(query, filters, (key) => tree?.byKey.get(key)?.path).toString(),
+    headingRef: titleRef,
+    rowRef: titleRowRef,
   });
 
-  // What the header says (U17): what's shown, and in a sentence what narrows it.
+  // What the header says (U17, U20): what's shown (a saved search's name, a category, or All
+  // recipes), and under it how many recipes and what narrows them.
   const picked = pickedList(filters);
   const address = useSearchString();
-  const title = listTitle(
-    filters,
-    (key) => tree?.byKey.get(key)?.name ?? addressCategoryName(address, key),
-  );
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  useFitToLines(titleRef, title);
+  const nameOf = (key: string) => tree?.byKey.get(key)?.name ?? addressCategoryName(address, key);
+  const listName = listTitle(filters, nameOf);
+  const title = saved.shown?.name ?? listName;
+  useFitToLines(titleRef, `${title}|${saved.naming}`);
   // An address naming a category that no longer exists (an old bookmark, or one renamed).
   const gone =
     !!tree && picked.kind === "category" && picked.key !== UNFILED && !tree.byKey.has(picked.key);
-  const sentence = busy ? "Searching…" : shownSentence(shown.length, query, filters, nameOf);
-  const showCount = recipes !== null && list.length > 0;
+  const everything = picked.kind === "all" && !narrowing;
+  // Categories in the line are said with what they're in ("Also in Dessert › Cakes").
+  const pathOf = (key: string) => tree?.byKey.get(key)?.path ?? addressCategoryName(address, key);
+  const parts = countLineParts(query, filters, pathOf, saved.savedShape);
   // Filters only More filters shows: the left panel shows the category and the quick searches'
   // tick lines that are on (U18).
   const moreOn = activeFilterCount(
@@ -483,6 +499,40 @@ export function RecipesPage() {
   );
   const outside =
     searching && !busy && counts ? outsideCount(filters, counts.all, shown.length) : 0;
+
+  // What else the line under the heading says, after the count.
+  const extra: ReactNode = gone ? (
+    <>There&rsquo;s no category called &ldquo;{listName}&rdquo; now.</>
+  ) : outside > 0 ? (
+    <>
+      {outside} more {outside === 1 ? "matches" : "match"}{" "}
+      {filters.category === UNFILED ? (
+        "in categories"
+      ) : (
+        <>
+          outside {/* A very long name is shortened here; the heading says it in full. */}
+          <span className={listStyles.outsideName} title={listName}>
+            {listName}
+          </span>
+        </>
+      )}
+      .{" "}
+      <button
+        type="button"
+        className={listStyles.inlineLink}
+        onClick={() => library.show(query, pickAll(filters))}
+      >
+        Search all recipes
+      </button>
+    </>
+  ) : !busy && shown.length === 0 ? (
+    filters.category === UNFILED && !searching && filtering === 1 ? (
+      "Every recipe is in a category."
+    ) : (
+      "No recipes found."
+    )
+  ) : null;
+  const note = busy ? "" : unknownNote(found.unknown, filters);
 
   // The order: under the title on a computer, beside it on a phone, where its names are short.
   const sortChoice = (
@@ -523,59 +573,69 @@ export function RecipesPage() {
       ) : null}
 
       <header className={listStyles.head}>
-        {picked.kind === "all" && !narrowing && wide ? (
-          <p className="hand-note">{greetingFor(new Date())}</p>
+        {/* The line above the heading keeps its space on a computer, so nothing below moves
+            between lists (U20): the greeting on All recipes with nothing on, QUICK SEARCH when
+            the list is exactly a saved search, else nothing. */}
+        {wide ? (
+          <div className={listStyles.above}>
+            {saved.shown && saved.exact ? (
+              <p className={listStyles.kind}>
+                <SearchIcon size={14} />
+                Quick search
+              </p>
+            ) : everything && !saved.shown ? (
+              <p className="hand-note">{greetingFor(new Date())}</p>
+            ) : null}
+          </div>
         ) : null}
-        <div className={listStyles.titleRow}>
+        <div
+          ref={titleRowRef}
+          className={`${listStyles.titleRow} ${saved.naming ? listStyles.namingRow : ""}`}
+          style={saved.rowHeight ? { minHeight: saved.rowHeight } : undefined}
+        >
           <div className={`${listStyles.what} ${title.length > 18 ? listStyles.longName : ""}`}>
-            {/* The name, then its ✕ and the count kept together after its last line. */}
-            <div className={listStyles.nameRow}>
-              <h1 ref={titleRef} tabIndex={-1} className={listStyles.title}>
-                {title}
-              </h1>
-              {picked.kind !== "all" || (showCount && !sentence) ? (
-                <span className={listStyles.after}>
-                  {picked.kind !== "all" ? (
-                    <button
-                      type="button"
-                      className={listStyles.unpick}
-                      aria-label="Show all categories"
-                      title="Show all categories"
-                      onClick={() => library.show(query, pickAll(filters))}
-                    >
-                      <svg
-                        width="9"
-                        height="9"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="3"
-                        strokeLinecap="round"
-                        aria-hidden="true"
-                      >
-                        <path d="M6 6l12 12M18 6 6 18" />
-                      </svg>
-                    </button>
-                  ) : null}
-                  {showCount && !sentence ? (
-                    <span className={listStyles.shown} aria-hidden="true">
-                      {shown.length}
+            {/* The name, then its pencil and ✕ kept together after its last line; or, while
+                naming a saved search, the box for its name in the same place. */}
+            <div className={`${listStyles.nameRow} ${saved.naming ? listStyles.naming : ""}`}>
+              {saved.naming ? (
+                saved.nameBox
+              ) : (
+                <>
+                  <h1 ref={titleRef} tabIndex={-1} className={listStyles.title}>
+                    {title}
+                  </h1>
+                  {saved.shown || picked.kind !== "all" ? (
+                    <span className={listStyles.after}>
+                      {saved.pencil}
+                      {saved.shown ? (
+                        <button
+                          type="button"
+                          className={listStyles.unpick}
+                          aria-label="Close this search"
+                          title="Close this search"
+                          onClick={() => {
+                            library.setChosenSearch("");
+                            library.show("", ALL_RECIPES);
+                          }}
+                        >
+                          <RemoveIcon />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className={listStyles.unpick}
+                          aria-label="Show all categories"
+                          title="Show all categories"
+                          onClick={() => library.show(query, pickAll(filters))}
+                        >
+                          <RemoveIcon />
+                        </button>
+                      )}
                     </span>
                   ) : null}
-                </span>
-              ) : null}
+                </>
+              )}
             </div>
-            {/* Said aloud as it changes: the sentence, or how many recipes the list shows. */}
-            {showCount ? (
-              <p
-                className={
-                  sentence ? `${listStyles.shown} ${listStyles.sentence}` : "visually-hidden"
-                }
-                aria-live="polite"
-              >
-                {sentence ?? `${shown.length} ${shown.length === 1 ? "recipe" : "recipes"}`}
-              </p>
-            ) : null}
           </div>
           {list.length > 0 ? (
             <div className={listStyles.headActions}>
@@ -606,41 +666,50 @@ export function RecipesPage() {
         {list.length > 0 ? (
           <div className={listStyles.bar}>
             <p className={listStyles.hint}>
-              {gone ? (
-                <>There&rsquo;s no category called &ldquo;{title}&rdquo; now. </>
-              ) : outside > 0 ? (
-                <>
-                  {outside} more {outside === 1 ? "matches" : "match"}{" "}
-                  {filters.category === UNFILED ? (
-                    "in categories"
-                  ) : (
-                    <>
-                      outside{" "}
-                      {/* A very long name is shortened here; the heading says it in full. */}
-                      <span className={listStyles.outsideName} title={title}>
-                        {title}
-                      </span>
-                    </>
-                  )}
-                  .{" "}
-                  <button
-                    type="button"
-                    className={listStyles.inlineLink}
-                    onClick={() => library.show(query, pickAll(filters))}
-                  >
-                    Search all recipes
-                  </button>
-                </>
-              ) : !busy && shown.length === 0 ? (
-                filters.category === UNFILED && !searching && filtering === 1 ? (
-                  "Every recipe is in a category."
+              {/* How many recipes and what narrows them (U20), said aloud in full as it
+                  changes. */}
+              <span className={listStyles.countLine} aria-live="polite" aria-atomic="true">
+                {busy ? (
+                  "Searching…"
                 ) : (
-                  "No recipes found."
-                )
-              ) : !narrowing && wide ? (
-                "Pick a category on the left, or just start typing to search."
+                  <>
+                    <strong className={listStyles.countWord}>{recipesText(shown.length)}</strong>
+                    {parts.map((part, i) => (
+                      <span key={i}>
+                        {" · "}
+                        {part.added ? (
+                          <span className={listStyles.added}>
+                            <span aria-hidden="true">+ </span>
+                            {part.text}
+                            <span className="visually-hidden"> (added)</span>
+                          </span>
+                        ) : (
+                          part.text
+                        )}
+                      </span>
+                    ))}
+                    {everything && wide && !saved.shown ? (
+                      <> · pick a category on the left, or just start typing to search</>
+                    ) : null}
+                  </>
+                )}
+              </span>
+              {extra ? (
+                <>
+                  {busy ? " " : ". "}
+                  {extra}
+                </>
               ) : null}
-              {busy ? "" : unknownNote(found.unknown, filters)}
+              {note ? `${extra ? " " : ". "}${note}` : null}
+              {/* What went wrong naming or updating a saved search, after the count. */}
+              {saved.problem ? (
+                <>
+                  {busy || extra || note ? " " : ". "}
+                  <span id={saved.problemId} className={listStyles.problem} role="alert">
+                    {saved.problem}
+                  </span>
+                </>
+              ) : null}
             </p>
             <div className={listStyles.tools}>
               {saved.buttons}
@@ -678,8 +747,8 @@ export function RecipesPage() {
             </div>
           </div>
         ) : null}
+        {saved.status}
       </header>
-      {list.length > 0 ? saved.panel : null}
 
       {/* Right under the filters, where the list starts, so it is seen on a phone too. */}
       <div aria-live="polite">

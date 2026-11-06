@@ -30,7 +30,7 @@ const THRESHOLD = 5;
 
 type Part = "main" | "more" | "add";
 
-export function QuickSearches({ savedHere }: { savedHere: string | null }) {
+export function QuickSearches({ shownSearch }: { shownSearch: string | null }) {
   const library = useLibrary();
   const { quick, query, filters, onList, counts } = library;
   const entries = quick.entries;
@@ -253,7 +253,7 @@ export function QuickSearches({ savedHere }: { savedHere: string | null }) {
                 <Link
                   href={entry.search?.query ? `/?${entry.search.query.replace(/^\?/, "")}` : "/"}
                   className={styles.quickMain}
-                  aria-current={savedHere === entry.search?.id ? "page" : undefined}
+                  aria-current={shownSearch === entry.search?.id ? "page" : undefined}
                   draggable={false}
                   data-quick-part="main"
                   onPointerDown={(e) => onPointerDown(e, entry.key)}
