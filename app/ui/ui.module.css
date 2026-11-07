@@ -1,0 +1,114 @@
+/* Shared pieces of the laptop look (U23): the "done" bar and the warm note. Tokens only.
+
+   Elsewhere (phones, touch screens, windows under 900px) these add nothing: each screen passes
+   its own look in as classes. On a laptop the rules below win over those classes (an element
+   name in each selector), so every screen draws them the same way. */
+
+.icon {
+  display: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  svg.icon {
+    display: block;
+    flex: none;
+    width: var(--icon);
+    height: var(--icon);
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* --- The done bar: grey, a green check, the words, Undo at the right ----------------------- */
+  div.doneBar.shown {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    max-width: none;
+    margin: 0;
+    padding: 0.375rem 0.375rem 0.375rem var(--space-3);
+    border: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+  }
+
+  div.doneBar.shown p.doneWords {
+    display: flex;
+    flex: 1 1 auto;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control-sm);
+    margin: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+
+  div.doneBar.shown p.doneWords > svg.icon {
+    color: var(--color-success);
+  }
+
+  /* Undo: the bar's one action, icon and words in the accent (the button rule). */
+  div.doneBar.shown button.undo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control-sm);
+    margin-left: auto;
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--action-text);
+    font: inherit;
+    font-weight: var(--action-weight);
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  div.doneBar.shown button.undo:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  div.doneBar.shown button.undo:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  /* --- The warm note: pale warm fill, a coloured icon, dark text ------------------------------ */
+  p.warmNote {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: 0.625rem var(--space-3);
+    border: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-warm-soft);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  p.warmNote > svg.icon {
+    margin-top: 0.125rem;
+    color: var(--color-warm-text);
+  }
+
+  p.warmNote > span {
+    min-width: 0;
+  }
+}
+
+/* Windows contrast themes draw no fills: the bar and the note keep an edge there. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  div.doneBar.shown,
+  p.warmNote {
+    border: 1px solid;
+  }
+}

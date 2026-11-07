@@ -7,12 +7,17 @@ import { PhotoEditor } from "../photos/PhotoEditor";
 import { NOTHING_LOST, TOO_LARGE_TEXT, addBlockedText } from "../limits/limitText";
 import { useUsage } from "../limits/useLimits";
 import { navigate } from "../navigation";
+import { WarmNote } from "../ui/WarmNote";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
-import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
+import { activeSyncClient, saveChanges, useRecipe, useSyncStatus } from "../sync/useSync";
 import editor from "./editor.module.css";
 import { Field, LinesBox, SourceFields, TimeBox } from "./editorFields";
 import { NutritionFields } from "./NutritionFields";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
+import { noteTrashed } from "./trashNotice";
+import { usePointer } from "./usePointer";
 import { described, problemsFor } from "./fieldProblems";
 import { EditorSession, type EditorState, type SaveState } from "./editorSession";
 import styles from "./recipes.module.css";
@@ -36,6 +41,17 @@ const SAVE_TEXT: Record<SaveState, string> = {
   paused: "Waiting for a connection to save",
   failed: "Couldn’t save just now; trying again",
   too_large: "Too large to save",
+};
+
+/** The dot before the saving status on a laptop (U23): beside the words, never instead of them. */
+const SAVE_DOT: Record<SaveState, "saved" | "waiting" | "problem"> = {
+  saved: "saved",
+  saving: "waiting",
+  needs_title: "waiting",
+  problems: "problem",
+  paused: "waiting",
+  failed: "problem",
+  too_large: "problem",
 };
 
 function Editor({
@@ -63,6 +79,17 @@ function Editor({
   const maxBytes = status.usage?.maxRecipeBytes ?? null;
   const titleBox = useRef<HTMLInputElement>(null);
   const tooLargeNotice = useRef<HTMLParagraphElement>(null);
+  const head = useRef<HTMLDivElement>(null);
+  const laptop = usePointer();
+
+  // On a laptop the bar's heading gets smaller once the page has scrolled (U23); the mark does
+  // nothing elsewhere.
+  useEffect(() => {
+    const mark = () => head.current?.toggleAttribute("data-scrolled", window.scrollY > 8);
+    mark();
+    window.addEventListener("scroll", mark, { passive: true });
+    return () => window.removeEventListener("scroll", mark);
+  }, []);
 
   useEffect(() => session.setEditable(editable), [session, editable]);
   useEffect(() => session.setMaxBytes(maxBytes), [session, maxBytes]);
@@ -95,92 +122,129 @@ function Editor({
     document.title = `${title ? `Editing ${title}` : "New recipe"} · Fennl`;
   }, [title]);
 
-  const done = async () => {
+  /** Saves what's typed; false (and the focus on the problem) when some of it can't be saved. */
+  const saveAll = async (): Promise<boolean> => {
     await session.flush();
     // Leaving would lose what can't be saved.
-    if (session.getSnapshot().tooLarge) return tooLargeNotice.current?.focus();
+    if (session.getSnapshot().tooLarge) {
+      tooLargeNotice.current?.focus();
+      return false;
+    }
     const problem = document.querySelector<HTMLElement>("[aria-invalid='true']");
-    if (problem) return problem.focus();
+    if (problem) {
+      problem.focus();
+      return false;
+    }
+    return true;
+  };
+
+  const done = async () => {
+    if (!(await saveAll())) return;
     navigate(session.getSnapshot().created ? `/recipes/${id}` : "/");
+  };
+
+  // Move to Trash at the bottom (U23, owner's choice 2026-11-07): what's typed is saved first, with
+  // Done's checks, so nothing typed is lost without a word (putting it back brings it all back);
+  // then the recipe goes to Trash and the list says so, with Undo, as from the recipe's page (C9).
+  const trash = async () => {
+    if (!(await saveAll())) return;
+    const changedAt = Date.now();
+    const ok = await saveChanges([{ kind: "recipe", id, fields: {}, deleted: true, changedAt }]);
+    if (!ok) return;
+    noteTrashed(id, session.savedTitle(), changedAt);
+    navigate("/");
   };
 
   const set = session.set.bind(session);
   const titleProblems = state.created ? problemsFor(state.issues, "title") : [];
   const servingsProblems = problemsFor(state.issues, "servings");
   const draft = state.draft;
+  const saveState = editable || state.save === "saved" ? state.save : "paused";
 
+  // On a laptop (U23) the heading, the saving status, Undo, Redo and Done are one bar that stays
+  // at the top, and each section is a white box under a plain heading; the wrappers that make
+  // the boxes (`head`, `box`, `groupBox`, `fieldBox`) add nothing on phones (display: contents).
   return (
     <article className={editor.editor}>
-      <h1 tabIndex={-1} className={editor.heading}>
-        {initial ? "Edit recipe" : "New recipe"}
-      </h1>
-      <div className={editor.bar}>
-        <p className={editor.status} data-editor-status aria-live="polite">
-          {SAVE_TEXT[editable || state.save === "saved" ? state.save : "paused"]}
-        </p>
-        <div className={editor.barButtons}>
-          <button
-            type="button"
-            className={styles.secondary}
-            onClick={() => void session.undo()}
-            disabled={!editable || !state.canUndo}
-          >
-            Undo
-          </button>
-          <button
-            type="button"
-            className={styles.secondary}
-            onClick={() => void session.redo()}
-            disabled={!editable || !state.canRedo}
-          >
-            Redo
-          </button>
-          <button type="button" className={styles.primary} onClick={() => void done()}>
-            Done
-          </button>
+      <div className={editor.head} ref={head}>
+        <h1 tabIndex={-1} className={editor.heading}>
+          {initial ? "Edit recipe" : "New recipe"}
+        </h1>
+        <div className={editor.bar}>
+          <p className={editor.status} data-editor-status aria-live="polite">
+            <span className={editor.dot} data-dot={SAVE_DOT[saveState]} aria-hidden="true" />
+            {SAVE_TEXT[saveState]}
+          </p>
+          <span className={editor.divider} aria-hidden="true" />
+          <div className={editor.barButtons}>
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => void session.undo()}
+              disabled={!editable || !state.canUndo}
+            >
+              <LaptopIcon path={LAPTOP_ICONS.undo} />
+              Undo
+            </button>
+            <button
+              type="button"
+              className={styles.secondary}
+              onClick={() => void session.redo()}
+              disabled={!editable || !state.canRedo}
+            >
+              <LaptopIcon path={LAPTOP_ICONS.redo} />
+              Redo
+            </button>
+            <button type="button" className={styles.primary} onClick={() => void done()}>
+              <LaptopIcon path={LAPTOP_ICONS.check} />
+              Done
+            </button>
+          </div>
         </div>
       </div>
 
       {!editable ? (
-        <p className={editor.notice} role="status">
+        <WarmNote className={editor.notice} role="status">
           Editing is paused until this device is back online. Nothing you&rsquo;ve typed is lost.
-        </p>
+        </WarmNote>
       ) : null}
       {state.tooLarge ? (
-        <p className={editor.notice} role="alert" tabIndex={-1} ref={tooLargeNotice}>
+        <WarmNote className={editor.notice} role="alert" tabIndex={-1} ref={tooLargeNotice}>
           {TOO_LARGE_TEXT}
-        </p>
+        </WarmNote>
       ) : null}
 
       <form onSubmit={(e) => e.preventDefault()}>
         <fieldset className={editor.fields} disabled={!editable}>
-          <Field id="edit-title" label="Title" problems={titleProblems}>
-            <input
-              ref={titleBox}
-              {...described("edit-title", false, titleProblems)}
-              className={`${styles.input} ${editor.titleInput}`}
-              value={draft.title}
-              maxLength={RECIPE_RULES.titleLength}
-              placeholder="Green chile stew"
-              onChange={(e) => set({ title: e.target.value })}
-            />
-          </Field>
+          <div className={editor.box}>
+            <Field id="edit-title" label="Title" problems={titleProblems}>
+              <input
+                ref={titleBox}
+                {...described("edit-title", false, titleProblems)}
+                className={`${styles.input} ${editor.titleInput}`}
+                value={draft.title}
+                maxLength={RECIPE_RULES.titleLength}
+                placeholder="Green chile stew"
+                onChange={(e) => set({ title: e.target.value })}
+              />
+            </Field>
 
-          <Field
-            id="edit-description"
-            label="About this recipe"
-            hint="A line or two shown under the title."
-            problems={problemsFor(state.issues, "description")}
-          >
-            <textarea
-              {...described("edit-description", true, problemsFor(state.issues, "description"))}
-              className={`${styles.input} ${editor.textarea} ${editor.short}`}
-              value={draft.description}
-              rows={2}
-              maxLength={RECIPE_RULES.descriptionLength}
-              onChange={(e) => set({ description: e.target.value })}
-            />
-          </Field>
+            <Field
+              id="edit-description"
+              label="About this recipe"
+              hint="A line or two shown under the title."
+              problems={problemsFor(state.issues, "description")}
+            >
+              <textarea
+                {...described("edit-description", true, problemsFor(state.issues, "description"))}
+                className={`${styles.input} ${editor.textarea} ${editor.short}`}
+                value={draft.description}
+                rows={2}
+                maxLength={RECIPE_RULES.descriptionLength}
+                onChange={(e) => set({ description: e.target.value })}
+              />
+            </Field>
+          </div>
 
           <PhotoEditor
             recipeId={id}
@@ -196,6 +260,7 @@ function Editor({
             label="Ingredients"
             hint="One per line, as you'd write them."
             linkFrom={id}
+            inEditor
           />
           <LinesBox
             session={session}
@@ -203,67 +268,70 @@ function Editor({
             list="directions"
             label="Method"
             hint="One step per line; numbers are added for you."
+            inEditor
           />
 
-          <RecipeCategories recipeId={id} disabled={!editable} />
+          <RecipeCategories recipeId={id} disabled={!editable} inEditor />
 
           <fieldset className={editor.group}>
             <legend>Time and servings</legend>
-            <div className={editor.row}>
-              <TimeBox session={session} state={state} which="prep" label="Prep time" />
-              <TimeBox session={session} state={state} which="cook" label="Cook time" />
-              <TimeBox session={session} state={state} which="total" label="Total time" />
-            </div>
-            <div className={editor.row}>
-              <Field
-                id="edit-servings"
-                label="Serves"
-                problems={servingsProblems}
-                className={editor.narrow}
-              >
-                <input
-                  {...described("edit-servings", false, servingsProblems)}
-                  className={styles.input}
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={RECIPE_RULES.maxServings}
-                  value={state.boxes.servings}
-                  onChange={(e) => session.setBox("servings", e.target.value)}
-                  onBlur={() => session.tidyBox("servings")}
-                />
-              </Field>
-              <Field id="edit-yield" label="Makes" hint="For example 2 loaves, or 24 cookies.">
-                <input
-                  {...described("edit-yield", true, [])}
-                  className={styles.input}
-                  value={draft.servings.yield ?? ""}
-                  maxLength={RECIPE_RULES.shortTextLength}
-                  onChange={(e) =>
-                    set({ servings: { ...draft.servings, yield: e.target.value || null } })
-                  }
-                />
-              </Field>
-              <Field id="edit-difficulty" label="Difficulty" className={editor.narrow}>
-                <select
-                  id="edit-difficulty"
-                  className={styles.select}
-                  value={draft.difficulty ?? ""}
-                  onChange={(e) =>
-                    set({
-                      difficulty: (e.target.value || null) as Difficulty | null,
-                      difficultyText: null,
-                    })
-                  }
+            <div className={`${editor.groupBox} ${editor.timeBox}`}>
+              <div className={editor.row}>
+                <TimeBox session={session} state={state} which="prep" label="Prep time" />
+                <TimeBox session={session} state={state} which="cook" label="Cook time" />
+                <TimeBox session={session} state={state} which="total" label="Total time" />
+              </div>
+              <div className={editor.row}>
+                <Field
+                  id="edit-servings"
+                  label="Serves"
+                  problems={servingsProblems}
+                  className={editor.narrow}
                 >
-                  <option value="">{draft.difficultyText ?? "Not set"}</option>
-                  {DIFFICULTIES.map((d) => (
-                    <option key={d} value={d}>
-                      {d[0]?.toUpperCase() + d.slice(1)}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+                  <input
+                    {...described("edit-servings", false, servingsProblems)}
+                    className={styles.input}
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={RECIPE_RULES.maxServings}
+                    value={state.boxes.servings}
+                    onChange={(e) => session.setBox("servings", e.target.value)}
+                    onBlur={() => session.tidyBox("servings")}
+                  />
+                </Field>
+                <Field id="edit-yield" label="Makes" hint="For example 2 loaves, or 24 cookies.">
+                  <input
+                    {...described("edit-yield", true, [])}
+                    className={styles.input}
+                    value={draft.servings.yield ?? ""}
+                    maxLength={RECIPE_RULES.shortTextLength}
+                    onChange={(e) =>
+                      set({ servings: { ...draft.servings, yield: e.target.value || null } })
+                    }
+                  />
+                </Field>
+                <Field id="edit-difficulty" label="Difficulty" className={editor.narrow}>
+                  <select
+                    id="edit-difficulty"
+                    className={styles.select}
+                    value={draft.difficulty ?? ""}
+                    onChange={(e) =>
+                      set({
+                        difficulty: (e.target.value || null) as Difficulty | null,
+                        difficultyText: null,
+                      })
+                    }
+                  >
+                    <option value="">{draft.difficultyText ?? "Not set"}</option>
+                    {DIFFICULTIES.map((d) => (
+                      <option key={d} value={d}>
+                        {d[0]?.toUpperCase() + d.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              </div>
             </div>
           </fieldset>
 
@@ -272,8 +340,11 @@ function Editor({
           <Field
             id="edit-notes"
             label="Notes"
-            hint="Notes that go with the recipe. Your own signed note is on the recipe's page."
+            // "notes" since U7 (there can be several); laptop only for now, so phones look as
+            // before until the owner says (U23 slice 5).
+            hint={`Notes that go with the recipe. Your own signed ${laptop ? "notes are" : "note is"} on the recipe's page.`}
             problems={problemsFor(state.issues, "notes")}
+            boxed
           >
             <textarea
               {...described("edit-notes", true, problemsFor(state.issues, "notes"))}
@@ -289,11 +360,28 @@ function Editor({
         </fieldset>
       </form>
 
+      {/* Phones keep a second Done here; a laptop's bar with Done stays in view instead (U23). */}
       <div className={editor.footer}>
         <button type="button" className={styles.primary} onClick={() => void done()}>
           Done
         </button>
       </div>
+      {/* On a laptop, Move to Trash at the very bottom (U23, owner's choice 2026-11-07); not for a
+          new recipe that has no title yet, so nothing was saved. */}
+      {state.created ? (
+        <div className={editor.trashFoot}>
+          <button
+            type="button"
+            className={editor.trashButton}
+            disabled={!editable}
+            onClick={() => void trash()}
+          >
+            <LaptopIcon path={LAPTOP_ICONS.trash} />
+            Move to Trash
+          </button>
+          <p className={editor.trashHint}>It stays in Trash for 30 days, so you can put it back.</p>
+        </div>
+      ) : null}
     </article>
   );
 }

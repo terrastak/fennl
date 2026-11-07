@@ -12,6 +12,9 @@ import type { EditorSession, EditorState } from "./editorSession";
 import styles from "./recipes.module.css";
 import { highlightWords } from "./highlight";
 import { LinkPicker, LinkedName } from "./LinkControl";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
+import { usePointer } from "./usePointer";
 
 // The recipe editor's fields (phase C6), shared with the import review screen (phase E4), which
 // edits a draft with the same boxes before it becomes a recipe.
@@ -24,7 +27,27 @@ const SOURCE_KIND_NAMES: Record<SourceKind, string> = {
 };
 
 const MAC = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.userAgent);
-const MOVE_KEYS = MAC ? "⌥↑ / ⌥↓" : "Alt+↑ / Alt+↓";
+
+/**
+ * "Alt+↑ / Alt+↓" (⌥↑ / ⌥↓ on a Mac), each key in a <kbd>: drawn as small keys on a laptop
+ * (U23), as plain words elsewhere.
+ */
+function MoveKeys({ keys }: { keys: boolean }) {
+  const laptop = usePointer() && keys;
+  const alt = MAC ? "⌥" : "Alt";
+  const plus = MAC ? "" : "+";
+  // Phones (and the import review screen, for now) keep the plain words (a key in a box would shape the text differently there).
+  if (!laptop) return <>{`${alt}${plus}↑ / ${alt}${plus}↓`}</>;
+  return (
+    <>
+      <kbd className={editor.key}>{alt}</kbd>
+      {plus}
+      <kbd className={editor.key}>↑</kbd> / <kbd className={editor.key}>{alt}</kbd>
+      {plus}
+      <kbd className={editor.key}>↓</kbd>
+    </>
+  );
+}
 
 export function Field({
   id,
@@ -32,6 +55,7 @@ export function Field({
   hint,
   problems = [],
   className,
+  boxed = false,
   children,
 }: {
   id: string;
@@ -39,11 +63,15 @@ export function Field({
   hint?: string | undefined;
   problems?: string[];
   className?: string | undefined;
+  /**
+   * A section of its own (the editor's Notes): on a laptop (U23) the label is the section's
+   * heading and the box, its hint and any problem sit in a white box under it.
+   */
+  boxed?: boolean;
   children: ReactNode;
 }) {
-  return (
-    <div className={`${editor.field} ${className ?? ""}`}>
-      <label htmlFor={id}>{label}</label>
+  const below = (
+    <>
       {children}
       {hint ? (
         <p id={`${id}-hint`} className={styles.hint}>
@@ -55,6 +83,12 @@ export function Field({
           {problems.join(" ")}
         </p>
       ) : null}
+    </>
+  );
+  return (
+    <div className={`${editor.field} ${boxed ? editor.boxedField : ""} ${className ?? ""}`}>
+      <label htmlFor={id}>{label}</label>
+      {boxed ? <div className={editor.fieldBox}>{below}</div> : below}
     </div>
   );
 }
@@ -70,6 +104,7 @@ export function LinesBox({
   marks,
   words,
   linkFrom,
+  inEditor = false,
 }: {
   session: EditorSession;
   state: EditorState;
@@ -87,6 +122,8 @@ export function LinesBox({
   words?: ReadonlyMap<string, readonly string[]>;
   /** The recipe being edited, so its ingredients can link to other recipes (phase F3). */
   linkFrom?: string;
+  /** In the recipe editor, whose laptop look (U23) adds icons and draws the keys in the hint. */
+  inEditor?: boolean;
 }) {
   const id = `edit-${list}`;
   const box = useRef<HTMLTextAreaElement>(null);
@@ -163,6 +200,7 @@ export function LinesBox({
             onMouseDown={(event) => event.preventDefault()}
             onClick={toggleHeading}
           >
+            {inEditor ? <LaptopIcon path={LAPTOP_ICONS.heading} /> : null}
             Heading
           </button>
           {linkFrom && list === "ingredients" ? (
@@ -171,8 +209,10 @@ export function LinesBox({
               className={editor.small}
               disabled={current === undefined || current.heading}
               onMouseDown={(event) => event.preventDefault()}
+              aria-expanded={linking !== null}
               onClick={() => setLinking(current?.id ?? null)}
             >
+              {inEditor ? <LaptopIcon path={LAPTOP_ICONS.link} /> : null}
               Link a recipe
             </button>
           ) : null}
@@ -208,8 +248,8 @@ export function LinesBox({
             onBlur={() => session.tidyBox(list)}
           />
           <p id={`${id}-hint`} className={styles.hint}>
-            {hint} {MOVE_KEYS} moves the line you&rsquo;re on. Heading makes it a section heading
-            (&ldquo;For the crust&rdquo;).
+            {hint} <MoveKeys keys={inEditor} /> moves the line you&rsquo;re on. Heading makes it a
+            section heading (&ldquo;For the crust&rdquo;).
           </p>
           {problems.length > 0 ? (
             <p id={`${id}-problem`} className={editor.problem}>
@@ -259,7 +299,10 @@ export function LinesBox({
                     {line.heading ? (
                       <span className="visually-hidden">Heading: </span>
                     ) : list === "directions" ? (
-                      <span className={editor.stepNumber}>{numbers[i]}.</span>
+                      <span className={editor.stepNumber}>
+                        {numbers[i]}
+                        <span className={editor.stepDot}>.</span>
+                      </span>
                     ) : null}
                     {highlightWords(line.text, words?.get(line.id) ?? []).map((piece, k) =>
                       piece.marked ? (
@@ -337,74 +380,76 @@ export function SourceFields({ session, state }: { session: EditorSession; state
   return (
     <fieldset className={editor.group}>
       <legend>Where it&rsquo;s from</legend>
-      <div className={editor.row}>
-        <Field id="edit-source-kind" label="Source">
-          <select
-            id="edit-source-kind"
-            className={styles.select}
-            value={kind ?? ""}
-            onChange={(e) => set({ kind: (e.target.value || null) as SourceKind | null })}
-          >
-            <option value="">Not set</option>
-            {SOURCE_KINDS.map((k) => (
-              <option key={k} value={k}>
-                {SOURCE_KIND_NAMES[k]}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {kind ? (
-          <Field
-            id="edit-source-name"
-            label={nameLabel[kind]}
-            hint={kind === "person" ? "Shown handwritten above the title." : undefined}
-          >
-            <input
-              {...described("edit-source-name", kind === "person", [])}
-              className={styles.input}
-              value={source.name ?? ""}
-              maxLength={RECIPE_RULES.shortTextLength}
-              onChange={(e) => set({ name: text(e.target.value) })}
-            />
+      <div className={editor.groupBox}>
+        <div className={editor.row}>
+          <Field id="edit-source-kind" label="Source">
+            <select
+              id="edit-source-kind"
+              className={styles.select}
+              value={kind ?? ""}
+              onChange={(e) => set({ kind: (e.target.value || null) as SourceKind | null })}
+            >
+              <option value="">Not set</option>
+              {SOURCE_KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {SOURCE_KIND_NAMES[k]}
+                </option>
+              ))}
+            </select>
           </Field>
-        ) : null}
-        {kind === "website" || kind === "cookbook" ? (
-          <Field id="edit-source-author" label="Author">
-            <input
-              id="edit-source-author"
-              className={styles.input}
-              value={source.author ?? ""}
-              maxLength={RECIPE_RULES.shortTextLength}
-              onChange={(e) => set({ author: text(e.target.value) })}
-            />
-          </Field>
-        ) : null}
-        {kind === "cookbook" ? (
-          <Field id="edit-source-page" label="Page" className={editor.narrow}>
-            <input
-              id="edit-source-page"
-              className={styles.input}
-              value={source.page ?? ""}
-              maxLength={RECIPE_RULES.shortTextLength}
-              onChange={(e) => set({ page: text(e.target.value) })}
-            />
-          </Field>
-        ) : null}
-        {kind === "website" || kind === "other" ? (
-          <Field id="edit-source-url" label="Web address" problems={urlProblems}>
-            <input
-              {...described("edit-source-url", false, urlProblems)}
-              className={styles.input}
-              type="url"
-              inputMode="url"
-              value={source.url ?? ""}
-              placeholder="https://"
-              maxLength={RECIPE_RULES.urlLength}
-              onChange={(e) => set({ url: e.target.value || null })}
-              onBlur={() => set({ url: webAddress(source.url ?? "") })}
-            />
-          </Field>
-        ) : null}
+          {kind ? (
+            <Field
+              id="edit-source-name"
+              label={nameLabel[kind]}
+              hint={kind === "person" ? "Shown handwritten above the title." : undefined}
+            >
+              <input
+                {...described("edit-source-name", kind === "person", [])}
+                className={styles.input}
+                value={source.name ?? ""}
+                maxLength={RECIPE_RULES.shortTextLength}
+                onChange={(e) => set({ name: text(e.target.value) })}
+              />
+            </Field>
+          ) : null}
+          {kind === "website" || kind === "cookbook" ? (
+            <Field id="edit-source-author" label="Author">
+              <input
+                id="edit-source-author"
+                className={styles.input}
+                value={source.author ?? ""}
+                maxLength={RECIPE_RULES.shortTextLength}
+                onChange={(e) => set({ author: text(e.target.value) })}
+              />
+            </Field>
+          ) : null}
+          {kind === "cookbook" ? (
+            <Field id="edit-source-page" label="Page" className={editor.narrow}>
+              <input
+                id="edit-source-page"
+                className={styles.input}
+                value={source.page ?? ""}
+                maxLength={RECIPE_RULES.shortTextLength}
+                onChange={(e) => set({ page: text(e.target.value) })}
+              />
+            </Field>
+          ) : null}
+          {kind === "website" || kind === "other" ? (
+            <Field id="edit-source-url" label="Web address" problems={urlProblems}>
+              <input
+                {...described("edit-source-url", false, urlProblems)}
+                className={styles.input}
+                type="url"
+                inputMode="url"
+                value={source.url ?? ""}
+                placeholder="https://"
+                maxLength={RECIPE_RULES.urlLength}
+                onChange={(e) => set({ url: e.target.value || null })}
+                onBlur={() => set({ url: webAddress(source.url ?? "") })}
+              />
+            </Field>
+          ) : null}
+        </div>
       </div>
     </fieldset>
   );
