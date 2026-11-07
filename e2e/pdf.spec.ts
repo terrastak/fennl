@@ -59,6 +59,8 @@ test("Premium: a PDF's recipes are found, checked, and each read into a draft", 
   await expect(waiting.getByRole("link", { name: "Lemon Bars" })).toBeVisible();
   await waiting.getByRole("link", { name: "Brown Butter Shortbread and Tomato Soup" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "Review the import" })).toBeVisible();
+  // What to check it against, in the source pane's words (U23 slice 6).
+  await expect(page.getByText(/^Check it against the pages?, fix/)).toBeVisible();
   // Its pages, kept with it.
   const source = page.getByRole("region", { name: "The pages" });
   await showFolded(

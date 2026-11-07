@@ -22,6 +22,10 @@ import {
 import { editedPreview, smallCopy } from "./preview";
 import { looksBlurry } from "./sharpness";
 import styles from "./scan.module.css";
+import importStyles from "../import/import.module.css";
+import { SourceIcon, UploadIcon } from "../import/SourceRow";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 
 // Importing a recipe from photos (phase E9; spec.md E9): photograph the pages with the live
 // camera (page after page, then Done), the phone's own camera, or choose photos; put them in
@@ -238,7 +242,11 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
   const croppingPage = pages.find((p) => p.id === cropping);
 
   return (
-    <section className={styles.section} aria-labelledby="import-photos-title">
+    <section
+      className={`${styles.section} ${importStyles.sourceRow}`}
+      aria-labelledby="import-photos-title"
+    >
+      <SourceIcon path={LAPTOP_ICONS.import} />
       <h2 id="import-photos-title">From photos or screenshots</h2>
       <p>
         A handwritten card, a cookbook page or a printout: take a photo of each side or page. Or a
@@ -247,26 +255,31 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
       </p>
 
       {unavailable ? (
-        <p className={recipes.hint}>{unavailable}</p>
+        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>{unavailable}</p>
       ) : !online ? (
-        <p className={recipes.hint}>Importing photos needs a connection.</p>
+        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>
+          Importing photos needs a connection.
+        </p>
       ) : (
-        <div className={styles.addButtons}>
+        <div className={`${styles.addButtons} ${importStyles.sourceControl}`}>
           {touch && cameraAvailable() ? (
             <button
               type="button"
-              className={recipes.primary}
+              className={`${recipes.primary} ${importStyles.sourceButton}`}
               disabled={!canAdd}
               onClick={() => {
                 setProblem(null);
                 setCamera(true);
               }}
             >
+              <LaptopIcon path={LAPTOP_ICONS.import} />
               Scan pages
             </button>
           ) : null}
           {touch ? (
-            <label className={`${recipes.secondary} ${canAdd ? "" : styles.off}`}>
+            <label
+              className={`${recipes.secondary} ${importStyles.sourceButton} ${canAdd ? "" : styles.off}`}
+            >
               <input
                 type="file"
                 className="visually-hidden"
@@ -275,11 +288,12 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
                 disabled={!canAdd}
                 onChange={(event) => choose(event.currentTarget, true)}
               />
+              <LaptopIcon path={LAPTOP_ICONS.import} />
               Take photo
             </label>
           ) : null}
           <label
-            className={`${touch ? recipes.secondary : recipes.primary} ${canAdd ? "" : styles.off}`}
+            className={`${touch ? recipes.secondary : recipes.primary} ${importStyles.sourceButton} ${canAdd ? "" : styles.off}`}
           >
             <input
               type="file"
@@ -289,6 +303,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
               disabled={!canAdd}
               onChange={(event) => choose(event.currentTarget, false)}
             />
+            <UploadIcon />
             Choose photos
           </label>
         </div>
@@ -375,7 +390,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
           <div className={styles.addButtons}>
             <button
               type="button"
-              className={recipes.primary}
+              className={`${recipes.primary} ${importStyles.ink}`}
               disabled={working !== null || !online || Boolean(unavailable)}
               onClick={() => void read()}
             >
@@ -383,7 +398,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
             </button>
             <button
               type="button"
-              className={recipes.secondary}
+              className={`${recipes.secondary} ${importStyles.quiet}`}
               disabled={working !== null}
               onClick={() => {
                 setPages([]);
@@ -391,6 +406,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
                 setAnnounce("Pages cleared.");
               }}
             >
+              <LaptopIcon path={LAPTOP_ICONS.again} />
               Start over
             </button>
           </div>

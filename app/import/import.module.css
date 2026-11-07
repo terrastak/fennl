@@ -598,3 +598,1214 @@
   margin-top: 0.2rem;
   flex: none;
 }
+
+/* --- The laptop look (U23 slice 6, owner's choices 2026-11-07) -------------------------------- */
+/* Wrappers that only make the laptop's page and boxes, and parts drawn on a laptop only.
+   Elsewhere they add nothing, so phones, touch screens and narrow windows look as before. */
+.importPage,
+.sources,
+.photosBox,
+.pick {
+  display: contents;
+}
+
+.sourceIcon,
+.laptopOnly,
+.barDivider,
+.coverTag,
+.dupIcon {
+  display: none;
+}
+
+/* The paste box, opened by "Paste a recipe…" (every screen size). */
+.pasteForm {
+  display: grid;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+/* A wide window with a mouse or trackpad. The Import page: 760px wide, as Settings; Waiting for
+   review first when drafts wait, its drafts as compact rows in white boxes; the six sources one
+   white box of rows (an icon, the name and its explanation, a quiet button), what a source opens
+   under its row. The review screen: one bar at the top that stays in view, the source beside the
+   draft while scrolling, each part's heading above its white box (the editor's look, from
+   editor.laptopFields), warnings the shared warm note. Buttons: ink only where a form or
+   decision is finished, everything else icon and words (the button rule). Phones, touch screens
+   and windows under 900px keep the screens above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .notLaptop {
+    display: none;
+  }
+
+  /* --- Buttons ------------------------------------------------------------------------------ */
+  /* Ink: filled in the text colour, where a form or decision is finished. */
+  :is(.importPage, .review) .ink {
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  :is(.importPage, .review) .ink:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  :is(.importPage, .review) .ink:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  /* Icon and words: no fill or line, a soft fill when pointed at. */
+  :is(.importPage, .review) .quiet,
+  :is(.importPage, .review) .plain {
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  :is(.importPage, .review) .quiet:has(> svg:first-child) {
+    padding-left: 0.625rem;
+  }
+
+  :is(.importPage, .review) .quiet svg {
+    color: var(--color-text-muted);
+  }
+
+  :is(.importPage, .review) :is(.quiet, .plain):not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  :is(.importPage, .review) :is(.quiet, .plain):disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  /* A discard: red words with a bin. */
+  :is(.importPage, .review) .quiet.danger,
+  :is(.importPage, .review) .quiet.danger svg,
+  :is(.importPage, .review) .quiet.danger:not(:disabled):hover {
+    border: 0;
+    color: var(--color-danger);
+  }
+
+  /* --- The Import page ---------------------------------------------------------------------- */
+  .importPage {
+    display: block;
+    max-width: 47.5rem;
+  }
+
+  .importPage > header {
+    margin-bottom: var(--space-6);
+    padding-top: 0.375rem;
+  }
+
+  .importPage > header h1 {
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .importPage > header > div {
+    max-width: 64ch;
+    margin-top: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .pageNotes > p {
+    margin: 0 0 var(--space-4);
+    font-size: var(--ui-text);
+  }
+
+  /* The sources: one white box of rows, like Settings. */
+  .sources {
+    display: block;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .sources .sourceRow {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    align-items: center;
+    justify-items: stretch;
+    gap: 0 0.875rem;
+    max-width: none;
+    margin: 0;
+    padding: 0.8125rem var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .sources .sourceRow:first-child {
+    border-top: 0;
+  }
+
+  /* What a row opens, and anything it says, sits under its words. */
+  .sources .sourceRow > * {
+    grid-column: 2 / -1;
+    margin-top: var(--space-3);
+  }
+
+  .sources .sourceRow > .sourceIcon {
+    display: grid;
+    place-items: center;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    width: 2rem;
+    height: 2rem;
+    margin-top: 1px;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+  }
+
+  .sources .sourceIcon svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .sources .sourceRow > h2 {
+    grid-column: 2;
+    grid-row: 1;
+    margin: 0;
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .sources .sourceRow > h2 + p {
+    grid-column: 2;
+    grid-row: 2;
+    max-width: 66ch;
+    margin: 0.125rem 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .sources .sourceRow > h2 + p strong {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .sources .sourceRow > p:not(h2 + p),
+  .sources .sourceRow > ul {
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  /* The row's button, at its right. */
+  .sources .sourceRow > .sourceButton,
+  .sources .sourceRow > .sourceControl {
+    grid-column: 3;
+    grid-row: 1 / span 2;
+    align-self: center;
+    justify-self: end;
+    margin: 0;
+  }
+
+  .sources .sourceControl {
+    flex-wrap: nowrap;
+    gap: var(--space-1);
+  }
+
+  /* Quiet words with a small icon (an arrow out of a tray for a file), a soft fill when
+     pointed at and while what it opens is open. */
+  .sources .sourceRow .sourceButton {
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .sources .sourceRow .sourceButton svg {
+    color: var(--color-text-muted);
+  }
+
+  .sources .sourceRow .sourceButton:not(:disabled, [aria-disabled="true"]):hover,
+  .sources .sourceRow .sourceButton[aria-expanded="true"] {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .sources .sourceRow .sourceButton:has(input:focus-visible) {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* What a row opens: under its words, on a faint band to the row's edges. */
+  .sources .sourceRow > .subform {
+    grid-column: 1 / -1;
+    width: auto;
+    margin: var(--space-3) calc(-1 * var(--space-4)) -0.8125rem;
+    padding: var(--space-3) var(--space-4) 0.875rem calc(var(--space-4) + 2rem + 0.875rem);
+    border-top: 1px solid var(--color-border-soft);
+    background: color-mix(in srgb, var(--color-surface-sunken) 40%, var(--color-surface));
+  }
+
+  .sources .sourceRow:last-child > .subform {
+    border-radius: 0 0 var(--radius-pop) var(--radius-pop);
+  }
+
+  .sources .pasteForm {
+    gap: var(--space-3);
+  }
+
+  /* The paste box grows with what's pasted (where the browser can), as the editor's boxes do. */
+  .sources .pasteBox {
+    min-height: 9.375rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    line-height: 1.55;
+    field-sizing: content;
+  }
+
+  .sources .pasteBox:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .sources .pasteBox:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  .sources .pasteBox::placeholder {
+    color: var(--color-text-subtle);
+  }
+
+  .sources .pasteRow {
+    gap: var(--space-2);
+  }
+
+  .sources .subform :is(h3, legend) {
+    font-size: var(--subheading-size);
+  }
+
+  .sources .subform :is(p, li, label, summary) {
+    font-size: var(--ui-text);
+  }
+
+  /* --- Waiting for review ------------------------------------------------------------------- */
+  .importPage .waiting {
+    gap: 0;
+    max-width: none;
+    margin-bottom: var(--space-6);
+  }
+
+  .waitingHead {
+    gap: var(--space-1) var(--space-2);
+    min-height: var(--control);
+  }
+
+  .importPage .waiting h2 {
+    margin-right: auto;
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .waitingButtons {
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  /* "Save all N ready" waits as words while another question is open (or another ink button is
+     showing below), so one ink button shows at a time. */
+  .importPage .saveReady:disabled,
+  .importPage:has(.sources .ink) .saveReady {
+    background: transparent;
+    color: var(--action-text);
+    font-weight: var(--action-weight);
+  }
+
+  .importPage:has(.sources .ink) .saveReady:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--action-text);
+  }
+
+  /* The same among the sources: while "Save N recipes?" is open its answer is the ink button, and
+     when two sources are open at once only the higher one's finishing button is ink. */
+  .importPage:has(.waiting .ask) .sources .ink,
+  .sources .sourceRow:has(.ink) ~ .sourceRow .ink {
+    background: transparent;
+    color: var(--action-text);
+    font-weight: var(--action-weight);
+  }
+
+  .importPage:has(.waiting .ask) .sources .ink:not(:disabled):hover,
+  .sources .sourceRow:has(.ink) ~ .sourceRow .ink:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--action-text);
+  }
+
+  .importPage .saveReady {
+    margin-right: var(--space-1);
+  }
+
+  .importPage .waiting > p[role="status"] {
+    margin-top: var(--space-2);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* The done bar ("Discarded 2 drafts.") and a problem sit just above the list. */
+  .importPage .waiting > :is(div, p):has(> [role="status"]),
+  .importPage .waiting > p[role="alert"] {
+    margin-top: var(--space-3);
+  }
+
+  .importPage .waiting .waitingEmpty {
+    margin-top: var(--space-3);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .selectLine {
+    gap: 0 0.125rem;
+    margin: 0.375rem 0 0 calc(-1 * var(--space-2));
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .importPage .selectLine .plain {
+    min-height: 1.625rem;
+    padding: 0 var(--space-2);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .importPage .selectLine .plain:disabled {
+    color: var(--color-text-muted);
+  }
+
+  .selectLine > span[aria-hidden] {
+    color: var(--color-text-subtle);
+  }
+
+  .selectLine > .selectCount {
+    margin-left: var(--space-2);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .selectLine + p {
+    margin-top: var(--space-2);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .waiting .group {
+    gap: 0;
+    margin-top: var(--space-4);
+  }
+
+  .groupTitle {
+    margin-bottom: 0.375rem;
+    font-size: var(--subheading-size);
+  }
+
+  .groupCount {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.25rem;
+    height: 1.125rem;
+    padding: 0 0.375rem;
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+  }
+
+  .readyDot {
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+
+  /* "Ready to save": its heading and line above a white box, like "To look at". */
+  .waiting .readyBox {
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .waiting .groupHint {
+    margin: -0.125rem 0 var(--space-2);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .waiting .jobs {
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  /* Each draft one compact row: the tick box, the name, where it came from and when, its label
+     in words and colour, and a › showing the row opens it. */
+  .waiting .jobs li {
+    position: relative;
+    align-items: center;
+    gap: 0.625rem;
+    min-height: 2.5rem;
+    padding: 0.375rem var(--space-3);
+    border-bottom: 1px solid var(--color-border-soft);
+  }
+
+  .waiting .jobs li:last-child {
+    border-bottom: 0;
+  }
+
+  .waiting .jobs li:hover {
+    background: color-mix(in srgb, var(--hover-fill) 60%, transparent);
+  }
+
+  .waiting .jobs li[data-chosen] {
+    border-radius: 0;
+    background: color-mix(in srgb, var(--color-accent-soft) 45%, var(--color-surface));
+  }
+
+  .waiting .jobs li:first-child {
+    border-radius: var(--radius-pop) var(--radius-pop) 0 0;
+  }
+
+  .waiting .jobs li:last-child {
+    border-radius: 0 0 var(--radius-pop) var(--radius-pop);
+  }
+
+  .waiting .jobs li:only-child {
+    border-radius: var(--radius-pop);
+  }
+
+  /* The tick box: drawn at 16px, pressed anywhere in 28 x 28 around it, above the row's link so
+     it can be pressed on its own. */
+  .waiting .jobs .pick {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    margin: 0 -0.25rem 0 -0.375rem;
+    border-radius: var(--radius-control);
+    cursor: pointer;
+  }
+
+  .waiting .jobs .pick:hover {
+    background: var(--hover-fill);
+  }
+
+  .waiting .jobs .chooseBox {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    align-self: center;
+    accent-color: var(--color-accent);
+    cursor: pointer;
+  }
+
+  .jobText {
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 0.25rem 0.625rem;
+  }
+
+  /* The name: underlined only when pointed at; the whole row opens the draft. */
+  .waiting .jobLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .waiting .jobLink::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .waiting .jobs li:hover .jobLink {
+    color: var(--color-accent);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .waiting .jobLink:focus-visible {
+    outline: none;
+  }
+
+  .waiting .jobLink:focus-visible::after {
+    border-radius: inherit;
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: -2px;
+  }
+
+  .waiting .jobMeta {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .waiting .tag {
+    gap: 0.25rem;
+    min-height: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-tag);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    line-height: 1.2;
+  }
+
+  .waiting .tag::before {
+    width: 0.375rem;
+    height: 0.375rem;
+  }
+
+  .waiting .jobChevron {
+    margin-left: auto;
+    color: var(--color-text-subtle);
+  }
+
+  .importPage .waitingFoot {
+    margin-top: var(--space-3);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.5;
+  }
+
+  /* "Save 3 recipes?": in the page, under "Select all · Select none". */
+  .waiting .ask {
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+    padding: 0.875rem var(--space-4) 0.75rem;
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      0 2px 6px color-mix(in srgb, var(--color-text) 8%, transparent);
+    font-size: var(--ui-text);
+  }
+
+  .waiting .ask .smallTitle {
+    font-size: var(--subheading-size);
+  }
+
+  .askList {
+    gap: 0.125rem;
+    padding-left: 1.25rem;
+  }
+
+  /* "What “save anyway” does": a small chevron says it opens (turned down while open). */
+  .ask summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-height: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+
+  .ask summary:hover {
+    color: var(--color-text);
+  }
+
+  .ask .askChevron {
+    width: 0.875rem;
+    height: 0.875rem;
+    margin-left: -0.125rem;
+  }
+
+  .ask details[open] .askChevron {
+    transform: rotate(90deg);
+  }
+
+  .askButtons {
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+  }
+
+  /* --- The review screen -------------------------------------------------------------------- */
+  .review {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The bar: first, at the top, staying in view; its fill and line run to the window's edge. */
+  .review .reviewBar {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    order: -1;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.125rem;
+    min-height: 3.25rem;
+    margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-8)) 0;
+    padding: var(--space-2) var(--space-6);
+    border-bottom: 0;
+    background: var(--color-bg);
+    border-image: linear-gradient(to top, var(--color-border-soft) 1px, var(--color-bg) 1px) fill
+      0 / 0 / 0 100vw 0 0;
+  }
+
+  :global(html):has(.reviewBar) {
+    scroll-padding-top: 5rem;
+  }
+
+  .review :where(input, select, textarea, button, summary, label, h2, legend, a) {
+    scroll-margin-top: 5rem;
+  }
+
+  .review .barBack {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin-right: auto;
+    padding: 0 var(--space-3) 0 0.625rem;
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .review .barBack svg {
+    color: var(--color-text-muted);
+  }
+
+  .review .barBack:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .review .reviewBar > p {
+    margin-right: var(--space-2);
+    font-size: var(--ui-text-secondary);
+    white-space: nowrap;
+  }
+
+  .review .reviewBar > div {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  .review .barDivider {
+    display: block;
+    flex: none;
+    width: 1px;
+    height: 1.25rem;
+    margin: 0 0.375rem;
+    background: var(--color-border);
+  }
+
+  .review .reviewBar .ink {
+    margin-left: 0.375rem;
+  }
+
+  .review .laptopOnly {
+    display: inline-flex;
+  }
+
+  .review .reviewTitle {
+    margin: 1.125rem 0 0;
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .review .reviewLede {
+    margin: 0.25rem 0 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .review > p:is([role="alert"], [role="status"]) {
+    max-width: 47.5rem;
+    margin: var(--space-4) 0 0;
+  }
+
+  /* A possible duplicate: a white box with a small copy icon. */
+  .review .duplicates {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    gap: 0.25rem 0.875rem;
+    max-width: 47.5rem;
+    margin: 1.125rem 0 0;
+    padding: 0.875rem var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .review .duplicates > * {
+    grid-column: 2;
+  }
+
+  .review .duplicates > .dupIcon {
+    display: grid;
+    place-items: center;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+    align-self: start;
+    width: 2rem;
+    height: 2rem;
+    border-radius: var(--radius-pop);
+    background: var(--color-warm-soft);
+    color: var(--color-warm-text);
+  }
+
+  .review .dupIcon svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .review .duplicates .sectionTitle {
+    margin: 0.25rem 0 0;
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .dupLinks {
+    font-size: var(--ui-text);
+  }
+
+  .dupLinks a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1875rem;
+    color: var(--color-accent);
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .dupLinks > li > span {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .review .externalIcon {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .review .choices {
+    gap: 0;
+    margin-top: var(--space-2);
+  }
+
+  .review .choices legend {
+    margin-bottom: var(--space-1);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  .review .choices label {
+    gap: 0.625rem;
+    min-height: 1.875rem;
+    margin-left: calc(-1 * var(--space-2));
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    cursor: pointer;
+  }
+
+  .review .choices label:hover {
+    background: var(--hover-fill);
+  }
+
+  .review .choices label:has(input:checked) {
+    font-weight: var(--weight-semibold);
+  }
+
+  .review .choices input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--color-accent);
+  }
+
+  .review .updates {
+    margin-top: var(--space-2);
+    padding: 0.625rem var(--space-3);
+    border-top: 0;
+    border-radius: var(--radius-control);
+    background: color-mix(in srgb, var(--color-surface-sunken) 60%, var(--color-surface));
+    font-size: var(--ui-text);
+  }
+
+  .review .updates .plainList {
+    gap: 0.125rem;
+  }
+
+  .review .updates .smallTitle {
+    margin: 0 0 var(--space-1);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  .review .updates p,
+  .review .duplicates > p {
+    margin-top: 0.375rem;
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* The source beside the draft, staying in view while scrolling; at most 40% of the width, so a
+     large text size still leaves the draft room. */
+  .review .layout {
+    grid-template-columns: min(21.25rem, 40%) minmax(0, 1fr);
+    gap: var(--space-6);
+    margin-top: var(--space-5);
+  }
+
+  .review .source {
+    top: 4.25rem;
+    gap: var(--space-2);
+  }
+
+  .review .sourceHead .sectionTitle {
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .review .sourceBody {
+    gap: var(--space-2);
+  }
+
+  .review .sourceBody > p {
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .review .sourceBody a {
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+  }
+
+  .review .pasted {
+    max-height: calc(100vh - 10rem);
+    padding: 0.75rem 0.875rem;
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    font-size: var(--ui-text);
+    line-height: 1.55;
+  }
+
+  .review .frame {
+    height: calc(100vh - 9.5rem);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .review .pagePhoto img {
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  /* The draft column is a container, so the editor's boxes put "How Fennl reads it" under each
+     box when the column itself is narrow (a large text size), not only when the window is. */
+  .review .draft {
+    justify-items: stretch;
+    gap: 0.875rem;
+    container: review-draft / inline-size;
+  }
+
+  /* "Not quite right?": a white box with Read again at its right. */
+  .review .again {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.125rem var(--space-4);
+    align-items: center;
+    max-width: none;
+    padding: 0.75rem var(--space-4) 0.875rem;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .review .again > * {
+    grid-column: 1 / -1;
+  }
+
+  .review .again > h2 {
+    grid-column: 1;
+    margin: 0;
+    font-size: var(--subheading-size);
+  }
+
+  .review .again > h2 + p {
+    grid-column: 1;
+    max-width: 60ch;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .review .again > .againButton {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .review .again > p:not(h2 + p) {
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* "Fennl has read this as carefully as it can": what "Not quite right?" becomes once read
+     again, in the same quiet white box (it says what's left to do, it doesn't warn). */
+  .review .bestEffort {
+    gap: 0.25rem;
+    max-width: none;
+    padding: 0.75rem var(--space-4) 0.875rem;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .review .bestEffort > h2 {
+    margin: 0;
+    font-size: var(--subheading-size);
+  }
+
+  .review .bestEffort > p {
+    max-width: 60ch;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .review .smallTitle {
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .review .tidy {
+    justify-self: start;
+    margin: -0.125rem 0 -0.125rem calc(-1 * var(--space-2));
+  }
+
+  /* The form: the editor's laptop look (editor.laptopFields); a few parts of its own. */
+  .review .reviewForm {
+    gap: var(--space-5);
+  }
+
+  /* Time and servings: the times on one line, then Serves and Makes. */
+  .review .reviewTimes.reviewTimes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .review .reviewTimes > :last-child > :last-child {
+    grid-column: span 2;
+  }
+
+  /* Categories: chips over the box to add one. */
+  .review .reviewForm .categoriesBox.categoriesBox {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: none;
+    grid-template-rows: none;
+  }
+
+  .review .reviewForm .categoriesBox > * {
+    grid-area: auto;
+  }
+
+  /* Photos to keep: three across, "Keep photo 1" and "Cover" under each. */
+  .review .photos {
+    gap: 0;
+  }
+
+  .review .photos .sectionTitle {
+    margin: 0 0 var(--space-2);
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .review .photosBox {
+    display: grid;
+    gap: 0.625rem;
+    padding: 0.875rem var(--space-4) var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .review .photosBox > p {
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .review .photoList {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .review .photo {
+    position: relative;
+    gap: 0.375rem;
+    width: auto;
+  }
+
+  .review .photo img {
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .review .photo:not([data-kept]) img {
+    opacity: 0.55;
+  }
+
+  .review .coverTag {
+    position: absolute;
+    top: var(--space-2);
+    left: var(--space-2);
+    display: inline-flex;
+    align-items: center;
+    height: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-tag);
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 18%, transparent);
+    color: var(--color-text);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+  }
+
+  .review .photo label {
+    gap: 0.375rem;
+    min-height: 1.75rem;
+    margin-left: -0.375rem;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text-secondary);
+    cursor: pointer;
+  }
+
+  .review .photo label:hover {
+    background: var(--hover-fill);
+  }
+
+  .review .photo label:has(input:disabled) {
+    color: var(--color-text-muted);
+    cursor: default;
+  }
+
+  .review .photo input {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--color-accent);
+  }
+
+  .review .photo p {
+    font-size: var(--ui-text-secondary);
+  }
+}
+
+/* A window a little narrower than usual: the source and the draft share the width, and each
+   list's "How Fennl reads it" goes under its box. */
+@media (min-width: 900px) and (max-width: 1199px) and (pointer: fine) {
+  .review .layout {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+    gap: var(--space-5);
+  }
+
+  .review .photoList {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Windows contrast themes draw no fills or shadows: the boxes, rows, chosen drafts, the question,
+   the ink buttons and the bar keep an edge or a line. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .sources,
+  .waiting .jobs,
+  .waiting .ask,
+  .review .duplicates,
+  .review .again,
+  .review .bestEffort,
+  .review .photosBox,
+  .review .pasted,
+  .review .frame {
+    border: 1px solid;
+  }
+
+  :is(.importPage, .review) .ink {
+    border: 1px solid ButtonText;
+  }
+
+  .sources .pasteBox:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 0;
+  }
+
+  .waiting .jobs li[data-chosen] {
+    outline: 1px solid;
+    outline-offset: -1px;
+  }
+
+  .review .reviewBar {
+    border-image-source: none;
+    border-bottom: 1px solid;
+  }
+
+  .sources .sourceIcon,
+  .review .dupIcon {
+    forced-color-adjust: none;
+    background: Canvas;
+    color: CanvasText;
+  }
+}

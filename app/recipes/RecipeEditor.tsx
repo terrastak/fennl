@@ -260,7 +260,7 @@ function Editor({
             label="Ingredients"
             hint="One per line, as you'd write them."
             linkFrom={id}
-            inEditor
+            laptopLook
           />
           <LinesBox
             session={session}
@@ -268,7 +268,7 @@ function Editor({
             list="directions"
             label="Method"
             hint="One step per line; numbers are added for you."
-            inEditor
+            laptopLook
           />
 
           <RecipeCategories recipeId={id} disabled={!editable} inEditor />

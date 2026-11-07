@@ -16,6 +16,10 @@ import recipes from "../recipes/recipes.module.css";
 import { activeSyncClient, useSyncStatus } from "../sync/useSync";
 import { PdfFile, type PdfPageInfo } from "./pdfFile";
 import styles from "./pdf.module.css";
+import importStyles from "../import/import.module.css";
+import { SourceIcon, UploadIcon } from "../import/SourceRow";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 
 // Importing recipes from a PDF (phase E12; spec.md E12): the PDF is opened on this device, its
 // pages looked through (each page's own text, or a small picture of a scanned page) and the
@@ -315,7 +319,11 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
   };
 
   return (
-    <section className={styles.section} aria-labelledby="import-pdf-title">
+    <section
+      className={`${styles.section} ${importStyles.sourceRow}`}
+      aria-labelledby="import-pdf-title"
+    >
+      <SourceIcon path={LAPTOP_ICONS.pdf} />
       <h2 id="import-pdf-title">From a PDF</h2>
       <p>
         A cookbook, a printout or a file of family recipes, up to {PDF_RULES.pages} pages. Fennl
@@ -324,11 +332,15 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
       </p>
 
       {unavailable ? (
-        <p className={recipes.hint}>{unavailable}</p>
+        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>{unavailable}</p>
       ) : !online ? (
-        <p className={recipes.hint}>Importing a PDF needs a connection.</p>
+        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>
+          Importing a PDF needs a connection.
+        </p>
       ) : rows === null ? (
-        <label className={`${recipes.primary} ${working ? styles.off : ""}`}>
+        <label
+          className={`${recipes.primary} ${importStyles.sourceButton} ${working ? styles.off : ""}`}
+        >
           <input
             type="file"
             className="visually-hidden"
@@ -336,6 +348,7 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
             disabled={working !== null}
             onChange={(event) => void choose(event.currentTarget)}
           />
+          <UploadIcon />
           Choose a PDF
         </label>
       ) : null}
@@ -352,7 +365,7 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
       ) : null}
 
       {rows && pdf ? (
-        <div className={styles.found}>
+        <div className={`${styles.found} ${importStyles.subform}`}>
           <h3 ref={listRef} tabIndex={-1} className={styles.foundTitle}>
             {rows.length === 0
               ? `No recipes found in ${pdf.name}`
@@ -432,7 +445,7 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
           <div className={styles.buttons}>
             <button
               type="button"
-              className={recipes.primary}
+              className={`${recipes.primary} ${importStyles.ink}`}
               disabled={working !== null || chosen.length === 0}
               onClick={() => void read()}
             >
@@ -440,21 +453,23 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
             </button>
             <button
               type="button"
-              className={recipes.secondary}
+              className={`${recipes.secondary} ${importStyles.quiet}`}
               disabled={working !== null}
               onClick={add}
             >
+              <LaptopIcon path={LAPTOP_ICONS.plus} />
               Add a recipe
             </button>
             <button
               type="button"
-              className={recipes.secondary}
+              className={`${recipes.secondary} ${importStyles.quiet}`}
               disabled={working !== null}
               onClick={() => {
                 reset();
                 setProblem(null);
               }}
             >
+              <LaptopIcon path={LAPTOP_ICONS.upload} />
               Choose a different PDF
             </button>
           </div>

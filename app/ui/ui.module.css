@@ -8,6 +8,11 @@
   display: none;
 }
 
+/* A titled warm note's heading and what follows sit straight in the section elsewhere. */
+.warmBody {
+  display: contents;
+}
+
 @media (min-width: 900px) and (pointer: fine) {
   svg.icon {
     display: block;
@@ -82,7 +87,8 @@
   }
 
   /* --- The warm note: pale warm fill, a coloured icon, dark text ------------------------------ */
-  p.warmNote {
+  p.warmNote,
+  section.warmNote {
     display: flex;
     align-items: flex-start;
     gap: var(--space-2);
@@ -95,7 +101,7 @@
     line-height: 1.45;
   }
 
-  p.warmNote > svg.icon {
+  :is(p, section).warmNote > svg.icon {
     margin-top: 0.125rem;
     color: var(--color-warm-text);
   }
@@ -103,12 +109,42 @@
   p.warmNote > span {
     min-width: 0;
   }
+
+  /* A titled note: a small heading, then its words or list, beside the icon. */
+  section.warmNote {
+    max-width: none;
+    margin: 0;
+  }
+
+  section.warmNote > div.warmBody {
+    display: grid;
+    flex: 1 1 auto;
+    gap: var(--space-1);
+    min-width: 0;
+  }
+
+  section.warmNote > div.warmBody > h2 {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  section.warmNote > div.warmBody > :is(p, ul) {
+    margin: 0;
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
 }
 
 /* Windows contrast themes draw no fills: the bar and the note keep an edge there. */
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
   div.doneBar.shown,
-  p.warmNote {
+  p.warmNote,
+  section.warmNote {
     border: 1px solid;
   }
 }

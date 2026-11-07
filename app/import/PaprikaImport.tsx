@@ -9,6 +9,8 @@ import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
 import { activeSyncClient, saveChanges, useCategoryTree, useSyncStatus } from "../sync/useSync";
 import styles from "./import.module.css";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
+import { SourceIcon, UploadIcon } from "./SourceRow";
 import {
   planPaprika,
   previewPaprika,
@@ -203,7 +205,11 @@ export function PaprikaImport() {
       : null;
 
   return (
-    <section className={styles.section} aria-labelledby="import-paprika-title">
+    <section
+      className={`${styles.section} ${styles.sourceRow}`}
+      aria-labelledby="import-paprika-title"
+    >
+      <SourceIcon path={LAPTOP_ICONS.paprika} />
       <h2 id="import-paprika-title">From Paprika</h2>
       <p>
         Your whole Paprika library at once. In Paprika, choose <strong>File › Export</strong>, then{" "}
@@ -212,7 +218,7 @@ export function PaprikaImport() {
       </p>
       {allowed ? (
         <label
-          className={`${recipes.primary} ${working ? styles.off : ""}`}
+          className={`${recipes.primary} ${styles.sourceButton} ${working ? styles.off : ""}`}
           aria-disabled={working !== null}
         >
           <input
@@ -226,10 +232,11 @@ export function PaprikaImport() {
               void choose(chosen);
             }}
           />
+          <UploadIcon />
           Choose the Paprika file
         </label>
       ) : (
-        <p className={recipes.hint}>
+        <p className={`${recipes.hint} ${styles.sourceAside}`}>
           Importing from Paprika is part of Premium. <Link href="/account">See your plan</Link>.
         </p>
       )}
@@ -250,7 +257,7 @@ export function PaprikaImport() {
       ) : null}
 
       {preview && summary && !working ? (
-        <div className={styles.paprikaPreview}>
+        <div className={`${styles.paprikaPreview} ${styles.subform}`}>
           <h3 ref={previewRef} tabIndex={-1} className={styles.smallTitle}>
             {preview.fileName}: {plural(preview.items.length + preview.problems.length, "recipe")}
           </h3>
@@ -341,7 +348,11 @@ export function PaprikaImport() {
 
           <div className={styles.pasteRow}>
             {toDo > 0 ? (
-              <button type="button" className={recipes.primary} onClick={() => void start()}>
+              <button
+                type="button"
+                className={`${recipes.primary} ${styles.ink}`}
+                onClick={() => void start()}
+              >
                 {summary.add.length > 0
                   ? `Import ${plural(summary.add.length, "recipe")}`
                   : "Import"}
@@ -351,7 +362,7 @@ export function PaprikaImport() {
             )}
             <button
               type="button"
-              className={recipes.secondary}
+              className={`${recipes.secondary} ${styles.plain}`}
               onClick={() => {
                 setPreview(null);
                 setFile(null);
