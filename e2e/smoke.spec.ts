@@ -8,7 +8,11 @@ test("home page shows the recipes page", async ({ page }) => {
 
 test("settings shows the server and database are reachable", async ({ page }) => {
   await page.goto("/settings");
-  await expect(page.getByText("Server status: ok, database connected")).toBeVisible();
+  // "Server status: ok, database connected" on a phone; on a laptop (U23) a row named Server
+  // status with "OK, database connected" on its right.
+  const about = page.getByRole("region", { name: "About" });
+  await expect(about).toContainText("Server status");
+  await expect(about.locator("output")).toHaveText(/^ok, database connected$/i);
 });
 
 test("unknown addresses show a friendly not-found page inside the app", async ({ page }) => {

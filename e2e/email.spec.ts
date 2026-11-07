@@ -30,6 +30,12 @@ test("change your email: verify the new address, and the old one is told", async
   await expect(section).toContainText(oldEmail);
   await expect(section).toContainText("Verified on");
 
+  // "Change email…" opens the box (U23), its field taking focus.
+  const change = section.getByRole("button", { name: "Change email…" });
+  await expect(section.getByLabel("New email address")).toHaveCount(0);
+  await change.click();
+  await expect(change).toHaveAttribute("aria-expanded", "true");
+  await expect(section.getByLabel("New email address")).toBeFocused();
   const newEmail = uniqueEmail("moved");
   await section.getByLabel("New email address").fill(newEmail);
   await section.getByRole("button", { name: "Send verification link" }).click();
@@ -49,6 +55,41 @@ test("change your email: verify the new address, and the old one is told", async
     await page.request.get(`/api/dev/outbox?to=${encodeURIComponent(oldEmail)}`)
   ).json()) as { subject: string }[];
   expect(notices[0]?.subject).toBe("Your Fennl email address was changed");
+});
+
+test("the change box closes with Cancel or Escape, and focus goes back", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  const email = await useOwnAccount(context, baseURL!);
+  await page.goto("/settings");
+  const section = page.getByRole("region", { name: "Email" });
+  const change = section.getByRole("button", { name: "Change email…" });
+  const field = section.getByLabel("New email address");
+
+  await change.click();
+  await field.fill("typed@example.com");
+  await section.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(field).toHaveCount(0);
+  await expect(change).toHaveAttribute("aria-expanded", "false");
+  await expect(change).toBeFocused();
+
+  // Opened again it starts empty; Escape closes it too.
+  await page.keyboard.press("Enter");
+  await expect(field).toBeFocused();
+  await expect(field).toHaveValue("");
+  await page.keyboard.press("Escape");
+  await expect(field).toHaveCount(0);
+  await expect(change).toBeFocused();
+
+  // A problem shows in the box, which stays open.
+  await change.click();
+  await field.fill(email);
+  await section.getByRole("button", { name: "Send verification link" }).click();
+  await expect(section.getByRole("alert")).toHaveText("That's already your email.");
+  await expect(field).toBeVisible();
+  await expectAccessible(page);
 });
 
 test("a used link says so, and nothing changes", async ({ page, context, baseURL }) => {
@@ -88,6 +129,12 @@ test("a bounced address shows a notice on every page, until it's said to be righ
   const section = page.getByRole("region", { name: "Email" });
   await expect(section).toContainText("Emails to this address aren’t arriving.");
   await expect(section).toBeInViewport();
+  // The link opens the box for a new address, ready to type in (U23).
+  await expect(section.getByLabel("New email address")).toBeFocused();
+  await expect(section.getByRole("button", { name: "Change email…" })).toHaveAttribute(
+    "aria-expanded",
+    "true",
+  );
   // Scrolled to, clear of the phone's top bar: nothing covers the section's heading.
   const heading = section.getByRole("heading", { name: "Email" });
   await expect
@@ -139,6 +186,8 @@ test("changing to a new address takes the notice away", async ({ page, context, 
 
   const newEmail = uniqueEmail("working");
   const section = page.getByRole("region", { name: "Email" });
+  // Arriving at #email opens the box (U23).
+  await expect(section.getByLabel("New email address")).toBeFocused();
   await section.getByLabel("New email address").fill(newEmail);
   await section.getByRole("button", { name: "Send verification link" }).click();
   await expect(section.getByRole("status")).toContainText(`We sent a link to ${newEmail}`);

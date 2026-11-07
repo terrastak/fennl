@@ -69,6 +69,14 @@ export function canEdit(status: SyncStatus): boolean {
   return status.phase !== "offline" && status.phase !== "waiting";
 }
 
+/** The colour of the dot before those words (the words say the same thing). */
+export function statusTone(status: SyncStatus): "ok" | "busy" | "waiting" | "problem" {
+  if (status.phase === "saved" && status.pending === 0) return "ok";
+  if (status.phase === "syncing" || status.phase === "starting") return "busy";
+  if (["signed_out", "upgrade", "unavailable"].includes(status.phase)) return "problem";
+  return "waiting";
+}
+
 /** The few words shown in the app's frame. */
 export function statusText(status: SyncStatus): string {
   const waiting = `${status.pending} ${status.pending === 1 ? "change" : "changes"} waiting`;
