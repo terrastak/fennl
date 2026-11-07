@@ -11,6 +11,17 @@ import { signUpConfirmed, useFreshAddress, useOwnAccount } from "./support";
 
 const TACOS = "Black Bean Tacos with Lime Crema";
 
+/**
+ * The print choices: always showing on a computer (U23, owner's choice 2026-11-07), folded away
+ * under "Change what's printed" elsewhere.
+ */
+async function showChoices(page: Page) {
+  await expect(page.getByRole("button", { name: "Print", exact: true })).toBeVisible();
+  const fold = page.getByText("Change what’s printed");
+  if (await fold.isVisible()) await fold.click();
+  await expect(page.getByRole("group", { name: "Layout" })).toBeVisible();
+}
+
 interface PdfPage {
   width: number;
   height: number;
@@ -141,8 +152,12 @@ test("Print a recipe in two taps, with its linked recipe, and save it as a PDF",
   expect(pdf.at(-1)?.text).toContain("Stir together.");
   expect(pdf[0]?.text).not.toContain("Stir together.");
 
-  // A recipe card: its own small paper, everything still on it.
-  await page.getByText("Change what’s printed").click();
+  // A recipe card: its own small paper, everything still on it. On a computer the choices are
+  // always showing, with no fold-out.
+  if (!test.info().project.use.isMobile) {
+    await expect(page.getByText("Change what’s printed")).toHaveCount(0);
+  }
+  await showChoices(page);
   await page.getByLabel("Recipe card, 4×6").check();
   await expect(page.getByText("Your choices are kept for next time")).toBeVisible();
   const cards = await readPdf(await page.pdf({ preferCSSPageSize: true }));
@@ -155,7 +170,7 @@ test("Print a recipe in two taps, with its linked recipe, and save it as a PDF",
   // The choices are kept with the account, not just this device.
   await page.evaluate(() => localStorage.removeItem("fennl:print"));
   await page.reload();
-  await page.getByText("Change what’s printed").click();
+  await showChoices(page);
   await expect(page.getByLabel("Recipe card, 4×6")).toBeChecked();
   await page.getByLabel("Standard").check();
   await page.getByLabel("Linked recipes, each on its own page").uncheck();
@@ -214,7 +229,7 @@ test("Print what the list shows, or the recipes ticked, as a booklet", async ({
   await expect(page.getByRole("article")).toHaveCount(2);
   // A contents page only when asked for.
   await expect(page.getByRole("navigation", { name: "Contents" })).toHaveCount(0);
-  await page.getByText("Change what’s printed").click();
+  await showChoices(page);
   await page.getByLabel("Contents page").check();
   await expect(page.getByRole("navigation", { name: "Contents" })).toContainText(
     "Lemon Olive Oil Cake",

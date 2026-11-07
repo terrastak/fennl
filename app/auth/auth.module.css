@@ -277,3 +277,228 @@
   overflow-wrap: anywhere;
   text-align: center;
 }
+
+/* --- On a laptop (U23 slice 7, owner's choices 2026-11-07) ------------------------------------ */
+/* Sign in, Create an account and the other account screens: the same centred card under the
+   logo, narrower and with less padding, so the form sits higher; smaller semibold labels;
+   boxes and the main button 36px (a little taller than inside the app, this being the page's one
+   form); the main button the one ink button; Google, Apple and other second choices soft grey;
+   a problem in the soft warm note. Scoped to these screens' page, since Settings borrows the
+   fields. Phones, touch screens and windows under 900px keep the card above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .page {
+    padding: 2.25rem var(--space-4) var(--space-10);
+  }
+
+  .brand {
+    margin-bottom: 1.375rem;
+  }
+
+  .brandLink {
+    --logo-gap: 0.5625rem;
+    --logo-wordmark-size: 1.375rem;
+  }
+
+  .brandLink svg {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .main {
+    max-width: 25rem;
+  }
+
+  .card {
+    padding: 1.75rem 2rem 1.5rem;
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow:
+      0 0 0 1px var(--color-border-soft),
+      0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent);
+  }
+
+  .page .header {
+    margin-bottom: 1.25rem;
+  }
+
+  .page .header :global(.hand-note) {
+    margin: 0 0 0.125rem -0.25rem;
+    font-size: 1.375rem;
+  }
+
+  .page .title {
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .page .lead {
+    margin-top: 0.375rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .page .body {
+    font-size: var(--ui-text);
+    line-height: 1.5;
+  }
+
+  .page .form {
+    gap: 0.875rem;
+  }
+
+  .page .field {
+    gap: 0.375rem;
+  }
+
+  .page .label {
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-semibold);
+  }
+
+  .page .smallLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    font-size: var(--ui-text-label);
+  }
+
+  .page .input {
+    min-height: 2.25rem;
+    padding: 0 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .page .input:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .page .input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  .page .input[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+
+  .page .hint {
+    font-size: var(--ui-text-label);
+    line-height: 1.4;
+  }
+
+  .page :is(.button, .secondaryButton, .providerButton) {
+    gap: 0.5rem;
+    min-height: 2.25rem;
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    line-height: 1.2;
+  }
+
+  /* The main button: ink, where the form is finished. */
+  .page .button {
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .page .button:hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .page .form .button {
+    margin-top: 0.25rem;
+  }
+
+  /* Google, Apple and other second choices: soft grey. */
+  .page :is(.secondaryButton, .providerButton) {
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .page :is(.secondaryButton, .providerButton):hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+    color: var(--color-text);
+  }
+
+  .page .providerIcon {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .page .providers,
+  .page .stack {
+    gap: 0.5rem;
+  }
+
+  .page .divider {
+    margin: 1.125rem 0 0.875rem;
+    font-size: var(--ui-text-label);
+  }
+
+  .page :is(.error, .notice) {
+    margin-bottom: var(--space-4);
+    padding: 0.625rem var(--space-3);
+    border: 0;
+    border-radius: var(--radius-pop);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  /* A problem: the soft warm note (the words say what went wrong). */
+  .page .error {
+    background: var(--color-warm-soft);
+    color: var(--color-text);
+  }
+
+  .page .footer {
+    margin-top: 1.125rem;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .page .suggestion {
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+    font-size: var(--ui-text);
+  }
+
+  .page .deviceList {
+    gap: var(--space-2);
+  }
+
+  .page .deviceList li {
+    gap: var(--space-2);
+    padding: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    font-size: var(--ui-text);
+  }
+}
+
+/* Windows contrast themes draw no fills: the card, buttons and notes keep an edge. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .card,
+  .page :is(.error, .notice),
+  .page .deviceList li {
+    border: 1px solid CanvasText;
+  }
+
+  .page :is(.button, .secondaryButton, .providerButton) {
+    border: 1px solid ButtonText;
+  }
+
+  .page .input:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 0;
+  }
+}

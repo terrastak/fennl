@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { pairKey, type DuplicatePair } from "../../shared/duplicates";
-import { UndoBar } from "../categories/UndoBar";
+import categoryStyles from "../categories/categories.module.css";
 import { useUndoable } from "../categories/useUndoable";
 import { PageHeader } from "../pages/PageHeader";
+import { DoneBar } from "../ui/DoneBar";
 import { Link } from "../router";
 import { activeSyncClient, useRecipeList } from "../sync/useSync";
 import { problemText, useDuplicateDismissals } from "./duplicateDismissals";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
 import { MergePanel } from "./MergePanel";
 import styles from "./recipes.module.css";
 
@@ -13,6 +16,19 @@ import styles from "./recipes.module.css";
 // in the background), compared side by side and merged, or marked "not a duplicate" so they
 // aren't offered again. Merging never deletes: the extra copy goes to Trash, and Undo puts
 // everything back.
+//
+// On a laptop (U23, owner's choices 2026-11-07): Find duplicates, Look again and "Show the
+// dismissed pair again" quiet buttons with small icons; each pair one white box, its buttons
+// quiet with icons (Compare and merge becomes Close while open); what happened in the shared done
+// bar, Undo at its right. The comparison itself is in MergePanel. Phones keep the page as it was.
+
+/** Icons beside the words on a laptop only. */
+const ICONS = {
+  refresh:
+    "M20 11a8 8 0 0 0-14.7-4.3L4 8.5M4 4v4.5h4.5M4 13a8 8 0 0 0 14.7 4.3l1.3-1.8M20 20v-4.5h-4.5",
+  eye: "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12zM14.8 12a2.8 2.8 0 1 1-5.6 0 2.8 2.8 0 0 1 5.6 0",
+  up: "m6 15 6-6 6 6",
+};
 
 const REASONS = {
   same_page: "From the same page",
@@ -93,7 +109,7 @@ export function DuplicatesPage() {
   };
 
   return (
-    <>
+    <div className={styles.duplicatesPage}>
       <Link href="/" className={styles.back}>
         ← All recipes
       </Link>
@@ -107,31 +123,47 @@ export function DuplicatesPage() {
       <div className={styles.duplicateTop}>
         <button
           type="button"
-          className={styles.primary}
+          className={`${styles.primary} ${found === null ? styles.findButton : styles.againButton}`}
           disabled={scanning || recipes === null}
           onClick={() => void scan()}
         >
+          <LaptopIcon path={found === null ? LAPTOP_ICONS.search : ICONS.refresh} />
           {scanning ? "Looking…" : found === null ? "Find duplicates" : "Look again"}
         </button>
         {dismissed !== null && dismissed.length > 0 && found !== null && hiddenCount > 0 ? (
-          <button type="button" className={styles.textButton} onClick={() => void showAgain()}>
+          <button
+            type="button"
+            className={`${styles.textButton} ${styles.showAgain}`}
+            onClick={() => void showAgain()}
+          >
+            <LaptopIcon path={ICONS.eye} />
             Show {hiddenCount === 1 ? "the dismissed pair" : `${hiddenCount} dismissed pairs`} again
           </button>
         ) : null}
       </div>
 
-      <UndoBar done={done} failed={failed} onUndo={() => void undo()} />
-      <p
-        role={message?.problem ? "alert" : "status"}
-        className={message?.problem ? styles.error : styles.hint}
-      >
-        {message?.text ?? ""}{" "}
-        {lastDismissed && !message?.problem ? (
-          <button type="button" className={styles.textButton} onClick={() => void takeBack()}>
-            Undo
-          </button>
-        ) : null}
-      </p>
+      <DoneBar
+        message={
+          failed ? "That couldn’t be saved just now. Please try again." : (done?.message ?? "")
+        }
+        problem={failed}
+        onUndo={done && done.undo.length > 0 && !failed ? () => void undo() : null}
+        className={categoryStyles.undoBar}
+        undoClassName={categoryStyles.undoButton}
+      />
+      {message?.problem ? (
+        <p role="alert" className={styles.error}>
+          {message.text}{" "}
+        </p>
+      ) : (
+        <DoneBar
+          message={message?.text ?? ""}
+          onUndo={lastDismissed ? () => void takeBack() : null}
+          className={`${styles.hint} ${styles.duplicateNote}`}
+          messageClassName={styles.inlineWords}
+          undoClassName={styles.textButton}
+        />
+      )}
 
       {found === null ? null : pairs.length === 0 ? (
         <p>
@@ -156,7 +188,9 @@ export function DuplicatesPage() {
                   <div className={styles.duplicateHead}>
                     <p className={styles.duplicateTitles}>
                       <Link href={`/recipes/${a.id}`}>{a.title || "Untitled"}</Link>
-                      <span aria-hidden="true"> and </span>
+                      <span aria-hidden="true" className={styles.duplicateAnd}>
+                        {" and "}
+                      </span>
                       <span className="visually-hidden">and</span>
                       <Link href={`/recipes/${b.id}`}>{b.title || "Untitled"}</Link>
                     </p>
@@ -165,17 +199,19 @@ export function DuplicatesPage() {
                   <div className={styles.duplicateButtons}>
                     <button
                       type="button"
-                      className={styles.secondary}
+                      className={`${styles.secondary} ${styles.pairButton}`}
                       aria-expanded={isOpen}
                       onClick={() => setOpen(isOpen ? null : key)}
                     >
+                      <LaptopIcon path={isOpen ? ICONS.up : LAPTOP_ICONS.copy} />
                       {isOpen ? "Close" : "Compare and merge"}
                     </button>
                     <button
                       type="button"
-                      className={styles.textButton}
+                      className={`${styles.textButton} ${styles.pairButton}`}
                       onClick={() => void notDuplicate(pair)}
                     >
+                      <LaptopIcon path={LAPTOP_ICONS.x} />
                       Not a duplicate
                     </button>
                   </div>
@@ -198,6 +234,6 @@ export function DuplicatesPage() {
           </ul>
         </section>
       )}
-    </>
+    </div>
   );
 }
