@@ -76,7 +76,8 @@ test("On a computer: the ingredients beside two steps, two steps at a time", asy
   await page.keyboard.press("ArrowLeft");
   await expect(page.getByRole("heading", { level: 1, name: "Steps 3–4 of 5" })).toBeVisible();
   // A timer's View step goes back to the step that started it.
-  await page.getByRole("button", { name: "Timer", exact: true }).click();
+  // On a computer: Timers, with how many there are (U23).
+  await page.getByRole("button", { name: /^Timers, 1 timer/ }).click();
   await page
     .getByRole("dialog", { name: "Timers" })
     .getByRole("button", { name: /^View step/ })

@@ -893,3 +893,1324 @@
     text-decoration: underline dashed;
   }
 }
+
+/* Pieces drawn on a laptop only (below): hidden on phones, touch screens and narrow windows. */
+.order,
+.presetsLabel,
+.pausedTag,
+.named {
+  display: none;
+}
+
+.rowRing {
+  display: none;
+}
+
+.rangeChoices {
+  display: contents;
+}
+
+/*
+ * The laptop look (U23, mockup approved 2026-11-07, owner's choices the same day): the panel
+ * smaller and quieter, 440px wide over a lightly dimmed page; every timer a row in one white box
+ * (a ring, the name with "Paused" in a tag, where it's from, the time large on the right, opening
+ * Adjust time) with quiet word buttons and Cancel in red; "Keep cooking" in small grey capitals;
+ * Add timer soft grey; notifications a box with an On/Off switch and How they work; Save time and
+ * Start timer the one ink button on their forms with Cancel in plain words after; quick lengths
+ * one small switch; the warnings the shared warm note; the corner cards smaller white cards with
+ * Pause and Stop as small icons. Every size, colour and corner from the tokens.
+ */
+@media (min-width: 900px) and (pointer: fine) {
+  /* --- The panel ------------------------------------------------------------------------------ */
+  .dialog {
+    width: min(100vw, 27.5rem);
+    border-left: 0;
+    background: var(--color-bg);
+    box-shadow: var(--shadow-pop);
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+  }
+
+  .dialog::backdrop {
+    background: color-mix(in srgb, var(--color-text) 22%, transparent);
+  }
+
+  .startDialog::backdrop {
+    background: color-mix(in srgb, var(--color-text) 14%, transparent);
+  }
+
+  .panelHead {
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: 1.125rem var(--space-4) var(--space-3) 1.25rem;
+  }
+
+  .panelHead .eyebrow {
+    margin-bottom: var(--space-1);
+  }
+
+  /* Small grey capitals: over the panel's title, a step's question, and nothing handwritten. */
+  .eyebrow {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.06em;
+  }
+
+  /* Adjust time and Add timer: the small line under the title, in grey. */
+  .below > div {
+    display: flex;
+    flex-direction: column-reverse;
+  }
+
+  .below .eyebrow {
+    margin: 0.1875rem 0 0;
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-regular);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .panelTitle {
+    font-size: 1.375rem;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+  }
+
+  .headButtons {
+    gap: var(--space-1);
+    padding-top: 0.375rem;
+  }
+
+  .close {
+    display: grid;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    place-items: center;
+    border-radius: var(--radius-control);
+    color: var(--color-text-muted);
+  }
+
+  .close:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .closeChar {
+    display: none;
+  }
+
+  .panelBody {
+    gap: 0;
+    padding: var(--space-4) 1.25rem var(--space-6);
+  }
+
+  .empty {
+    padding: var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    font-size: var(--ui-text);
+  }
+
+  /* Every button in the panel: no outline, a soft fill under the pointer, the 2px ring. */
+  .dialog button:focus-visible,
+  .startDialog button:focus-visible,
+  .card button:focus-visible,
+  .cardDone button:focus-visible,
+  .more:focus-visible,
+  .howTheyWork summary:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* Add timer: soft grey (owner's choice 2026-11-07), a + before the words. */
+  .primary.addTimer {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 var(--space-3) 0 0.625rem;
+    border-radius: var(--radius-control);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+  }
+
+  .primary.addTimer:hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  }
+
+  /* "3 timers · soonest to end first", over the list. */
+  .order {
+    display: block;
+    margin: 0 0.125rem var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* --- Every timer: a row in one white box ---------------------------------------------------- */
+  .list {
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    overflow: hidden;
+  }
+
+  .row,
+  .rowDone {
+    gap: 0;
+    margin: 0;
+    padding: var(--space-3) 0.875rem 0.625rem;
+    border: 0;
+    border-top: 1px solid var(--color-border-soft);
+    border-radius: 0;
+  }
+
+  .row:first-child,
+  .rowDone:first-child {
+    border-top: 0;
+  }
+
+  /* A finished one: a pale warm row in the box, "Finished: Bake" in words. */
+  .rowDone {
+    background: var(--color-warm-soft);
+  }
+
+  .rowTop {
+    display: grid;
+    grid-template-columns: 2rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.625rem;
+  }
+
+  .rowTop > div {
+    gap: 0;
+  }
+
+  .rowRing {
+    display: block;
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .rowName {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: var(--subheading-size);
+    line-height: 1.3;
+  }
+
+  /* "Paused" in words, not only the grey ring and time. */
+  .pausedTag {
+    display: inline-block;
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-tag);
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-medium);
+    line-height: 1.4;
+  }
+
+  .pausedWords {
+    display: none;
+  }
+
+  .rowFrom {
+    margin-top: 0.0625rem;
+    overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-regular);
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  .rowTime,
+  .rowTimePaused {
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: 1.625rem;
+    font-weight: var(--weight-regular);
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+
+  .rowTimePaused {
+    color: var(--color-text-muted);
+  }
+
+  /* The time is the button that adjusts it (as in cook mode). */
+  .rowTimeButton {
+    height: 2.25rem;
+    margin-right: -0.375rem;
+    padding: 0 0.375rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    cursor: pointer;
+  }
+
+  .rowTimeButton:not(.rowTimePaused) {
+    color: var(--color-text);
+  }
+
+  .rowTimeButton:hover {
+    background: var(--hover-fill);
+  }
+
+  /* Quiet word buttons under the name; Cancel in red at the right. */
+  .rowButtons {
+    flex-wrap: nowrap;
+    gap: 0.125rem;
+    margin: var(--space-2) -0.5rem 0 -0.375rem;
+  }
+
+  .pill,
+  .cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-regular);
+    white-space: nowrap;
+  }
+
+  .pill:has(> svg:first-child) {
+    padding-left: 0.375rem;
+  }
+
+  .pill:hover,
+  .cancel:hover {
+    border-color: transparent;
+    background: var(--hover-fill);
+    text-decoration: none;
+  }
+
+  .rowButtons svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--color-text-muted);
+  }
+
+  .rowButtons .smallIcon {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .cancel {
+    color: var(--color-danger);
+  }
+
+  /* A finished row's Dismiss: soft warm, as on the corner card. A white fill with a warm edge, so
+     the warm words keep at least 4.5:1 in every scheme (a warm fill took Harbor light under it). */
+  .primary.rowDismiss {
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-warm-text) 30%, transparent);
+    color: var(--color-warm-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+  }
+
+  .primary.rowDismiss:hover {
+    background: color-mix(in srgb, var(--color-warm-text) 6%, var(--color-surface));
+  }
+
+  /* The warnings under a timer are the shared warm note (app/ui); here only its place. */
+  .problem {
+    margin-top: var(--space-2);
+  }
+
+  .note {
+    margin-top: 0.375rem;
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .textLink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.5rem;
+    color: var(--color-accent);
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.125rem;
+    vertical-align: baseline;
+  }
+
+  .textLink:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  /* --- Notifications: one box, a row with the switch, then How they work ---------------------- */
+  .notifications {
+    display: block;
+    margin-top: 1.25rem;
+    padding: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    overflow: hidden;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+  }
+
+  /* A notification that never arrived: a warm strip at the top of the box, Dismiss at its right. */
+  .notifications p.missed {
+    border-bottom: 1px solid var(--color-border-soft);
+    border-radius: 0;
+    padding: 0.625rem 0.875rem;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .notifications p.missed > span {
+    display: flex;
+    flex: 1;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .missedWords {
+    flex: 1;
+  }
+
+  .textLink.missedDismiss {
+    flex: none;
+    min-height: 1.625rem;
+    margin: -0.1875rem -0.375rem -0.1875rem 0;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .textLink.missedDismiss:hover {
+    background: color-mix(in srgb, var(--color-warm-soft) 90%, var(--color-text));
+  }
+
+  .notifyRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-3) 0.875rem;
+  }
+
+  .notifyName {
+    display: block;
+    margin: 0;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .notifyRow .notifyLine {
+    margin: 0.125rem 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  /* The On/Off switch, as Settings' Show nutrition: the knob moves and the word says which. */
+  .switch {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .switchInput {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .switchInput:disabled {
+    cursor: default;
+  }
+
+  .track {
+    position: relative;
+    width: 2rem;
+    height: 1.125rem;
+    border-radius: var(--radius-full);
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px var(--color-text-muted);
+    transition: background-color var(--duration-fast);
+  }
+
+  .track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: var(--radius-full);
+    background: var(--color-text-muted);
+    transition: transform var(--duration-fast);
+  }
+
+  .switchInput:checked ~ .track {
+    background: var(--color-accent);
+    box-shadow: none;
+  }
+
+  .switchInput:checked ~ .track::after {
+    top: 2px;
+    left: 2px;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 25%, transparent);
+    transform: translateX(0.875rem);
+  }
+
+  .switchInput:focus-visible ~ .track {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* How they work: a quiet button with a chevron that turns, in the same box. */
+  .howTheyWork {
+    display: block;
+    padding: var(--space-1) 0.375rem;
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .howTheyWork[open] {
+    display: block;
+  }
+
+  .howTheyWork summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: 1.875rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    list-style: none;
+  }
+
+  .howTheyWork summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .howTheyWork summary:hover {
+    background: var(--hover-fill);
+  }
+
+  .howTheyWork summary svg.howIcon {
+    width: 0.75rem;
+    height: 0.75rem;
+    color: var(--color-text-muted);
+    transition: transform var(--duration-fast);
+  }
+
+  .howTheyWork[open] summary svg.howIcon {
+    transform: rotate(90deg);
+  }
+
+  .howBody {
+    display: grid;
+    justify-items: start;
+    padding: 0.125rem var(--space-2) 0.625rem 1.625rem;
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .howBody .needs {
+    margin: 0;
+    padding-left: 0.875rem;
+    gap: 0.1875rem;
+    color: var(--color-text-muted);
+  }
+
+  .howBody .textLink {
+    margin-top: 0.375rem;
+  }
+
+  .howBody .hint {
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* The test's answer: a green circle with a tick, or a ✗ in the warm colour; dark words. */
+  .tested,
+  .howBody .problem {
+    display: flex;
+    gap: 0.375rem;
+    margin: 0.375rem 0 0;
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .tested:empty,
+  .howBody .problem:empty {
+    display: none;
+  }
+
+  .mark {
+    display: grid;
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.0625rem;
+    place-items: center;
+    font-size: 0.625rem;
+  }
+
+  .tested .mark {
+    border-radius: var(--radius-full);
+    background: var(--color-success);
+    color: var(--color-surface);
+  }
+
+  .howBody .problem .mark {
+    color: var(--color-warm-text);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .notifyProblem {
+    margin: 0;
+    padding: 0 0.875rem var(--space-3);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* --- Adjust time, Add timer and a step's question -------------------------------------------- */
+  .adjustName {
+    padding-top: 0;
+    font-size: var(--subheading-size);
+  }
+
+  /* Time remaining: a white box, the time large at the right. */
+  .status,
+  .statusHeld {
+    margin: 0.625rem 0 1.125rem;
+    padding: 0.625rem 0.875rem;
+    border: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-regular);
+  }
+
+  .statusHeld {
+    background: var(--color-warm-soft);
+    color: var(--color-warm-text);
+  }
+
+  .statusTime {
+    color: var(--color-text);
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+
+  /* Hours, minutes and seconds: each a box with its own ▲ and ▼, every arrow 24px tall. */
+  .duration {
+    gap: 0;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .duration legend,
+  .range legend {
+    margin: 0 0 var(--space-2);
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  .fields {
+    display: flex;
+    gap: 0.625rem;
+  }
+
+  .field {
+    gap: var(--space-1);
+  }
+
+  .field label {
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-regular);
+  }
+
+  .numberBox {
+    align-items: stretch;
+    width: 5.25rem;
+    height: 3rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    overflow: hidden;
+  }
+
+  /* A changed number: an accent edge. */
+  .numberBox.changed {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 1px var(--color-accent);
+  }
+
+  /* Typing in one: the standard 2px focus ring outside its edge, so it reads apart from a changed
+     box however many are changed. */
+  .numberBox:focus-within {
+    border-color: var(--color-accent);
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .number {
+    flex: 1;
+    width: 0;
+    height: auto;
+    padding: 0 0 0 var(--space-3);
+    border: 0;
+    border-radius: 0;
+    background: none;
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: 1.5rem;
+    font-weight: var(--weight-regular);
+    text-align: left;
+  }
+
+  .number:focus {
+    outline: none;
+  }
+
+  .arrows {
+    position: static;
+    display: grid;
+    grid-template-rows: 1.5rem 1.5rem;
+    gap: 0;
+    width: 1.625rem;
+    border-left: 1px solid var(--color-border-soft);
+  }
+
+  .arrows button {
+    width: auto;
+    border-radius: 0;
+    background: none;
+    color: var(--color-text-muted);
+  }
+
+  .arrows button + button {
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .arrows button:hover:not(:disabled) {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .arrows button:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .arrows svg {
+    width: 0.625rem;
+    height: 0.375rem;
+    stroke-width: 1.6;
+  }
+
+  .fieldHint {
+    margin-top: var(--space-2);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  /* Add timer's name. */
+  .nameLabel {
+    padding-top: 0;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .nameLabel small {
+    font-size: var(--ui-text-label);
+  }
+
+  .nameInput {
+    min-height: 2.25rem;
+    margin: 0.375rem 0 1.125rem;
+    padding: 0 var(--space-3);
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .nameInput:focus {
+    border-color: var(--color-accent);
+    outline: none;
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  /* Quick lengths: one small switch, the chosen length raised and bold. */
+  .presetsLabel {
+    display: block;
+    margin: 1.125rem 0 0.375rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .presets,
+  .rangeChoices {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    justify-self: start;
+    padding: 2px;
+    border-radius: calc(var(--radius-control) + 1px);
+    background: var(--color-surface-sunken);
+  }
+
+  .chip,
+  .range label {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--chip);
+    padding: 0 0.5625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-regular);
+    cursor: pointer;
+  }
+
+  .chip:hover,
+  .range label:hover {
+    border-color: transparent;
+    color: var(--color-text);
+  }
+
+  .chip[aria-pressed="true"],
+  .range label:has(input:checked) {
+    border-color: transparent;
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 12%, transparent);
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* A step's two lengths: the radio hidden, the label its switch part; the ring on the label. */
+  .range {
+    display: block;
+    margin: 0 0 0.875rem;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+
+  .range legend {
+    font-weight: var(--weight-semibold);
+  }
+
+  .range label {
+    position: relative;
+    padding: 0 var(--space-3);
+  }
+
+  .range input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+  }
+
+  .range label:has(input:focus-visible) {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* The buttons: the ink button, then Cancel in plain words, under a hairline in the panel. */
+  .actions {
+    justify-content: flex-start;
+    gap: var(--space-2);
+    margin-top: 1.25rem;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .start .actions {
+    margin-top: var(--space-4);
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .actions .primary,
+  .actions .secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+  }
+
+  .actions .primary {
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+  }
+
+  .actions .primary:not(:disabled):hover {
+    background: var(--button-ink-hover);
+  }
+
+  .actions .smallIcon {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .actions .secondary {
+    background: none;
+    color: var(--color-text);
+  }
+
+  .actions .secondary:hover {
+    border-color: transparent;
+    background: var(--hover-fill);
+  }
+
+  /* A step's "Start a timer for 40 minutes?": small, low in the middle of the page beside the
+     left panel. */
+  .startDialog {
+    width: min(calc(100vw - 2 * var(--space-4)), 25rem);
+    margin: auto auto 4rem
+      max(var(--space-4), calc(var(--sidebar-width) + (100vw - var(--sidebar-width) - 25rem) / 2));
+    padding: 1.125rem 1.25rem var(--space-4);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: var(--shadow-pop);
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+  }
+
+  .start {
+    gap: 0;
+  }
+
+  .startTitle {
+    margin: 0.375rem 0 0.125rem;
+    font-size: 1.25rem;
+    line-height: 1.2;
+  }
+
+  .startName {
+    margin: 0 0 0.875rem;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .named {
+    display: inline;
+  }
+
+  .startNameText {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* --- Cook mode's timer strip (TimerButtons) -------------------------------------------------- */
+  .buttons {
+    flex-wrap: nowrap;
+    gap: 0.125rem;
+  }
+
+  .clock {
+    min-height: 2rem;
+    margin-left: var(--space-2);
+    padding: 0 0.375rem;
+    border-bottom: 0;
+    border-radius: var(--radius-control);
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: 1.375rem;
+    font-weight: var(--weight-regular);
+    line-height: 1;
+    text-decoration: underline dotted 1.5px;
+    text-underline-offset: 0.3125rem;
+  }
+
+  .clock:hover {
+    background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  }
+
+  .clockDone {
+    margin-left: var(--space-2);
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: 1.375rem;
+    font-weight: var(--weight-regular);
+    line-height: 1;
+  }
+
+  .stripPaused {
+    margin: 0 var(--space-1) 0 0.125rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Pause (Resume) and Stop as small icons (owner's choice 2026-11-07). */
+  .stripIcon {
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .stripIcon:hover {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+
+  .stripIcon svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .small {
+    min-height: 2rem;
+    padding: 0 0.625rem;
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .small:hover {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+    text-decoration: none;
+  }
+
+  .small.stripDismiss {
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent);
+  }
+
+  .small.stripDismiss:hover {
+    background: color-mix(in srgb, currentColor 6%, var(--color-surface));
+  }
+
+  .buttons button:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* --- The corner cards ------------------------------------------------------------------------ */
+  .floating {
+    right: var(--space-6);
+    bottom: 1.25rem;
+    gap: var(--space-2);
+    width: min(18rem, calc(100vw - var(--sidebar-width) - 3rem));
+  }
+
+  .card,
+  .cardDone {
+    gap: var(--space-1);
+    padding: var(--space-2) 0.375rem var(--space-2) var(--space-2);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    box-shadow:
+      0 0 0 1px var(--color-border-soft),
+      0 2px 4px color-mix(in srgb, var(--color-text) 6%, transparent),
+      0 8px 20px color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  .cardDone {
+    border: 0;
+    background: var(--color-warm-soft);
+    box-shadow:
+      0 0 0 1px color-mix(in srgb, var(--color-warm) 45%, transparent),
+      0 8px 20px color-mix(in srgb, var(--color-text) 10%, transparent);
+  }
+
+  .cardMain {
+    gap: 0.625rem;
+    padding: 0.125rem var(--space-1);
+    border-radius: var(--radius-control);
+  }
+
+  .cardMain:hover {
+    background: var(--hover-fill);
+  }
+
+  .cardDone .cardMain:hover {
+    background: color-mix(in srgb, var(--color-warm-text) 8%, transparent);
+  }
+
+  .ring {
+    width: 2rem;
+    height: 2rem;
+  }
+
+  .ring circle {
+    stroke-width: 5;
+  }
+
+  .ringTrack {
+    stroke: var(--color-surface-sunken);
+  }
+
+  .ringLeft {
+    stroke-linecap: round;
+  }
+
+  .ringPaused {
+    stroke: var(--color-border-strong);
+    stroke-linecap: round;
+  }
+
+  .cardDone .ringTrack,
+  .rowDone .ringTrack {
+    stroke: var(--color-warm);
+    opacity: 1;
+  }
+
+  /* The time, then the name in bold, then where it's from (the order shown, not read). */
+  .cardText {
+    line-height: 1.25;
+  }
+
+  .cardTime,
+  .cardTimePaused {
+    display: flex;
+    align-items: center;
+    gap: 0.3125rem;
+    order: 0;
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: 1.125rem;
+    font-weight: var(--weight-regular);
+    line-height: 1.2;
+  }
+
+  .cardTime svg {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .cardDone .cardTime {
+    font-weight: var(--weight-semibold);
+  }
+
+  .cardTimePaused small {
+    margin-left: 0.125rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    text-transform: capitalize;
+  }
+
+  .cardName {
+    order: 1;
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-semibold);
+  }
+
+  .cardFrom {
+    order: 2;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-regular);
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  .cardDone .cardFrom {
+    color: var(--color-warm-text);
+  }
+
+  .cardWarn {
+    order: 3;
+    font-size: var(--ui-text-label);
+  }
+
+  /* Pause (Resume) and Stop: small square icon buttons, a tooltip and a spoken name each. */
+  .round {
+    width: var(--control-sm);
+    height: var(--control-sm);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text);
+  }
+
+  .round:hover {
+    border-color: transparent;
+    background: var(--hover-fill);
+  }
+
+  .round svg {
+    width: 0.625rem;
+    height: 0.625rem;
+  }
+
+  .playIcon,
+  .stopIcon {
+    fill: currentColor;
+  }
+
+  .pauseIcon {
+    stroke: currentColor;
+  }
+
+  .cardPill,
+  .cardDismiss {
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-warm-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+  }
+
+  /* Fills on the warm card stay light enough for the warm words' 4.5:1 in every scheme. */
+  .cardPill:hover {
+    background: color-mix(in srgb, var(--color-warm-text) 6%, transparent);
+  }
+
+  .cardDismiss {
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-warm-text) 30%, transparent);
+  }
+
+  .cardDismiss:hover {
+    background: color-mix(in srgb, var(--color-warm-text) 6%, var(--color-surface));
+  }
+
+  .more {
+    min-height: var(--control-sm);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow:
+      0 0 0 1px var(--color-border-soft),
+      0 2px 4px color-mix(in srgb, var(--color-text) 6%, transparent);
+    font-weight: var(--weight-medium);
+  }
+
+  .more:hover {
+    background: var(--hover-fill);
+  }
+}
+
+@media (min-width: 900px) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .track,
+  .track::after,
+  .howTheyWork summary svg.howIcon {
+    transition: none;
+  }
+}
+
+/* Windows contrast themes draw no fills or shadows: the boxes, cards, buttons and switches keep an
+   edge, and the chosen length or duration a thicker one. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .list,
+  .notifications,
+  .empty,
+  .status,
+  .statusHeld,
+  .card,
+  .cardDone,
+  .startDialog,
+  .presets,
+  .rangeChoices,
+  .primary.addTimer,
+  .actions .primary,
+  .pausedTag,
+  .more,
+  .cardDismiss,
+  .stripDismiss {
+    border: 1px solid;
+  }
+
+  .dialog {
+    border-left: 1px solid;
+  }
+
+  .chip[aria-pressed="true"],
+  .range label:has(input:checked) {
+    outline: 2px solid;
+    outline-offset: -2px;
+  }
+
+  /* The switch draws its own colours, as Settings' Show nutrition: an edge and a knob in the text
+     colour, and when on a highlighted track with its knob in the highlight's text colour. */
+  .track {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .track::after {
+    top: 2px;
+    left: 2px;
+    background: CanvasText;
+  }
+
+  .switchInput:checked ~ .track {
+    background: Highlight;
+  }
+
+  .switchInput:checked ~ .track::after {
+    top: 1px;
+    left: 1px;
+    background: HighlightText;
+  }
+
+  /* The track opts out of forced colours, so its keyboard ring takes the theme's own colour. */
+  .switchInput:focus-visible ~ .track {
+    outline-color: Highlight;
+  }
+}

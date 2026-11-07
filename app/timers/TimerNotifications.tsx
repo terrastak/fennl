@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { arrived, dismissMissed, forgetArrival, useMissed } from "./arrivals";
 import { alertNeeds, type AlertNeeds } from "../../shared/timerAlerts";
 import { sendTestAlert, turnOffAlerts, turnOnAlerts, useAlertsState } from "./timerAlerts";
 import { alertRunningTimers, askForNotifications, canAskForNotifications } from "./timers";
 import styles from "./timers.module.css";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
+import { usePointer } from "../recipes/usePointer";
+import { WarmNote } from "../ui/WarmNote";
 
 /**
  * Timer notifications, at the foot of the Timers panel (owner's choice 2026-10-29; until then a
@@ -12,12 +16,18 @@ import styles from "./timers.module.css";
  * 2026-11-02: only what people need) and Send test notification, which checks itself and answers
  * in one line. A timer's notification that didn't arrive is said here too (./arrivals.ts). An iPhone's Safari tab, notifications blocked in the browser,
  * and a browser that can't take them each get their own line. It's per browser.
+ *
+ * On a laptop (U23, owner's choice 2026-11-07) it is a white box: a "Timer notifications" row
+ * with the same sentence under it and an On/Off switch (as Settings' Show nutrition) in place of
+ * Turn on and Turn off, then How they work in the same box.
  */
 export function TimerNotifications() {
   const state = useAlertsState();
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   const [askable, setAskable] = useState(canAskForNotifications);
+  const laptop = usePointer();
+  const switchId = useId();
 
   const turnOn = () => {
     setBusy(true);
@@ -39,10 +49,111 @@ export function TimerNotifications() {
   };
 
   if (state === null) return null;
+
+  /** On a laptop: the row's name, its sentence under it, and its control on the right. */
+  const row = (sentence: ReactNode, control?: ReactNode) => (
+    <div className={styles.notifyRow}>
+      <div>
+        {control ? (
+          <label htmlFor={switchId} className={styles.notifyName}>
+            Timer notifications
+          </label>
+        ) : (
+          <p className={styles.notifyName}>Timer notifications</p>
+        )}
+        <p className={styles.notifyLine}>{sentence}</p>
+      </div>
+      {control}
+    </div>
+  );
+
   return (
     <section className={styles.notifications} aria-label="Timer notifications">
       <MissedNotice />
-      {state === "on" || state === "off" ? (
+      {laptop && (state === "on" || state === "off") ? (
+        <>
+          {row(
+            state === "on"
+              ? "Timers will use this device’s notifications."
+              : "Timers won’t use this device’s notifications.",
+            // The knob moves and the word says it, so it isn't shown by colour alone.
+            <span className={styles.switch}>
+              <span className={styles.switchWord} aria-hidden="true">
+                {state === "on" ? "On" : "Off"}
+              </span>
+              <input
+                id={switchId}
+                type="checkbox"
+                role="switch"
+                className={styles.switchInput}
+                checked={state === "on"}
+                disabled={busy}
+                onChange={state === "on" ? turnOff : turnOn}
+              />
+              <span className={styles.track} aria-hidden="true" />
+            </span>,
+          )}
+          <details className={styles.howTheyWork}>
+            <summary>
+              <LaptopIcon path={LAPTOP_ICONS.chevronRight} className={styles.howIcon} />
+              How they work
+            </summary>
+            <div className={styles.howBody}>
+              <WhatItNeeds />
+              {state === "on" ? (
+                <SelfCheck
+                  onGone={() =>
+                    setProblem(
+                      "This browser stopped receiving Fennl’s notifications. Turn them on again.",
+                    )
+                  }
+                />
+              ) : null}
+            </div>
+          </details>
+        </>
+      ) : laptop && state === "home-screen" ? (
+        <>
+          {row("On iPhone and iPad, timer notifications need Fennl opened from the Home Screen.")}
+          <details className={styles.howTheyWork}>
+            <summary>
+              <LaptopIcon path={LAPTOP_ICONS.chevronRight} className={styles.howIcon} />
+              How
+            </summary>
+            <div className={styles.howBody}>
+              <p className={styles.hint}>
+                In Safari, tap Share (under &bull;&bull;&bull; beside the address), then Add to Home
+                Screen, and open Fennl from its icon. Then turn notifications on here.
+              </p>
+            </div>
+          </details>
+        </>
+      ) : laptop && state === "blocked" ? (
+        row(
+          <>
+            Notifications are blocked for Fennl in this browser&rsquo;s settings. Allow them there
+            for timers to use them.
+          </>,
+        )
+      ) : laptop ? (
+        row(
+          <>
+            This browser can&rsquo;t send timer notifications; timers ring while Fennl is on screen.
+            {askable ? (
+              <>
+                {" "}
+                <button
+                  type="button"
+                  className={styles.textLink}
+                  onClick={() => void askForNotifications().then(() => setAskable(false))}
+                >
+                  Tell me while I&rsquo;m in another app
+                </button>
+              </>
+            ) : null}
+          </>,
+        )
+      ) : state === "on" || state === "off" ? (
         <>
           <p className={styles.notifyLine}>
             {state === "on"
@@ -107,7 +218,7 @@ export function TimerNotifications() {
         </p>
       )}
       {problem ? (
-        <p role="alert" className={styles.hint}>
+        <p role="alert" className={`${styles.hint} ${styles.notifyProblem}`}>
           {problem}
         </p>
       ) : null}
@@ -241,8 +352,8 @@ function MissedNotice() {
   );
   if (!missed) return null;
   return (
-    <p role="alert" className={styles.missed}>
-      <span>
+    <WarmNote role="alert" className={styles.missed}>
+      <span className={styles.missedWords}>
         The notification for <strong>{missed.label}</strong> didn&rsquo;t arrive.{" "}
         {needs.kind === "browser-running"
           ? `Keep ${needs.browser} open and the computer awake while a timer runs.`
@@ -250,9 +361,13 @@ function MissedNotice() {
             ? "Check the device had a connection when the timer ended."
             : "Keep the Mac awake and connected while a timer runs."}
       </span>{" "}
-      <button type="button" className={styles.textLink} onClick={dismissMissed}>
+      <button
+        type="button"
+        className={`${styles.textLink} ${styles.missedDismiss}`}
+        onClick={dismissMissed}
+      >
         Dismiss
       </button>
-    </p>
+    </WarmNote>
   );
 }

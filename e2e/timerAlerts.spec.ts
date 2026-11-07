@@ -89,16 +89,19 @@ test("Timer notifications are turned on and off at the foot of the Timers panel"
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   const timers = await startTimer(page, "Pasta");
 
-  // One line says whether timers use this device's notifications (owner's choice 2026-10-29).
+  // One line says whether timers use this device's notifications (owner's choice 2026-10-29); on
+  // a computer an On/Off switch beside it turns them on and off (owner's choice 2026-11-07).
   const line = timers.getByRole("region", { name: "Timer notifications" });
   await expect(line).toContainText("Timers won’t use this device’s notifications.");
+  await expect(line.getByRole("switch", { name: "Timer notifications" })).not.toBeChecked();
   // Turning on asks the server for an alert for the timer already running.
   const asked = timerRequest(page, "PUT");
-  await line.getByRole("button", { name: "Turn on" }).click();
+  await line.getByRole("switch", { name: "Timer notifications" }).click();
   const request = await asked;
   expect(request.postDataJSON()).toMatchObject({ label: "Pasta", recipeTitle: "", path: "/" });
   expect((await request.response())?.status()).toBe(200);
   await expect(line).toContainText("Timers will use this device’s notifications.");
+  await expect(line.getByRole("switch", { name: "Timer notifications" })).toBeChecked();
 
   // Paused, it won't alert; resumed, it will again.
   const pasta = timers.getByRole("listitem").filter({ hasText: "Pasta" });
@@ -145,9 +148,9 @@ test("Timer notifications are turned on and off at the foot of the Timers panel"
   );
   await expect(line.getByRole("button", { name: "Send another" })).toBeVisible();
 
-  await line.getByRole("button", { name: "Turn off" }).click();
+  await line.getByRole("switch", { name: "Timer notifications" }).click();
   await expect(line).toContainText("Timers won’t use this device’s notifications.");
-  await line.getByRole("button", { name: "Turn on" }).click();
+  await line.getByRole("switch", { name: "Timer notifications" }).click();
   await expect(line).toContainText("Timers will use this device’s notifications.");
 
   // Settings no longer has a section for them.
@@ -174,7 +177,7 @@ test("On an iPhone in a Safari tab, the Timers panel says how to get timer notif
     .getByRole("dialog", { name: "Timers" })
     .getByRole("region", { name: "Timer notifications" });
   await expect(line).toContainText("timer notifications need Fennl opened from the Home Screen");
-  await expect(line.getByRole("button", { name: "Turn on" })).toHaveCount(0);
+  await expect(line.getByRole("switch")).toHaveCount(0);
   await line.getByText("How", { exact: true }).click();
   await expect(line).toContainText("Add to Home Screen");
 });
@@ -190,7 +193,7 @@ test("A timer whose notification can't be set up says so, with the way to fix it
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   const timers = await startTimer(page, "Pasta");
   const line = timers.getByRole("region", { name: "Timer notifications" });
-  await line.getByRole("button", { name: "Turn on" }).click();
+  await line.getByRole("switch", { name: "Timer notifications" }).click();
   await expect(line).toContainText("Timers will use this device’s notifications.");
 
   // The browser lost its subscription (as when a browser's data is cleared): the next timer's
