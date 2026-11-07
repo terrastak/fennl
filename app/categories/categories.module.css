@@ -534,3 +534,614 @@
     outline: 2px solid Highlight;
   }
 }
+
+/* --- The Categories page on a laptop (U23, owner's choices 2026-11-07) ----------------------- */
+/* Pieces drawn on a laptop only: the divider before Rename, and the arrows' words-as-text stay
+   on phones. */
+.divider {
+  display: none;
+}
+
+/* A wide window with a mouse or trackpad: the page 760px wide; the done bar beside the title, so
+   nothing moves when it appears; New category one line (the box and + Add, filled in ink only
+   once there's something to add); the whole tree in one white box of rows, inner categories
+   indented with a thin line; each row's buttons quiet with small icons, shown on the row pointed
+   at or holding the keyboard focus (always there for screen readers); Rename and Move open in the
+   row with Save or Move the one ink button; Delete tints what goes and asks under it with a soft
+   red Delete, as Trash does. Phones, touch screens and windows under 900px keep the page above. */
+@media (min-width: 900px) and (pointer: fine) {
+  /* One column, but the title and the done bar share a line (flex order; read in page order). */
+  .categoriesPage {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    column-gap: var(--space-4);
+    max-width: 47.5rem;
+  }
+
+  .categoriesPage > * {
+    flex: 0 0 100%;
+    order: 3;
+  }
+
+  /* All recipes: plain words with the arrow, a soft fill when pointed at. */
+  .categoriesPage > a:first-child {
+    flex-basis: auto;
+    order: 0;
+    margin-right: 100%;
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin-top: 0;
+    margin-bottom: 0.375rem;
+    margin-left: calc(-1 * var(--space-2));
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: 1;
+  }
+
+  .categoriesPage > a:first-child:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  /* The title and the done bar share a line; the sentence under them. */
+  .categoriesPage > header {
+    display: contents;
+  }
+
+  .categoriesPage > header > h1 {
+    flex: none;
+    order: 1;
+    min-height: 2rem;
+    margin: 0;
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .categoriesPage > header > div {
+    flex: 0 0 100%;
+    order: 3;
+    max-width: none;
+    margin-top: 0.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .categoriesPage > div:has(> p[role="status"]) {
+    flex: 1 1 0;
+    order: 2;
+    min-width: 0;
+  }
+
+  .categoriesPage > div.undoBar.undoBar {
+    min-height: 2rem;
+    padding: 0.125rem 0.25rem 0.125rem 0.75rem;
+  }
+
+  .categoriesPage .doneWords:empty {
+    min-height: 0;
+    margin: 0;
+  }
+
+  .categoriesPage > .hint {
+    margin-top: var(--space-5);
+    font-size: var(--ui-text);
+  }
+
+  /* --- Fields: smaller, a soft line, the accent and a halo while typing --------------------- */
+  .categoriesPage .input,
+  .categoriesPage .select {
+    height: var(--control);
+    min-height: var(--control);
+    padding: 0 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--ui-text);
+  }
+
+  .categoriesPage .input:hover,
+  .categoriesPage .select:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .categoriesPage .input:focus,
+  .categoriesPage .select:focus-visible {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  .categoriesPage .input::placeholder {
+    color: var(--color-text-subtle);
+  }
+
+  /* A select drawn with a small chevron. */
+  .categoriesPage .select {
+    padding-right: 1.75rem;
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+      linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 0.875rem) 52%,
+      calc(100% - 0.625rem) 52%;
+    background-size:
+      0.25rem 0.25rem,
+      0.25rem 0.25rem;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+
+  /* --- New category: the label, the box and + Add, the hint under them ---------------------- */
+  .newForm {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "label label"
+      "input add"
+      "hint hint";
+    align-items: center;
+    gap: 0.375rem var(--space-2);
+    max-width: 32.5rem;
+    margin: var(--space-4) 0 0;
+  }
+
+  .newForm > .field {
+    display: contents;
+  }
+
+  .newForm label {
+    grid-area: label;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    line-height: 1.3;
+  }
+
+  .newForm .input {
+    grid-area: input;
+    width: 100%;
+  }
+
+  .newForm .hint {
+    grid-area: hint;
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  /* Add: ink once there's something to add (the form is finished); soft grey until then. */
+  .newForm > button.addButton {
+    grid-area: add;
+    gap: 0.375rem;
+    min-height: 0;
+    height: var(--control);
+    margin: 0;
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+    line-height: 1;
+  }
+
+  .newForm > button.addButton:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .newForm > button.addButton:disabled {
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  /* While a row's Save or Move is the filled button: Add as accent words with its +. */
+  .newForm > button.addButton.quietAdd:not(:disabled) {
+    background: transparent;
+    color: var(--action-text);
+    font-weight: var(--action-weight);
+  }
+
+  .newForm > button.addButton.quietAdd:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--action-text);
+  }
+
+  /* --- The tree: one white box, a hairline between rows -------------------------------------- */
+  .tree {
+    padding-left: 0;
+  }
+
+  .tree.top {
+    max-width: none;
+    margin-top: 1.125rem;
+    overflow: hidden;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .tree > li {
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .tree > li:first-child {
+    border-top: 0;
+  }
+
+  .tree .tree {
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  /* The buttons go under the name when the line is too short (large text, a long name). */
+  .row {
+    position: relative;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.625rem;
+    min-height: 2.125rem;
+    padding: 0.1875rem 0.5rem 0.1875rem calc(0.875rem + var(--depth, 0) * 1.75rem);
+    border-bottom: 0;
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+  }
+
+  .row:hover {
+    background: color-mix(in srgb, var(--hover-fill) 60%, transparent);
+  }
+
+  /* Inside another: indented, with a thin line down the left for each level. */
+  .tree .tree .row::before,
+  .tree .tree .deleteQuestion::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 1.5rem;
+    width: calc((var(--depth, 1) - 1) * 1.75rem + 1px);
+    background: repeating-linear-gradient(
+      to right,
+      var(--color-border) 0 1px,
+      transparent 1px 1.75rem
+    );
+  }
+
+  .name {
+    min-width: 0;
+    font-weight: var(--weight-medium);
+    overflow-wrap: anywhere;
+  }
+
+  /* The count opens the recipe list: grey with a thin underline, so it reads as a link. */
+  .row .count {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    min-height: 1.5rem;
+    border-radius: 3px;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-variant-numeric: tabular-nums;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-decoration-color: color-mix(in srgb, var(--color-text-muted) 45%, transparent);
+    text-underline-offset: 2px;
+    white-space: nowrap;
+  }
+
+  .row .count:hover {
+    color: var(--color-text);
+    text-decoration-color: currentColor;
+  }
+
+  /* --- The row's buttons: quiet, small icons, on the row pointed at or with the focus -------- */
+  .actions {
+    flex: none;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+  }
+
+  /* Hidden from sight only: still there for screen readers and the keyboard, which shows them. */
+  .row:not(:hover, :focus-within) > .actions {
+    opacity: 0;
+  }
+
+  .actions .small {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+    min-height: var(--control-sm);
+    height: var(--control-sm);
+    padding: 0 0.5rem 0 0.4375rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .row:hover .actions .small {
+    color: var(--color-text);
+  }
+
+  .actions .small:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .actions .small svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .actions .arrow {
+    justify-content: center;
+    width: var(--control-sm);
+    padding: 0;
+  }
+
+  .actions .arrow svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+
+  .arrowText {
+    display: none;
+  }
+
+  /* The first at each level can't go up, the last can't go down: drawn lighter. */
+  .actions .small:disabled,
+  .row:hover .actions .small:disabled {
+    background: none;
+    color: var(--color-border-strong);
+    opacity: 1;
+    cursor: not-allowed;
+  }
+
+  .divider {
+    display: block;
+    width: 1px;
+    height: 1rem;
+    margin: 0 0.375rem;
+    background: var(--color-border);
+  }
+
+  /* --- Rename and Move in the row ------------------------------------------------------------ */
+  .row.editing,
+  .row.editing:hover {
+    flex-wrap: wrap;
+    row-gap: 0.375rem;
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
+    background: color-mix(in srgb, var(--color-surface-sunken) 40%, var(--color-surface));
+  }
+
+  .rowForm {
+    display: contents;
+  }
+
+  .rowForm .input {
+    flex: 0 1 16.25rem;
+    width: 16.25rem;
+    height: 1.875rem;
+    min-height: 1.875rem;
+  }
+
+  .rowForm .select {
+    flex: 0 1 15rem;
+    width: 15rem;
+    height: 1.875rem;
+    min-height: 1.875rem;
+  }
+
+  .formLabel {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    white-space: nowrap;
+  }
+
+  .rowNote {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .formButtons {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    margin-left: auto;
+  }
+
+  /* Save or Move: the one ink button while the row is open. */
+  .formButtons .inkButton {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font: inherit;
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .formButtons .inkButton:not(:disabled):hover {
+    background: var(--button-ink-hover);
+  }
+
+  .formButtons .inkButton:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  /* Cancel: plain words, after the main button. */
+  .formButtons .plainButton {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .formButtons .plainButton:hover {
+    background: var(--hover-fill);
+  }
+
+  /* The note under the box: what it joins, with a small ⓘ so it reads as a note, not an error. */
+  .rowHint {
+    display: flex;
+    flex-basis: 100%;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.4;
+  }
+
+  .rowHint:empty {
+    display: none;
+  }
+
+  .rowHint .hintIcon {
+    width: 0.875rem;
+    height: 0.875rem;
+    color: var(--color-accent);
+  }
+
+  /* --- Delete: what goes is tinted and tagged, the question under it -------------------------- */
+  .doomed .row,
+  .doomed .row:hover {
+    background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+  }
+
+  .tag {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 1.25rem;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-tag);
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+    color: var(--color-danger);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  /* Under the category, at its indent, the tree's lines carried on through it. */
+  .deleteQuestion {
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+    padding: 0.625rem 0.5rem 0.625rem calc(0.875rem + var(--depth, 0) * 1.75rem);
+    border-top: 1px solid var(--color-border-soft);
+    background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+  }
+
+  .deleteQuestion .warnIcon {
+    align-self: flex-start;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 1px;
+    color: var(--color-danger);
+  }
+
+  .deleteQuestion > p {
+    flex: 1 1 16rem;
+    min-width: 0;
+    max-width: 52ch;
+    margin: 0;
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .question {
+    font-weight: var(--weight-semibold);
+  }
+
+  .questionNote {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* Delete in the question: a soft red button, never the page's ink. */
+  .formButtons .deleteButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+    color: var(--color-danger);
+    font: inherit;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  /* Pointed at: a deeper fill, and the words a touch deeper so they keep 4.5:1 on it. */
+  .formButtons .deleteButton:hover {
+    background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
+    color: color-mix(in srgb, var(--color-danger) 85%, var(--color-text));
+  }
+}
+
+/* Windows contrast themes draw no fills: the box, the tag, the question and the filled buttons
+   keep an edge there. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .tree.top,
+  .tag,
+  .deleteQuestion,
+  .newForm > button.addButton,
+  .formButtons .inkButton,
+  .formButtons .deleteButton {
+    border: 1px solid;
+  }
+
+  /* The fields' halo is a shadow, which these themes drop: a real outline instead. */
+  .categoriesPage .input:focus,
+  .categoriesPage .select:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 0;
+  }
+}
