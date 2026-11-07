@@ -23,11 +23,7 @@ async function noAccessibilityProblems(page: Page) {
 const ingredientsBox = (page: Page) => page.getByRole("textbox", { name: "Ingredients" });
 const methodBox = (page: Page) => page.getByRole("textbox", { name: "Method" });
 
-test("A whole recipe written with the keyboard alone", async ({
-  page,
-  context,
-  baseURL,
-}, testInfo) => {
+test("A whole recipe written with the keyboard alone", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
   const key = page.keyboard;
@@ -134,20 +130,16 @@ test("A whole recipe written with the keyboard alone", async ({
   await key.press("Tab");
   await expect(page.locator("summary").filter({ hasText: "Nutrition per serving" })).toBeFocused();
   await key.press("Tab");
-  if (testInfo.project.name === "phone") {
-    await expect(page.getByRole("button", { name: "Done" }).last()).toBeFocused();
-  } else {
-    // A laptop (U23): Move to Trash at the very bottom, and the only Done in the bar at the top,
-    // which stays in view; back up to it.
-    await expect(page.getByRole("button", { name: "Move to Trash" })).toBeFocused();
-    const done = page.getByRole("button", { name: "Done" });
-    await expect(done).toHaveCount(1);
-    for (let i = 0; i < 60; i++) {
-      if (await done.evaluate((el) => el === document.activeElement)) break;
-      await key.press("Shift+Tab");
-    }
-    await expect(done).toBeFocused();
+  // Move to Trash at the very bottom, and the only Done in the bar at the top, which stays in
+  // view; back up to it (U23; on every screen since the owner's choice 2026-11-07).
+  await expect(page.getByRole("button", { name: "Move to Trash" })).toBeFocused();
+  const done = page.getByRole("button", { name: "Done" });
+  await expect(done).toHaveCount(1);
+  for (let i = 0; i < 60; i++) {
+    if (await done.evaluate((el) => el === document.activeElement)) break;
+    await key.press("Shift+Tab");
   }
+  await expect(done).toBeFocused();
   await key.press("Enter");
 
   // The recipe page shows all of it.
@@ -324,12 +316,7 @@ test("Free: editing pauses offline, and what was typed saves when the connection
   await expect(page.getByLabel("Notes")).toHaveValue("Toast the rice first.");
 });
 
-test("On a laptop, Move to Trash at the bottom of the editor (U23)", async ({
-  page,
-  context,
-  baseURL,
-}, testInfo) => {
-  test.skip(testInfo.project.name === "phone", "Laptop only; phones keep the editor as before.");
+test("Move to Trash at the bottom of the editor (U23)", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
 
