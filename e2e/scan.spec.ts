@@ -64,6 +64,7 @@ test("Premium: choose photos, arrange them, read them, and keep them with the re
   await section.getByRole("button", { name: "Read the recipe" }).click();
   await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/, { timeout: 60_000 });
   await expect(page.getByRole("heading", { level: 1, name: "Review the import" })).toBeVisible();
+  await expect(page.getByText(/^Check it against the photos?, fix/)).toBeVisible();
 
   // The photos beside the draft (folded away under a button on a phone).
   const source = page.getByRole("region", { name: "The photos" });

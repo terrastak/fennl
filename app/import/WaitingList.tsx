@@ -4,10 +4,15 @@ import { addBlockedBy } from "../../shared/limits";
 import { addBlockedText } from "../limits/limitText";
 import { reportRefused } from "../limits/reportRefused";
 import { currentPhotoCache } from "../photos/usePhoto";
+import { dayText, localDay } from "../recipes/format";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 import recipes from "../recipes/recipes.module.css";
 import { Link } from "../router";
 import { activeSyncClient, useCategoryTree, useSyncStatus } from "../sync/useSync";
-import { discardImportJob } from "./api";
+import { DoneBar } from "../ui/DoneBar";
+import { WarmNote } from "../ui/WarmNote";
+import { discardImportJob, rememberLeavingDiscards } from "./api";
 import styles from "./import.module.css";
 import { checkDraft, saveMany, savedText, type DraftStanding } from "./saveMany";
 
@@ -16,6 +21,13 @@ import { checkDraft, saveMany, savedText, type DraftStanding } from "./saveMany"
 // bottom. Save all ready, Save selected and Discard selected sit on the heading's line (on a phone,
 // in a bar at the bottom of the screen). Save selected offers to save only the ready ones or all of
 // them anyway; Discard goes at once with Undo, the drafts only removed when Undo's time is up.
+//
+// U23 slice 6 (owner's choices 2026-11-07): above the sources whenever drafts are waiting; dates
+// as "Nov 6", as Trash shows them; "Discarded 2 drafts." in the shared done bar with Undo, and a
+// problem in the shared warm note. On a laptop "Save all N ready" is the list's one ink button
+// (it finishes the list), Save selected and Discard selected are icon and words (Discard in red),
+// each draft is one compact row in a white box, and while another question is open on the page
+// (the paste box, Save selected's question) the heading's buttons wait, greyed.
 
 /** The time a save is made (outside the component, which mustn't read the clock as it draws). */
 const clock = () => Date.now();
@@ -86,8 +98,10 @@ export function WaitingList(props: {
   update: (change: (before: ImportJobSummary[]) => ImportJobSummary[]) => void;
   /** Something else on the page is reading a recipe. */
   reading: boolean;
+  /** Another question is open on the page (the paste box, on a laptop): the heading's buttons wait. */
+  paused?: boolean;
 }) {
-  const { jobs, update, reading } = props;
+  const { jobs, update, reading, paused = false } = props;
   const status = useSyncStatus();
   const tree = useCategoryTree();
   const premium = status.photos?.enabled ?? false;
@@ -99,10 +113,15 @@ export function WaitingList(props: {
   const [saving, setSaving] = useState<string | null>(null);
   const [ask, setAsk] = useState<Ask | null>(null);
   const [note, setNote] = useState<Note | null>(null);
+  /** Moves the focus to the done bar's words when it says something new. */
+  const [noteFocus, setNoteFocus] = useState(0);
   const noteRef = useRef<HTMLParagraphElement>(null);
   /** The next note is read out and focused (not when Undo's time runs out). */
   const focusNote = useRef(false);
   const askRef = useRef<HTMLButtonElement>(null);
+  /** The button that opened the question, to take the focus back after Cancel. */
+  const askOpener = useRef<HTMLElement | null>(null);
+  const askCancelled = useRef(false);
   const pending = useRef<Pending | null>(null);
   const running = useRef(new Set<string>());
   const premiumNow = useRef(premium);
@@ -150,7 +169,9 @@ export function WaitingList(props: {
   }, [jobs, standings, tree, premium]);
 
   const say = (next: Note | null) => {
-    focusNote.current = next !== null;
+    // A problem is focused here; the done bar focuses its own words.
+    focusNote.current = next !== null && next.problem;
+    if (next && !next.problem) setNoteFocus((n) => n + 1);
     setNote(next);
   };
   useEffect(() => {
@@ -160,6 +181,10 @@ export function WaitingList(props: {
   }, [note]);
   useEffect(() => {
     if (ask) askRef.current?.focus();
+    else if (askCancelled.current) {
+      askCancelled.current = false;
+      askOpener.current?.focus();
+    }
   }, [ask]);
 
   /** Drafts back in the list, in the order they were in. */
@@ -195,9 +220,13 @@ export function WaitingList(props: {
   });
   useEffect(() => {
     const leave = () => settleRef.current();
-    window.addEventListener("pagehide", leave);
+    const closing = () => {
+      rememberLeavingDiscards(pending.current?.jobs.map((job) => job.id) ?? []);
+      leave();
+    };
+    window.addEventListener("pagehide", closing);
     return () => {
-      window.removeEventListener("pagehide", leave);
+      window.removeEventListener("pagehide", closing);
       leave();
     };
   }, []);
@@ -276,7 +305,14 @@ export function WaitingList(props: {
       return;
     }
     say(null);
+    askOpener.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setAsk({ ready, held, blocked });
+  };
+
+  const cancelAsk = () => {
+    askCancelled.current = true;
+    setAsk(null);
   };
 
   const discard = () => {
@@ -313,23 +349,28 @@ export function WaitingList(props: {
     const on = chosen.has(job.id);
     return (
       <li key={job.id} data-chosen={on || undefined}>
-        <input
-          type="checkbox"
-          className={styles.chooseBox}
-          aria-label={`Select ${job.title}`}
-          checked={on}
-          disabled={busy}
-          onChange={(event) => {
-            const next = new Set(chosen);
-            if (event.currentTarget.checked) next.add(job.id);
-            else next.delete(job.id);
-            choose(next);
-          }}
-        />
+        {/* On a laptop the box is pressed anywhere in 28 x 28 around it (elsewhere it adds nothing). */}
+        <label className={styles.pick}>
+          <input
+            type="checkbox"
+            className={styles.chooseBox}
+            aria-label={`Select ${job.title}`}
+            checked={on}
+            disabled={busy}
+            onChange={(event) => {
+              const next = new Set(chosen);
+              if (event.currentTarget.checked) next.add(job.id);
+              else next.delete(job.id);
+              choose(next);
+            }}
+          />
+        </label>
         <span className={styles.jobText}>
-          <Link href={`/import/${job.id}`}>{job.title}</Link>
-          <span className={recipes.hint}>
-            {[site(job.url), new Date(job.createdAt).toLocaleDateString()]
+          <Link href={`/import/${job.id}`} className={styles.jobLink}>
+            {job.title}
+          </Link>
+          <span className={`${recipes.hint} ${styles.jobMeta}`}>
+            {[site(job.url), dayText(localDay(new Date(job.createdAt)))]
               .filter(Boolean)
               .join(" · ")}
           </span>
@@ -344,17 +385,19 @@ export function WaitingList(props: {
             </span>
           ) : null}
         </span>
+        <LaptopIcon path={LAPTOP_ICONS.chevronRight} className={styles.jobChevron} />
       </li>
     );
   };
 
+  const waits = busy || paused;
   const buttons = (phone: boolean) => (
     <>
       {readyJobs.length > 0 ? (
         <button
           type="button"
-          className={recipes.primary}
-          disabled={busy || !tree}
+          className={`${recipes.primary} ${styles.ink} ${styles.saveReady}`}
+          disabled={waits || !tree}
           onClick={() => void run(readyJobs)}
         >
           {saveReadyLabel}
@@ -362,18 +405,20 @@ export function WaitingList(props: {
       ) : null}
       <button
         type="button"
-        className={recipes.secondary}
-        disabled={busy || nothingChosen || !tree}
+        className={`${recipes.secondary} ${styles.quiet}`}
+        disabled={waits || nothingChosen || !tree}
         onClick={saveChosen}
       >
+        {phone ? null : <LaptopIcon path={LAPTOP_ICONS.check} />}
         Save{phone ? <span className="visually-hidden"> selected</span> : " selected"}
       </button>
       <button
         type="button"
-        className={`${recipes.secondary} ${styles.discard}`}
-        disabled={busy || nothingChosen}
+        className={`${recipes.secondary} ${styles.discard} ${styles.quiet} ${styles.danger}`}
+        disabled={waits || nothingChosen}
         onClick={discard}
       >
+        {phone ? null : <LaptopIcon path={LAPTOP_ICONS.trash} />}
         Discard{phone ? <span className="visually-hidden"> selected</span> : " selected"}
       </button>
     </>
@@ -394,27 +439,30 @@ export function WaitingList(props: {
           {saving}
         </p>
       ) : null}
-      {note ? (
-        <p
+      {note?.problem ? (
+        <WarmNote
           ref={noteRef}
           tabIndex={-1}
-          role={note.problem ? "alert" : "status"}
-          className={`${styles.waitingNote} ${note.problem ? styles.problem : ""}`}
+          role="alert"
+          className={`${styles.waitingNote} ${styles.problem}`}
         >
-          <span>{note.text}</span>
-          {note.undo ? (
-            <button type="button" className={recipes.textButton} onClick={note.undo}>
-              Undo
-            </button>
-          ) : null}
-        </p>
+          {note.text}
+        </WarmNote>
+      ) : note ? (
+        <DoneBar
+          message={note.text}
+          onUndo={note.undo}
+          focusKey={noteFocus}
+          className={styles.waitingNote}
+          undoClassName={recipes.textButton}
+        />
       ) : null}
 
       {jobs.length > 0 ? (
         <div className={styles.selectLine}>
           <button
             type="button"
-            className={recipes.textButton}
+            className={`${recipes.textButton} ${styles.plain}`}
             disabled={busy || chosen.size === jobs.length}
             onClick={() => choose(new Set(jobs.map((j) => j.id)))}
           >
@@ -423,21 +471,21 @@ export function WaitingList(props: {
           <span aria-hidden="true">·</span>
           <button
             type="button"
-            className={recipes.textButton}
+            className={`${recipes.textButton} ${styles.plain}`}
             disabled={busy || nothingChosen}
             onClick={() => choose(new Set())}
           >
             Select none
           </button>
-          <span className={recipes.hint} aria-live="polite">
+          <span className={`${recipes.hint} ${styles.selectCount}`} aria-live="polite">
             {chosen.size} of {jobs.length} selected
           </span>
         </div>
       ) : (
-        <p className={recipes.hint}>Nothing else is waiting.</p>
+        <p className={`${recipes.hint} ${styles.waitingEmpty}`}>Nothing else is waiting.</p>
       )}
 
-      {ask ? <AskSave ask={ask} buttonRef={askRef} run={run} cancel={() => setAsk(null)} /> : null}
+      {ask ? <AskSave ask={ask} buttonRef={askRef} run={run} cancel={cancelAsk} /> : null}
 
       {lookJobs.length > 0 ? (
         <div className={styles.group} role="group" aria-labelledby="import-look-title">
@@ -458,13 +506,15 @@ export function WaitingList(props: {
             <span className={styles.readyDot} aria-hidden="true" />
             Ready to save <span className={styles.groupCount}>{readyJobs.length}</span>
           </h3>
-          <p className={recipes.hint}>Nothing to check. Each will be saved as Fennl read it.</p>
+          <p className={`${recipes.hint} ${styles.groupHint}`}>
+            Nothing to check. Each will be saved as Fennl read it.
+          </p>
           <ul className={styles.jobs}>{readyJobs.map(row)}</ul>
         </div>
       ) : null}
 
       {jobs.length > 0 ? (
-        <p className={recipes.hint}>
+        <p className={`${recipes.hint} ${styles.waitingFoot}`}>
           Open a draft to check it and save it, or select several to save or discard them at once.
           <br />
           Drafts you don&rsquo;t save are removed after {IMPORT_RULES.keepDays} days.
@@ -507,7 +557,10 @@ function AskSave(props: {
             ))}
           </ul>
           <details>
-            <summary>What &ldquo;save anyway&rdquo; does</summary>
+            <summary>
+              <LaptopIcon path={LAPTOP_ICONS.chevronRight} className={styles.askChevron} />
+              What &ldquo;save anyway&rdquo; does
+            </summary>
             <ul className={styles.askList}>
               {held.map((job) => (
                 <li key={job.id}>
@@ -532,7 +585,7 @@ function AskSave(props: {
           <button
             ref={buttonRef}
             type="button"
-            className={recipes.primary}
+            className={`${recipes.primary} ${styles.ink}`}
             onClick={() => void run(ready)}
           >
             Save the {count(ready.length, "ready one", "# ready ones")}
@@ -542,9 +595,11 @@ function AskSave(props: {
           <button
             ref={ready.length > 0 ? undefined : buttonRef}
             type="button"
-            className={recipes.secondary}
+            // The question's finishing button is ink: this one when nothing is ready.
+            className={`${recipes.secondary} ${ready.length > 0 ? styles.quiet : styles.ink}`}
             onClick={() => void run([...ready, ...held], new Set(held.map((job) => job.id)))}
           >
+            {ready.length > 0 ? <LaptopIcon path={LAPTOP_ICONS.check} /> : null}
             {ready.length > 0
               ? `Save all ${all} anyway`
               : `Save ${count(held.length, "it", "them")} anyway`}
@@ -553,7 +608,7 @@ function AskSave(props: {
         <button
           ref={ready.length === 0 && held.length === 0 ? buttonRef : undefined}
           type="button"
-          className={recipes.textButton}
+          className={`${recipes.textButton} ${styles.plain}`}
           onClick={cancel}
         >
           Cancel

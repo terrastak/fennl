@@ -367,13 +367,17 @@
   font: inherit;
 }
 
+/* The import review screen's form (U23 slice 6) takes the editor's laptop look for its fields,
+   boxes, lines and "How Fennl reads it" (the rules below name it beside .editor); the bar, the
+   bottom and nutrition stay the editor's own. It adds nothing by itself (no rule here). */
+
 /* A wide window with a mouse or trackpad: one bar at the top that stays in view (the heading,
    how saving is going, Undo, Redo and Done as icon and words, Done in the accent); each section
    a white box under a plain heading, as in Settings; smaller fields with a soft line; "How Fennl
    reads it" tighter, the line being typed marked with a thin accent edge; Link a recipe a small
    panel under its button; nutrition a row with a button that says what it does; Move to Trash at
    the very bottom, and no second Done. Phones, touch screens and windows under 900px keep the
-   editor above. Scoped to the editor: the import review screen shares some of these classes. */
+   editor above. The import review screen's form takes the field rules too (.laptopFields, U23 slice 6). */
 @media (min-width: 900px) and (pointer: fine) {
   /* --- The bar ----------------------------------------------------------------------------- */
   .editor .head {
@@ -402,7 +406,8 @@
   }
 
   /* Whatever is scrolled to (a box being tabbed into, a heading) stops below the bar. */
-  .editor :where(input, select, textarea, button, summary, label, h2, legend, a) {
+  :is(.editor, .laptopFields)
+    :where(input, select, textarea, button, summary, label, h2, legend, a) {
     scroll-margin-top: 5.5rem;
   }
 
@@ -519,14 +524,14 @@
     margin-top: var(--space-4);
   }
 
-  .editor .fields {
+  :is(.editor, .laptopFields) .fields {
     gap: var(--space-6);
   }
 
-  .editor .box,
-  .editor .groupBox,
-  .editor .fieldBox,
-  .editor .linesBody {
+  :is(.editor, .laptopFields) .box,
+  :is(.editor, .laptopFields) .groupBox,
+  :is(.editor, .laptopFields) .fieldBox,
+  :is(.editor, .laptopFields) .linesBody {
     display: grid;
     gap: 0.875rem;
     padding: 0.875rem var(--space-4) var(--space-4);
@@ -535,14 +540,14 @@
     box-shadow: 0 0 0 1px var(--color-border-soft);
   }
 
-  .editor .group {
+  :is(.editor, .laptopFields) .group {
     gap: 0;
   }
 
-  .editor .group legend,
-  .editor .linesLabel,
-  .editor .field.boxedField > label,
-  .editor .nutritionHeading {
+  :is(.editor, .laptopFields) .group legend,
+  :is(.editor, .laptopFields) .linesLabel,
+  :is(.editor, .laptopFields) .field.boxedField > label,
+  :is(.editor, .laptopFields) .nutritionHeading {
     margin: 0 0 var(--space-2);
     font-family: var(--font-display);
     font-variation-settings: var(--font-display-settings);
@@ -553,38 +558,38 @@
     color: var(--color-text);
   }
 
-  .editor .field {
+  :is(.editor, .laptopFields) .field {
     gap: 0.375rem;
   }
 
-  .editor .field > label {
+  :is(.editor, .laptopFields) .field > label {
     color: var(--color-text-muted);
     font-size: var(--ui-text-label);
     font-weight: var(--weight-semibold);
     line-height: 1.3;
   }
 
-  .editor .boxedField {
+  :is(.editor, .laptopFields) .boxedField {
     gap: 0;
   }
 
-  .editor .fieldBox {
+  :is(.editor, .laptopFields) .fieldBox {
     gap: 0.375rem;
   }
 
   /* Hints and problems under a box. */
-  .editor .field p,
-  .editor .lines p,
-  .editor .nutrition p,
-  .editor .nutritionHidden {
+  :is(.editor, .laptopFields) .field p,
+  :is(.editor, .laptopFields) .lines p,
+  :is(.editor, .laptopFields) .nutrition p,
+  :is(.editor, .laptopFields) .nutritionHidden {
     font-size: var(--ui-text-secondary);
     line-height: 1.45;
   }
 
   /* --- Fields: smaller, a soft line, the accent and a halo while typing ------------------------ */
-  .editor input:not([type="file"], [type="checkbox"], [type="radio"]),
-  .editor select,
-  .editor textarea {
+  :is(.editor, .laptopFields) input:not([type="file"], [type="checkbox"], [type="radio"]),
+  :is(.editor, .laptopFields) select,
+  :is(.editor, .laptopFields) textarea {
     min-height: var(--control);
     padding: 0 0.625rem;
     border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
@@ -592,20 +597,20 @@
     font-size: var(--ui-text);
   }
 
-  .editor textarea {
+  :is(.editor, .laptopFields) textarea {
     padding: 0.4375rem 0.625rem;
     line-height: 1.5;
   }
 
-  .editor input:not([type="file"], [type="checkbox"], [type="radio"]):hover,
-  .editor select:hover,
-  .editor textarea:hover {
+  :is(.editor, .laptopFields) input:not([type="file"], [type="checkbox"], [type="radio"]):hover,
+  :is(.editor, .laptopFields) select:hover,
+  :is(.editor, .laptopFields) textarea:hover {
     border-color: var(--color-border-strong);
   }
 
-  .editor input:not([type="file"], [type="checkbox"], [type="radio"]):focus,
-  .editor select:focus-visible,
-  .editor textarea:focus {
+  :is(.editor, .laptopFields) input:not([type="file"], [type="checkbox"], [type="radio"]):focus,
+  :is(.editor, .laptopFields) select:focus-visible,
+  :is(.editor, .laptopFields) textarea:focus {
     outline: none;
     border-color: var(--color-accent);
     /* A 2px accent edge (the border and one more pixel), then the soft halo. */
@@ -614,13 +619,13 @@
       0 0 0 4px var(--color-accent-soft);
   }
 
-  .editor input::placeholder,
-  .editor textarea::placeholder {
+  :is(.editor, .laptopFields) input::placeholder,
+  :is(.editor, .laptopFields) textarea::placeholder {
     color: var(--color-text-subtle);
   }
 
   /* A select drawn with a small chevron. */
-  .editor select {
+  :is(.editor, .laptopFields) select {
     padding-right: 1.75rem;
     appearance: none;
     background-image:
@@ -636,83 +641,83 @@
     cursor: pointer;
   }
 
-  .editor [aria-invalid="true"],
-  .editor [aria-invalid="true"]:hover {
+  :is(.editor, .laptopFields) [aria-invalid="true"],
+  :is(.editor, .laptopFields) [aria-invalid="true"]:hover {
     border-color: var(--color-danger);
   }
 
   /* The title in the heading font, as on the recipe's page; the example in plain grey text. */
-  .editor input.titleInput {
+  :is(.editor, .laptopFields) input.titleInput {
     min-height: 2.5rem;
     padding: 0 0.75rem;
     font-size: 1.25rem;
     letter-spacing: -0.01em;
   }
 
-  .editor input.titleInput::placeholder {
+  :is(.editor, .laptopFields) input.titleInput::placeholder {
     font-family: var(--font-ui);
     font-variation-settings: normal;
     font-size: 1.0625rem;
     letter-spacing: 0;
   }
 
-  .editor .textarea.short {
+  :is(.editor, .laptopFields) .textarea.short {
     min-height: 4.375rem;
   }
 
-  .editor .boxedField .textarea {
+  :is(.editor, .laptopFields) .boxedField .textarea {
     min-height: 5.5rem;
   }
 
   /* --- Time and servings on one line; where it's from on one line ------------------------------ */
-  .editor .timeBox {
+  :is(.editor, .laptopFields) .timeBox {
     grid-template-columns: repeat(3, minmax(0, 1fr)) 5.25rem minmax(0, 1.5fr) 8.25rem;
     gap: 0.75rem;
     align-items: start;
   }
 
-  .editor .timeBox > .row {
+  :is(.editor, .laptopFields) .timeBox > .row {
     display: contents;
   }
 
-  .editor .groupBox > .row {
+  :is(.editor, .laptopFields) .groupBox > .row {
     gap: 0.75rem;
   }
 
-  .editor .groupBox > .row > * {
+  :is(.editor, .laptopFields) .groupBox > .row > * {
     flex: 1 1 9rem;
   }
 
-  .editor .groupBox > .row > :first-child {
+  :is(.editor, .laptopFields) .groupBox > .row > :first-child {
     flex: 0 0 10.5rem;
   }
 
-  .editor .groupBox > .row > :has(#edit-source-url) {
+  :is(.editor, .laptopFields) .groupBox > .row > :has(#edit-source-url) {
     flex-grow: 1.35;
   }
 
   /* --- Ingredients and Method -------------------------------------------------------------- */
-  .editor .lines {
+  :is(.editor, .laptopFields) .lines {
     position: relative;
     gap: 0;
   }
 
-  .editor .linesHead {
+  :is(.editor, .laptopFields) .linesHead {
     gap: 0.625rem;
     min-height: 1.75rem;
     margin-bottom: var(--space-2);
   }
 
-  .editor .linesLabel {
+  :is(.editor, .laptopFields) .linesLabel {
     margin: 0;
   }
 
-  .editor .lineTools {
+  :is(.editor, .laptopFields) .lineTools {
     gap: var(--space-1);
   }
 
   /* Heading and Link a recipe: small quiet buttons with icons. */
-  .editor .small {
+  :is(.editor, .laptopFields) .small {
     display: inline-flex;
     align-items: center;
     gap: 0.375rem;
@@ -727,65 +732,65 @@
     line-height: 1;
   }
 
-  .editor .small svg {
+  :is(.editor, .laptopFields) .small svg {
     color: var(--color-text-muted);
   }
 
-  .editor .small:not(:disabled):hover,
-  .editor .small[aria-expanded="true"] {
+  :is(.editor, .laptopFields) .small:not(:disabled):hover,
+  :is(.editor, .laptopFields) .small[aria-expanded="true"] {
     background: var(--hover-fill);
   }
 
-  .editor .small[aria-pressed="true"] {
+  :is(.editor, .laptopFields) .small[aria-pressed="true"] {
     background: var(--color-accent-soft);
     color: var(--color-accent-soft-text);
   }
 
-  .editor .small[aria-pressed="true"] svg {
+  :is(.editor, .laptopFields) .small[aria-pressed="true"] svg {
     color: inherit;
   }
 
-  .editor .small:disabled {
+  :is(.editor, .laptopFields) .small:disabled {
     opacity: 0.5;
   }
 
-  .editor .linesBody {
+  :is(.editor, .laptopFields) .linesBody {
     grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
     gap: var(--space-5);
     align-items: start;
   }
 
   /* The box grows to hold the whole recipe, so nothing scrolls inside it. */
-  .editor .lines .textarea {
+  :is(.editor, .laptopFields) .lines .textarea {
     min-height: 10rem;
     padding: 0.5625rem 0.75rem;
     font-size: var(--read-text);
     line-height: 1.55;
   }
 
-  .editor .lines .field p {
+  :is(.editor, .laptopFields) .lines .field p {
     margin-top: 0.125rem;
   }
 
-  .editor .preview {
+  :is(.editor, .laptopFields) .preview {
     padding: 0.625rem 0.75rem 0.5rem;
     border-radius: var(--radius-control);
     background: color-mix(in srgb, var(--color-surface-sunken) 60%, var(--color-surface));
     font-size: var(--ui-text);
   }
 
-  .editor .previewTitle {
+  :is(.editor, .laptopFields) .previewTitle {
     margin: 0 0 var(--space-1);
     font-size: var(--ui-text-eyebrow);
     letter-spacing: 0.06em;
     text-transform: uppercase;
   }
 
-  .editor .previewList {
+  :is(.editor, .laptopFields) .previewList {
     gap: 0;
   }
 
-  .editor .previewList li {
+  :is(.editor, .laptopFields) .previewList li {
     margin: 0 -0.375rem;
     padding: 0.125rem 0.375rem;
     border-radius: 0.25rem;
@@ -793,17 +798,17 @@
   }
 
   /* The line being typed on: white, with a thin accent edge (words in the box say which). */
-  .editor .previewCurrent {
+  :is(.editor, .laptopFields) .previewCurrent {
     box-shadow: inset 2px 0 0 var(--color-accent);
   }
 
   /* Steps hang from their numbers. */
-  .editor .previewList li:has(> .stepNumber) {
+  :is(.editor, .laptopFields) .previewList li:has(> .stepNumber) {
     padding-left: calc(0.375rem + 1.375rem);
     text-indent: -1.375rem;
   }
 
-  .editor .stepNumber {
+  :is(.editor, .laptopFields) .stepNumber {
     min-width: 1.375rem;
     color: var(--color-text-muted);
     font-size: var(--ui-text-label);
@@ -811,12 +816,12 @@
     text-indent: 0;
   }
 
-  .editor .stepDot {
+  :is(.editor, .laptopFields) .stepDot {
     display: none;
   }
 
   /* Alt+↑ drawn as small keys. */
-  .editor .key {
+  :is(.editor, .laptopFields) .key {
     display: inline-grid;
     place-items: center;
     min-width: 1.125rem;
@@ -834,15 +839,15 @@
   }
 
   /* A linked line: a link mark and the recipe's name, underlined, then a quiet Unlink. */
-  .editor .link {
+  :is(.editor, .laptopFields) .link {
     font-size: inherit;
   }
 
-  .editor .linkArrow {
+  :is(.editor, .laptopFields) .linkArrow {
     display: none;
   }
 
-  .editor .linkIcon {
+  :is(.editor, .laptopFields) .linkIcon {
     display: inline-block;
     width: 0.75rem;
     height: 0.75rem;
@@ -851,7 +856,7 @@
     vertical-align: -1px;
   }
 
-  .editor .link a {
+  :is(.editor, .laptopFields) .link a {
     display: inline-block;
     min-height: 1.5rem;
     margin: -0.125rem 0;
@@ -863,7 +868,7 @@
     text-indent: 0;
   }
 
-  .editor .previewList .linkButton {
+  :is(.editor, .laptopFields) .previewList .linkButton {
     float: right;
     min-height: 1.5rem;
     margin: -0.125rem 0 -0.125rem var(--space-2);
@@ -876,13 +881,13 @@
     text-indent: 0;
   }
 
-  .editor .previewList .linkButton:hover {
+  :is(.editor, .laptopFields) .previewList .linkButton:hover {
     background: var(--hover-fill);
     color: var(--color-text);
   }
 
   /* Link a recipe: a small panel under its button, not pushing the page down. */
-  .editor .linkPicker {
+  :is(.editor, .laptopFields) .linkPicker {
     position: absolute;
     z-index: 4;
     top: 2.25rem;
@@ -898,25 +903,25 @@
     box-shadow: var(--shadow-pop);
   }
 
-  .editor .linkPicker > label {
+  :is(.editor, .laptopFields) .linkPicker > label {
     color: var(--color-text-muted);
     font-size: var(--ui-text-secondary);
     line-height: 1.4;
   }
 
-  .editor .linkLine {
+  :is(.editor, .laptopFields) .linkLine {
     color: var(--color-text);
     font-weight: var(--weight-semibold);
   }
 
-  .editor .linkPicker input {
+  :is(.editor, .laptopFields) .linkPicker input {
     grid-row: 2;
     grid-column: 1;
     min-height: var(--control);
     padding-left: 2rem;
   }
 
-  .editor .findIcon {
+  :is(.editor, .laptopFields) .findIcon {
     z-index: 1;
     grid-row: 2;
     grid-column: 1;
@@ -926,11 +931,11 @@
     pointer-events: none;
   }
 
-  .editor .linkPicker ul {
+  :is(.editor, .laptopFields) .linkPicker ul {
     gap: 1px;
   }
 
-  .editor .linkPicker ul .linkButton {
+  :is(.editor, .laptopFields) .linkPicker ul .linkButton {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -943,20 +948,20 @@
     text-decoration: none;
   }
 
-  .editor .linkPicker ul .linkButton svg {
+  :is(.editor, .laptopFields) .linkPicker ul .linkButton svg {
     color: var(--color-text-muted);
   }
 
-  .editor .linkPicker ul .linkButton:hover {
+  :is(.editor, .laptopFields) .linkPicker ul .linkButton:hover {
     background: var(--hover-fill);
   }
 
-  .editor .linkPicker > p {
+  :is(.editor, .laptopFields) .linkPicker > p {
     margin: var(--space-1) 0;
     color: var(--color-text-muted);
   }
 
-  .editor .linkFoot {
+  :is(.editor, .laptopFields) .linkFoot {
     display: flex;
     align-items: center;
     gap: var(--space-2);
@@ -965,7 +970,7 @@
     border-top: 1px solid var(--color-border-soft);
   }
 
-  .editor .escHint {
+  :is(.editor, .laptopFields) .escHint {
     display: flex;
     align-items: center;
     gap: var(--space-1);
@@ -975,7 +980,7 @@
   }
 
   /* Cancel: plain words. */
-  .editor .linkFoot .linkButton {
+  :is(.editor, .laptopFields) .linkFoot .linkButton {
     min-height: var(--control-sm);
     margin-left: auto;
     padding: 0 var(--space-2);
@@ -986,7 +991,7 @@
     text-decoration: none;
   }
 
-  .editor .linkFoot .linkButton:hover {
+  :is(.editor, .laptopFields) .linkFoot .linkButton:hover {
     background: var(--hover-fill);
   }
 
@@ -1184,30 +1189,47 @@
 
 /* A window a little narrower than usual: time and servings on two lines. */
 @media (min-width: 900px) and (max-width: 1099px) and (pointer: fine) {
-  .editor .timeBox {
+  :is(.editor, .laptopFields) .timeBox {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* The import review screen in a window a little narrower than usual (U23 slice 6): its draft
+   shares the width with the source, so "How Fennl reads it" goes under each box. */
+@media (min-width: 900px) and (max-width: 1199px) and (pointer: fine) {
+  .laptopFields .linesBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* And whenever the draft's column is narrow for its words (the largest text sizes on a laptop). */
+@media (min-width: 900px) and (pointer: fine) {
+  @container review-draft (max-width: 30rem) {
+    .laptopFields .linesBody {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 }
 
 /* Windows contrast themes draw no fills or shadows: the boxes, the panel, the keys, the chosen
    line and a Heading that's on keep an edge, and a box being typed in its ring. */
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
-  .editor .box,
-  .editor .groupBox,
-  .editor .fieldBox,
-  .editor .linesBody,
+  :is(.editor, .laptopFields) .box,
+  :is(.editor, .laptopFields) .groupBox,
+  :is(.editor, .laptopFields) .fieldBox,
+  :is(.editor, .laptopFields) .linesBody,
   .editor .nutrition,
   .editor .linkPicker,
-  .editor .key {
+  :is(.editor, .laptopFields) .key {
     border: 1px solid;
   }
 
-  .editor .previewCurrent {
+  :is(.editor, .laptopFields) .previewCurrent {
     outline: 1px solid;
   }
 
   /* Heading while the line is one: an inner ring, as no fill shows. */
-  .editor .small[aria-pressed="true"] {
+  :is(.editor, .laptopFields) .small[aria-pressed="true"] {
     outline: 2px solid;
     outline-offset: -2px;
   }
@@ -1218,9 +1240,9 @@
     border-image-source: none;
   }
 
-  .editor input:not([type="file"], [type="checkbox"], [type="radio"]):focus,
-  .editor select:focus-visible,
-  .editor textarea:focus {
+  :is(.editor, .laptopFields) input:not([type="file"], [type="checkbox"], [type="radio"]):focus,
+  :is(.editor, .laptopFields) select:focus-visible,
+  :is(.editor, .laptopFields) textarea:focus {
     outline: 2px solid Highlight;
     outline-offset: 0;
   }
