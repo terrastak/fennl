@@ -23,7 +23,11 @@ async function noAccessibilityProblems(page: Page) {
 const ingredientsBox = (page: Page) => page.getByRole("textbox", { name: "Ingredients" });
 const methodBox = (page: Page) => page.getByRole("textbox", { name: "Method" });
 
-test("A whole recipe written with the keyboard alone", async ({ page, context, baseURL }) => {
+test("A whole recipe written with the keyboard alone", async ({
+  page,
+  context,
+  baseURL,
+}, testInfo) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
   const key = page.keyboard;
@@ -128,9 +132,22 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
 
   // Nutrition (phase F4) is closed until opened: one stop on the way.
   await key.press("Tab");
-  await expect(page.getByText("Nutrition per serving", { exact: true })).toBeFocused();
+  await expect(page.locator("summary").filter({ hasText: "Nutrition per serving" })).toBeFocused();
   await key.press("Tab");
-  await expect(page.getByRole("button", { name: "Done" }).last()).toBeFocused();
+  if (testInfo.project.name === "phone") {
+    await expect(page.getByRole("button", { name: "Done" }).last()).toBeFocused();
+  } else {
+    // A laptop (U23): Move to Trash at the very bottom, and the only Done in the bar at the top,
+    // which stays in view; back up to it.
+    await expect(page.getByRole("button", { name: "Move to Trash" })).toBeFocused();
+    const done = page.getByRole("button", { name: "Done" });
+    await expect(done).toHaveCount(1);
+    for (let i = 0; i < 60; i++) {
+      if (await done.evaluate((el) => el === document.activeElement)) break;
+      await key.press("Shift+Tab");
+    }
+    await expect(done).toBeFocused();
+  }
   await key.press("Enter");
 
   // The recipe page shows all of it.
@@ -305,4 +322,36 @@ test("Free: editing pauses offline, and what was typed saves when the connection
   await expect(syncStatus(page)).toHaveText("Saved to cloud", { timeout: 15_000 });
   await page.reload();
   await expect(page.getByLabel("Notes")).toHaveValue("Toast the rice first.");
+});
+
+test("On a laptop, Move to Trash at the bottom of the editor (U23)", async ({
+  page,
+  context,
+  baseURL,
+}, testInfo) => {
+  test.skip(testInfo.project.name === "phone", "Laptop only; phones keep the editor as before.");
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+
+  // Not for a new recipe that has no title yet: nothing has been saved.
+  await page.getByRole("button", { name: "Add recipe" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);
+  await page.getByLabel("Title", { exact: true }).fill("Arroz rojo");
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(
+    page.getByText("It stays in Trash for 30 days, so you can put it back."),
+  ).toBeVisible();
+
+  // What was just typed is saved, the recipe goes to Trash, and the list says so with Undo.
+  await page.getByLabel("Notes").fill("Toast the rice first.");
+  await page.getByRole("button", { name: "Move to Trash" }).click();
+  await expect(page.getByRole("status").filter({ hasText: "to Trash." })).toHaveText(
+    "Moved “Arroz rojo” to Trash.",
+  );
+  await expect(recipeCard(page, "Arroz rojo")).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(recipeCard(page, "Arroz rojo")).toBeVisible();
+  await recipeCard(page, "Arroz rojo").getByRole("link").first().click();
+  await expect(page.getByText("Toast the rice first.")).toBeVisible();
 });

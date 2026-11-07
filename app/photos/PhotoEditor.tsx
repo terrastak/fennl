@@ -13,6 +13,10 @@ import { arrangeRecipePhotos } from "./arrange";
 import { orderAt } from "./order";
 import { PhotoImage } from "./PhotoImage";
 import { currentPhotoCache } from "./usePhoto";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
+import { DoneBar } from "../ui/DoneBar";
+import { WarmNote } from "../ui/WarmNote";
 import styles from "./photoEditor.module.css";
 
 // The editor's photos (phase D2; spec.md D2): add, reorder, choose the cover, remove. The first
@@ -63,7 +67,9 @@ export function PhotoEditor({
   const [online, setOnline] = useState(() => navigator.onLine);
   const [adding, setAdding] = useState<{ done: number; total: number } | null>(null);
   const [problem, setProblem] = useState<AddPhotoProblem | null>(null);
-  const [removed, setRemoved] = useState<RecipePhoto | null>(null);
+  // "Photo removed." with Undo, then "Undone." once used: the bar stays after its first use, so
+  // the focus has somewhere to go when the Remove button goes with its photo, and after Undo.
+  const [removed, setRemoved] = useState<{ photo: RecipePhoto | null; at: number } | null>(null);
   const [dropping, setDropping] = useState(false);
   const [touch] = useState(touchDevice);
 
@@ -118,11 +124,12 @@ export function PhotoEditor({
     void saveChanges([move(photo, orderAt(others(photo), index))]);
 
   const remove = async (photo: RecipePhoto) => {
-    if (await saveChanges([removal(photo, true)])) setRemoved(photo);
+    if (await saveChanges([removal(photo, true)])) setRemoved({ photo, at: Date.now() });
   };
 
   const undo = async () => {
-    if (removed && (await saveChanges([removal(removed, false)]))) setRemoved(null);
+    const photo = removed?.photo;
+    if (photo && (await saveChanges([removal(photo, false)]))) setRemoved({ photo: null, at: 0 });
   };
 
   const onDrop = (event: DragEvent) => {
@@ -132,9 +139,13 @@ export function PhotoEditor({
     void add([...event.dataTransfer.files].filter((f) => f.type.startsWith("image/")));
   };
 
-  const filePicker = (label: string, camera: boolean, primary: boolean) => (
+  // On a laptop (U23) a computer's "Add photos" is a tile at the end of the photos ("or drop
+  // them here", while dropping works), or a small button beside why it can't be used yet.
+  const filePicker = (label: string, camera: boolean, primary: boolean, tile = false) => (
     <label
-      className={`${primary ? styles.primary : styles.secondary} ${canAdd ? "" : styles.off}`}
+      className={`${primary ? styles.primary : styles.secondary} ${canAdd ? "" : styles.off} ${
+        tile ? (gallery.length > 0 ? styles.tile : styles.tileSmall) : ""
+      }`}
       aria-disabled={!canAdd}
     >
       <input
@@ -151,7 +162,11 @@ export function PhotoEditor({
           void add(files);
         }}
       />
+      {tile ? <LaptopIcon path={LAPTOP_ICONS.addPhoto} /> : null}
       {label}
+      {tile && canAdd && gallery.length > 0 ? (
+        <small className={styles.tileHint}> or drop them here</small>
+      ) : null}
     </label>
   );
 
@@ -178,122 +193,150 @@ export function PhotoEditor({
         ) : null}
       </div>
 
-      {arrangedByFennl(gallery) ? (
-        <p className={styles.note}>
-          Arranged by Fennl. Moving a photo keeps your own order from then on.
-        </p>
-      ) : null}
-      {gallery.length > 0 ? (
-        <ol className={styles.photos} aria-label="Photos, the first is the cover">
-          {gallery.map((photo, index) => (
-            <li key={photo.id} className={styles.photo} data-hash={photo.imageHash}>
-              <PhotoImage
-                hash={photo.imageHash}
-                size="thumb"
-                width={photo.width}
-                height={photo.height}
-                alt={`Photo ${index + 1}${index === 0 ? ", the cover" : ""}`}
-                className={styles.thumb}
-              />
-              {index === 0 ? <span className={styles.coverTag}>Cover</span> : null}
-              <div className={styles.photoButtons}>
-                {index > 0 ? (
-                  <button
-                    type="button"
-                    className={styles.small}
-                    disabled={!editable}
-                    onClick={() => moveTo(photo, 0)}
-                  >
-                    Make cover
-                  </button>
-                ) : null}
-                {index > 0 ? (
-                  <button
-                    type="button"
-                    className={styles.small}
-                    disabled={!editable}
-                    aria-label={`Move photo ${index + 1} earlier`}
-                    onClick={() => moveTo(photo, index - 1)}
-                  >
-                    ←
-                  </button>
-                ) : null}
-                {index < gallery.length - 1 ? (
-                  <button
-                    type="button"
-                    className={styles.small}
-                    disabled={!editable}
-                    aria-label={`Move photo ${index + 1} later`}
-                    onClick={() => moveTo(photo, index + 1)}
-                  >
-                    →
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className={styles.small}
-                  disabled={!editable}
-                  aria-label={`Remove photo ${index + 1}`}
-                  onClick={() => void remove(photo)}
-                >
-                  Remove
-                </button>
-              </div>
-            </li>
-          ))}
-        </ol>
-      ) : null}
-
-      {plan && !premium ? (
-        <p className={styles.note}>
-          {gallery.length > 0
-            ? "Adding photos is a Premium feature. These photos stay, and you can still reorder or remove them."
-            : "Photos are a Premium feature."}
-        </p>
-      ) : premium ? (
-        <>
-          <div className={styles.buttons}>
-            {touch ? filePicker("Take photo", true, true) : null}
-            {filePicker(touch ? "Choose photos" : "Add photos", false, !touch)}
-          </div>
-          {!touch && canAdd ? <p className={styles.note}>Or drop photos here.</p> : null}
-          {!created ? (
-            <p className={styles.note}>Give the recipe a title first, then add photos.</p>
-          ) : !online ? (
-            <p className={styles.note}>
-              Adding photos needs a connection. Everything else here still saves.
-            </p>
-          ) : room === 0 ? (
-            <p className={styles.note}>
-              This recipe has {max} photos, the most it can have. Remove one to add another.
-            </p>
+      {/* The white box on a laptop (U23); adds nothing on phones. */}
+      <div className={styles.box}>
+        {arrangedByFennl(gallery) ? (
+          <p className={`${styles.note} ${styles.arranged}`}>
+            <LaptopIcon path={LAPTOP_ICONS.spark} />
+            Arranged by Fennl. Moving a photo keeps your own order from then on.
+          </p>
+        ) : null}
+        <div className={styles.strip}>
+          {gallery.length > 0 ? (
+            <ol className={styles.photos} aria-label="Photos, the first is the cover">
+              {gallery.map((photo, index) => (
+                <li key={photo.id} className={styles.photo} data-hash={photo.imageHash}>
+                  <PhotoImage
+                    hash={photo.imageHash}
+                    size="thumb"
+                    width={photo.width}
+                    height={photo.height}
+                    alt={`Photo ${index + 1}${index === 0 ? ", the cover" : ""}`}
+                    className={styles.thumb}
+                  />
+                  {index === 0 ? (
+                    <span className={styles.coverTag}>
+                      <LaptopIcon path={LAPTOP_ICONS.star} fill />
+                      Cover
+                    </span>
+                  ) : null}
+                  {/* One row of small controls under each photo on a laptop (U23): Make cover (or
+                  "The cover"), then earlier, later and Remove as icons with tooltips. */}
+                  <div className={styles.photoButtons}>
+                    {index > 0 ? (
+                      <button
+                        type="button"
+                        className={`${styles.small} ${styles.words}`}
+                        disabled={!editable}
+                        onClick={() => moveTo(photo, 0)}
+                      >
+                        Make cover
+                      </button>
+                    ) : (
+                      <span className={styles.theCover} aria-hidden="true" />
+                    )}
+                    {index > 0 ? (
+                      <button
+                        type="button"
+                        className={`${styles.small} ${styles.iconButton}`}
+                        disabled={!editable}
+                        aria-label={`Move photo ${index + 1} earlier`}
+                        title="Move earlier"
+                        onClick={() => moveTo(photo, index - 1)}
+                      >
+                        <span className={styles.glyph}>←</span>
+                        <LaptopIcon path={LAPTOP_ICONS.left} />
+                      </button>
+                    ) : null}
+                    {index < gallery.length - 1 ? (
+                      <button
+                        type="button"
+                        className={`${styles.small} ${styles.iconButton}`}
+                        disabled={!editable}
+                        aria-label={`Move photo ${index + 1} later`}
+                        title="Move later"
+                        onClick={() => moveTo(photo, index + 1)}
+                      >
+                        <span className={styles.glyph}>→</span>
+                        <LaptopIcon path={LAPTOP_ICONS.right} />
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={`${styles.small} ${styles.iconButton}`}
+                      disabled={!editable}
+                      aria-label={`Remove photo ${index + 1}`}
+                      title="Remove"
+                      onClick={() => void remove(photo)}
+                    >
+                      <span className={styles.glyph}>Remove</span>
+                      <LaptopIcon path={LAPTOP_ICONS.trash} />
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ol>
           ) : null}
-          {quota && level !== "fine" ? (
-            <p className={styles.note}>
-              {photosNearText(quota, quotaFull)} <Link href="/account#usage">Usage and limits</Link>
-            </p>
-          ) : null}
-        </>
-      ) : null}
 
-      {adding ? (
-        <p role="status" className={styles.note}>
-          Adding photo {Math.min(adding.done + 1, adding.total)} of {adding.total}…
-        </p>
-      ) : null}
-      {problem ? (
-        <p role="alert" className={styles.problem}>
-          {problemText(problem, max)}
-        </p>
-      ) : null}
-      {removed ? (
-        <p role="status" className={styles.note}>
-          Photo removed.{" "}
-          <button type="button" className={styles.link} onClick={() => void undo()}>
-            Undo
-          </button>
-        </p>
-      ) : null}
+          {premium ? (
+            <div className={styles.buttons}>
+              {touch ? filePicker("Take photo", true, true) : null}
+              {filePicker(touch ? "Choose photos" : "Add photos", false, !touch, !touch)}
+            </div>
+          ) : null}
+        </div>
+        {plan && !premium ? (
+          <p className={styles.note}>
+            {gallery.length > 0
+              ? "Adding photos is a Premium feature. These photos stay, and you can still reorder or remove them."
+              : "Photos are a Premium feature."}
+          </p>
+        ) : premium ? (
+          <>
+            {!touch && canAdd ? (
+              <p className={`${styles.note} ${styles.dropNote}`}>Or drop photos here.</p>
+            ) : null}
+            {!created ? (
+              <p className={styles.note}>Give the recipe a title first, then add photos.</p>
+            ) : !online ? (
+              <p className={styles.note}>
+                Adding photos needs a connection. Everything else here still saves.
+              </p>
+            ) : room === 0 ? (
+              <p className={styles.note}>
+                This recipe has {max} photos, the most it can have. Remove one to add another.
+              </p>
+            ) : null}
+            {quota && level !== "fine" ? (
+              <WarmNote className={styles.note}>
+                {photosNearText(quota, quotaFull)}{" "}
+                <Link href="/account#usage">Usage and limits</Link>
+              </WarmNote>
+            ) : null}
+          </>
+        ) : null}
+
+        {adding ? (
+          <p role="status" className={styles.note}>
+            Adding photo {Math.min(adding.done + 1, adding.total)} of {adding.total}…
+          </p>
+        ) : null}
+        {problem ? (
+          <WarmNote role="alert" className={styles.problem}>
+            {problemText(problem, max)}
+          </WarmNote>
+        ) : null}
+        {removed ? (
+          <DoneBar
+            message={removed.photo ? "Photo removed." : "Undone."}
+            onUndo={removed.photo ? () => void undo() : null}
+            focusKey={removed.at}
+            className={styles.note}
+            messageClassName={styles.inline}
+            undoClassName={styles.link}
+          />
+        ) : null}
+      </div>
     </section>
   );
 }

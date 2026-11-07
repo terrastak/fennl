@@ -336,3 +336,897 @@
   grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
   gap: var(--space-3) var(--space-4);
 }
+
+/* --- The laptop look (U23 slice 5, owner's choices 2026-11-07) -------------------------------- */
+/* Wrappers that only make the laptop's bar and white boxes, and parts drawn on a laptop only.
+   Elsewhere they add nothing, so phones, touch screens and narrow windows look as before. */
+.head,
+.box,
+.groupBox,
+.fieldBox,
+.nutritionSection,
+.nutritionBody,
+.unitBox,
+.linkFoot {
+  display: contents;
+}
+
+.dot,
+.divider,
+.trashFoot,
+.nutritionHeading,
+.summaryText,
+.summaryButton,
+.unit,
+.escHint {
+  display: none;
+}
+
+/* The keys in "Alt+↑ / Alt+↓": plain words here (a <kbd> is monospace by default). */
+.key {
+  font: inherit;
+}
+
+/* A wide window with a mouse or trackpad: one bar at the top that stays in view (the heading,
+   how saving is going, Undo, Redo and Done as icon and words, Done in the accent); each section
+   a white box under a plain heading, as in Settings; smaller fields with a soft line; "How Fennl
+   reads it" tighter, the line being typed marked with a thin accent edge; Link a recipe a small
+   panel under its button; nutrition a row with a button that says what it does; Move to Trash at
+   the very bottom, and no second Done. Phones, touch screens and windows under 900px keep the
+   editor above. Scoped to the editor: the import review screen shares some of these classes. */
+@media (min-width: 900px) and (pointer: fine) {
+  /* --- The bar ----------------------------------------------------------------------------- */
+  .editor .head {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 4rem;
+    margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-8)) 0;
+    padding: var(--space-2) var(--space-8);
+    border-bottom: 1px solid var(--color-border-soft);
+    background: var(--color-bg);
+    /* The bar's fill and its line run on to the window's right edge, past the editor's width. A
+       border image outside the box is only painted, so nothing scrolls sideways. */
+    border-image: linear-gradient(to top, var(--color-border-soft) 1px, var(--color-bg) 1px) fill
+      0 / 0 / 0 100vw 0 0;
+  }
+
+  /* While the editor is open the window keeps the bar's height clear when it brings a field into
+     view (tabbing back up, the typing cursor at the top of a long box), so none hides under it. */
+  :global(html):has(.editor .head) {
+    scroll-padding-top: 5.5rem;
+  }
+
+  /* Whatever is scrolled to (a box being tabbed into, a heading) stops below the bar. */
+  .editor :where(input, select, textarea, button, summary, label, h2, legend, a) {
+    scroll-margin-top: 5.5rem;
+  }
+
+  .editor .heading {
+    margin: 0 auto 0 0;
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  /* Once the page has scrolled, the bar's heading is smaller and the bar casts a soft edge. */
+  .editor .head[data-scrolled] {
+    border-image: linear-gradient(
+        to bottom,
+        var(--color-bg) calc(100% - 0.5rem - 1px),
+        var(--color-border-soft) calc(100% - 0.5rem - 1px) calc(100% - 0.5rem),
+        color-mix(in srgb, var(--color-text) 8%, transparent) calc(100% - 0.5rem),
+        transparent
+      )
+      fill 0 / 0 / 0 100vw 0.5rem 0;
+  }
+
+  .editor .head[data-scrolled] .heading {
+    font-size: var(--heading-size);
+  }
+
+  .editor .bar {
+    display: contents;
+  }
+
+  .editor .status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin-right: 0.375rem;
+    font-size: var(--ui-text-secondary);
+    white-space: nowrap;
+  }
+
+  /* A dot beside the words: filled when saved, a ring while waiting, warm when it can't. */
+  .editor .dot {
+    display: block;
+    flex: none;
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    background: var(--color-success);
+  }
+
+  .editor .dot[data-dot="waiting"] {
+    background: none;
+    box-shadow: inset 0 0 0 1.5px var(--color-text-muted);
+  }
+
+  .editor .dot[data-dot="problem"] {
+    background: var(--color-warm);
+  }
+
+  .editor .divider {
+    display: block;
+    flex: none;
+    width: 1px;
+    height: 1.25rem;
+    margin: 0 0.375rem;
+    background: var(--color-border);
+  }
+
+  .editor .barButtons {
+    align-items: center;
+    gap: 0.125rem;
+  }
+
+  /* Undo, Redo and Done: icon and words, no fill or line, a soft fill when pointed at (the button
+     rule, owner's choice 2026-11-07). Done is navigation, so the main action: accent, semibold. */
+  .editor .barButtons button {
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+  }
+
+  .editor .barButtons button svg {
+    color: var(--color-text-muted);
+  }
+
+  .editor .barButtons button:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .editor .barButtons button:last-child {
+    margin-left: 0.375rem;
+    color: var(--action-text);
+    font-weight: var(--action-weight);
+  }
+
+  .editor .barButtons button:last-child svg,
+  .editor .barButtons button:last-child:not(:disabled):hover {
+    color: var(--action-text);
+  }
+
+  .editor .notice {
+    margin: var(--space-4) 0 0;
+  }
+
+  /* --- Sections: a plain heading above one white box ------------------------------------------ */
+  .editor form {
+    margin-top: var(--space-4);
+  }
+
+  .editor .fields {
+    gap: var(--space-6);
+  }
+
+  .editor .box,
+  .editor .groupBox,
+  .editor .fieldBox,
+  .editor .linesBody {
+    display: grid;
+    gap: 0.875rem;
+    padding: 0.875rem var(--space-4) var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .editor .group {
+    gap: 0;
+  }
+
+  .editor .group legend,
+  .editor .linesLabel,
+  .editor .field.boxedField > label,
+  .editor .nutritionHeading {
+    margin: 0 0 var(--space-2);
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: var(--heading-size);
+    font-weight: normal;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    color: var(--color-text);
+  }
+
+  .editor .field {
+    gap: 0.375rem;
+  }
+
+  .editor .field > label {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    line-height: 1.3;
+  }
+
+  .editor .boxedField {
+    gap: 0;
+  }
+
+  .editor .fieldBox {
+    gap: 0.375rem;
+  }
+
+  /* Hints and problems under a box. */
+  .editor .field p,
+  .editor .lines p,
+  .editor .nutrition p,
+  .editor .nutritionHidden {
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  /* --- Fields: smaller, a soft line, the accent and a halo while typing ------------------------ */
+  .editor input:not([type="file"], [type="checkbox"], [type="radio"]),
+  .editor select,
+  .editor textarea {
+    min-height: var(--control);
+    padding: 0 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .editor textarea {
+    padding: 0.4375rem 0.625rem;
+    line-height: 1.5;
+  }
+
+  .editor input:not([type="file"], [type="checkbox"], [type="radio"]):hover,
+  .editor select:hover,
+  .editor textarea:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .editor input:not([type="file"], [type="checkbox"], [type="radio"]):focus,
+  .editor select:focus-visible,
+  .editor textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    /* A 2px accent edge (the border and one more pixel), then the soft halo. */
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  .editor input::placeholder,
+  .editor textarea::placeholder {
+    color: var(--color-text-subtle);
+  }
+
+  /* A select drawn with a small chevron. */
+  .editor select {
+    padding-right: 1.75rem;
+    appearance: none;
+    background-image:
+      linear-gradient(45deg, transparent 50%, var(--color-text-muted) 50%),
+      linear-gradient(135deg, var(--color-text-muted) 50%, transparent 50%);
+    background-position:
+      calc(100% - 0.875rem) 52%,
+      calc(100% - 0.625rem) 52%;
+    background-size:
+      0.25rem 0.25rem,
+      0.25rem 0.25rem;
+    background-repeat: no-repeat;
+    cursor: pointer;
+  }
+
+  .editor [aria-invalid="true"],
+  .editor [aria-invalid="true"]:hover {
+    border-color: var(--color-danger);
+  }
+
+  /* The title in the heading font, as on the recipe's page; the example in plain grey text. */
+  .editor input.titleInput {
+    min-height: 2.5rem;
+    padding: 0 0.75rem;
+    font-size: 1.25rem;
+    letter-spacing: -0.01em;
+  }
+
+  .editor input.titleInput::placeholder {
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: 1.0625rem;
+    letter-spacing: 0;
+  }
+
+  .editor .textarea.short {
+    min-height: 4.375rem;
+  }
+
+  .editor .boxedField .textarea {
+    min-height: 5.5rem;
+  }
+
+  /* --- Time and servings on one line; where it's from on one line ------------------------------ */
+  .editor .timeBox {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 5.25rem minmax(0, 1.5fr) 8.25rem;
+    gap: 0.75rem;
+    align-items: start;
+  }
+
+  .editor .timeBox > .row {
+    display: contents;
+  }
+
+  .editor .groupBox > .row {
+    gap: 0.75rem;
+  }
+
+  .editor .groupBox > .row > * {
+    flex: 1 1 9rem;
+  }
+
+  .editor .groupBox > .row > :first-child {
+    flex: 0 0 10.5rem;
+  }
+
+  .editor .groupBox > .row > :has(#edit-source-url) {
+    flex-grow: 1.35;
+  }
+
+  /* --- Ingredients and Method -------------------------------------------------------------- */
+  .editor .lines {
+    position: relative;
+    gap: 0;
+  }
+
+  .editor .linesHead {
+    gap: 0.625rem;
+    min-height: 1.75rem;
+    margin-bottom: var(--space-2);
+  }
+
+  .editor .linesLabel {
+    margin: 0;
+  }
+
+  .editor .lineTools {
+    gap: var(--space-1);
+  }
+
+  /* Heading and Link a recipe: small quiet buttons with icons. */
+  .editor .small {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+  }
+
+  .editor .small svg {
+    color: var(--color-text-muted);
+  }
+
+  .editor .small:not(:disabled):hover,
+  .editor .small[aria-expanded="true"] {
+    background: var(--hover-fill);
+  }
+
+  .editor .small[aria-pressed="true"] {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+  }
+
+  .editor .small[aria-pressed="true"] svg {
+    color: inherit;
+  }
+
+  .editor .small:disabled {
+    opacity: 0.5;
+  }
+
+  .editor .linesBody {
+    grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+    gap: var(--space-5);
+    align-items: start;
+  }
+
+  /* The box grows to hold the whole recipe, so nothing scrolls inside it. */
+  .editor .lines .textarea {
+    min-height: 10rem;
+    padding: 0.5625rem 0.75rem;
+    font-size: var(--read-text);
+    line-height: 1.55;
+  }
+
+  .editor .lines .field p {
+    margin-top: 0.125rem;
+  }
+
+  .editor .preview {
+    padding: 0.625rem 0.75rem 0.5rem;
+    border-radius: var(--radius-control);
+    background: color-mix(in srgb, var(--color-surface-sunken) 60%, var(--color-surface));
+    font-size: var(--ui-text);
+  }
+
+  .editor .previewTitle {
+    margin: 0 0 var(--space-1);
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .editor .previewList {
+    gap: 0;
+  }
+
+  .editor .previewList li {
+    margin: 0 -0.375rem;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    line-height: 1.4;
+  }
+
+  /* The line being typed on: white, with a thin accent edge (words in the box say which). */
+  .editor .previewCurrent {
+    box-shadow: inset 2px 0 0 var(--color-accent);
+  }
+
+  /* Steps hang from their numbers. */
+  .editor .previewList li:has(> .stepNumber) {
+    padding-left: calc(0.375rem + 1.375rem);
+    text-indent: -1.375rem;
+  }
+
+  .editor .stepNumber {
+    min-width: 1.375rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-variant-numeric: tabular-nums;
+    text-indent: 0;
+  }
+
+  .editor .stepDot {
+    display: none;
+  }
+
+  /* Alt+↑ drawn as small keys. */
+  .editor .key {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    margin: 0 1px;
+    padding: 0 0.25rem;
+    border-radius: var(--radius-tag);
+    box-shadow:
+      inset 0 0 0 1px var(--color-border),
+      inset 0 -1px 0 var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font: var(--weight-semibold) var(--ui-text-eyebrow) / 1 var(--font-ui);
+    vertical-align: 1px;
+  }
+
+  /* A linked line: a link mark and the recipe's name, underlined, then a quiet Unlink. */
+  .editor .link {
+    font-size: inherit;
+  }
+
+  .editor .linkArrow {
+    display: none;
+  }
+
+  .editor .linkIcon {
+    display: inline-block;
+    width: 0.75rem;
+    height: 0.75rem;
+    margin: 0 0.1875rem 0 0.25rem;
+    color: var(--color-text-muted);
+    vertical-align: -1px;
+  }
+
+  .editor .link a {
+    display: inline-block;
+    min-height: 1.5rem;
+    margin: -0.125rem 0;
+    line-height: 1.5rem;
+    color: var(--color-accent);
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 2px;
+    text-indent: 0;
+  }
+
+  .editor .previewList .linkButton {
+    float: right;
+    min-height: 1.5rem;
+    margin: -0.125rem 0 -0.125rem var(--space-2);
+    padding: 0 0.375rem;
+    border-radius: var(--radius-control);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    text-indent: 0;
+  }
+
+  .editor .previewList .linkButton:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  /* Link a recipe: a small panel under its button, not pushing the page down. */
+  .editor .linkPicker {
+    position: absolute;
+    z-index: 4;
+    top: 2.25rem;
+    right: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+    width: min(22.5rem, 100%);
+    margin: 0;
+    padding: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-pop);
+  }
+
+  .editor .linkPicker > label {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.4;
+  }
+
+  .editor .linkLine {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .editor .linkPicker input {
+    grid-row: 2;
+    grid-column: 1;
+    min-height: var(--control);
+    padding-left: 2rem;
+  }
+
+  .editor .findIcon {
+    z-index: 1;
+    grid-row: 2;
+    grid-column: 1;
+    align-self: center;
+    margin-left: 0.625rem;
+    color: var(--color-text-muted);
+    pointer-events: none;
+  }
+
+  .editor .linkPicker ul {
+    gap: 1px;
+  }
+
+  .editor .linkPicker ul .linkButton {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--row);
+    padding: 0 var(--space-2);
+    border-radius: 0.3125rem;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    text-decoration: none;
+  }
+
+  .editor .linkPicker ul .linkButton svg {
+    color: var(--color-text-muted);
+  }
+
+  .editor .linkPicker ul .linkButton:hover {
+    background: var(--hover-fill);
+  }
+
+  .editor .linkPicker > p {
+    margin: var(--space-1) 0;
+    color: var(--color-text-muted);
+  }
+
+  .editor .linkFoot {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .editor .escHint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  /* Cancel: plain words. */
+  .editor .linkFoot .linkButton {
+    min-height: var(--control-sm);
+    margin-left: auto;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .editor .linkFoot .linkButton:hover {
+    background: var(--hover-fill);
+  }
+
+  /* --- Nutrition per serving: a row that says what's there, and a button that says what it does */
+  .editor .nutritionSection {
+    display: grid;
+  }
+
+  .editor .nutritionHeading {
+    display: block;
+  }
+
+  .editor .nutrition {
+    display: block;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .editor .nutrition summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-6);
+    min-height: 0;
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius-pop);
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text);
+    list-style: none;
+  }
+
+  .editor .nutrition summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .editor .summaryTitle {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .editor .summaryText {
+    display: grid;
+    gap: 0.125rem;
+  }
+
+  .editor .summaryFrom {
+    font-weight: var(--weight-medium);
+  }
+
+  .editor .summaryHelp {
+    max-width: 60ch;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .editor .summaryButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control);
+    padding: 0 0.625rem 0 var(--space-3);
+    border-radius: var(--radius-control);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+  }
+
+  .editor .nutrition summary:hover .summaryButton,
+  .editor .nutrition[open] .summaryButton {
+    background: var(--hover-fill);
+  }
+
+  .editor .whenOpen,
+  .editor .nutrition[open] .whenClosed {
+    display: none;
+  }
+
+  .editor .nutrition[open] .whenOpen {
+    display: inline;
+  }
+
+  .editor .chevron {
+    color: var(--color-text-muted);
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .editor .nutrition[open] .chevron {
+    transform: rotate(180deg);
+  }
+
+  .editor .nutritionBody {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-1) var(--space-4) var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .editor .nutritionHint {
+    display: none;
+  }
+
+  .editor .nutritionGrid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  /* The unit inside the box ("310 kcal"); the label still says it to screen readers. */
+  .editor .unitInLabel {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .editor .unitBox {
+    position: relative;
+    display: block;
+  }
+
+  .editor .unitBox input {
+    padding-right: 2.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .editor .unit {
+    position: absolute;
+    top: 50%;
+    right: 0.625rem;
+    display: block;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    pointer-events: none;
+  }
+
+  /* --- The bottom: Move to Trash, and no second Done --------------------------------------- */
+  .editor .footer {
+    display: none;
+  }
+
+  .editor .trashFoot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    margin-top: var(--space-8);
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  /* A delete: red words with a bin (the button rule). */
+  .editor .trashButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin-left: -0.625rem;
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-danger);
+    font: inherit;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .editor .trashButton:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  .editor .trashButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  .editor .trashHint {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+}
+
+/* A window a little narrower than usual: time and servings on two lines. */
+@media (min-width: 900px) and (max-width: 1099px) and (pointer: fine) {
+  .editor .timeBox {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Windows contrast themes draw no fills or shadows: the boxes, the panel, the keys, the chosen
+   line and a Heading that's on keep an edge, and a box being typed in its ring. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .editor .box,
+  .editor .groupBox,
+  .editor .fieldBox,
+  .editor .linesBody,
+  .editor .nutrition,
+  .editor .linkPicker,
+  .editor .key {
+    border: 1px solid;
+  }
+
+  .editor .previewCurrent {
+    outline: 1px solid;
+  }
+
+  /* Heading while the line is one: an inner ring, as no fill shows. */
+  .editor .small[aria-pressed="true"] {
+    outline: 2px solid;
+    outline-offset: -2px;
+  }
+
+  /* The bar: a plain line under it, no painted fill. */
+  .editor .head,
+  .editor .head[data-scrolled] {
+    border-image-source: none;
+  }
+
+  .editor input:not([type="file"], [type="checkbox"], [type="radio"]):focus,
+  .editor select:focus-visible,
+  .editor textarea:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 0;
+  }
+
+  .editor .dot {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}

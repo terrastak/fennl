@@ -168,6 +168,11 @@ export class EditorSession {
 
   getSnapshot = (): EditorState => this.snapshot;
 
+  /** The title as last saved (what the recipe is called elsewhere, Trash included). */
+  savedTitle(): string {
+    return this.saved.title.trim();
+  }
+
   /** Fields typed directly (title, notes, source…). */
   set(patch: Partial<RecipeContent>): void {
     this.draft = { ...this.draft, ...patch };

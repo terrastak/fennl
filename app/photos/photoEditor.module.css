@@ -147,3 +147,313 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* --- The laptop look (U23 slice 5, owner's choices 2026-11-07) -------------------------------- */
+/* The wrappers below only make the laptop's white box and row; elsewhere they add nothing. */
+.box,
+.strip {
+  display: contents;
+}
+
+.theCover,
+.tileHint {
+  display: none;
+}
+
+.inline {
+  display: inline;
+}
+
+/* A wide window with a mouse or trackpad: "Photos" and "3 of 10" above one white box; the photos
+   a row of 172px squares, each with one row of small controls under it (Make cover, then earlier,
+   later and Remove as icons with tooltips); "Add photos" a tile at the end ("or drop them here"),
+   or a small button beside why it can't be used yet. Phones, touch screens and windows under
+   900px keep the section above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .section {
+    gap: var(--space-2);
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .section.dropping {
+    background: none;
+  }
+
+  .top {
+    align-items: center;
+    min-height: 1.75rem;
+  }
+
+  .heading {
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .count,
+  .note {
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .box {
+    display: grid;
+    gap: var(--space-3);
+    padding: 0.875rem var(--space-4) var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  /* Dropping photos on the section: the box's edge in the accent. */
+  .dropping .box {
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  /* "Arranged by Fennl" under the photos, with a small mark. */
+  .arranged {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    order: 2;
+  }
+
+  .strip {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-4) var(--space-3);
+  }
+
+  .photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-3);
+  }
+
+  .photo {
+    gap: 0.375rem;
+    width: 10.75rem;
+  }
+
+  .thumb {
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .coverTag {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    min-height: 1.375rem;
+    padding: 0 0.4375rem;
+    border-radius: var(--radius-control);
+    background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+    font-size: var(--ui-text-label);
+  }
+
+  .coverTag svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    color: var(--color-warm);
+  }
+
+  .photoButtons {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+    min-height: var(--control-sm);
+  }
+
+  .small {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    min-height: 1.625rem;
+    padding: 0 0.4375rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+  }
+
+  .small:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  .small:disabled {
+    opacity: 0.5;
+  }
+
+  /* Make cover lines up with the photo's edge; its fill reaches out to the left when pointed at. */
+  .words {
+    margin-right: auto;
+    margin-left: -0.4375rem;
+  }
+
+  /* Drawn, not written (the span is hidden from screen readers): the photo's own description
+     already says it's the cover. */
+  .theCover::before {
+    content: "The cover";
+  }
+
+  .theCover {
+    display: block;
+    margin-right: auto;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .iconButton {
+    width: 1.625rem;
+    padding: 0;
+    color: var(--color-text-muted);
+  }
+
+  .iconButton:not(:disabled):hover {
+    color: var(--color-text);
+  }
+
+  .glyph {
+    display: none;
+  }
+
+  .iconButton svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+
+  .buttons {
+    display: block;
+  }
+
+  /* Add photos: a tile the size of a photo at the end of the row. */
+  .tile,
+  .tileSmall {
+    gap: var(--space-1);
+    border: 1.5px dashed var(--color-border);
+    background: color-mix(in srgb, var(--color-surface-sunken) 45%, var(--color-surface));
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    text-align: center;
+  }
+
+  .tile {
+    flex-direction: column;
+    width: 10.75rem;
+    height: 10.75rem;
+    padding: var(--space-2);
+    border-radius: var(--radius-pop);
+  }
+
+  .tile svg {
+    width: 1.375rem;
+    height: 1.375rem;
+    color: var(--color-text-muted);
+  }
+
+  .tileHint {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-regular);
+  }
+
+  .tileSmall {
+    gap: var(--space-2);
+    min-height: var(--control);
+    padding: 0 0.875rem;
+    border-width: 1px;
+    border-radius: var(--radius-control);
+  }
+
+  .tileSmall svg {
+    color: var(--color-text-muted);
+  }
+
+  .tile:not(.off):hover,
+  .tileSmall:not(.off):hover {
+    border-color: var(--color-border-strong);
+    background: var(--hover-fill);
+  }
+
+  .tile.off,
+  .tileSmall.off {
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+
+  .tile.off svg,
+  .tileSmall.off svg {
+    color: var(--color-border-strong);
+  }
+
+  .tile:focus-within,
+  .tileSmall:focus-within {
+    outline-width: var(--focus-width);
+  }
+
+  /* Dropping is said on the tile itself. */
+  .dropNote {
+    display: none;
+  }
+
+  /* No photos yet: the small button with the reason beside it. */
+  .box:has(.tileSmall) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) 0.875rem;
+  }
+
+  .box:has(.tileSmall) > .note {
+    flex: 1 1 18rem;
+  }
+
+  /* With no photos yet, dropping is said beside the small button. */
+  .box:has(.tileSmall) > .dropNote {
+    display: block;
+    flex: 0 1 auto;
+  }
+
+  .box:has(.tileSmall) > :not(.strip, .note) {
+    flex-basis: 100%;
+  }
+
+  .problem {
+    font-size: var(--ui-text);
+  }
+}
+
+/* A narrower laptop window: slightly smaller squares, so three photos and Add photos share a row. */
+@media (min-width: 900px) and (max-width: 1099px) and (pointer: fine) {
+  .photo {
+    width: 9.75rem;
+  }
+
+  .tile {
+    width: 9.75rem;
+    height: 9.75rem;
+  }
+}
+
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .box {
+    border: 1px solid;
+  }
+
+  .small {
+    border: 1px solid transparent;
+  }
+}

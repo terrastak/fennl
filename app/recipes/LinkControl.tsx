@@ -4,6 +4,8 @@ import { wouldLoop } from "../../shared/subRecipes";
 import { Link } from "../router";
 import { useRecipeLinks, useRecipeList } from "../sync/useSync";
 import editor from "./editor.module.css";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
 
 // Linking an ingredient to another recipe in the household, in the editor's preview (phase F3):
 // "1 cup BBQ sauce" → the BBQ sauce recipe. A recipe that already uses this one (directly or
@@ -31,7 +33,8 @@ export function LinkedName({ recipeId, onUnlink }: { recipeId: string; onUnlink:
     <span className={editor.link}>
       {linked ? (
         <>
-          {" → "}
+          <span className={editor.linkArrow}>{" → "}</span>
+          <LaptopIcon path={LAPTOP_ICONS.link} className={editor.linkIcon} />
           <Link href={`/recipes/${linked.id}`}>{linked.title}</Link>
         </>
       ) : recipes ? (
@@ -72,7 +75,10 @@ export function LinkPicker({
 
   return (
     <div className={editor.linkPicker} role="group" aria-label={`Link a recipe to “${line.text}”`}>
-      <label htmlFor={`${id}-find`}>Find a recipe to link to &ldquo;{line.text}&rdquo;</label>
+      <label htmlFor={`${id}-find`}>
+        Find a recipe to link to <span className={editor.linkLine}>&ldquo;{line.text}&rdquo;</span>
+      </label>
+      <LaptopIcon path={LAPTOP_ICONS.search} className={editor.findIcon} />
       <input
         id={`${id}-find`}
         type="search"
@@ -88,6 +94,7 @@ export function LinkPicker({
           {candidates.map(({ recipe }) => (
             <li key={recipe.id}>
               <button type="button" className={editor.linkButton} onClick={() => onLink(recipe.id)}>
+                <LaptopIcon path={LAPTOP_ICONS.book} />
                 {recipe.title}
               </button>
             </li>
@@ -96,9 +103,15 @@ export function LinkPicker({
       ) : (
         <p role="status">{q ? "No recipe by that name." : "Type part of a recipe's name."}</p>
       )}
-      <button type="button" className={editor.linkButton} onClick={onClose}>
-        Cancel
-      </button>
+      <div className={editor.linkFoot}>
+        {/* Said on a laptop only, where the keyboard is at hand. */}
+        <p className={editor.escHint} aria-hidden="true">
+          <kbd className={editor.key}>Esc</kbd> also closes this
+        </p>
+        <button type="button" className={editor.linkButton} onClick={onClose}>
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }
