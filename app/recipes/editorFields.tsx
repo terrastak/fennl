@@ -36,7 +36,7 @@ function MoveKeys({ keys }: { keys: boolean }) {
   const laptop = usePointer() && keys;
   const alt = MAC ? "⌥" : "Alt";
   const plus = MAC ? "" : "+";
-  // Phones (and the import review screen, for now) keep the plain words (a key in a box would shape the text differently there).
+  // Phones keep the plain words (a key in a box would shape the text differently there).
   if (!laptop) return <>{`${alt}${plus}↑ / ${alt}${plus}↓`}</>;
   return (
     <>
@@ -104,7 +104,7 @@ export function LinesBox({
   marks,
   words,
   linkFrom,
-  inEditor = false,
+  laptopLook = false,
 }: {
   session: EditorSession;
   state: EditorState;
@@ -113,17 +113,21 @@ export function LinesBox({
   hint: string;
   /**
    * More buttons beside Heading (the review screen's), for the line the cursor is on. `run`
-   * changes the text and says where the cursor goes next, or null to leave it.
+   * changes the text and says where the cursor goes next, or null to leave it; `icon` is drawn
+   * beside the words on a laptop.
    */
-  tools?: { label: string; run: (line: number) => number | null }[];
+  tools?: { label: string; icon?: string; run: (line: number) => number | null }[];
   /** Lines to point out, by line ID: why ("Check this line"). */
   marks?: ReadonlyMap<string, string>;
   /** Words to highlight in lines, by line ID (the ones an AI import wasn't sure of, E10). */
   words?: ReadonlyMap<string, readonly string[]>;
   /** The recipe being edited, so its ingredients can link to other recipes (phase F3). */
   linkFrom?: string;
-  /** In the recipe editor, whose laptop look (U23) adds icons and draws the keys in the hint. */
-  inEditor?: boolean;
+  /**
+   * The laptop look (U23: the recipe editor, and the import review screen since slice 6) adds
+   * icons to the buttons and draws the keys in the hint.
+   */
+  laptopLook?: boolean;
 }) {
   const id = `edit-${list}`;
   const box = useRef<HTMLTextAreaElement>(null);
@@ -200,7 +204,7 @@ export function LinesBox({
             onMouseDown={(event) => event.preventDefault()}
             onClick={toggleHeading}
           >
-            {inEditor ? <LaptopIcon path={LAPTOP_ICONS.heading} /> : null}
+            {laptopLook ? <LaptopIcon path={LAPTOP_ICONS.heading} /> : null}
             Heading
           </button>
           {linkFrom && list === "ingredients" ? (
@@ -212,7 +216,7 @@ export function LinesBox({
               aria-expanded={linking !== null}
               onClick={() => setLinking(current?.id ?? null)}
             >
-              {inEditor ? <LaptopIcon path={LAPTOP_ICONS.link} /> : null}
+              {laptopLook ? <LaptopIcon path={LAPTOP_ICONS.link} /> : null}
               Link a recipe
             </button>
           ) : null}
@@ -225,6 +229,7 @@ export function LinesBox({
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => runTool(tool.run)}
             >
+              {laptopLook && tool.icon ? <LaptopIcon path={tool.icon} /> : null}
               {tool.label}
             </button>
           ))}
@@ -248,7 +253,7 @@ export function LinesBox({
             onBlur={() => session.tidyBox(list)}
           />
           <p id={`${id}-hint`} className={styles.hint}>
-            {hint} <MoveKeys keys={inEditor} /> moves the line you&rsquo;re on. Heading makes it a
+            {hint} <MoveKeys keys={laptopLook} /> moves the line you&rsquo;re on. Heading makes it a
             section heading (&ldquo;For the crust&rdquo;).
           </p>
           {problems.length > 0 ? (

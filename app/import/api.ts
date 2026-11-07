@@ -242,6 +242,37 @@ export async function discardImportJob(id: string, keepalive = false): Promise<b
   return Boolean(res?.ok || res?.status === 404);
 }
 
+// Discards sent as the page was left (Discard selected, before Undo's time ran out) can still be on
+// their way when the next page asks for the list, which would show those drafts again. Their ids
+// are kept for this tab only, and the Import page sends them once more (a discarded draft answers
+// 404, which counts as done) before it asks for the list. Only a convenience: the discard itself
+// was already sent, so storage that's blocked or cleared changes nothing else.
+const LEAVING_KEY = "fennl.import.discardsLeaving";
+
+export function rememberLeavingDiscards(ids: string[]): void {
+  if (ids.length === 0) return;
+  try {
+    sessionStorage.setItem(LEAVING_KEY, JSON.stringify(ids));
+  } catch {
+    // Not kept: the list may show them until the discard arrives.
+  }
+}
+
+/** Sends again the discards sent as the last page closed, and waits for them. */
+export async function finishLeavingDiscards(): Promise<void> {
+  let ids: unknown;
+  try {
+    ids = JSON.parse(sessionStorage.getItem(LEAVING_KEY) ?? "[]");
+    sessionStorage.removeItem(LEAVING_KEY);
+  } catch {
+    return;
+  }
+  if (!Array.isArray(ids)) return;
+  await Promise.all(
+    ids.filter((id): id is string => typeof id === "string").map((id) => discardImportJob(id)),
+  );
+}
+
 /** The draft went into a recipe the household already had. */
 export async function markImportSaved(id: string, recipeId: string): Promise<boolean> {
   const res = await fetch(`/api/import/jobs/${encodeURIComponent(id)}/saved`, {

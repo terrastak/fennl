@@ -28,6 +28,9 @@ powdered sugar, work in two cups of flour, roll into balls and bake 15 minutes a
 async function paste(page: Page, text: string) {
   await page.goto("/import");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  // "Paste a recipe…" opens the box (U23, owner's choice 2026-11-07).
+  await page.getByRole("button", { name: "Paste a recipe…" }).click();
+  await expect(page.getByLabel("Recipe text")).toBeFocused();
   await page.getByLabel("Recipe text").fill(text);
   await page.getByRole("button", { name: "Read this recipe" }).click();
 }
@@ -42,6 +45,8 @@ test("Free: laid out text is read without AI, reviewed beside the pasted text, a
   await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/);
   await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Grandma's Banana Bread");
   await expect(page.getByRole("textbox", { name: "Ingredients" })).toHaveValue(/3 ripe bananas/);
+  // What to check it against says where it came from (U23, owner's choice 2026-11-07).
+  await expect(page.getByText(/^Check it against the text, fix/)).toBeVisible();
 
   const source = page.getByRole("region", { name: "The pasted text" });
   await showFolded(
@@ -100,4 +105,34 @@ test("a web address on its own is turned away, not fetched", async ({ page, cont
   await paste(page, "https://example.com/recipes/banana-bread");
   await expect(page.getByRole("alert")).toContainText("can't import from a link yet");
   await expect(page).toHaveURL(/\/import$/);
+});
+
+test("the paste box opens from its button, and Cancel or Escape closes it", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/import");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  const open = page.getByRole("button", { name: "Paste a recipe…" });
+  await expect(page.getByLabel("Recipe text")).toHaveCount(0);
+  await expect(open).toHaveAttribute("aria-expanded", "false");
+
+  // Cancel closes it, forgets what was typed and gives the focus back to the button.
+  await open.click();
+  await expect(open).toHaveAttribute("aria-expanded", "true");
+  await page.getByLabel("Recipe text").fill("Half a recipe");
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await expect(page.getByLabel("Recipe text")).toHaveCount(0);
+  await expect(open).toBeFocused();
+
+  // Escape too; opened again, the box is empty.
+  await page.keyboard.press("Enter");
+  await expect(page.getByLabel("Recipe text")).toBeFocused();
+  await expect(page.getByLabel("Recipe text")).toHaveValue("");
+  await page.keyboard.type("Another");
+  await page.keyboard.press("Escape");
+  await expect(page.getByLabel("Recipe text")).toHaveCount(0);
+  await expect(open).toBeFocused();
 });

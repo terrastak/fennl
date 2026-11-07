@@ -27,6 +27,7 @@ async function importSavedPage(page: Page, file: string) {
   await page.locator('input[type="file"][accept*="html"]').setInputFiles(`test_pages/${file}`);
   await expect(page).toHaveURL(/\/import\/[0-9a-f-]{36}$/);
   await expect(page.getByRole("heading", { level: 1, name: "Review the import" })).toBeVisible();
+  await expect(page.getByText(/^Check it against the page, fix/)).toBeVisible();
 }
 
 const ingredients = (page: Page) => page.getByRole("textbox", { name: "Ingredients" });

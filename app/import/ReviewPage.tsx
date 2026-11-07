@@ -19,12 +19,16 @@ import { Link } from "../router";
 import { lineEnd } from "../recipes/editing";
 import editor from "../recipes/editor.module.css";
 import { Field, LinesBox, SourceFields, TimeBox } from "../recipes/editorFields";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
+import { usePointer } from "../recipes/usePointer";
 import { described, problemsFor } from "../recipes/fieldProblems";
 import { EditorSession } from "../recipes/editorSession";
 import recipes from "../recipes/recipes.module.css";
 import type { RecipeDetail } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, saveChanges, useCategoryTree, useSyncStatus } from "../sync/useSync";
+import { WarmNote } from "../ui/WarmNote";
 import { discardImportJob, importJob, inputUrl, markImportSaved, readAgain } from "./api";
 import { keepOriginals, originalHashes } from "./originals";
 import styles from "./import.module.css";
@@ -47,6 +51,14 @@ import { SourcePane } from "./SourcePane";
 // the draft, what the importer wasn't sure of, quick fixes, the photos to keep, and whether it
 // duplicates a recipe already in the library. Saving creates the recipe through sync, with
 // where it came from.
+//
+// U23 slice 6 (owner's choices 2026-11-07): the line under the title says what to check it
+// against (the text, the photos or the page). On a laptop one bar at the top stays in view (←
+// Import; how saving is going; Undo, Redo, Discard in red words and Save as the one ink button),
+// instead of Save and Discard again at the bottom; the source stays beside the draft while
+// scrolling; each part's heading sits above its white box, as in the editor (the form takes the
+// editor's laptop look, editor.laptopFields); warnings are the shared warm note. Phones keep the
+// screen as it was, with Save and Discard at the bottom.
 
 /** The time a save is made (outside the components, which mustn't read the clock as they draw). */
 const clock = () => Date.now();
@@ -91,6 +103,7 @@ function Review({
   const usage = useUsage();
   const tree = useCategoryTree();
   const me = activeSyncClient()?.userId ?? "";
+  const laptop = usePointer();
 
   const [recipeId] = useState(() => crypto.randomUUID());
   const [duplicates, setDuplicates] = useState<Duplicate[]>([]);
@@ -195,6 +208,7 @@ function Review({
   const lineTools = (from: "ingredients" | "directions") => [
     {
       label: from === "ingredients" ? "Move to method" : "Move to ingredients",
+      icon: LAPTOP_ICONS.swap,
       run: (line: number) => {
         const moved = moveLineTo(session.getSnapshot().draft, from, line);
         if (!moved) return null;
@@ -350,6 +364,27 @@ function Review({
         : "Save recipe";
   const canSave =
     editable && saving === null && !blocked && !tooLarge && (choice.kind !== "update" || existing);
+  const discard = () => {
+    void discardImportJob(job.id).then((ok) => {
+      if (ok) navigate("/import");
+      else setProblem("This draft couldn't be discarded just now. Please try again.");
+    });
+  };
+  // What to check it against (owner's choice 2026-11-07): by where the draft came from, in the
+  // source pane's own words (a PDF's pages, screenshots, photos).
+  const originals = originalHashes(job.draft).length;
+  const originalNoun =
+    job.draft.source === "screenshot"
+      ? "screenshot"
+      : job.draft.source === "pdf"
+        ? "page"
+        : "photo";
+  const against =
+    job.pastedText !== null
+      ? "the text"
+      : originals > 0
+        ? `the ${originalNoun}${originals === 1 ? "" : "s"}`
+        : "the page";
   const kindOf = (d: Duplicate) =>
     d.match.reason === "same_page"
       ? "imported from this page"
@@ -357,41 +392,63 @@ function Review({
 
   return (
     <article className={styles.review}>
-      <Link href="/import" className={recipes.back}>
+      <Link href="/import" className={`${recipes.back} ${styles.notLaptop}`}>
         ← Import
       </Link>
-      <h1 tabIndex={-1} className={editor.heading}>
+      <h1 tabIndex={-1} className={`${editor.heading} ${styles.reviewTitle}`}>
         Review the import
       </h1>
-      <p className={recipes.hint}>
-        Check it against the page, fix anything that&rsquo;s off, then save. Nothing is added to
+      <p className={`${recipes.hint} ${styles.reviewLede}`}>
+        Check it against {against}, fix anything that&rsquo;s off, then save. Nothing is added to
         your recipes until you do.
       </p>
 
-      <div className={editor.bar}>
+      <div className={`${editor.bar} ${styles.reviewBar}`}>
+        <Link href="/import" className={`${styles.barBack} ${styles.laptopOnly}`}>
+          <LaptopIcon path={LAPTOP_ICONS.left} />
+          Import
+        </Link>
         <p className={editor.status} aria-live="polite">
           {saving ?? announce}
         </p>
         <div className={editor.barButtons}>
           <button
             type="button"
-            className={recipes.secondary}
+            className={`${recipes.secondary} ${styles.quiet}`}
             onClick={() => void session.undo()}
             disabled={!state.canUndo || saving !== null}
           >
+            <LaptopIcon path={LAPTOP_ICONS.undo} />
             Undo
           </button>
           <button
             type="button"
-            className={recipes.secondary}
+            className={`${recipes.secondary} ${styles.quiet}`}
             onClick={() => void session.redo()}
             disabled={!state.canRedo || saving !== null}
           >
+            <LaptopIcon path={LAPTOP_ICONS.redo} />
             Redo
           </button>
+          {/* Discard near Save on a laptop (owner's choice 2026-11-07); phones keep it at the
+              bottom. Not while "Don't import it" is chosen: Save does it then. */}
+          {choice.kind !== "skip" ? (
+            <>
+              <span className={styles.barDivider} aria-hidden="true" />
+              <button
+                type="button"
+                className={`${recipes.secondary} ${styles.quiet} ${styles.danger} ${styles.laptopOnly}`}
+                disabled={saving !== null}
+                onClick={discard}
+              >
+                <LaptopIcon path={LAPTOP_ICONS.trash} />
+                Discard
+              </button>
+            </>
+          ) : null}
           <button
             type="button"
-            className={recipes.primary}
+            className={`${recipes.primary} ${styles.ink}`}
             onClick={() => void save()}
             disabled={!canSave}
           >
@@ -401,36 +458,44 @@ function Review({
       </div>
 
       {problem ? (
-        <p ref={problemRef} tabIndex={-1} role="alert" className={editor.notice}>
+        <WarmNote ref={problemRef} tabIndex={-1} role="alert" className={editor.notice}>
           {problem}
-        </p>
+        </WarmNote>
       ) : null}
       {!editable ? (
-        <p className={editor.notice} role="status">
+        <WarmNote className={editor.notice} role="status">
           Saving is paused until this device is back online. You can keep checking the draft.
-        </p>
+        </WarmNote>
       ) : null}
       {blocked && usage ? (
-        <p className={editor.notice} role="status">
+        <WarmNote className={editor.notice} role="status">
           {addBlockedText(blocked, usage)} {NOTHING_LOST}
-        </p>
+        </WarmNote>
       ) : null}
       {tooLarge ? (
-        <p className={editor.notice} role="status">
+        <WarmNote className={editor.notice} role="status">
           {TOO_LARGE_TEXT}
-        </p>
+        </WarmNote>
       ) : null}
 
       {duplicates.length > 0 ? (
         <section className={styles.duplicates} aria-labelledby="duplicates-title">
+          <span className={styles.dupIcon} aria-hidden="true">
+            <LaptopIcon path={LAPTOP_ICONS.copy} />
+          </span>
           <h2 id="duplicates-title" className={styles.sectionTitle}>
             This looks like a recipe you already have
           </h2>
-          <ul className={styles.plainList}>
+          <ul className={`${styles.plainList} ${styles.dupLinks}`}>
             {duplicates.map((d) => (
               <li key={d.match.id}>
                 <a href={`/recipes/${d.match.id}`} target="_blank" rel="noopener">
                   {d.detail.recipe.title}
+                  {/* Drawn only on a laptop: inside a link even a hidden icon moves the phone's
+                      underline by a hair. */}
+                  {laptop ? (
+                    <LaptopIcon path={LAPTOP_ICONS.external} className={styles.externalIcon} />
+                  ) : null}
                   <span className="visually-hidden"> (opens in a new tab)</span>
                 </a>{" "}
                 <span className={recipes.hint}>({kindOf(d)})</span>
@@ -499,7 +564,10 @@ function Review({
 
         <div className={styles.draft}>
           {job.ai?.canReadAgain ? (
-            <section className={styles.check} aria-labelledby="read-again-title">
+            <section
+              className={`${styles.check} ${styles.again}`}
+              aria-labelledby="read-again-title"
+            >
               <h2 id="read-again-title" className={styles.smallTitle}>
                 Not quite right?
               </h2>
@@ -513,13 +581,14 @@ function Review({
                 again, more carefully, once. Anything you&rsquo;ve already changed here is kept. It
                 counts as one of this month&rsquo;s AI imports.
               </p>
-              <div>
+              <div className={styles.againButton}>
                 <button
                   type="button"
-                  className={recipes.secondary}
+                  className={`${recipes.secondary} ${styles.quiet}`}
                   onClick={() => void readItAgain()}
                   disabled={reading || saving !== null}
                 >
+                  <LaptopIcon path={LAPTOP_ICONS.again} />
                   {reading ? "Reading again…" : "Read again more carefully"}
                 </button>
               </div>
@@ -535,23 +604,31 @@ function Review({
               ) : null}
             </section>
           ) : job.ai && stillUncertain(job.draft) ? (
-            <section className={styles.check} aria-labelledby="best-effort-title">
+            // Not a warning: where "Not quite right?" was, in the same quiet box on a laptop.
+            <section
+              className={`${styles.check} ${styles.bestEffort}`}
+              aria-labelledby="best-effort-title"
+            >
               <h2 id="best-effort-title" className={styles.smallTitle}>
                 Fennl has read this as carefully as it can
               </h2>
               <p className={styles.note}>
-                The parts marked &ldquo;Check this&rdquo; may not be right. Check them against the
-                photo and correct them by hand. If the photo is blurry or dark, a clearer one may
-                read better.
+                The parts marked &ldquo;Check this&rdquo; may not be right. Check them against{" "}
+                {against} and correct them by hand.
+                {originalNoun === "photo" && originals > 0
+                  ? ` If the ${originals === 1 ? "photo is" : "photos are"} blurry or dark, a clearer one may read better.`
+                  : null}
               </p>
             </section>
           ) : null}
 
           {toCheck.length > 0 || words.size > 0 || job.draft.warnings.length > 0 ? (
-            <section className={styles.check} aria-labelledby="check-title">
-              <h2 id="check-title" className={styles.smallTitle}>
-                Worth checking
-              </h2>
+            <WarmNote
+              className={styles.check}
+              title="Worth checking"
+              titleId="check-title"
+              titleClassName={styles.smallTitle}
+            >
               <ul className={styles.plainList}>
                 {toCheck.map(({ field, note }) => (
                   <li key={field}>
@@ -571,37 +648,51 @@ function Review({
                   <li key={w}>{w}</li>
                 ))}
               </ul>
-            </section>
+            </WarmNote>
           ) : null}
 
-          <button type="button" className={recipes.secondary} onClick={() => void tidy()}>
+          <button
+            type="button"
+            className={`${recipes.secondary} ${styles.quiet} ${styles.tidy}`}
+            onClick={() => void tidy()}
+          >
+            <LaptopIcon path={LAPTOP_ICONS.wand} />
             Tidy fractions and temperatures
           </button>
 
-          <form onSubmit={(e) => e.preventDefault()} className={editor.fields}>
-            <Field id="edit-title" label="Title" problems={problemsFor(state.issues, "title")}>
-              <input
-                {...described("edit-title", false, problemsFor(state.issues, "title"))}
-                className={`${recipes.input} ${editor.titleInput}`}
-                value={draft.title}
-                maxLength={RECIPE_RULES.titleLength}
-                onChange={(e) => set({ title: e.target.value })}
-              />
-            </Field>
-            <Field
-              id="edit-description"
-              label="About this recipe"
-              problems={problemsFor(state.issues, "description")}
-            >
-              <textarea
-                {...described("edit-description", false, problemsFor(state.issues, "description"))}
-                className={`${recipes.input} ${editor.textarea} ${editor.short}`}
-                value={draft.description}
-                rows={3}
-                maxLength={RECIPE_RULES.descriptionLength}
-                onChange={(e) => set({ description: e.target.value })}
-              />
-            </Field>
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className={`${editor.fields} ${editor.laptopFields} ${styles.reviewForm}`}
+          >
+            <div className={editor.box}>
+              <Field id="edit-title" label="Title" problems={problemsFor(state.issues, "title")}>
+                <input
+                  {...described("edit-title", false, problemsFor(state.issues, "title"))}
+                  className={`${recipes.input} ${editor.titleInput}`}
+                  value={draft.title}
+                  maxLength={RECIPE_RULES.titleLength}
+                  onChange={(e) => set({ title: e.target.value })}
+                />
+              </Field>
+              <Field
+                id="edit-description"
+                label="About this recipe"
+                problems={problemsFor(state.issues, "description")}
+              >
+                <textarea
+                  {...described(
+                    "edit-description",
+                    false,
+                    problemsFor(state.issues, "description"),
+                  )}
+                  className={`${recipes.input} ${editor.textarea} ${editor.short}`}
+                  value={draft.description}
+                  rows={3}
+                  maxLength={RECIPE_RULES.descriptionLength}
+                  onChange={(e) => set({ description: e.target.value })}
+                />
+              </Field>
+            </div>
 
             <LinesBox
               session={session}
@@ -612,6 +703,7 @@ function Review({
               tools={lineTools("ingredients")}
               marks={marks}
               words={words}
+              laptopLook
             />
             <LinesBox
               session={session}
@@ -622,6 +714,7 @@ function Review({
               tools={lineTools("directions")}
               marks={marks}
               words={words}
+              laptopLook
             />
 
             <PhotoChoices
@@ -635,91 +728,103 @@ function Review({
             />
 
             <section
-              className={categoryStyles.recipeCategories}
+              className={`${categoryStyles.recipeCategories} ${categoryStyles.inEditor}`}
               aria-labelledby="review-categories"
             >
               <h2 id="review-categories" className={categoryStyles.sectionTitle}>
                 Categories
               </h2>
-              {paths.length > 0 ? (
-                <ul className={categoryStyles.chips} aria-label="Categories to file it under">
-                  {paths.map((names) => {
-                    const path = names.join(" › ");
-                    return (
-                      <li key={pathKey(names)} className={categoryStyles.chip}>
-                        {path}
-                        <button
-                          type="button"
-                          className={categoryStyles.chipRemove}
-                          onClick={() => {
-                            setPaths(paths.filter((p) => pathKey(p) !== pathKey(names)));
-                            setAnnounce(`Won't be filed under ${path}.`);
-                          }}
-                        >
-                          <span aria-hidden="true">×</span>
-                          <span className="visually-hidden">Don&rsquo;t file under {path}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-              {tree ? (
-                <CategoryCombobox
-                  tree={tree}
-                  label="Add a category"
-                  exclude={paths.map(pathKey)}
-                  onChoose={(names) => {
-                    setPaths([...paths, names]);
-                    setAnnounce(`Will be filed under ${names.join(" › ")}.`);
-                  }}
-                />
-              ) : null}
+              <div className={`${categoryStyles.editorBox} ${styles.categoriesBox}`}>
+                {paths.length > 0 ? (
+                  <ul className={categoryStyles.chips} aria-label="Categories to file it under">
+                    {paths.map((names) => {
+                      const path = names.join(" › ");
+                      return (
+                        <li key={pathKey(names)} className={categoryStyles.chip}>
+                          {path}
+                          <button
+                            type="button"
+                            className={categoryStyles.chipRemove}
+                            onClick={() => {
+                              setPaths(paths.filter((p) => pathKey(p) !== pathKey(names)));
+                              setAnnounce(`Won't be filed under ${path}.`);
+                            }}
+                          >
+                            <span aria-hidden="true" className={categoryStyles.times}>
+                              ×
+                            </span>
+                            <LaptopIcon path={LAPTOP_ICONS.x} />
+                            <span className="visually-hidden">Don&rsquo;t file under {path}</span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : null}
+                {tree ? (
+                  <CategoryCombobox
+                    tree={tree}
+                    label="Add a category"
+                    exclude={paths.map(pathKey)}
+                    onChoose={(names) => {
+                      setPaths([...paths, names]);
+                      setAnnounce(`Will be filed under ${names.join(" › ")}.`);
+                    }}
+                  />
+                ) : null}
+              </div>
             </section>
 
             <fieldset className={editor.group}>
               <legend>Time and servings</legend>
-              <div className={editor.row}>
-                <TimeBox session={session} state={state} which="prep" label="Prep time" />
-                <TimeBox session={session} state={state} which="cook" label="Cook time" />
-                <TimeBox session={session} state={state} which="total" label="Total time" />
-              </div>
-              <div className={editor.row}>
-                <Field
-                  id="edit-servings"
-                  label="Serves"
-                  problems={problemsFor(state.issues, "servings")}
-                  className={editor.narrow}
-                >
-                  <input
-                    {...described("edit-servings", false, problemsFor(state.issues, "servings"))}
-                    className={recipes.input}
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={RECIPE_RULES.maxServings}
-                    value={state.boxes.servings}
-                    onChange={(e) => session.setBox("servings", e.target.value)}
-                    onBlur={() => session.tidyBox("servings")}
-                  />
-                </Field>
-                <Field id="edit-yield" label="Makes">
-                  <input
-                    id="edit-yield"
-                    className={recipes.input}
-                    value={draft.servings.yield ?? ""}
-                    maxLength={RECIPE_RULES.shortTextLength}
-                    onChange={(e) =>
-                      set({ servings: { ...draft.servings, yield: e.target.value || null } })
-                    }
-                  />
-                </Field>
+              <div className={`${editor.groupBox} ${editor.timeBox} ${styles.reviewTimes}`}>
+                <div className={editor.row}>
+                  <TimeBox session={session} state={state} which="prep" label="Prep time" />
+                  <TimeBox session={session} state={state} which="cook" label="Cook time" />
+                  <TimeBox session={session} state={state} which="total" label="Total time" />
+                </div>
+                <div className={editor.row}>
+                  <Field
+                    id="edit-servings"
+                    label="Serves"
+                    problems={problemsFor(state.issues, "servings")}
+                    className={editor.narrow}
+                  >
+                    <input
+                      {...described("edit-servings", false, problemsFor(state.issues, "servings"))}
+                      className={recipes.input}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={RECIPE_RULES.maxServings}
+                      value={state.boxes.servings}
+                      onChange={(e) => session.setBox("servings", e.target.value)}
+                      onBlur={() => session.tidyBox("servings")}
+                    />
+                  </Field>
+                  <Field id="edit-yield" label="Makes">
+                    <input
+                      id="edit-yield"
+                      className={recipes.input}
+                      value={draft.servings.yield ?? ""}
+                      maxLength={RECIPE_RULES.shortTextLength}
+                      onChange={(e) =>
+                        set({ servings: { ...draft.servings, yield: e.target.value || null } })
+                      }
+                    />
+                  </Field>
+                </div>
               </div>
             </fieldset>
 
             <SourceFields session={session} state={state} />
 
-            <Field id="edit-notes" label="Notes" problems={problemsFor(state.issues, "notes")}>
+            <Field
+              id="edit-notes"
+              label="Notes"
+              problems={problemsFor(state.issues, "notes")}
+              boxed
+            >
               <textarea
                 {...described("edit-notes", false, problemsFor(state.issues, "notes"))}
                 className={`${recipes.input} ${editor.textarea}`}
@@ -731,7 +836,8 @@ function Review({
             </Field>
           </form>
 
-          <div className={editor.footer}>
+          {/* Phones keep Save and Discard here; a laptop's bar at the top stays in view instead. */}
+          <div className={`${editor.footer} ${styles.notLaptop}`}>
             <button
               type="button"
               className={recipes.primary}
@@ -745,12 +851,7 @@ function Review({
                 type="button"
                 className={recipes.secondary}
                 disabled={saving !== null}
-                onClick={() => {
-                  void discardImportJob(job.id).then((ok) => {
-                    if (ok) navigate("/import");
-                    else setProblem("This draft couldn't be discarded just now. Please try again.");
-                  });
-                }}
+                onClick={discard}
               >
                 Discard
               </button>
@@ -802,10 +903,12 @@ function PhotoChoices({
         <h2 id="review-photos" className={styles.sectionTitle}>
           Photos
         </h2>
-        <p className={recipes.hint}>
-          Photos come with Premium, so this recipe is imported without the page&rsquo;s{" "}
-          {inputs.length === 1 ? "photo" : `${inputs.length} photos`}.
-        </p>
+        <div className={styles.photosBox}>
+          <p className={recipes.hint}>
+            Photos come with Premium, so this recipe is imported without the page&rsquo;s{" "}
+            {inputs.length === 1 ? "photo" : `${inputs.length} photos`}.
+          </p>
+        </div>
       </section>
     );
   }
@@ -814,57 +917,64 @@ function PhotoChoices({
       <h2 id="review-photos" className={styles.sectionTitle}>
         Photos
       </h2>
-      <p className={recipes.hint}>
-        From the page. Kept photos are stored in your account, so the recipe doesn&rsquo;t depend on
-        the site.
-      </p>
-      <ul className={styles.photoList}>
-        {inputs.map((input, i) => {
-          const keep = kept.includes(input);
-          return (
-            <li key={input} className={styles.photo}>
-              {failed.includes(input) ? (
-                <p className={recipes.hint}>
-                  Photo {i + 1} couldn&rsquo;t be fetched from the page&rsquo;s site.
-                </p>
-              ) : (
-                <img
-                  src={inputUrl(job.id, input)}
-                  alt={`Photo ${i + 1} from the page`}
-                  loading="lazy"
-                  onError={() => {
-                    setFailed((all) => [...all, input]);
-                    setKept(kept.filter((k) => k !== input));
-                  }}
-                />
-              )}
-              <label>
-                <input
-                  type="checkbox"
-                  checked={keep}
-                  disabled={failed.includes(input)}
-                  onChange={() =>
-                    setKept(keep ? kept.filter((k) => k !== input) : [...kept, input])
-                  }
-                />{" "}
-                Keep photo {i + 1}
-              </label>
-              {cover !== null && inputs.length > 1 ? (
+      <div className={styles.photosBox}>
+        <p className={recipes.hint}>
+          From the page. Kept photos are stored in your account, so the recipe doesn&rsquo;t depend
+          on the site.
+        </p>
+        <ul className={styles.photoList}>
+          {inputs.map((input, i) => {
+            const keep = kept.includes(input);
+            return (
+              <li key={input} className={styles.photo} data-kept={keep || undefined}>
+                {cover === input && keep && inputs.length > 1 ? (
+                  <span className={styles.coverTag} aria-hidden="true">
+                    Cover
+                  </span>
+                ) : null}
+                {failed.includes(input) ? (
+                  <p className={recipes.hint}>
+                    Photo {i + 1} couldn&rsquo;t be fetched from the page&rsquo;s site.
+                  </p>
+                ) : (
+                  <img
+                    src={inputUrl(job.id, input)}
+                    alt={`Photo ${i + 1} from the page`}
+                    loading="lazy"
+                    onError={() => {
+                      setFailed((all) => [...all, input]);
+                      setKept(kept.filter((k) => k !== input));
+                    }}
+                  />
+                )}
                 <label>
                   <input
-                    type="radio"
-                    name="review-cover"
-                    checked={cover === input}
-                    disabled={!keep}
-                    onChange={() => setCover(input)}
+                    type="checkbox"
+                    checked={keep}
+                    disabled={failed.includes(input)}
+                    onChange={() =>
+                      setKept(keep ? kept.filter((k) => k !== input) : [...kept, input])
+                    }
                   />{" "}
-                  Cover
+                  Keep photo {i + 1}
                 </label>
-              ) : null}
-            </li>
-          );
-        })}
-      </ul>
+                {cover !== null && inputs.length > 1 ? (
+                  <label>
+                    <input
+                      type="radio"
+                      name="review-cover"
+                      checked={cover === input}
+                      disabled={!keep}
+                      onChange={() => setCover(input)}
+                    />{" "}
+                    Cover
+                  </label>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </section>
   );
 }
