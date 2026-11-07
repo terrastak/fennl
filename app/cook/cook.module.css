@@ -351,3 +351,467 @@
   flex: none;
   align-items: flex-end;
 }
+
+/* Pieces drawn on a laptop only (below). */
+.where,
+.keys {
+  display: none;
+}
+
+/*
+ * The laptop look (U23, mockup approved 2026-11-07, owner's choices the same day): the words stay
+ * large, the controls get quieter. Where you are beside the recipe's name; Timers a quiet button
+ * with a count; running timers smaller, Pause and Stop as icons; "You'll need" a white box; step
+ * text 30px, times in it the recipe page's soft highlight; Next the one ink button, Back soft
+ * grey with "or press ← →"; on the last screen "Close without marking it made" a quiet button to
+ * the left of Done. A tablet on its side (touch) and phones keep the look above.
+ */
+@media (min-width: 900px) and (pointer: fine) {
+  .cook {
+    gap: 0;
+    padding: 0 max(2.5rem, env(safe-area-inset-right)) 1.25rem
+      max(2.5rem, env(safe-area-inset-left));
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+  }
+
+  .top {
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    min-height: 3.5rem;
+  }
+
+  /* A long name shrinks to one line ending in "…", so Timers and the close button stay on screen. */
+  .title {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .where {
+    display: block;
+    flex: 1 0 auto;
+    margin: 0 0 0 var(--space-1);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .scaled {
+    flex: none;
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-tag);
+    font-size: var(--ui-text-label);
+  }
+
+  .where + .scaled {
+    margin-right: auto;
+  }
+
+  /* Timers: a quiet button with a clock and how many there are. */
+  .newTimer {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin-left: auto;
+    padding: 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-regular);
+  }
+
+  .newTimer:hover {
+    background: var(--hover-fill);
+  }
+
+  .topIcon {
+    color: var(--color-text-muted);
+  }
+
+  .timerCount {
+    display: inline-grid;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    place-items: center;
+    padding: 0 0.25rem;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .leave {
+    flex: none;
+    min-width: var(--control);
+    min-height: var(--control);
+    border-radius: var(--radius-control);
+  }
+
+  .leave:hover {
+    background: var(--hover-fill);
+  }
+
+  .leaveChar {
+    display: none;
+  }
+
+  .leave svg.leaveIcon {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .newTimer:focus-visible,
+  .leave:focus-visible,
+  .bottom button:focus-visible,
+  .timeButton:focus-visible,
+  .cookFirst:focus-visible,
+  .timers .textButton:focus-visible {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  .bar {
+    height: 3px;
+    background: var(--color-surface-sunken);
+  }
+
+  /* Running timers along the top: smaller, the name bold and where it's from beside it. */
+  .timers {
+    margin-top: 0.875rem;
+  }
+
+  .timer,
+  .timerDone {
+    flex-wrap: nowrap;
+    gap: 0.125rem;
+    min-height: 2.5rem;
+    padding: 0 var(--space-1) 0 var(--space-3);
+    border-radius: var(--radius-sm);
+    outline: 0;
+    font-weight: var(--weight-regular);
+  }
+
+  /* A paused one in grey ("Paused" in words beside its time). */
+  .timer.timerPaused {
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+  }
+
+  .timerLabel {
+    display: inline;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+
+  .timerFrom {
+    font-weight: var(--weight-regular);
+  }
+
+  .timeChar {
+    display: none;
+  }
+
+  .timerLabel svg.stripClock {
+    display: inline-block;
+    margin-right: 0.375rem;
+    vertical-align: -0.1875rem;
+  }
+
+  .timers > .textButton {
+    min-height: 1.5rem;
+    margin: var(--space-2) 0 0 0.375rem;
+    padding: 0;
+    color: var(--color-accent);
+    font-size: var(--ui-text-secondary);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.125rem;
+  }
+
+  .timers > .textButton:hover {
+    color: var(--color-accent);
+    text-decoration-thickness: 2px;
+  }
+
+  /* A step's time: the recipe page's soft highlight with a clock, sized to the text. */
+  .timeButton {
+    margin: 0 -0.125rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-weight: var(--weight-medium);
+    -webkit-box-decoration-break: clone;
+  }
+
+  .timeButton:hover {
+    background: color-mix(in srgb, var(--color-accent-soft) 70%, var(--color-accent) 14%);
+  }
+
+  .timeButton svg.timeClock {
+    display: inline-block;
+    width: 0.75em;
+    height: 0.75em;
+    margin-right: 0.2em;
+    vertical-align: -0.05em;
+  }
+
+  /* --- Wide: "You'll need" a white box beside two steps ---------------------------------------- */
+  .wide .columns {
+    /* "You'll need" 300px, but never more than 30% of the window, so at the largest text size on
+       a 1024px laptop the two steps keep room. */
+    grid-template-columns: min(18.75rem, 30vw) minmax(0, 1fr) minmax(0, 1fr);
+    margin-top: 1.375rem;
+    padding-top: 0;
+  }
+
+  .wide .columns > section {
+    padding: var(--space-1) 2.25rem 0;
+    border-left: 1px solid var(--color-border-soft);
+  }
+
+  .wide .columns > section:first-of-type {
+    align-self: start;
+    max-height: 100%;
+    padding: var(--space-4) 1.125rem 0.625rem;
+    border-left: 0;
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .wide .columns > section:nth-of-type(2) {
+    margin-left: var(--space-8);
+  }
+
+  .wide .columns > section:last-child {
+    padding-right: 0;
+  }
+
+  .wide .needHeading {
+    margin: 0 0 0.375rem;
+    font-size: 1.375rem;
+  }
+
+  .wide .ingredients li {
+    padding: 0.4375rem 0;
+    border-top: 1px solid var(--color-border-soft);
+    border-bottom: 0;
+    line-height: 1.4;
+  }
+
+  .wide .ingredients li:not(.section) {
+    font-size: 1.0625rem;
+  }
+
+  .wide .ingredients li:first-child {
+    border-top: 0;
+  }
+
+  .wide .ingredients .section {
+    padding-top: var(--space-3);
+    border-top: 0;
+    font-size: var(--ui-text-label);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .cookFirst {
+    display: inline-flex;
+    gap: var(--space-1);
+    min-height: 1.5rem;
+    margin-top: 0.125rem;
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.125rem;
+  }
+
+  .cookFirst svg.cookFirstIcon {
+    width: 0.8125rem;
+    height: 0.8125rem;
+  }
+
+  .stepNumber {
+    margin: 0;
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.06em;
+  }
+
+  .sectionName {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .uses {
+    margin: var(--space-2) 0 0;
+    font-size: var(--ui-text);
+    line-height: 1.5;
+  }
+
+  /* Each ingredient kept together as one piece, wrapping inside only when it is wider than the
+     column (the largest text size in a narrow window), never running out of it. */
+  .use {
+    display: inline-block;
+    max-width: 100%;
+    color: var(--color-text);
+    overflow-wrap: anywhere;
+  }
+
+  /* 30px, a little smaller only where the window is too narrow for two steps of it (the largest
+     text size near 1024px), and long words wrap rather than run out of the column. */
+  .wide .stepText {
+    margin: 0.875rem 0 0;
+    font-size: min(1.875rem, 3.4vw);
+    overflow-wrap: break-word;
+    line-height: 1.42;
+    letter-spacing: -0.005em;
+    text-wrap: pretty;
+  }
+
+  /* --- The buttons ------------------------------------------------------------------------------ */
+  .wide .bottom {
+    align-items: center;
+    justify-content: flex-start;
+    gap: var(--space-3);
+    padding: var(--space-4) 0 0;
+  }
+
+  .wide .primary,
+  .wide .secondary,
+  .wide .textButton {
+    gap: 0.375rem;
+    min-height: 2.5rem;
+    padding: 0 0.875rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    font-size: 0.9375rem;
+  }
+
+  /* Next (and Done): the one ink button. */
+  .wide .primary {
+    padding: 0 1.125rem;
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .wide .primary:not(:disabled):hover {
+    background: var(--button-ink-hover);
+  }
+
+  /* Back: soft grey; before there's anywhere to go back to, just faded words. */
+  .wide .secondary {
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-weight: var(--weight-regular);
+  }
+
+  .wide .secondary:not(:disabled):hover {
+    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  }
+
+  .wide .secondary:disabled {
+    background: none;
+    color: var(--color-text-muted);
+    opacity: 0.7;
+  }
+
+  .wide .secondary svg {
+    color: var(--color-text-muted);
+  }
+
+  /* The ‹ and › stay in the buttons' names; an arrow is drawn in their place. */
+  .chevron {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .keys {
+    display: inline-flex;
+    align-items: center;
+    margin: 0 0 0 0.375rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  /* What's drawn (the keys), hidden from screen readers, which hear the words beside it. */
+  .keysShown {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3125rem;
+  }
+
+  .keys kbd {
+    display: inline-grid;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    place-items: center;
+    padding: 0 0.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-tag);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-size: var(--ui-text-label);
+    line-height: 1;
+  }
+
+  .wide .forward {
+    flex: 1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--space-2) var(--space-3);
+  }
+
+  /* Close without marking it made: a quiet button beside Done (owner's choice 2026-11-07). */
+  .wide .textButton {
+    background: none;
+    color: var(--color-text);
+  }
+
+  .wide .textButton:hover {
+    background: var(--hover-fill);
+    text-decoration: none;
+  }
+
+  .wide .forward > p {
+    flex-basis: 100%;
+    text-align: right;
+  }
+}
+
+/* Windows contrast themes draw no fills: the ingredients box, timers, times and buttons keep an
+   edge. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .wide .columns > section:first-of-type,
+  .timer,
+  .timerDone,
+  .wide .primary,
+  .wide .secondary,
+  .keys kbd {
+    border: 1px solid;
+  }
+
+  .timeButton {
+    text-decoration: underline dashed;
+  }
+}

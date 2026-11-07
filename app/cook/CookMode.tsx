@@ -23,7 +23,10 @@ import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
 import { usePlace } from "./place";
-import { TimerButtons, TimersDialog } from "../timers/Timers";
+import { ClockIcon, TimerButtons, TimersDialog } from "../timers/Timers";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
+import { usePointer } from "../recipes/usePointer";
 import { openTimers } from "../timers/timersView";
 import {
   askForNotifications,
@@ -43,6 +46,13 @@ import styles from "./cook.module.css";
 // as the recipe page shows them), times in it start timers that stay at the top, the screen is
 // kept on, and the last step's button is "Done · I made it today". Where someone is is kept on
 // the device for 12 hours. A linked recipe can be cooked first and comes back here.
+//
+// On a laptop (U23, mockup approved 2026-11-07) the words stay large and the controls get quieter:
+// step text 30px, "You'll need" a white box, where you are beside the recipe's name, Timers a
+// quiet button with a count, times in a step the recipe page's soft highlight, running timers
+// smaller with Pause and Stop as icons, Next the one ink button and Back soft grey with "or press
+// ← →"; on the last screen "Close without marking it made" sits to the left of Done. A tablet on
+// its side (touch) keeps the wide layout as it was.
 
 /** A step with the section heading it sits under ("For the sauce:"), if any. */
 interface CookStep {
@@ -99,6 +109,8 @@ export function CookMode({ id }: { id: string }) {
   const scaling = useScaling(recipe);
   const day = localDay();
   const wide = useWide();
+  const laptop = usePointer();
+  const { timers: running } = useTimers();
   const [place, setPlace] = usePlace(id);
   const wake = useWakeLock(true);
   const heading = useRef<HTMLHeadingElement>(null);
@@ -245,6 +257,7 @@ export function CookMode({ id }: { id: string }) {
                 href={`/recipes/${line.linkedRecipeId}/cook?back=${id}`}
               >
                 Cook {detail.linked[line.linkedRecipeId]?.title} first
+                <LaptopIcon path={LAPTOP_ICONS.right} className={styles.cookFirstIcon} />
               </Link>
             ) : null}
           </li>
@@ -297,9 +310,12 @@ export function CookMode({ id }: { id: string }) {
             {used.map((use, i) => (
               <span key={use.key}>
                 {i > 0 ? " · " : ""}
-                <ShownText line={use.line} />
-                {use.from ? ` from step ${use.from.number}` : ""}
-                {use.unsure ? ` (${use.unsure.short})` : ""}
+                {/* Each ingredient kept together, in the text colour, on a laptop. */}
+                <span className={styles.use}>
+                  <ShownText line={use.line} />
+                  {use.from ? ` from step ${use.from.number}` : ""}
+                  {use.unsure ? ` (${use.unsure.short})` : ""}
+                </span>
               </span>
             ))}
           </p>
@@ -340,6 +356,13 @@ export function CookMode({ id }: { id: string }) {
     >
       <header className={styles.top}>
         <p className={styles.title}>{recipe.title}</p>
+        {wide && laptop && total > 0 && first >= 0 ? (
+          // Where you are, beside the name (the screen's heading says it to screen readers). Only
+          // the wide layout: one step at a time already shows "Step N of M" right under it.
+          <p className={styles.where} aria-hidden="true">
+            · {stepsName(first, lastShown)} of {total}
+          </p>
+        ) : null}
         {scaling.active ? (
           <p className={styles.scaled}>
             {scaleNote(
@@ -349,20 +372,46 @@ export function CookMode({ id }: { id: string }) {
             ).replace(/:.*$/u, "")}
           </p>
         ) : null}
-        <button
-          type="button"
-          className={styles.newTimer}
-          aria-haspopup="dialog"
-          onClick={openTimers}
-        >
-          <span aria-hidden="true">⏱ </span>Timer
-        </button>
+        {laptop ? (
+          // A quiet button with how many timers there are (as the left panel's Timers).
+          <button
+            type="button"
+            className={styles.newTimer}
+            aria-haspopup="dialog"
+            aria-label={
+              running.length > 0
+                ? `Timers, ${running.length} ${running.length === 1 ? "timer" : "timers"}`
+                : "Timers"
+            }
+            onClick={openTimers}
+          >
+            <ClockIcon className={styles.topIcon} />
+            Timers
+            {running.length > 0 ? (
+              <span className={styles.timerCount} aria-hidden="true">
+                {running.length}
+              </span>
+            ) : null}
+          </button>
+        ) : (
+          <button
+            type="button"
+            className={styles.newTimer}
+            aria-haspopup="dialog"
+            onClick={openTimers}
+          >
+            <span aria-hidden="true">⏱ </span>Timer
+          </button>
+        )}
         <Link
           href={leaveTo}
           className={styles.leave}
           aria-label={parentTitle ? `Back to ${parentTitle}` : "Leave cook mode"}
         >
-          <span aria-hidden="true">✕</span>
+          <span aria-hidden="true" className={styles.leaveChar}>
+            ✕
+          </span>
+          <LaptopIcon path={LAPTOP_ICONS.x} className={styles.leaveIcon} />
         </Link>
       </header>
       {total > 0 ? (
@@ -401,7 +450,17 @@ export function CookMode({ id }: { id: string }) {
       <footer className={styles.bottom}>
         {wide ? (
           <button type="button" className={styles.secondary} disabled={atStart} onClick={backward}>
-            ‹ Back{atStart ? "" : ` · ${stepsName(backFrom, Math.min(total - 1, first - 1))}`}
+            {laptop ? (
+              <>
+                <LaptopIcon path={LAPTOP_ICONS.left} />
+                {/* An arrow is drawn in place of the ‹, which stays in the name. */}
+                <span className={styles.chevron}>‹ </span>
+                Back
+              </>
+            ) : (
+              "‹ Back"
+            )}
+            {atStart ? "" : ` · ${stepsName(backFrom, Math.min(total - 1, first - 1))}`}
           </button>
         ) : (
           <button
@@ -414,18 +473,35 @@ export function CookMode({ id }: { id: string }) {
             ‹
           </button>
         )}
+        {wide && laptop ? (
+          // The arrow keys already move between steps; on a laptop the footer says so.
+          <p className={styles.keys}>
+            <span aria-hidden="true" className={styles.keysShown}>
+              or press <kbd>←</kbd> <kbd>→</kbd>
+            </span>
+            <span className="visually-hidden">or press the left and right arrow keys</span>
+          </p>
+        ) : null}
         <div className={styles.forward}>
           {atEnd && total > 0 && first >= 0 ? (
             <>
+              {/* On a laptop (owner's choice 2026-11-07) a quiet button to the left of Done, in
+                  the wide layout's one row; a tall window's single column keeps it under Done. */}
+              {markMade && wide && laptop ? (
+                <button type="button" className={styles.textButton} onClick={close}>
+                  Close without marking it made
+                </button>
+              ) : null}
               <button
                 type="button"
                 className={styles.primary}
                 disabled={made === "saving"}
                 onClick={() => void finish()}
               >
+                {wide && laptop ? <LaptopIcon path={LAPTOP_ICONS.check} /> : null}
                 {made === "saving" ? "Saving…" : doneLabel}
               </button>
-              {markMade ? (
+              {markMade && !(wide && laptop) ? (
                 <button type="button" className={styles.textButton} onClick={close}>
                   Close without marking it made
                 </button>
@@ -442,11 +518,20 @@ export function CookMode({ id }: { id: string }) {
             </button>
           ) : (
             <button type="button" className={styles.primary} onClick={forward}>
-              {first < 0
-                ? `Start · Step 1 of ${total}`
-                : wide
-                  ? `Next · ${nextName} ›`
-                  : "Next step"}
+              {first < 0 ? (
+                `Start · Step 1 of ${total}`
+              ) : wide && laptop ? (
+                <>
+                  {`Next · ${nextName}`}
+                  {/* An arrow is drawn in place of the ›, which stays in the name. */}
+                  <span className={styles.chevron}> ›</span>
+                  <LaptopIcon path={LAPTOP_ICONS.right} />
+                </>
+              ) : wide ? (
+                `Next · ${nextName} ›`
+              ) : (
+                "Next step"
+              )}
             </button>
           )}
         </div>
@@ -491,7 +576,10 @@ function StepText({
           })
         }
       >
-        <span aria-hidden="true">⏱ </span>
+        <span aria-hidden="true" className={styles.timeChar}>
+          {"⏱ "}
+        </span>
+        <ClockIcon className={styles.timeClock} />
         {time.text}
       </button>,
     );
@@ -509,21 +597,46 @@ function StepText({
  */
 function Timers({ recipeTitle }: { recipeTitle: string }) {
   const { timers, now } = useTimers();
+  const laptop = usePointer();
+  const from = (timer: (typeof timers)[number]) =>
+    timer.recipeTitle !== recipeTitle
+      ? ` · ${fromText(timer)}`
+      : timer.step
+        ? ` · Step ${timer.step}`
+        : "";
   const [askable, setAskable] = useState(canAskForNotifications);
   if (timers.length === 0) return null;
   return (
     <section className={styles.timers} aria-label="Timers">
       <ul>
         {timers.map((timer) => (
-          <li key={timer.id} className={timer.done ? styles.timerDone : styles.timer}>
+          <li
+            key={timer.id}
+            className={
+              timer.done
+                ? styles.timerDone
+                : timer.pausedLeft !== null
+                  ? `${styles.timer} ${styles.timerPaused}`
+                  : styles.timer
+            }
+          >
             <span className={styles.timerLabel}>
-              <span aria-hidden="true">⏱ </span>
-              {timer.label}
-              {timer.recipeTitle !== recipeTitle
-                ? ` · ${fromText(timer)}`
-                : timer.step
-                  ? ` · Step ${timer.step}`
-                  : ""}
+              <span aria-hidden="true" className={styles.timeChar}>
+                {"⏱ "}
+              </span>
+              <ClockIcon className={styles.stripClock} />
+              {/* On a laptop where it's from is in regular weight; elsewhere one run of words. */}
+              {laptop ? (
+                <>
+                  {timer.label}
+                  <span className={styles.timerFrom}>{from(timer)}</span>
+                </>
+              ) : (
+                <>
+                  {timer.label}
+                  {from(timer)}
+                </>
+              )}
             </span>
             <TimerButtons timer={timer} now={now} />
           </li>
