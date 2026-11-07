@@ -1023,17 +1023,33 @@
     gap: var(--space-1);
   }
 
+  /* Update or Save: finishes the name box, so it's the ink button (U23, 2026-11-07). */
   .nameSubmit {
     gap: var(--space-2);
-    min-height: var(--control);
-    padding: 0 var(--space-3);
+    min-height: var(--button-height);
+    padding: 0 var(--space-2) 0 var(--space-3);
     border: 0;
     border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
     font-size: var(--ui-text);
+    font-weight: var(--button-weight);
   }
 
-  .nameSubmit:hover {
-    background: color-mix(in srgb, var(--color-accent-soft) 82%, var(--color-accent));
+  .nameSubmit:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .nameSubmit svg {
+    color: inherit;
+  }
+
+  /* Its ↵ a faint key on the ink, not a white one. */
+  .nameSubmit .key {
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--button-ink-text) 35%, transparent);
+    background: color-mix(in srgb, var(--button-ink-text) 14%, transparent);
+    color: inherit;
   }
 
   .key {
@@ -1089,16 +1105,24 @@
     gap: var(--space-2);
   }
 
-  /* + Add recipe: the screen's one filled button. */
+  /* + Add recipe: the screen's main action, icon and words in the accent, semibold, with no fill
+     or line; a soft fill when pointed at (U23 buttons, owner's choice 2026-11-07). */
   .headActions .add {
-    gap: var(--space-2);
-    min-height: var(--control);
-    padding: 0 var(--space-4) 0 var(--space-3);
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
     border: 0;
     border-radius: var(--radius-control);
-    box-shadow: var(--shadow-sm);
+    background: transparent;
+    color: var(--action-text);
     font-size: var(--ui-text);
+    font-weight: var(--action-weight);
     line-height: 1;
+  }
+
+  .headActions .add:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--action-text);
   }
 
   .headActions .add > span:first-child {
@@ -1300,15 +1324,17 @@
 }
 
 /* Windows contrast themes draw no shadows and no fills, so on a laptop the edges the rules above
-   take away (or leave to a shadow) come back there: the ⋯ menu, + Add recipe, Update, and the
-   buttons that had an outline before. */
+   take away (or leave to a shadow) come back there: the ⋯ menu, the ink Update or Save, and the
+   buttons that had an outline before. + Add recipe is words, so it needs no edge. */
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
   .menu,
-  .headActions .add,
-  .nameSubmit,
   .iconButton,
   .unpick,
   .tool {
     border: 1px solid;
+  }
+
+  .nameSubmit {
+    border: 1px solid ButtonText;
   }
 }

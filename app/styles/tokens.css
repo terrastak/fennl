@@ -112,6 +112,20 @@
   --shadow-pop: var(--shadow-lg); /* menus and popovers */
   /* The keyboard's focus ring (base.css). */
   --focus-width: 3px;
+  /* Buttons (U23, owner's choice 2026-11-07). On a laptop an action is icon and words, with no
+     fill or line and --hover-fill when pointed at: the main one in --action-text and
+     --action-weight, the others in the text colour. Only where a form or decision is finished
+     is there a filled "ink" button: the text colour with the page's own colour on it, so
+     near-black in light mode and light in dark mode, --button-height tall, --button-weight, no
+     shadow. Here they are today's filled button (the accent, 44px, semibold), so phones, touch
+     screens and narrow windows look exactly as before. */
+  --action-text: var(--color-accent);
+  --action-weight: var(--weight-semibold);
+  --button-height: var(--tap-target);
+  --button-weight: var(--weight-semibold);
+  --button-ink-bg: var(--color-accent);
+  --button-ink-text: var(--color-on-accent);
+  --button-ink-hover: var(--color-accent-hover);
 
   /* Printouts (phase F6): dark ink on white paper in every scheme and mode, since a page
      printed from dark mode must not come out dark, and grey that a printer can still draw. */
@@ -159,6 +173,12 @@
       0 12px 28px color-mix(in srgb, var(--color-text) 12%, transparent);
     --focus-width: 2px;
     --sidebar-width: 15rem;
+    /* Ink: the text colour, a touch lighter when pointed at; 30px, medium weight. */
+    --button-height: 1.875rem;
+    --button-weight: var(--weight-medium);
+    --button-ink-bg: var(--color-text);
+    --button-ink-text: var(--color-surface);
+    --button-ink-hover: color-mix(in srgb, var(--color-text) 84%, var(--color-surface));
   }
 }
 

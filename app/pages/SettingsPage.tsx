@@ -130,10 +130,25 @@ export function SettingsPage() {
                         Rose
                       </span>
                       <span className={styles.previewTitle}>Lemon Bars</span>
+                      {/* The scheme's own accent, as variables so a laptop can show Start
+                          cooking as it looks there: accent words with no fill (U23). */}
                       <span
                         className={styles.previewButton}
-                        style={{ background: p.accent, color: p.onAccent }}
+                        style={
+                          {
+                            "--preview-accent": p.accent,
+                            "--preview-on-accent": p.onAccent,
+                          } as CSSProperties
+                        }
                       >
+                        <svg
+                          className={styles.previewIcon}
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M7 5v14l11-7z" />
+                        </svg>
                         Start cooking
                       </span>
                     </span>

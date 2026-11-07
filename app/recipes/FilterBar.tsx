@@ -11,6 +11,8 @@ import {
 import { isQuickSearchItem, quickSearchKey, type QuickFilter } from "../../shared/quickSearches";
 import type { CategoryTree } from "../categories/tree";
 import { AddToQuick } from "./AddToQuick";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
 import { CategoriesField } from "./FiltersPanel";
 import {
   barChips,
@@ -908,6 +910,7 @@ function WordsBox({
           }}
         />
         <button type="button" className={styles.soft} onClick={add} disabled={!typed.trim()}>
+          <LaptopIcon path={LAPTOP_ICONS.plus} />
           Add
         </button>
       </div>

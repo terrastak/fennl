@@ -95,8 +95,15 @@
   margin-top: auto;
   padding: var(--space-1) var(--space-3);
   border-radius: var(--radius-sm);
+  background: var(--preview-accent);
+  color: var(--preview-on-accent);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
+}
+
+/* The play icon is only drawn on a laptop, where Start cooking is icon and words. */
+.previewIcon {
+  display: none;
 }
 
 .schemeName {
@@ -427,12 +434,26 @@
     line-height: 1.2;
   }
 
+  /* Start cooking as it looks on a laptop (U23 buttons, owner's choice 2026-11-07): the scheme's
+     accent words, semibold, with the play icon and no fill. */
   .previewButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
     margin-top: 3px;
-    padding: 2px 0.375rem;
+    padding: 2px 0;
     border-radius: var(--radius-tag);
+    background: transparent;
+    color: var(--preview-accent);
     font-size: 0.625rem;
     line-height: var(--ui-leading);
+  }
+
+  .previewIcon {
+    display: block;
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
   }
 
   .schemeName {

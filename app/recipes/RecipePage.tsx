@@ -47,6 +47,8 @@ import { TimeLink } from "../timers/TimeLink";
 import { markStep } from "../timers/timersView";
 import { ScaleStatus, ScaledLine, ServingsBar, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
 import { usePointer } from "./usePointer";
 import { noteTrashed } from "./trashNotice";
 import {
@@ -110,28 +112,7 @@ function useWide(): boolean {
   );
 }
 
-/** A small icon shown only on a laptop (U23), beside words that say the same thing. */
-function LaptopIcon({ path, fill = false }: { path: string; fill?: boolean }) {
-  return (
-    <svg
-      className={styles.laptopIcon}
-      viewBox="0 0 24 24"
-      fill={fill ? "currentColor" : "none"}
-      stroke="currentColor"
-      strokeWidth={fill ? 1.5 : 2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={path} />
-    </svg>
-  );
-}
-
-const PLAY = "M7 5v14l11-7z";
-const CHECK = "m5 12.5 4.5 4.5L19 7.5";
-const PEN = "M4 20h4L19 9l-4-4L4 16z";
-const PLUS = "M12 5v14M5 12h14";
+const { play: PLAY, check: CHECK, pen: PEN, plus: PLUS, undo: UNDO } = LAPTOP_ICONS;
 
 /**
  * The painting of the cover behind the top of the page, on wide screens only (owner's choice
@@ -465,6 +446,7 @@ function MadeIt({ detail, name, shared, me, editable }: Props & { me: string; ed
     <div className={styles.made}>
       {mine ? (
         <button type="button" className={styles.secondary} onClick={undo} disabled={!editable}>
+          <LaptopIcon path={UNDO} />
           Undo &ldquo;made it&rdquo;
         </button>
       ) : (
@@ -1052,7 +1034,7 @@ function NoteBox({
           {onDelete ? (
             <button
               type="button"
-              className={styles.quietButton}
+              className={`${styles.quietButton} ${styles.quietDanger}`}
               disabled={!editable || saving}
               onClick={onDelete}
             >
@@ -1148,6 +1130,7 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
           disabled={!editable}
           onClick={() => void restore()}
         >
+          <LaptopIcon path={UNDO} />
           Put back
         </button>
       </div>
