@@ -24,14 +24,16 @@ interface RowProps {
   group?: boolean | undefined;
   /** The name is the label of this field (a switch). */
   labelFor?: string | undefined;
+  /** More classes for the row (a shorter row, say). */
+  className?: string | undefined;
 }
 
 /** One row of a laptop's settings box. */
-export function SettingsRow({ name, help, children, top, group, labelFor }: RowProps) {
+export function SettingsRow({ name, help, children, top, group, labelFor, className }: RowProps) {
   const nameId = useId();
   return (
     <div
-      className={`${styles.row} ${top ? styles.rowTop : ""}`}
+      className={`${styles.row} ${top ? styles.rowTop : ""} ${className ?? ""}`}
       role={group ? "radiogroup" : undefined}
       aria-labelledby={group ? nameId : undefined}
     >

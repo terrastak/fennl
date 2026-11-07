@@ -19,6 +19,7 @@ export function WarmNote({
   title,
   titleId,
   titleClassName,
+  icon: iconPath,
 }: {
   children: ReactNode;
   /** The screen's own look on phones (and its margins everywhere). */
@@ -32,10 +33,12 @@ export function WarmNote({
   titleId?: string | undefined;
   /** The heading's own look on phones. */
   titleClassName?: string | undefined;
+  /** Another icon's path (a photo, an "i"), in place of the warning sign. */
+  icon?: string | undefined;
 }) {
   const icon = (
     <svg className={ui.icon} viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3 2 20h20zM12 10v4M12 17h.01" />
+      <path d={iconPath ?? "M12 3 2 20h20zM12 10v4M12 17h.01"} />
     </svg>
   );
   if (title !== undefined) {

@@ -78,3 +78,112 @@
   color: var(--color-text-muted);
   font-size: var(--text-sm);
 }
+
+/* The email notice on a laptop (U23 slice 9): the shared warm note's look (ui.module.css: a pale
+   warm fill, a coloured icon, dark text), the address's words beside an envelope, and both
+   choices as quiet icon-and-words buttons, a deeper warm fill under the pointer. Phones, touch
+   screens and windows under 900px keep the notice above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .laptopNotices {
+    display: grid;
+    gap: var(--space-3);
+    max-width: 47.5rem;
+    margin: 0.125rem 0 var(--space-4);
+  }
+
+  .warmNotice {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-2);
+    padding: 0.625rem var(--space-3) var(--space-2);
+    border-radius: var(--radius-pop);
+    background: var(--color-warm-soft);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .warmNoticeIcon {
+    flex: none;
+    width: var(--icon);
+    height: var(--icon);
+    margin-top: 0.125rem;
+    color: var(--color-warm-text);
+  }
+
+  .warmNoticeBody {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .warmNoticeBody > p {
+    margin: 0;
+  }
+
+  .warmNoticeBody strong {
+    font-weight: var(--weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  .warmNoticeButtons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-1);
+    margin: 0.375rem 0 0 calc(-1 * var(--space-2));
+  }
+
+  .quietNoticeButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .quietNoticeButton:not(:disabled):hover {
+    background: color-mix(in srgb, var(--color-warm-soft) 88%, var(--color-text));
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .quietNoticeButton:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .quietNoticeIcon {
+    flex: none;
+    width: var(--icon);
+    height: var(--icon);
+    color: var(--color-text-muted);
+  }
+
+  .quietNoticeButton:not(:disabled):hover .quietNoticeIcon {
+    color: var(--color-text);
+  }
+
+  .warmNoticeBody > p.noticeFailure {
+    margin: var(--space-1) 0 0.125rem;
+    color: var(--color-text);
+    font-size: var(--ui-text-secondary);
+  }
+}
+
+/* Windows contrast themes draw no fills: the notice keeps an edge, and so do its buttons. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .warmNotice,
+  .quietNoticeButton {
+    border: 1px solid;
+  }
+}
