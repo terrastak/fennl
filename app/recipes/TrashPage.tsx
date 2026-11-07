@@ -3,16 +3,25 @@ import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
 import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked } from "../limits/useLimits";
 import { PageHeader } from "../pages/PageHeader";
+import { DoneBar } from "../ui/DoneBar";
 import { Link } from "../router";
 import type { TrashItem } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useSyncStatus, useTrash } from "../sync/useSync";
 import { dayText, localDay, trashText } from "./format";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
 import styles from "./recipes.module.css";
 
 // Trash (phase C9): recipes moved to Trash, each kept for 30 days and then deleted for good
 // (worker/sync/trash.ts). Each can be put back, or deleted for good now; "Empty Trash" deletes
 // them all. Deleting for good needs a connection, since the server does it.
+//
+// On a laptop (U23, owner's choices 2026-11-07): the recipes in one white box of rows, Put back
+// and Delete for good quiet buttons with small icons, "Empty Trash…" in red words beside the
+// count, the question in a pale red strip under its row (a soft red "Delete for good" with the
+// keyboard focus, then Cancel in plain words), and what happened in the shared done bar above
+// the list. Phones keep the page as it was.
 
 const recipesText = (n: number) => `${n} ${n === 1 ? "recipe" : "recipes"}`;
 
@@ -31,6 +40,9 @@ async function putBack(item: TrashItem): Promise<boolean> {
   }
 }
 
+/** A warning sign, beside the question on a laptop. */
+const WARNING = "M12 4 2.5 20h19zM12 10v4M12 17.2v.1";
+
 /** "Delete … for good?", asked right where the button was. */
 function Confirm({
   question,
@@ -47,7 +59,11 @@ function Confirm({
 }) {
   return (
     <div className={styles.confirm} role="group" aria-label={question}>
-      <p>{question} This can&rsquo;t be undone.</p>
+      <LaptopIcon path={WARNING} className={styles.confirmIcon} />
+      <p>
+        <span className={styles.confirmQuestion}>{question}</span>{" "}
+        <span className={styles.confirmNote}>This can&rsquo;t be undone.</span>
+      </p>
       <div className={styles.trashButtons}>
         <button
           type="button"
@@ -56,6 +72,7 @@ function Confirm({
           autoFocus
           onClick={onConfirm}
         >
+          <LaptopIcon path={LAPTOP_ICONS.trash} />
           {busy ? "Deleting…" : action}
         </button>
         <button type="button" className={styles.secondary} onClick={onCancel}>
@@ -75,29 +92,32 @@ export function TrashPage() {
   const [asking, setAsking] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  /** The message says something went wrong (no green check in the done bar). */
+  const [problem, setProblem] = useState(false);
+  const say = (text: string, wrong = false) => {
+    setMessage(text);
+    setProblem(wrong);
+  };
 
   // Putting one back needs room under the plan's recipe limit (phase C11).
   const restoreBlocked = useAddBlocked(true);
   const restore = async (item: TrashItem) => {
     if (restoreBlocked && status.usage) {
-      setMessage(`${restoreBlockedText(status.usage)} ${NOTHING_LOST}`);
+      say(`${restoreBlockedText(status.usage)} ${NOTHING_LOST}`, true);
       reportRefused(restoreBlocked, "restore");
       return;
     }
-    setMessage(
-      (await putBack(item))
-        ? `Put “${item.title || "Untitled"}” back in your recipes.`
-        : "Couldn’t put it back just now. Please try again.",
-    );
+    if (await putBack(item)) say(`Put “${item.title || "Untitled"}” back in your recipes.`);
+    else say("Couldn’t put it back just now. Please try again.", true);
   };
 
   const deleteForGood = async (recipeIds: string[] | undefined) => {
     setBusy(true);
     try {
       const n = (await activeSyncClient()?.emptyTrash(recipeIds)) ?? 0;
-      setMessage(`Deleted ${recipesText(n)} for good.`);
+      say(`Deleted ${recipesText(n)} for good.`);
     } catch {
-      setMessage("Deleting for good needs a connection. Please try again when you’re online.");
+      say("Deleting for good needs a connection. Please try again when you’re online.", true);
     } finally {
       setBusy(false);
       setAsking(null);
@@ -106,7 +126,7 @@ export function TrashPage() {
 
   const list = items ?? [];
   return (
-    <>
+    <div className={styles.trashPage}>
       <Link href="/" className={styles.back}>
         ← All recipes
       </Link>
@@ -116,15 +136,14 @@ export function TrashPage() {
           them back.
         </p>
       </PageHeader>
-      <p role="status" className={styles.trashMessage}>
-        {message}
-      </p>
+      <DoneBar message={message} problem={problem} messageClassName={styles.trashMessage} />
 
       {items === null ? null : list.length === 0 ? (
         <p className={styles.hint}>Trash is empty.</p>
       ) : (
         <>
           <div className={styles.trashTop}>
+            <span className={styles.trashCount}>{recipesText(list.length)}</span>
             {asking === "all" ? (
               <Confirm
                 question={`Delete all ${recipesText(list.length)} in Trash for good?`}
@@ -136,11 +155,15 @@ export function TrashPage() {
             ) : (
               <button
                 type="button"
-                className={styles.secondary}
+                className={`${styles.secondary} ${styles.emptyTrash}`}
                 disabled={!online || busy}
                 onClick={() => setAsking("all")}
               >
+                <LaptopIcon path={LAPTOP_ICONS.trash} />
                 Empty Trash
+                <span className={styles.laptopOnly} aria-hidden="true">
+                  …
+                </span>
               </button>
             )}
             {!online ? (
@@ -149,7 +172,10 @@ export function TrashPage() {
           </div>
           <ul className={styles.trashList} aria-label="Recipes in Trash">
             {list.map((item) => (
-              <li key={item.id} className={styles.trashItem}>
+              <li
+                key={item.id}
+                className={`${styles.trashItem} ${asking === item.id ? styles.trashAsking : ""}`}
+              >
                 <div className={styles.trashText}>
                   <Link href={`/recipes/${item.id}`} className={styles.trashTitle}>
                     {item.title || "Untitled"}
@@ -172,18 +198,20 @@ export function TrashPage() {
                   <div className={styles.trashButtons}>
                     <button
                       type="button"
-                      className={styles.primary}
+                      className={`${styles.primary} ${styles.putBack}`}
                       disabled={!editable}
                       onClick={() => void restore(item)}
                     >
+                      <LaptopIcon path={LAPTOP_ICONS.undo} />
                       Put back<span className="visually-hidden"> {item.title}</span>
                     </button>
                     <button
                       type="button"
-                      className={styles.textButton}
+                      className={`${styles.textButton} ${styles.deleteForGood}`}
                       disabled={!online || busy}
                       onClick={() => setAsking(item.id)}
                     >
+                      <LaptopIcon path={LAPTOP_ICONS.trash} />
                       Delete for good<span className="visually-hidden"> {item.title}</span>
                     </button>
                   </div>
@@ -193,6 +221,6 @@ export function TrashPage() {
           </ul>
         </>
       )}
-    </>
+    </div>
   );
 }

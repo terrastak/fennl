@@ -21,6 +21,12 @@ import styles from "./recipes.module.css";
 // One is kept, with whatever the person picks from the other; the other goes to Trash. It starts
 // with sensible picks, so merging needs no choosing unless the person wants to, and it says
 // exactly what will happen before anything does.
+//
+// On a laptop (U23, owner's choice 2026-11-07): "Keep this recipe" as two cards side by side, and
+// where they differ a table, its two column headings said once at the top ("Kept recipe · …",
+// "Other recipe · …") and each part a row with the two versions side by side; screen readers
+// still hear "Use the kept recipe's title" on each choice. Merge the one ink button, Cancel plain
+// words. Phones keep the panel as it was.
 
 const LONG = 12;
 const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -148,7 +154,16 @@ export function MergePanel({
         <p>These two say the same thing in every part. Merging just removes the extra copy.</p>
       ) : (
         <>
-          <p>Where they differ, choose which to use:</p>
+          <p className={styles.mergeDiffer}>Where they differ, choose which to use:</p>
+          <div className={styles.mergeHeads} aria-hidden="true">
+            <span />
+            <span>
+              Kept recipe · <b>{keeper.recipe.title || "Untitled"}</b>
+            </span>
+            <span>
+              Other recipe · <b>{other.recipe.title || "Untitled"}</b>
+            </span>
+          </div>
           {different.map((id) => {
             const row = MERGE_ROWS.find((r) => r.id === id);
             if (!row) return null;
@@ -173,7 +188,7 @@ export function MergePanel({
                         onChange={() => setPicked({ ...picked, [id]: side })}
                       />
                       <span>
-                        <span className={styles.hint}>
+                        <span className={`${styles.hint} ${styles.mergeUse}`}>
                           Use the {name.toLowerCase()}&rsquo;s {row.label.toLowerCase()}
                         </span>
                         <Lines lines={rowLines(detail.recipe, id)} />
@@ -187,7 +202,7 @@ export function MergePanel({
         </>
       )}
       {same.length > 0 && different.length > 0 ? (
-        <p className={styles.hint}>
+        <p className={`${styles.hint} ${styles.mergeSame}`}>
           The same in both: {same.map((row) => row.label.toLowerCase()).join(", ")}.
         </p>
       ) : null}
@@ -225,13 +240,18 @@ export function MergePanel({
       <div className={styles.mergeButtons}>
         <button
           type="button"
-          className={styles.primary}
+          className={`${styles.primary} ${styles.mergeButton}`}
           disabled={busy || tooLong || !canEdit(status)}
           onClick={() => void merge(Date.now())}
         >
           {busy ? "Merging…" : "Merge"}
         </button>
-        <button type="button" className={styles.secondary} onClick={onCancel} disabled={busy}>
+        <button
+          type="button"
+          className={`${styles.secondary} ${styles.mergeCancel}`}
+          onClick={onCancel}
+          disabled={busy}
+        >
           Cancel
         </button>
       </div>

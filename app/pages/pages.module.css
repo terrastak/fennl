@@ -230,3 +230,179 @@
   cursor: not-allowed;
   opacity: 0.6;
 }
+
+/* --- Send feedback on a laptop (U23 slice 7, owner's choices 2026-11-07) ---------------------- */
+/* Laid out like Settings: the smaller title and note, "Your message" a heading above one white
+   box holding the question, the box to type in (the accent edge and a soft halo while typing) and
+   the line about what else is sent; Send feedback the one ink button at the box's bottom right.
+   After sending, the thank-you with a green check and Send another as icon and words. Phones,
+   touch screens and windows under 900px keep the card above. */
+@media (min-width: 900px) and (pointer: fine) {
+  .feedbackPage > header {
+    margin-bottom: var(--space-6);
+    padding-top: 0.375rem;
+  }
+
+  .feedbackPage > header :global(.hand-note) {
+    margin-bottom: 0.125rem;
+    margin-left: -0.125rem;
+    font-size: 1.3125rem;
+  }
+
+  .feedbackPage > header h1 {
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .feedbackPage > header > div {
+    max-width: 66ch;
+    margin-top: 0.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  .feedbackPage > .card {
+    max-width: 47.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .feedbackPage > .card > h2 {
+    margin-bottom: var(--space-2);
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .feedbackBox {
+    padding: var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .feedbackBox .stackForm {
+    gap: var(--space-3);
+  }
+
+  .feedbackBox .field {
+    gap: var(--space-2);
+  }
+
+  .feedbackBox .field label {
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .feedbackBox .textarea {
+    min-height: 9.75rem;
+    padding: 0.5rem 0.625rem;
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+    line-height: 1.5;
+  }
+
+  .feedbackBox .textarea:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .feedbackBox .textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  .feedbackBox .hint {
+    margin-top: -0.125rem;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .feedbackBox .error {
+    margin: 0;
+    font-size: var(--ui-text);
+  }
+
+  /* Send feedback: the one ink button, where the form is finished. */
+  .feedbackBox .sendButton {
+    gap: 0.375rem;
+    justify-self: end;
+    min-height: var(--button-height);
+    margin: var(--space-1) 0 0;
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+    line-height: 1;
+  }
+
+  .feedbackBox .sendButton:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .feedbackBox .sendButton:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  .feedbackBox .thanks {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    margin: 0;
+    font-size: var(--ui-text);
+    line-height: 1.5;
+  }
+
+  .feedbackBox .thanks > svg {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.0625rem;
+    color: var(--color-success);
+  }
+
+  /* Send another: the screen's one action, icon and words in the accent. */
+  .feedbackBox .sendAnother {
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin: var(--space-2) 0 0 calc(1.125rem + 0.625rem - 0.625rem);
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--action-text);
+    font-size: var(--ui-text);
+    font-weight: var(--action-weight);
+    line-height: 1;
+  }
+
+  .feedbackBox .sendAnother:hover {
+    background: var(--hover-fill);
+    color: var(--action-text);
+  }
+}
+
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .feedbackBox {
+    border: 1px solid CanvasText;
+  }
+
+  .feedbackBox .sendButton {
+    border: 1px solid ButtonText;
+  }
+
+  .feedbackBox .textarea:focus {
+    outline: 2px solid Highlight;
+    outline-offset: 0;
+  }
+}

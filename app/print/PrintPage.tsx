@@ -6,7 +6,10 @@ import {
   type PrintOptions,
 } from "../../shared/print";
 import { linkedIds } from "../../shared/subRecipes";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 import { useHideNutrition } from "../recipes/nutritionSetting";
+import { usePointer } from "../recipes/usePointer";
 import { useUnits } from "../recipes/units";
 import { Link } from "../router";
 import { usePrintSet } from "../sync/useSync";
@@ -18,6 +21,12 @@ import styles from "./printPage.module.css";
 // The print page (phase F6). Printing one recipe should take two taps: Print on the recipe, then
 // Print here, which is ready to press with the last choices used. The choices sit in a fold-out
 // beside the preview for anyone who wants to change them, and are kept with the account.
+//
+// On a laptop (U23, owner's choices 2026-11-07): the choices always showing, in a column on the
+// left with Print at its top (the one ink button), the layouts a short list with a check mark
+// beside the chosen one; the pages previewed beside it at about 70% of their size, each as a
+// sheet of paper. Only the screen changes: the printout itself is the same. Phones keep the
+// fold-out above full-size pages.
 
 const SWITCH_NAMES: { key: Exclude<keyof PrintOptions, "layout">; label: string }[] = [
   { key: "photo", label: "Cover photo" },
@@ -31,6 +40,7 @@ const SWITCH_NAMES: { key: Exclude<keyof PrintOptions, "layout">; label: string 
 
 export function PrintPage({ ids, back }: { ids: string[]; back: string }) {
   const id = useId();
+  const laptop = usePointer();
   const [options, choose] = usePrintOptions();
   const [units] = useUnits();
   const [hideNutrition] = useHideNutrition();
@@ -79,6 +89,59 @@ export function PrintPage({ ids, back }: { ids: string[]; back: string }) {
   const plusLinked =
     linked > 0 ? ` and ${linked} linked ${linked === 1 ? "recipe" : "recipes"}` : "";
 
+  // The choices: always showing on a laptop, in a fold-out elsewhere.
+  const choices = (
+    <>
+      <fieldset className={styles.fieldset}>
+        <legend>Layout</legend>
+        {PRINT_LAYOUTS.map((layout) => (
+          <label key={layout} className={`${styles.choice} ${styles.layoutChoice}`}>
+            <input
+              type="radio"
+              name={`${id}-layout`}
+              checked={options.layout === layout}
+              onChange={() => change({ ...options, layout })}
+            />
+            <LaptopIcon path={LAPTOP_ICONS.check} className={styles.layoutCheck} />
+            {LAYOUT_NAMES[layout]}
+          </label>
+        ))}
+        {options.layout.startsWith("card") ? (
+          <p className={styles.hint}>
+            Choose the card size as the paper in the print window if it isn&rsquo;t already.
+          </p>
+        ) : null}
+      </fieldset>
+      <fieldset className={styles.fieldset}>
+        <legend>Include</legend>
+        {SWITCH_NAMES.filter(
+          ({ key }) =>
+            (key !== "nutrition" || !hideNutrition) &&
+            (key !== "linked" || hasLinks) &&
+            (key !== "contents" || chosen > 1),
+        ).map(({ key, label }) => (
+          <label key={key} className={styles.choice}>
+            <input
+              type="checkbox"
+              checked={options[key]}
+              onChange={(e) => change({ ...options, [key]: e.target.checked })}
+            />
+            {label}
+          </label>
+        ))}
+        {options.layout.startsWith("card") ? (
+          <p className={styles.hint}>Recipe cards leave out the photo and the headnote.</p>
+        ) : null}
+      </fieldset>
+      <p className={`${styles.hint} ${styles.kept}`} role="status">
+        {saveFailed ? null : <LaptopIcon path={LAPTOP_ICONS.check} />}
+        {saveFailed
+          ? "Couldn’t save these choices to your account just now; they’re used here."
+          : "Your choices are kept for next time, on every device."}
+      </p>
+    </>
+  );
+
   return (
     <main id="main" className={styles.page}>
       <style>{pageRule(options.layout)}</style>
@@ -87,8 +150,11 @@ export function PrintPage({ ids, back }: { ids: string[]; back: string }) {
           ← {backLabel}
         </Link>
         <h1 className={styles.heading}>
-          Print{summary ? `: ${summary}` : ""}
-          {plusLinked}
+          <span className={styles.headingPrint}>
+            Print{summary ? <span className={styles.headingColon}>: </span> : null}
+          </span>
+          {summary ? <span className={styles.headingName}>{summary}</span> : null}
+          {plusLinked ? <span className={styles.headingLinked}>{plusLinked}</span> : null}
         </h1>
         <div className={styles.actions}>
           <button
@@ -98,6 +164,7 @@ export function PrintPage({ ids, back }: { ids: string[]; back: string }) {
             disabled={!ready || preparing}
             onClick={() => void print()}
           >
+            <LaptopIcon path={LAPTOP_ICONS.print} />
             Print
           </button>
           <p className={styles.hint} role="status">
@@ -113,57 +180,18 @@ export function PrintPage({ ids, back }: { ids: string[]; back: string }) {
           </p>
         ) : null}
 
-        <details className={styles.choices}>
-          <summary>Change what&rsquo;s printed</summary>
-          <fieldset className={styles.fieldset}>
-            <legend>Layout</legend>
-            {PRINT_LAYOUTS.map((layout) => (
-              <label key={layout} className={styles.choice}>
-                <input
-                  type="radio"
-                  name={`${id}-layout`}
-                  checked={options.layout === layout}
-                  onChange={() => change({ ...options, layout })}
-                />
-                {LAYOUT_NAMES[layout]}
-              </label>
-            ))}
-            {options.layout.startsWith("card") ? (
-              <p className={styles.hint}>
-                Choose the card size as the paper in the print window if it isn&rsquo;t already.
-              </p>
-            ) : null}
-          </fieldset>
-          <fieldset className={styles.fieldset}>
-            <legend>Include</legend>
-            {SWITCH_NAMES.filter(
-              ({ key }) =>
-                (key !== "nutrition" || !hideNutrition) &&
-                (key !== "linked" || hasLinks) &&
-                (key !== "contents" || chosen > 1),
-            ).map(({ key, label }) => (
-              <label key={key} className={styles.choice}>
-                <input
-                  type="checkbox"
-                  checked={options[key]}
-                  onChange={(e) => change({ ...options, [key]: e.target.checked })}
-                />
-                {label}
-              </label>
-            ))}
-            {options.layout.startsWith("card") ? (
-              <p className={styles.hint}>Recipe cards leave out the photo and the headnote.</p>
-            ) : null}
-          </fieldset>
-          <p className={styles.hint} role="status">
-            {saveFailed
-              ? "Couldn’t save these choices to your account just now; they’re used here."
-              : "Your choices are kept for next time, on every device."}
-          </p>
-        </details>
+        {laptop ? (
+          <div className={styles.choices}>{choices}</div>
+        ) : (
+          <details className={styles.choices}>
+            <summary>Change what&rsquo;s printed</summary>
+            {choices}
+          </details>
+        )}
       </div>
 
       <div ref={paper} className={styles.preview}>
+        {laptop ? <p className={styles.previewLabel}>Preview</p> : null}
         {set === undefined ? (
           <p role="status" className="visually-hidden">
             Getting the printout ready…

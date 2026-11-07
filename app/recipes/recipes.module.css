@@ -3450,3 +3450,688 @@ button.stepNumber:focus-visible::after {
     -webkit-text-stroke: 0;
   }
 }
+
+/* --- Trash and Find duplicates on a laptop (U23 slice 7, owner's choices 2026-11-07) -------- */
+/* Pieces drawn on a laptop only: the count beside Empty Trash, its "…", and the comparison's
+   column headings. Hidden elsewhere, so phones look as before. */
+.trashCount,
+.laptopOnly,
+.mergeHeads {
+  display: none;
+}
+
+/* The words before Undo on a phone sit on Undo's line, as they always have. */
+.inlineWords {
+  display: inline;
+  margin: 0;
+}
+
+/* Trash: one white box of rows, Put back and Delete for good quiet buttons with small icons,
+   "Empty Trash…" in red words beside the count, the question in a pale red strip under its row,
+   what happened in the shared done bar above the list. Find duplicates: quiet buttons with
+   icons, each pair one white box; the comparison a table with its column headings said once,
+   Merge the one ink button and Cancel plain words. */
+@media (min-width: 900px) and (pointer: fine) {
+  .trashCount {
+    display: inline;
+  }
+
+  .laptopOnly {
+    display: inline;
+  }
+
+  .trashPage,
+  .duplicatesPage {
+    max-width: 47.5rem;
+  }
+
+  /* Trash keeps the count line above the done bar and the list, wherever each is in the page;
+     "Trash is empty." comes after the bar, so what was just done reads first. */
+  .trashPage {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .trashPage > .trashTop {
+    order: 1;
+  }
+
+  .trashPage > div:has(> .trashMessage) {
+    order: 2;
+  }
+
+  .trashPage > .trashList,
+  .trashPage > .hint {
+    order: 3;
+  }
+
+  /* All recipes: plain words with the arrow, a soft fill when pointed at. */
+  :is(.trashPage, .duplicatesPage) > .back {
+    align-self: flex-start;
+    gap: 0.375rem;
+    min-height: var(--control);
+    margin: 0 calc(-1 * var(--space-2)) 0.375rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: 1;
+  }
+
+  :is(.trashPage, .duplicatesPage) > .back:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  :is(.trashPage, .duplicatesPage) > header {
+    margin-bottom: 0;
+  }
+
+  :is(.trashPage, .duplicatesPage) > header h1 {
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  :is(.trashPage, .duplicatesPage) > header > div {
+    max-width: 66ch;
+    margin-top: 0.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+  }
+
+  :is(.trashPage, .duplicatesPage) .hint {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .trashPage > .hint {
+    margin-top: var(--space-5);
+    font-size: var(--ui-text);
+  }
+
+  /* --- Quiet buttons: icon and words, no fill or line, a soft fill when pointed at ----------- */
+  .trashPage :is(.putBack, .deleteForGood, .emptyTrash),
+  .trashPage .confirm .secondary,
+  .duplicatesPage :is(.findButton, .againButton, .showAgain, .pairButton, .mergeCancel),
+  .duplicatesPage .duplicateNote .textButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-width: 0;
+    min-height: var(--control);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .trashPage :is(.putBack, .deleteForGood, .emptyTrash):has(> svg:first-child),
+  .duplicatesPage :is(.findButton, .againButton, .showAgain, .pairButton):has(> svg:first-child) {
+    padding-left: 0.625rem;
+  }
+
+  .trashPage :is(.putBack, .deleteForGood, .emptyTrash) > svg,
+  .duplicatesPage :is(.againButton, .showAgain, .pairButton) > svg {
+    color: var(--color-text-muted);
+  }
+
+  .trashPage :is(.putBack, .deleteForGood, .emptyTrash):not(:disabled):hover,
+  .trashPage .confirm .secondary:not(:disabled):hover,
+  .duplicatesPage
+    :is(.findButton, .againButton, .showAgain, .pairButton, .mergeCancel):not(:disabled):hover,
+  .duplicatesPage .duplicateNote .textButton:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+    text-decoration: none;
+  }
+
+  .trashPage :is(.putBack, .deleteForGood, .emptyTrash):disabled,
+  .trashPage .confirm .secondary:disabled,
+  .duplicatesPage :is(.findButton, .againButton, .mergeCancel):disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  /* The main action before any search: the accent, semibold. */
+  .duplicatesPage .findButton,
+  .duplicatesPage .findButton:not(:disabled):hover,
+  .duplicatesPage .duplicateNote .textButton,
+  .duplicatesPage .duplicateNote .textButton:not(:disabled):hover {
+    color: var(--action-text);
+    font-weight: var(--action-weight);
+  }
+
+  /* Delete for good on a row: quiet, red when pointed at. Empty Trash…: red words. */
+  .trashPage .deleteForGood {
+    color: var(--color-text-muted);
+  }
+
+  .trashPage .deleteForGood:not(:disabled):hover,
+  .trashPage .deleteForGood:not(:disabled):hover > svg,
+  .trashPage .emptyTrash,
+  .trashPage .emptyTrash > svg,
+  .trashPage .emptyTrash:not(:disabled):hover {
+    color: var(--color-danger);
+  }
+
+  /* --- Trash ------------------------------------------------------------------------------ */
+  .trashTop {
+    gap: var(--space-2) var(--space-3);
+    min-height: var(--control);
+    margin: var(--space-5) 0 var(--space-2);
+  }
+
+  .trashCount {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .trashTop .emptyTrash {
+    margin: 0 calc(-1 * var(--space-2)) 0 auto;
+  }
+
+  /* "…" says it asks first: right after the words. */
+  .emptyTrash > .laptopOnly {
+    margin-left: -0.375rem;
+  }
+
+  .trashTop > .hint {
+    flex-basis: 100%;
+    text-align: right;
+  }
+
+  .trashPage .trashMessage:empty {
+    min-height: 0;
+    margin: 0;
+  }
+
+  .trashPage > div:has(> .trashMessage:not(:empty)) {
+    margin-bottom: 0.625rem;
+  }
+
+  /* With Trash empty there is no count line: the bar keeps the gap under the heading, and
+     "Trash is empty." follows it closely. */
+  .trashPage:has(> .hint) > div:has(> .trashMessage:not(:empty)) {
+    margin-top: var(--space-5);
+  }
+
+  .trashPage:has(> div > .trashMessage:not(:empty)) > .hint {
+    margin-top: var(--space-1);
+  }
+
+  .trashList {
+    max-width: none;
+    overflow: hidden;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .trashItem {
+    flex-wrap: wrap;
+    gap: 0 var(--space-4);
+    min-height: 3.5rem;
+    padding: 0.5rem 0.625rem 0.5rem var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+    border-bottom: 0;
+  }
+
+  .trashItem:first-child {
+    border-top: 0;
+  }
+
+  .trashItem:hover {
+    background: color-mix(in srgb, var(--hover-fill) 60%, transparent);
+  }
+
+  .trashItem.trashAsking,
+  .trashItem.trashAsking:hover {
+    background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+  }
+
+  .trashText {
+    gap: 2px;
+  }
+
+  /* A recipe's name: the text colour, underlined only when pointed at. */
+  .trashTitle {
+    justify-self: start;
+    border-radius: 3px;
+    color: var(--color-text);
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+    line-height: var(--ui-leading);
+    text-decoration: none;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .trashTitle:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+  }
+
+  .trashItem > .trashButtons {
+    flex: none;
+    gap: var(--space-1);
+    margin-left: auto;
+  }
+
+  /* "Delete … for good? This can't be undone." in a pale red strip: under its row, or under the
+     count line for Empty Trash. */
+  .trashPage .confirm {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+    flex-basis: calc(100% + 0.625rem + var(--space-4));
+    margin: 0.5rem -0.625rem -0.5rem calc(-1 * var(--space-4));
+    padding: 0.625rem 0.625rem 0.625rem var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+  }
+
+  .trashTop .confirm {
+    flex-basis: 100%;
+    margin: 0;
+    border-top: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .trashPage .confirm > .confirmIcon {
+    width: 1.125rem;
+    height: 1.125rem;
+    color: var(--color-danger);
+  }
+
+  .trashPage .confirm > p {
+    flex: 1 1 14rem;
+    min-width: 0;
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .confirmQuestion {
+    font-weight: var(--weight-semibold);
+  }
+
+  .trashPage .confirmNote {
+    display: block;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .trashPage .confirm > .trashButtons {
+    flex: none;
+    gap: 0.375rem;
+    margin-left: auto;
+  }
+
+  /* Delete for good (or Empty Trash) in the question: a soft red button, never the page's ink. */
+  .trashPage .dangerButton {
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3) 0 0.625rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+    color: var(--color-danger);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+    white-space: nowrap;
+  }
+
+  .trashPage .dangerButton:not(:disabled):hover {
+    background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
+    color: var(--color-danger);
+  }
+
+  .trashPage .dangerButton:disabled {
+    cursor: default;
+    opacity: 0.6;
+  }
+
+  /* --- Find duplicates -------------------------------------------------------------------- */
+  .duplicateTop {
+    gap: var(--space-2);
+    margin: var(--space-4) 0 0;
+  }
+
+  .duplicateTop > :first-child {
+    margin-left: calc(-1 * 0.625rem);
+  }
+
+  /* What happened: the done bar under the buttons, Undo at its right. */
+  .duplicatesPage > div:has(> p:not(:empty)) {
+    margin-top: var(--space-3);
+  }
+
+  .duplicatesPage .duplicateNote .inlineWords {
+    display: flex;
+  }
+
+  .duplicatesPage > .error {
+    margin-top: var(--space-3);
+    font-size: var(--ui-text);
+  }
+
+  .duplicatesPage > p:not(.error) {
+    margin: var(--space-4) 0 0;
+    font-size: var(--ui-text);
+  }
+
+  .duplicateCount {
+    margin: var(--space-5) 0 var(--space-2);
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    line-height: 1.3;
+  }
+
+  .duplicateList {
+    gap: var(--space-3);
+  }
+
+  /* The names and why on the left, the buttons on the right (under them when there's no room). */
+  .duplicatePair {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .duplicateHead {
+    display: grid;
+    flex: 1 1 18rem;
+    gap: 2px;
+    align-self: center;
+    min-width: 0;
+    padding: 0.75rem 0 0.75rem var(--space-4);
+  }
+
+  .duplicateTitles {
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text);
+    line-height: 1.4;
+  }
+
+  .duplicateTitles a {
+    border-radius: 3px;
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+    text-decoration: none;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+
+  .duplicateTitles a:hover {
+    color: var(--color-text);
+    text-decoration: underline;
+  }
+
+  .duplicateAnd {
+    color: var(--color-text-muted);
+  }
+
+  .duplicatePair > .duplicateButtons {
+    flex: none;
+    flex-wrap: nowrap;
+    align-self: center;
+    margin-left: auto;
+    gap: var(--space-1);
+    padding: 0.75rem 0.75rem 0.75rem var(--space-3);
+  }
+
+  /* Close stays quiet while the comparison is open, so Merge is the only filled button. */
+  .duplicatesPage .pairButton[aria-expanded="true"]:not(:hover) {
+    background: transparent;
+  }
+
+  /* --- Compare and merge ------------------------------------------------------------------ */
+  .duplicatePair > .merge,
+  .duplicatePair > p {
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+
+  .duplicatePair > p {
+    padding: 0 var(--space-4) var(--space-3);
+  }
+
+  .merge {
+    gap: 0;
+    padding: 0.875rem var(--space-4) var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+    font-size: var(--ui-text);
+  }
+
+  .merge legend,
+  .mergeDiffer {
+    margin: 0 0 var(--space-2);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* Keep this recipe: two cards side by side; the chosen one has a ring. */
+  .mergeKeep {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
+  .mergeKeep > p {
+    grid-column: 1 / -1;
+    margin-top: -0.125rem;
+  }
+
+  .mergeSide {
+    gap: 0.625rem;
+    padding: 0.625rem 0.75rem;
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .mergeSide:hover {
+    box-shadow: 0 0 0 1px var(--color-border-strong);
+  }
+
+  .mergeKeep .mergeSide:has(input:checked) {
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+
+  .mergeSide > span {
+    gap: 2px;
+  }
+
+  .mergeSide strong {
+    font-weight: var(--weight-semibold);
+  }
+
+  .merge input[type="radio"] {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0.125rem 0 0;
+    accent-color: var(--color-accent);
+  }
+
+  .mergeDiffer {
+    margin-top: var(--space-5);
+  }
+
+  /* Where they differ: a table. The headings once, then each part a row: its name, then the
+     two versions side by side; the one used softly filled with a filled round button. */
+  .mergeHeads {
+    display: grid;
+    grid-template-columns: 7rem minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0 0.625rem;
+    padding-bottom: 0.375rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+  }
+
+  .mergeHeads > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mergeHeads b {
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* .merge on the front, to beat the phone's ".merge fieldset { border: none }". */
+  .merge .mergeRow {
+    display: flow-root;
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .merge .mergeRow > legend {
+    float: left;
+    width: 7rem;
+    margin: 0 0.625rem 0 0;
+    padding-top: 0.75rem;
+    font-weight: var(--weight-medium);
+  }
+
+  .mergeSides {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+    padding: 0.375rem 0;
+  }
+
+  .mergeSides .mergeSide {
+    height: 100%;
+    padding: 0.375rem 0.625rem;
+    border-radius: var(--radius-control);
+    box-shadow: none;
+  }
+
+  .mergeSides .mergeSide:hover {
+    background: var(--hover-fill);
+    box-shadow: none;
+  }
+
+  .mergeSides .mergeSideOn,
+  .mergeSides .mergeSideOn:hover {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+  }
+
+  /* "Use the kept recipe's title": said to screen readers, the headings say it on screen. */
+  .mergeUse {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .mergeLines {
+    gap: 1px;
+  }
+
+  .merge .mergeSame {
+    margin-top: var(--space-3);
+  }
+
+  .mergeSummary {
+    gap: var(--space-1);
+    margin-top: var(--space-4);
+    padding: 0.625rem 0.875rem;
+    border-radius: var(--radius-pop);
+    background: color-mix(in srgb, var(--color-surface-sunken) 60%, var(--color-surface));
+  }
+
+  .mergeSummary h3 {
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0;
+  }
+
+  .mergeSummary ul {
+    padding-left: 1.125rem;
+    font-size: var(--ui-text);
+  }
+
+  .mergeButtons {
+    gap: var(--space-2);
+    margin-top: 0.875rem;
+  }
+
+  /* Merge: the one ink button, where the decision is finished. */
+  .duplicatesPage .mergeButton {
+    gap: 0.375rem;
+    min-width: 0;
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+    line-height: 1;
+    box-shadow: none;
+  }
+
+  .duplicatesPage .mergeButton:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .duplicatesPage .mergeButton:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+}
+
+/* Windows contrast themes draw no fills: boxes, the question and the buttons keep an edge. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .trashList,
+  .duplicatePair,
+  .trashTop .confirm,
+  .mergeSide,
+  .mergeSummary {
+    border: 1px solid CanvasText;
+  }
+
+  .mergeSides .mergeSide {
+    border: 0;
+  }
+
+  .mergeSides .mergeSideOn,
+  .mergeKeep .mergeSide:has(input:checked) {
+    border: 2px solid Highlight;
+  }
+
+  .trashPage .dangerButton,
+  .duplicatesPage .mergeButton {
+    border: 1px solid ButtonText;
+  }
+}
