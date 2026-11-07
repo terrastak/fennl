@@ -14,6 +14,7 @@ import {
 import type { StepPart } from "../timers/stepParts";
 import { PanControls } from "./PanControls";
 import { SHOWN_IN, lineText, type Scaling } from "./scaling";
+import { usePointer } from "./usePointer";
 import styles from "./recipes.module.css";
 
 // The recipe page's scale and units controls, and its lines as shown (phase F1): every number
@@ -244,6 +245,8 @@ export function ScaleStatus({ note, scaling }: { note: string | null; scaling: S
 /** "Adjust", and the panel it opens: how many, amount, another pan and units. */
 export function Adjust({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  // "Click any line" on a laptop, "Tap" elsewhere (U23, owner's choice 2026-11-06).
+  const verb = usePointer() ? "Click" : "Tap";
   const id = useId();
   return (
     <>
@@ -275,7 +278,7 @@ export function Adjust({ recipe, scaling }: { recipe: Recipe; scaling: Scaling }
         </h2>
         <ScaleBar recipe={recipe} scaling={scaling} />
         <p className={styles.adjustNote}>
-          This only changes how the recipe is shown, never the recipe itself. Tap any line to see
+          This only changes how the recipe is shown, never the recipe itself. {verb} any line to see
           the original.
         </p>
         <div className={styles.adjustButtons}>

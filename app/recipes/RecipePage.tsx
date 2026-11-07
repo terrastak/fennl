@@ -47,6 +47,7 @@ import { TimeLink } from "../timers/TimeLink";
 import { markStep } from "../timers/timersView";
 import { ScaleStatus, ScaledLine, ServingsBar, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
+import { usePointer } from "./usePointer";
 import { noteTrashed } from "./trashNotice";
 import {
   dayText,
@@ -105,22 +106,6 @@ function useWide(): boolean {
       return () => query.removeEventListener("change", changed);
     },
     () => window.matchMedia(WIDE).matches,
-    () => false,
-  );
-}
-
-/** A laptop or desktop with a mouse or trackpad (U23): the same query as tokens.css. */
-const POINTER = "(min-width: 900px) and (pointer: fine)";
-
-/** Whether the laptop look applies, so words can say "click" there and "tap" elsewhere. */
-function usePointer(): boolean {
-  return useSyncExternalStore(
-    (changed) => {
-      const query = window.matchMedia(POINTER);
-      query.addEventListener("change", changed);
-      return () => query.removeEventListener("change", changed);
-    },
-    () => window.matchMedia(POINTER).matches,
     () => false,
   );
 }
@@ -513,6 +498,8 @@ function Ingredients({
   /** With "Serves − 4 +" and "Adjust" working (not in Trash). */
   adjustable?: boolean;
 }) {
+  // "Click a line" on a laptop, "Tap" elsewhere (U23, owner's choice 2026-11-06).
+  const pointer = usePointer();
   return (
     <section className={styles.panel} aria-labelledby="ingredients-title">
       <h2 id="ingredients-title">Ingredients</h2>
@@ -526,6 +513,7 @@ function Ingredients({
                     scaling.factor,
                     scaling.units,
                     scaling.pans ? panName(scaling.pans.yours) : null,
+                    pointer ? "Click" : "Tap",
                   )
                 : null
             }

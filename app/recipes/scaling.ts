@@ -69,6 +69,7 @@ export function scaleNote(
   factor: number,
   units: UnitSystem,
   yourPan: string | null = null,
+  verb: "Tap" | "Click" = "Tap",
 ): string {
   const scaled = yourPan
     ? `scaled for your ${yourPan} (${factorName(factor).toLowerCase()})`
@@ -77,7 +78,7 @@ export function scaleNote(
       : factorName(factor);
   const parts = [scaled, SHOWN_IN[units]].filter(Boolean);
   const said = parts.join(" and ");
-  return `${said[0]?.toUpperCase()}${said.slice(1)}: changed amounts are highlighted. Tap a line to see the original.`;
+  return `${said[0]?.toUpperCase()}${said.slice(1)}: changed amounts are highlighted. ${verb} a line to see the original.`;
 }
 
 /** The recipe's scale and the account's units, and ways to change them. */

@@ -30,6 +30,8 @@ test("Double a recipe and show it in metric; it stays that way", async ({
     ingredients.getByRole("group", { name: "Amount" }).getByRole("button", { name: "2×" }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByText("Doubled: changed amounts are highlighted.")).toBeVisible();
+  // A computer says "Click" (U23, owner's choice 2026-11-06); phones keep "Tap".
+  await expect(page.getByText("Click a line to see the original.")).toBeVisible();
   await expect(ingredients.locator("mark", { hasText: "4 cups" })).toHaveCount(2);
   await expect(ingredients.locator("mark", { hasText: "1/4 cup" })).toBeVisible();
   await expect(ingredients).toContainText("Serves 8 · Makes about 24 pancakes");
