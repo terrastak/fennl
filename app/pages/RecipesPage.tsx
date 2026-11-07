@@ -44,6 +44,8 @@ import {
 import { today, useLibrary } from "../recipes/libraryContext";
 import { minutesText } from "../recipes/format";
 import { Highlight } from "../recipes/Highlight";
+import { LaptopIcon } from "../recipes/LaptopIcon";
+import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 import { forgetTrashed, recentlyTrashed } from "../recipes/trashNotice";
 import listStyles from "../recipes/list.module.css";
 import styles from "../recipes/recipes.module.css";
@@ -273,9 +275,11 @@ function EmptyState({
             onClick={onAdd}
             disabled={disabled || blocked !== null}
           >
+            <LaptopIcon path={LAPTOP_ICONS.plus} />
             Add recipe
           </button>
           <Link href="/import" className={styles.secondary}>
+            <LaptopIcon path={LAPTOP_ICONS.import} />
             Import
           </Link>
         </div>
@@ -806,12 +810,14 @@ export function RecipesPage() {
             <div className={styles.surpriseActions}>
               <Link href={`/recipes/${surpriseRecipe.id}`} className={styles.primary}>
                 Open
+                <LaptopIcon path={LAPTOP_ICONS.arrow} />
               </Link>
               <button
                 type="button"
                 className={styles.secondary}
                 onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
               >
+                <LaptopIcon path={LAPTOP_ICONS.shuffle} />
                 Another one
               </button>
               <button type="button" className={styles.textButton} onClick={() => setSurprise(null)}>
@@ -866,6 +872,7 @@ export function RecipesPage() {
               disabled={chosen.length === 0}
               onClick={() => print(chosen)}
             >
+              <LaptopIcon path={LAPTOP_ICONS.print} />
               Print {chosen.length === 1 ? "this recipe" : "these recipes"}
             </button>
           </div>

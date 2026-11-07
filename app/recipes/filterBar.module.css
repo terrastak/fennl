@@ -444,3 +444,24 @@
 .problem:empty {
   display: none;
 }
+
+/* Buttons on a laptop (U23, owner's choice 2026-11-07): the Ingredients menu's Add is icon and
+   words with no fill, a soft fill when pointed at. Touch screens keep the soft grey button. */
+@media (min-width: 900px) and (pointer: fine) {
+  .soft {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    background: transparent;
+  }
+
+  .soft:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  .soft svg {
+    color: var(--color-text-muted);
+  }
+}

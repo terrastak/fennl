@@ -372,3 +372,27 @@
   background: none;
   color: var(--color-text-muted);
 }
+
+/* Add to quick searches, at the foot of a filter bar menu, on a laptop: icon and words in the
+   accent, with the same soft grey fill as every action when pointed at (U23 buttons, owner's
+   choice 2026-11-07). After the rules above, so it wins over their hover. */
+@media (min-width: 900px) and (pointer: fine) {
+  .addRow:hover {
+    background: var(--hover-fill);
+    color: var(--action-text);
+  }
+
+  /* Already added: the tick and "In quick searches" in green, in the text colour when pointed
+     at, as green on the grey fill is too faint in Heirloom (the tick and words still say it). */
+  .addRow[aria-pressed="true"] {
+    color: var(--color-success);
+  }
+
+  .addRow[aria-pressed="true"]:hover {
+    color: var(--color-text);
+  }
+
+  .addIcon:hover {
+    background: var(--hover-fill);
+  }
+}

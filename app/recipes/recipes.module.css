@@ -2300,7 +2300,7 @@ button.stepNumber:focus-visible::after {
     outline-width: 2px;
   }
 
-  /* No recipes yet: smaller words and buttons, Add recipe still the one filled. */
+  /* No recipes yet: smaller words and buttons; Add recipe the main action (icon and words). */
   .empty {
     min-height: 20rem;
     padding: var(--space-6) 0;
@@ -2336,31 +2336,43 @@ button.stepNumber:focus-visible::after {
     margin-top: var(--space-2);
   }
 
+  /* Buttons (U23, owner's choice 2026-11-07): icon and words with no fill or line, a soft fill
+     when pointed at; Add recipe, the main action, in the accent and semibold, Import and Show
+     more in the text colour. */
   .emptyText .primary,
   .emptyText .secondary,
   .more .secondary {
-    min-height: var(--control);
-    padding: 0 var(--space-4);
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
+    border: 0;
     border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
     font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    line-height: 1;
   }
 
   .emptyText .primary {
-    border: 0;
-    box-shadow: var(--shadow-sm);
+    color: var(--action-text);
+    font-weight: var(--action-weight);
   }
 
-  /* The second choice reads as a button without a line around it: a soft fill. */
-  .emptyText .secondary,
-  .more .secondary {
-    border-color: transparent;
-    background: var(--color-surface-sunken);
-    font-weight: var(--weight-medium);
+  .emptyText .primary:not(:disabled):hover,
+  .emptyText .secondary:not(:disabled):hover,
+  .more .secondary:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
   }
 
-  .emptyText .secondary:hover,
-  .more .secondary:hover {
-    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  .emptyText .primary:not(:disabled):hover {
+    color: var(--action-text);
+  }
+
+  .emptyText .secondary .laptopIcon,
+  .more .secondary .laptopIcon {
+    color: var(--color-text-muted);
   }
 
   .emptyText .textButton {
@@ -2383,9 +2395,10 @@ button.stepNumber:focus-visible::after {
     font-size: var(--ui-text-label);
   }
 
-  /* Surprise me and Select: cards like the recipe cards, with laptop-sized buttons. The main
-     choice in each is a soft accent button, so + Add recipe stays the screen's one filled button,
-     and the others are a soft fill with no line around them. */
+  /* Surprise me and Select: cards like the recipe cards, their buttons icon and words (U23,
+     owner's choice 2026-11-07): Open the main action in the accent, the others in the text
+     colour; a step that finishes a choice in Select ("Add 3 recipes", "Take 2 recipes out") is
+     the ink button. */
   .surprise,
   .bulk {
     margin-bottom: var(--space-5);
@@ -2444,41 +2457,79 @@ button.stepNumber:focus-visible::after {
   .surprise .secondary,
   .bulk .primary,
   .bulk .secondary {
-    min-height: var(--control);
-    padding: 0 var(--space-4);
-    border-color: transparent;
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
+    border: 0;
     border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
     font-size: var(--ui-text);
-  }
-
-  .surprise .primary,
-  .bulk .primary {
-    background: var(--color-accent-soft);
-    color: var(--color-accent-soft-text);
-  }
-
-  .surprise .primary:hover,
-  .bulk .primary:hover {
-    background: color-mix(in srgb, var(--color-accent-soft) 82%, var(--color-accent));
-    color: var(--color-accent-soft-text);
-  }
-
-  .surprise .secondary,
-  .bulk .secondary {
-    background: var(--color-surface-sunken);
     font-weight: var(--weight-medium);
+    line-height: 1;
   }
 
-  .surprise .secondary:hover,
-  .bulk .secondary:hover {
-    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
+  .surprise .primary {
+    color: var(--action-text);
+    font-weight: var(--action-weight);
   }
 
+  .surprise .primary:not(:disabled):hover,
+  .surprise .secondary:not(:disabled):hover,
+  .bulk .secondary:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .surprise .primary:not(:disabled):hover {
+    color: var(--action-text);
+  }
+
+  .surprise .secondary .laptopIcon,
+  .bulk .secondary .laptopIcon {
+    color: var(--color-text-muted);
+  }
+
+  .bulk .primary {
+    padding: 0 var(--space-3);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .bulk .primary:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  /* A row that starts with words lines them up with the words above (their soft fill reaches
+     out to the left when pointed at); words next to words sit closer. */
+  .bulk .secondary:first-child {
+    margin-left: calc(-1 * var(--space-2));
+  }
+
+  .bulk div:not(.bulkHead):has(> .secondary) {
+    column-gap: var(--space-1);
+  }
+
+  /* Not now and Select all shown: actions, so plain words in the text colour, not links. */
   .surprise .textButton,
   .bulk .textButton {
-    min-height: var(--control-sm);
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
+    line-height: 1;
     border-radius: var(--radius-control);
+    color: var(--color-text);
     font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .surprise .textButton:not(:disabled):hover,
+  .bulk .textButton:not(:disabled):hover {
+    background: var(--hover-fill);
   }
 
   .bulk .sort {
@@ -2495,20 +2546,18 @@ button.stepNumber:focus-visible::after {
 
 /* Windows contrast themes draw no shadows and no fills, so on a laptop the edges the rules above
    leave to a shadow, or take away, come back there: the cards, the Surprise me and Select boxes,
-   and their buttons. */
+   and Select's ink button. */
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
   .card,
   .ghost,
   .surprise,
-  .bulk,
-  .emptyText .primary,
-  .emptyText .secondary,
-  .more .secondary,
-  .surprise .primary,
-  .surprise .secondary,
-  .bulk .primary,
-  .bulk .secondary {
+  .bulk {
     border: 1px solid;
+  }
+
+  /* Icon-and-words buttons need no edge; the ink one does. */
+  .bulk .primary {
+    border: 1px solid ButtonText;
   }
 }
 
@@ -2564,7 +2613,7 @@ button.stepNumber:focus-visible::after {
   }
 
   .recipePage .back:hover,
-  .topAction:hover {
+  .topAction:not(:disabled):hover {
     background: var(--hover-fill);
     color: var(--color-text);
     text-decoration: none;
@@ -2580,12 +2629,22 @@ button.stepNumber:focus-visible::after {
     color: var(--color-text-muted);
   }
 
-  .topAction:hover svg {
+  .topAction:not(:disabled):hover svg {
     color: var(--color-text);
   }
 
   button.topAction:disabled svg {
     color: inherit;
+  }
+
+  /* Trash, the page's delete: red words and icon (U23 buttons, owner's choice 2026-11-07, "a
+     delete in red words"), the same soft fill when pointed at. Faded as before while it can't
+     be used. */
+  button.topAction:not(:disabled),
+  button.topAction:not(:disabled):hover,
+  button.topAction:not(:disabled) svg,
+  button.topAction:not(:disabled):hover svg {
+    color: var(--color-danger);
   }
 
   .hero {
@@ -2762,32 +2821,57 @@ button.stepNumber:focus-visible::after {
     white-space: nowrap;
   }
 
-  /* Start cooking, the page's one filled button; Made it today a soft grey one beside it. */
+  /* Buttons (U23, owner's choice 2026-11-07): icon and words, no fill or line, a soft fill when
+     pointed at. Start cooking is the main action, in the accent and semibold; Made it today
+     (or Undo "made it") is in the text colour beside it, then Last made. */
   .recipeHeader .actions {
     align-items: center;
-    gap: var(--space-2);
-    margin-top: 1.125rem;
+    gap: var(--space-1);
+    margin: 1.125rem 0 0 calc(-1 * var(--space-2));
   }
 
   .startCooking,
-  .made .secondary {
+  .made .secondary,
+  .recipePage > .actions .primary {
     gap: 0.375rem;
-    min-height: var(--control);
-    padding: 0 0.875rem 0 0.625rem;
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
     border: 0;
     border-radius: var(--radius-control);
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-text);
     font-size: var(--ui-text);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-medium);
     line-height: 1;
   }
 
-  .startCooking {
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent);
+  .startCooking,
+  .recipePage > .actions .primary {
+    color: var(--action-text);
+    font-weight: var(--action-weight);
+  }
+
+  .startCooking:not(:disabled):hover,
+  .made .secondary:not(:disabled):hover,
+  .recipePage > .actions .primary:not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .startCooking:not(:disabled):hover,
+  .recipePage > .actions .primary:not(:disabled):hover {
+    color: var(--action-text);
   }
 
   .startCooking .laptopIcon {
     width: 0.875rem;
     height: 0.875rem;
+  }
+
+  /* Put back, on a recipe in Trash: the page's main action, under the line saying so. */
+  .recipePage > .actions {
+    margin-left: calc(-1 * var(--space-2));
   }
 
   .made {
@@ -2797,17 +2881,12 @@ button.stepNumber:focus-visible::after {
     gap: var(--space-1) var(--space-3);
   }
 
-  .made .secondary {
-    background: var(--color-surface-sunken);
-    font-weight: var(--weight-medium);
-  }
-
-  .made .secondary:hover {
-    background: color-mix(in srgb, var(--color-surface-sunken) 75%, var(--color-border));
-  }
-
   .made .secondary .laptopIcon {
     color: var(--color-text-muted);
+  }
+
+  .made .secondary:not(:disabled):hover .laptopIcon {
+    color: var(--color-text);
   }
 
   .made p {
@@ -3207,16 +3286,135 @@ button.stepNumber:focus-visible::after {
     border-radius: var(--radius-pop);
   }
 
+  /* The note's card: Cancel (and Delete, in red words) as plain words, then Add note (or Done)
+     as the ink button, which finishes it. */
+  .composerButtons {
+    gap: var(--space-1);
+  }
+
+  .composer .quietButton {
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .composer .quietButton:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  .composer .quietDanger,
+  .composer .quietDanger:hover {
+    color: var(--color-danger);
+  }
+
+  .composer .pill {
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+  }
+
+  .composer .pill:not(:disabled):hover {
+    background: var(--button-ink-hover);
+  }
+
+  /* While "Save the note before leaving?" is open, its Save note is the one ink button: the
+     card's Add note (or Done) behind it shows as words. */
+  .recipePage:has(dialog[open] .leaveButtons) .composer .pill {
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  /* The Paprika update's choices: plain words in the text colour, none above the others. */
+  .recipePage .versionNotice .actions {
+    gap: var(--space-1);
+    margin-left: calc(-1 * var(--space-2));
+  }
+
+  .recipePage .versionNotice .secondary {
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .recipePage .versionNotice .secondary:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  /* The Adjust, categories and "Save the note before leaving?" windows: their finishing button
+     (Done, Save note) is the ink one; Don't save and Keep writing plain words. */
+  .adjust .adjustButtons .primary,
+  .adjust .leaveButtons .primary {
+    min-height: var(--button-height);
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+  }
+
+  .adjust .adjustButtons .primary:not(:disabled):hover,
+  .adjust .leaveButtons .primary:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .adjust .leaveButtons {
+    gap: var(--space-1);
+  }
+
+  .adjust .leaveButtons .secondary,
+  .adjust .leaveButtons .textButton {
+    min-height: var(--button-height);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+  }
+
+  .adjust .leaveButtons .secondary:not(:disabled):hover,
+  .adjust .leaveButtons .textButton:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
+  /* Scale (and the pan's own button) beside its box: words with no line, Done staying the
+     window's one ink button. */
+  .adjust .scaleChoice {
+    border-color: transparent;
+    border-radius: var(--radius-control);
+    background: transparent;
+    font-weight: var(--weight-medium);
+  }
+
+  .adjust .scaleChoice:not(:disabled):hover {
+    background: var(--hover-fill);
+  }
+
   .recipePage .nutrition dt {
     font-size: var(--ui-text-secondary);
   }
 }
 
-/* Windows contrast themes draw no fills or shadows: on a laptop the recipe page's buttons, the
-   ingredients panel, the amount switch's chosen part and a step's number keep an edge there. */
+/* Windows contrast themes draw no fills or shadows: on a laptop the recipe page's ink buttons,
+   the ingredients panel, the amount switch's chosen part and a step's number keep an edge there. */
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
-  .startCooking,
-  .made .secondary,
   .panel,
   .quickScale,
   button.stepNumber,
@@ -3227,6 +3425,17 @@ button.stepNumber:focus-visible::after {
   .quickChoice[aria-pressed="true"] {
     outline: 2px solid;
     outline-offset: -2px;
+  }
+
+  /* The ink buttons keep an edge; icon-and-words ones (Start cooking, Made it) need none. */
+  .composer .pill,
+  .adjust .adjustButtons .primary,
+  .adjust .leaveButtons .primary {
+    border: 1px solid ButtonText;
+  }
+
+  .recipePage:has(dialog[open] .leaveButtons) .composer .pill {
+    border: 0;
   }
 
   /* The empty star stays an outline: the theme would otherwise fill it with its text colour. */

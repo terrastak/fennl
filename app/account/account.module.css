@@ -110,7 +110,7 @@
 
 /* Settings on a laptop (U23): the address and when it was verified on one row of a white box,
    "Change email…" on its right; the box it opens sits under that row, its field with Send (the
-   page's one filled button) and Cancel beside it. Phones and touch screens keep the page above. */
+   page's one filled button, ink, U23 2026-11-07) and Cancel, plain words, beside it. Phones and touch screens keep the page above. */
 @media (min-width: 900px) and (pointer: fine) {
   .address {
     display: block;
@@ -237,17 +237,20 @@
     background: var(--hover-fill);
   }
 
-  /* The one filled button on the page, while the box is open. */
-  .sendButton {
-    padding: 0 0.875rem;
-    background: var(--color-accent);
-    color: var(--color-on-accent);
-    font-weight: var(--weight-semibold);
-    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 6%, transparent);
+  .cancelButton {
+    padding: 0 var(--space-2);
   }
 
-  .sendButton:hover {
-    background: var(--color-accent-hover);
+  /* The one filled button on the page, while the box is open: it finishes the form, so ink. */
+  .sendButton {
+    min-height: var(--button-height);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .sendButton:not(:disabled):hover {
+    background: var(--button-ink-hover);
   }
 
   .sendButton:disabled,
@@ -270,9 +273,9 @@
 }
 
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
-  .sendButton,
-  .cancelButton {
-    border: 1px solid;
+  /* The ink button keeps an edge; Cancel is words, so it needs none. */
+  .sendButton {
+    border: 1px solid ButtonText;
   }
 
   .subform {
