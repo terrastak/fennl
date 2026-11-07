@@ -238,10 +238,6 @@
   font-weight: var(--weight-semibold);
 }
 
-.footer {
-  margin-top: var(--space-8);
-}
-
 /* A line the import review screen points out (phase E4): words, not only color. */
 /* A word an AI import wasn't sure of (phase E10). */
 .unsure {
@@ -353,13 +349,58 @@
 
 .dot,
 .divider,
-.trashFoot,
 .nutritionHeading,
 .summaryText,
 .summaryButton,
 .unit,
 .escHint {
   display: none;
+}
+
+/* The bottom (U23, owner's choice 2026-11-07, every screen): no second Done, since the bar with
+   Done stays in view at the top; Move to Trash in red words with a bin (the button rule). */
+.trashFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin-top: var(--space-8);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border-soft);
+}
+
+/* A delete: red words with a bin (the button rule). */
+.trashButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--control);
+  margin-left: -0.625rem;
+  padding: 0 var(--space-3) 0 0.625rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-danger);
+  font: inherit;
+  font-size: var(--ui-text);
+  font-weight: var(--weight-medium);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.trashButton:not(:disabled):hover {
+  background: var(--hover-fill);
+}
+
+.trashButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.trashHint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: var(--ui-text-secondary);
 }
 
 /* The keys in "Alt+↑ / Alt+↓": plain words here (a <kbd> is monospace by default). */
@@ -375,8 +416,7 @@
    how saving is going, Undo, Redo and Done as icon and words, Done in the accent); each section
    a white box under a plain heading, as in Settings; smaller fields with a soft line; "How Fennl
    reads it" tighter, the line being typed marked with a thin accent edge; Link a recipe a small
-   panel under its button; nutrition a row with a button that says what it does; Move to Trash at
-   the very bottom, and no second Done. Phones, touch screens and windows under 900px keep the
+   panel under its button; nutrition a row with a button that says what it does. Phones, touch screens and windows under 900px keep the
    editor above. The import review screen's form takes the field rules too (.laptopFields, U23 slice 6). */
 @media (min-width: 900px) and (pointer: fine) {
   /* --- The bar ----------------------------------------------------------------------------- */
@@ -1135,55 +1175,6 @@
     color: var(--color-text-muted);
     font-size: var(--ui-text-label);
     pointer-events: none;
-  }
-
-  /* --- The bottom: Move to Trash, and no second Done --------------------------------------- */
-  .editor .footer {
-    display: none;
-  }
-
-  .editor .trashFoot {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: var(--space-2) var(--space-3);
-    margin-top: var(--space-8);
-    padding-top: var(--space-4);
-    border-top: 1px solid var(--color-border-soft);
-  }
-
-  /* A delete: red words with a bin (the button rule). */
-  .editor .trashButton {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.375rem;
-    min-height: var(--control);
-    margin-left: -0.625rem;
-    padding: 0 var(--space-3) 0 0.625rem;
-    border: 0;
-    border-radius: var(--radius-control);
-    background: transparent;
-    color: var(--color-danger);
-    font: inherit;
-    font-size: var(--ui-text);
-    font-weight: var(--weight-medium);
-    line-height: 1;
-    cursor: pointer;
-  }
-
-  .editor .trashButton:not(:disabled):hover {
-    background: var(--hover-fill);
-  }
-
-  .editor .trashButton:disabled {
-    cursor: not-allowed;
-    opacity: 0.5;
-  }
-
-  .editor .trashHint {
-    margin: 0;
-    color: var(--color-text-muted);
-    font-size: var(--ui-text-secondary);
   }
 }
 

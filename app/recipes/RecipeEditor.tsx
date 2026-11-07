@@ -17,7 +17,6 @@ import { NutritionFields } from "./NutritionFields";
 import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
 import { noteTrashed } from "./trashNotice";
-import { usePointer } from "./usePointer";
 import { described, problemsFor } from "./fieldProblems";
 import { EditorSession, type EditorState, type SaveState } from "./editorSession";
 import styles from "./recipes.module.css";
@@ -80,7 +79,6 @@ function Editor({
   const titleBox = useRef<HTMLInputElement>(null);
   const tooLargeNotice = useRef<HTMLParagraphElement>(null);
   const head = useRef<HTMLDivElement>(null);
-  const laptop = usePointer();
 
   // On a laptop the bar's heading gets smaller once the page has scrolled (U23); the mark does
   // nothing elsewhere.
@@ -340,9 +338,8 @@ function Editor({
           <Field
             id="edit-notes"
             label="Notes"
-            // "notes" since U7 (there can be several); laptop only for now, so phones look as
-            // before until the owner says (U23 slice 5).
-            hint={`Notes that go with the recipe. Your own signed ${laptop ? "notes are" : "note is"} on the recipe's page.`}
+            // "notes" since U7: there can be several (owner's choice 2026-11-07, every screen).
+            hint="Notes that go with the recipe. Your own signed notes are on the recipe's page."
             problems={problemsFor(state.issues, "notes")}
             boxed
           >
@@ -360,14 +357,9 @@ function Editor({
         </fieldset>
       </form>
 
-      {/* Phones keep a second Done here; a laptop's bar with Done stays in view instead (U23). */}
-      <div className={editor.footer}>
-        <button type="button" className={styles.primary} onClick={() => void done()}>
-          Done
-        </button>
-      </div>
-      {/* On a laptop, Move to Trash at the very bottom (U23, owner's choice 2026-11-07); not for a
-          new recipe that has no title yet, so nothing was saved. */}
+      {/* No second Done: the bar with Done stays in view at the top. Move to Trash at the very
+          bottom (U23, owner's choice 2026-11-07, every screen); not for a new recipe that has no
+          title yet, so nothing was saved. */}
       {state.created ? (
         <div className={editor.trashFoot}>
           <button
