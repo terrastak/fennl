@@ -96,12 +96,14 @@ function Meters({ usage }: { usage: Usage }) {
         used={usage.recipes}
         max={usage.maxRecipes}
         text={recipesLine(usage)}
+        words
       />
       <UsageMeter
         label="Recipe text"
         used={usage.textBytes}
         max={usage.maxTextBytes}
         text={textLine(usage)}
+        words
       />
     </>
   );
@@ -120,13 +122,14 @@ function PhotoMeters({ photos }: { photos: PhotoUsage }) {
   const waiting = photos.members.filter((m) => m.deleteAfter !== null && m.count > 0);
   return (
     <>
-      <UsageMeter label="Photos" used={photos.bytes} max={quota} text={photosLine(photos)} />
+      <UsageMeter label="Photos" used={photos.bytes} max={quota} text={photosLine(photos)} words />
       {usageLevel(photos.count, countMax) !== "fine" ? (
         <UsageMeter
           label="Number of photos"
           used={photos.count}
           max={countMax}
           text={photoCountLine(photos)}
+          words
         />
       ) : null}
       {shared && photos.count > 0 ? (
@@ -419,7 +422,9 @@ function AiMeter({ ai }: { ai: AiImportUsage }) {
   // Used up, by the plan's number or the hidden cost backstop (decided 2026-10-14): a full bar
   // and when they start again, without the count, which could read as room left.
   if (ai.enabled && ai.usedUp) {
-    return <UsageMeter label="AI imports this month" used={1} max={1} text={aiResetText(ai)} />;
+    return (
+      <UsageMeter label="AI imports this month" used={1} max={1} text={aiResetText(ai)} words />
+    );
   }
   return (
     <>
@@ -428,6 +433,7 @@ function AiMeter({ ai }: { ai: AiImportUsage }) {
         used={ai.used}
         max={ai.enabled ? ai.max : null}
         text={aiImportsLine(ai)}
+        words
       />
       {ai.enabled ? <p className={styles.help}>{aiResetText(ai)}</p> : null}
     </>

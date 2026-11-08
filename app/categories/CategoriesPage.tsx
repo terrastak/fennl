@@ -168,7 +168,9 @@ function RenameForm({
         {!valid
           ? "A name can't be empty or contain › or >."
           : joins
-            ? "There's already a category with that name here; they'll show as one."
+            ? `There's already a ${tree.byKey.get(target)?.name ?? names[0]} ${
+                node.names.at(-2) ? `in ${node.names.at(-2)}` : "at the top level"
+              }, so the two will show as one.`
             : ""}
       </p>
     </form>

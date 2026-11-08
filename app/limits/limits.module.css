@@ -78,7 +78,7 @@
 
 /* How full a bar is, in words beside its numbers (U23, owner's choice 2026-11-07): "Almost full"
    and "Full" in the warm tag, "Over the limit" in the red one, so the bar's colour is never alone.
-   Shown on a laptop's Account page for now. */
+   Shown on the Account page on every screen (owner's choice 2026-11-08). */
 .levelTag {
   display: inline-flex;
   align-items: center;
