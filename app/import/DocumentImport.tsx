@@ -12,7 +12,7 @@ import { useSyncStatus } from "../sync/useSync";
 import { giveDraftPicture, importPastedText, pastedProblemText } from "./api";
 import styles from "./import.module.css";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
-import { SourceIcon, UploadIcon } from "./SourceRow";
+import { SourceCard, SourceIcon, UploadIcon } from "./SourceRow";
 
 // Importing a recipe saved as a document (phase E18; spec.md E18): a Word, Rich Text, text or
 // Markdown file is opened on this device and its text taken out (shared/documentText.ts), then
@@ -145,35 +145,37 @@ export function DocumentImport({
       className={`${styles.section} ${styles.sourceRow}`}
       aria-labelledby="import-file-title"
     >
-      <SourceIcon path={LAPTOP_ICONS.doc} />
-      <h2 id="import-file-title">From a file</h2>
-      <p>
-        A recipe you typed up in Word, TextEdit or a notes app: choose the file (Word .docx, Rich
-        Text .rtf, text .txt or Markdown .md), or several at once. Fennl reads the text on this
-        device and you check the recipe before it&rsquo;s saved.
-        {status.photos?.enabled
-          ? " Photos in a Word file are offered to keep with the recipe."
-          : ""}
-      </p>
-      <label
-        className={`${recipes.primary} ${styles.sourceButton} ${working ? styles.off : ""}`}
-        aria-disabled={working !== null}
-      >
-        <input
-          type="file"
-          className="visually-hidden"
-          multiple
-          accept=".docx,.rtf,.txt,.text,.md,.markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/rtf,text/rtf,text/plain,text/markdown"
-          disabled={working !== null}
-          onChange={(event) => {
-            const files = [...(event.currentTarget.files ?? [])];
-            event.currentTarget.value = "";
-            void read(files);
-          }}
-        />
-        <UploadIcon />
-        Choose files
-      </label>
+      <SourceCard>
+        <SourceIcon path={LAPTOP_ICONS.doc} />
+        <h2 id="import-file-title">From a file</h2>
+        <p>
+          A recipe you typed up in Word, TextEdit or a notes app: choose the file (Word .docx, Rich
+          Text .rtf, text .txt or Markdown .md), or several at once. Fennl reads the text on this
+          device and you check the recipe before it&rsquo;s saved.
+          {status.photos?.enabled
+            ? " Photos in a Word file are offered to keep with the recipe."
+            : ""}
+        </p>
+        <label
+          className={`${recipes.primary} ${styles.sourceButton} ${working ? styles.off : ""}`}
+          aria-disabled={working !== null}
+        >
+          <input
+            type="file"
+            className="visually-hidden"
+            multiple
+            accept=".docx,.rtf,.txt,.text,.md,.markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/rtf,text/rtf,text/plain,text/markdown"
+            disabled={working !== null}
+            onChange={(event) => {
+              const files = [...(event.currentTarget.files ?? [])];
+              event.currentTarget.value = "";
+              void read(files);
+            }}
+          />
+          <UploadIcon />
+          Choose files
+        </label>
+      </SourceCard>
       {working ? (
         <p role="status" className={recipes.hint}>
           {working}

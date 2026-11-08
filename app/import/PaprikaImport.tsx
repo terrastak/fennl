@@ -10,7 +10,7 @@ import { Link } from "../router";
 import { activeSyncClient, saveChanges, useCategoryTree, useSyncStatus } from "../sync/useSync";
 import styles from "./import.module.css";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
-import { SourceIcon, UploadIcon } from "./SourceRow";
+import { SourceCard, SourceIcon, UploadIcon } from "./SourceRow";
 import {
   planPaprika,
   previewPaprika,
@@ -209,37 +209,39 @@ export function PaprikaImport() {
       className={`${styles.section} ${styles.sourceRow}`}
       aria-labelledby="import-paprika-title"
     >
-      <SourceIcon path={LAPTOP_ICONS.paprika} />
-      <h2 id="import-paprika-title">From Paprika</h2>
-      <p>
-        Your whole Paprika library at once. In Paprika, choose <strong>File › Export</strong>, then{" "}
-        <strong>All Recipes</strong>, and choose the <strong>.paprikarecipes</strong> file it saves.
-        Fennl reads it on this device and shows what it found before anything is imported.
-      </p>
-      {allowed ? (
-        <label
-          className={`${recipes.primary} ${styles.sourceButton} ${working ? styles.off : ""}`}
-          aria-disabled={working !== null}
-        >
-          <input
-            type="file"
-            className="visually-hidden"
-            accept=".paprikarecipes,application/zip"
-            disabled={working !== null}
-            onChange={(event) => {
-              const chosen = event.currentTarget.files?.[0];
-              event.currentTarget.value = "";
-              void choose(chosen);
-            }}
-          />
-          <UploadIcon />
-          Choose the Paprika file
-        </label>
-      ) : (
-        <p className={`${recipes.hint} ${styles.sourceAside}`}>
-          Importing from Paprika is part of Premium. <Link href="/account">See your plan</Link>.
+      <SourceCard>
+        <SourceIcon path={LAPTOP_ICONS.paprika} />
+        <h2 id="import-paprika-title">From Paprika</h2>
+        <p>
+          Your whole Paprika library at once. In Paprika, choose <strong>File › Export</strong>,
+          then <strong>All Recipes</strong>, and choose the <strong>.paprikarecipes</strong> file it
+          saves. Fennl reads it on this device and shows what it found before anything is imported.
         </p>
-      )}
+        {allowed ? (
+          <label
+            className={`${recipes.primary} ${styles.sourceButton} ${working ? styles.off : ""}`}
+            aria-disabled={working !== null}
+          >
+            <input
+              type="file"
+              className="visually-hidden"
+              accept=".paprikarecipes,application/zip"
+              disabled={working !== null}
+              onChange={(event) => {
+                const chosen = event.currentTarget.files?.[0];
+                event.currentTarget.value = "";
+                void choose(chosen);
+              }}
+            />
+            <UploadIcon />
+            Choose the Paprika file
+          </label>
+        ) : (
+          <p className={`${recipes.hint} ${styles.sourceAside}`}>
+            Importing from Paprika is part of Premium. <Link href="/account">See your plan</Link>.
+          </p>
+        )}
+      </SourceCard>
       {working ? (
         <p role="status" className={recipes.hint}>
           {working}

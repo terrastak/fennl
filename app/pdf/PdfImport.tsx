@@ -17,7 +17,7 @@ import { activeSyncClient, useSyncStatus } from "../sync/useSync";
 import { PdfFile, type PdfPageInfo } from "./pdfFile";
 import styles from "./pdf.module.css";
 import importStyles from "../import/import.module.css";
-import { SourceIcon, UploadIcon } from "../import/SourceRow";
+import { SourceCard, SourceIcon, UploadIcon } from "../import/SourceRow";
 import { LaptopIcon } from "../recipes/LaptopIcon";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 
@@ -323,35 +323,37 @@ export function PdfImport({ onImported }: { onImported(jobs: ImportJobSummary[])
       className={`${styles.section} ${importStyles.sourceRow}`}
       aria-labelledby="import-pdf-title"
     >
-      <SourceIcon path={LAPTOP_ICONS.pdf} />
-      <h2 id="import-pdf-title">From a PDF</h2>
-      <p>
-        A cookbook, a printout or a file of family recipes, up to {PDF_RULES.pages} pages. Fennl
-        finds the recipes in it; you check which pages each is on, then each one is read into a
-        recipe for you to check. Each recipe&rsquo;s pages are kept with it.
-      </p>
-
-      {unavailable ? (
-        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>{unavailable}</p>
-      ) : !online ? (
-        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>
-          Importing a PDF needs a connection.
+      <SourceCard>
+        <SourceIcon path={LAPTOP_ICONS.pdf} />
+        <h2 id="import-pdf-title">From a PDF</h2>
+        <p>
+          A cookbook, a printout or a file of family recipes, up to {PDF_RULES.pages} pages. Fennl
+          finds the recipes in it; you check which pages each is on, then each one is read into a
+          recipe for you to check. Each recipe&rsquo;s pages are kept with it.
         </p>
-      ) : rows === null ? (
-        <label
-          className={`${recipes.primary} ${importStyles.sourceButton} ${working ? styles.off : ""}`}
-        >
-          <input
-            type="file"
-            className="visually-hidden"
-            accept="application/pdf,.pdf"
-            disabled={working !== null}
-            onChange={(event) => void choose(event.currentTarget)}
-          />
-          <UploadIcon />
-          Choose a PDF
-        </label>
-      ) : null}
+
+        {unavailable ? (
+          <p className={`${recipes.hint} ${importStyles.sourceAside}`}>{unavailable}</p>
+        ) : !online ? (
+          <p className={`${recipes.hint} ${importStyles.sourceAside}`}>
+            Importing a PDF needs a connection.
+          </p>
+        ) : rows === null ? (
+          <label
+            className={`${recipes.primary} ${importStyles.sourceButton} ${working ? styles.off : ""}`}
+          >
+            <input
+              type="file"
+              className="visually-hidden"
+              accept="application/pdf,.pdf"
+              disabled={working !== null}
+              onChange={(event) => void choose(event.currentTarget)}
+            />
+            <UploadIcon />
+            Choose a PDF
+          </label>
+        ) : null}
+      </SourceCard>
 
       {working ? (
         <p role="status" className={recipes.hint}>

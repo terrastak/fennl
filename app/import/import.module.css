@@ -604,6 +604,8 @@
    Elsewhere they add nothing, so phones, touch screens and narrow windows look as before. */
 .importPage,
 .sources,
+.sourceCard,
+.opened,
 .photosBox,
 .pick {
   display: contents;
@@ -708,9 +710,9 @@
   }
 
   /* --- The Import page ---------------------------------------------------------------------- */
+  /* The whole main area, as the recipe list (U24, owner's request 2026-11-08). */
   .importPage {
     display: block;
-    max-width: 47.5rem;
   }
 
   .importPage > header {
@@ -736,45 +738,54 @@
     font-size: var(--ui-text);
   }
 
-  /* The sources: one white box of rows, like Settings. */
+  /* The sources (U24, owner's request 2026-11-08): a grid of cards that grows with the window,
+     like the recipe list's. What a source opens, and anything it says, spans the grid's width
+     right under its card, and the cards after it follow below it. Their row ends at that card, so
+     what's seen, the keyboard and a screen reader all go in the same order. */
   .sources {
-    display: block;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+    gap: var(--space-4);
+  }
+
+  .sources .sourceRow {
+    display: contents;
+  }
+
+  .sources .sourceRow > :not(.sourceCard) {
+    grid-column: 1 / -1;
+    max-width: none;
+    margin: 0;
+  }
+
+  /* A card: the icon beside the name, its explanation under them, its quiet button at the
+     bottom. */
+  .sources .sourceCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+    padding: var(--space-4) var(--space-4) var(--space-3);
     border-radius: var(--radius-pop);
     background: var(--color-surface);
     box-shadow: 0 0 0 1px var(--color-border-soft);
   }
 
-  .sources .sourceRow {
+  /* While what it opens is open, its card has a firmer edge. */
+  .sources .sourceCard:has([aria-expanded="true"]) {
+    box-shadow: 0 0 0 1px var(--color-border-strong);
+  }
+
+  .sources .sourceIcon {
     display: grid;
-    grid-template-columns: 2rem minmax(0, 1fr) auto;
-    align-items: center;
-    justify-items: stretch;
-    gap: 0 0.875rem;
-    max-width: none;
-    margin: 0;
-    padding: 0.8125rem var(--space-4);
-    border-top: 1px solid var(--color-border-soft);
-  }
-
-  .sources .sourceRow:first-child {
-    border-top: 0;
-  }
-
-  /* What a row opens, and anything it says, sits under its words. */
-  .sources .sourceRow > * {
-    grid-column: 2 / -1;
-    margin-top: var(--space-3);
-  }
-
-  .sources .sourceRow > .sourceIcon {
-    display: grid;
+    flex: none;
     place-items: center;
-    grid-column: 1;
-    grid-row: 1 / span 2;
-    align-self: start;
+    position: absolute;
+    top: var(--space-4);
+    left: var(--space-4);
     width: 2rem;
     height: 2rem;
-    margin-top: 1px;
     border-radius: var(--radius-pop);
     background: var(--color-surface-sunken);
     color: var(--color-text-muted);
@@ -785,10 +796,12 @@
     height: 1.125rem;
   }
 
-  .sources .sourceRow > h2 {
-    grid-column: 2;
-    grid-row: 1;
+  .sources .sourceCard > h2 {
+    display: flex;
+    align-items: center;
+    min-height: 2rem;
     margin: 0;
+    padding-left: 2.75rem;
     font-family: var(--font-ui);
     font-variation-settings: normal;
     font-size: var(--ui-text);
@@ -797,39 +810,34 @@
     letter-spacing: 0;
   }
 
-  .sources .sourceRow > h2 + p {
-    grid-column: 2;
-    grid-row: 2;
+  .sources .sourceCard > p {
     max-width: 66ch;
-    margin: 0.125rem 0 0;
+    margin: var(--space-2) 0 var(--space-3);
     color: var(--color-text-muted);
     font-size: var(--ui-text-secondary);
     line-height: 1.45;
   }
 
-  .sources .sourceRow > h2 + p strong {
+  .sources .sourceCard > p strong {
     color: var(--color-text);
     font-weight: var(--weight-semibold);
   }
 
-  .sources .sourceRow > p:not(h2 + p),
-  .sources .sourceRow > ul {
+  /* The card's button, at its bottom, its words in line with the card's. */
+  .sources .sourceCard > .sourceButton,
+  .sources .sourceCard > .sourceControl {
+    margin: auto 0 0 -0.625rem;
+  }
+
+  .sources .sourceRow > p,
+  .sources .sourceRow > ul,
+  .sources .opened > p {
     font-size: var(--ui-text-secondary);
     line-height: 1.45;
   }
 
-  /* The row's button, at its right. */
-  .sources .sourceRow > .sourceButton,
-  .sources .sourceRow > .sourceControl {
-    grid-column: 3;
-    grid-row: 1 / span 2;
-    align-self: center;
-    justify-self: end;
-    margin: 0;
-  }
-
   .sources .sourceControl {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: var(--space-1);
   }
 
@@ -864,22 +872,30 @@
     outline-offset: 2px;
   }
 
-  /* What a row opens: under its words, on a faint band to the row's edges. */
-  .sources .sourceRow > .subform {
-    grid-column: 1 / -1;
+  /* What a source opens (the paste box, the photos' pages, the PDF's recipes, the Paprika
+     preview): a white box the grid's width. */
+  .sources .sourceRow > :is(.subform, .opened) {
     width: auto;
-    margin: var(--space-3) calc(-1 * var(--space-4)) -0.8125rem;
-    padding: var(--space-3) var(--space-4) 0.875rem calc(var(--space-4) + 2rem + 0.875rem);
-    border-top: 1px solid var(--color-border-soft);
-    background: color-mix(in srgb, var(--color-surface-sunken) 40%, var(--color-surface));
+    padding: var(--space-4);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
   }
 
-  .sources .sourceRow:last-child > .subform {
-    border-radius: 0 0 var(--radius-pop) var(--radius-pop);
+  .sources .sourceRow > .opened {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-3);
   }
 
   .sources .pasteForm {
     gap: var(--space-3);
+  }
+
+  /* The paste box keeps a sensible reading width in a wide window. */
+  .sources .pasteForm > :is(.pasteBox, .pasteRow) {
+    width: 100%;
+    max-width: 47.5rem;
   }
 
   /* The paste box grows with what's pasted (where the browser can), as the editor's boxes do. */
@@ -1771,7 +1787,8 @@
 /* Windows contrast themes draw no fills or shadows: the boxes, rows, chosen drafts, the question,
    the ink buttons and the bar keep an edge or a line. */
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
-  .sources,
+  .sources .sourceCard,
+  .sources .sourceRow > :is(.subform, .opened),
   .waiting .jobs,
   .waiting .ask,
   .review .duplicates,

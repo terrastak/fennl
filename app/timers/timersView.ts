@@ -27,11 +27,21 @@ export type View =
   | { kind: "start"; offer: StartOffer };
 
 let view: View | null = null;
+/**
+ * Which side the panel comes from (U24, owner's request 2026-11-08): the left, beside the left
+ * panel, when opened from the left panel's Timers button on a laptop; otherwise the right, where
+ * cook mode's Timers button and the corner cards are. Kept while the panel moves between its
+ * parts (Add timer, Adjust time), forgotten when it closes.
+ */
+let side: "left" | "right" = "right";
 const viewListeners = new Set<() => void>();
 export const showView = (next: View | null) => {
   view = next;
+  if (!next) side = "right";
   for (const listener of viewListeners) listener();
 };
+/** The side the open panel comes from. */
+export const timersSide = () => side;
 export const useView = () =>
   useSyncExternalStore(
     (listener) => {
@@ -44,6 +54,12 @@ export const useView = () =>
 
 /** Opens the Timers panel: every timer, and Add timer. */
 export const openTimers = () => showView({ kind: "list" });
+
+/** Opens the Timers panel from the left, beside the left panel's Timers button (U24). */
+export const openTimersFromLeft = () => {
+  side = "left";
+  showView({ kind: "list" });
+};
 
 /** Opens one timer's Adjust time. */
 export const openAdjust = (id: string) => showView({ kind: "adjust", id, fromList: false });

@@ -24,6 +24,7 @@ import {
   listenForShowStep,
   openTimers,
   showView,
+  timersSide,
   useView,
   viewStep,
   type StartOffer,
@@ -37,6 +38,10 @@ import {
 // time. A time in a recipe's method asks before it starts a timer, with either end of a range to
 // pick. Running timers show as cards in the corner of a wide screen,
 // each with a ring for how much is left and its own Pause and Stop. A tap outside closes it all.
+//
+// On a laptop the panel opened from the left panel's Timers button comes from the left instead,
+// right beside the left panel, so the eye stays where it was (U24, owner's request 2026-11-08);
+// cook mode and the corner cards, at the right, keep it at the right.
 //
 // On a laptop (U23, mockup approved 2026-11-07) all of it is smaller and quieter: the panel 440px
 // wide, the timers rows in one white box (a ring, the name, where it's from, the time large on the
@@ -92,7 +97,13 @@ export function TimersDialog() {
   return (
     <dialog
       ref={dialog}
-      className={current?.kind === "start" ? styles.startDialog : styles.dialog}
+      className={
+        current?.kind === "start"
+          ? styles.startDialog
+          : timersSide() === "left"
+            ? `${styles.dialog} ${styles.fromLeft}`
+            : styles.dialog
+      }
       aria-labelledby={titleId}
       onClose={() => showView(null)}
       onPointerDown={(event) => {
@@ -890,7 +901,11 @@ function Ring({
 export function FloatingTimers() {
   const { timers, now } = useTimers();
   const laptop = usePointer();
+  const view = useView();
   if (timers.length === 0) return null;
+  // While the panel is open from the left (U24), it lists every timer: the corner cards would only
+  // repeat it under the dim, so they step aside until it closes.
+  if (laptop && view !== null && view.kind !== "start" && timersSide() === "left") return null;
   const shown = [...timers]
     .sort((a, b) => (a.done !== b.done ? (a.done ? -1 : 1) : timeLeft(a, now) - timeLeft(b, now)))
     .slice(0, 3);

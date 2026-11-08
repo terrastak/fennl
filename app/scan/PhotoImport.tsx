@@ -23,7 +23,7 @@ import { editedPreview, smallCopy } from "./preview";
 import { looksBlurry } from "./sharpness";
 import styles from "./scan.module.css";
 import importStyles from "../import/import.module.css";
-import { SourceIcon, UploadIcon } from "../import/SourceRow";
+import { SourceCard, SourceIcon, UploadIcon } from "../import/SourceRow";
 import { LaptopIcon } from "../recipes/LaptopIcon";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 
@@ -246,71 +246,74 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
       className={`${styles.section} ${importStyles.sourceRow}`}
       aria-labelledby="import-photos-title"
     >
-      <SourceIcon path={LAPTOP_ICONS.import} />
-      <h2 id="import-photos-title">From photos or screenshots</h2>
-      <p>
-        A handwritten card, a cookbook page or a printout: take a photo of each side or page. Or a
-        recipe in a post, message or email: choose its screenshots. Put them in order, and Fennl
-        reads them into a recipe for you to check. They&rsquo;re kept with the recipe.
-      </p>
-
-      {unavailable ? (
-        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>{unavailable}</p>
-      ) : !online ? (
-        <p className={`${recipes.hint} ${importStyles.sourceAside}`}>
-          Importing photos needs a connection.
+      <SourceCard>
+        <SourceIcon path={LAPTOP_ICONS.import} />
+        <h2 id="import-photos-title">From photos or screenshots</h2>
+        <p>
+          A handwritten card, a cookbook page or a printout: take a photo of each side or page. Or a
+          recipe in a post, message or email: choose its screenshots. Put them in order, and Fennl
+          reads them into a recipe for you to check. They&rsquo;re kept with the recipe.
         </p>
-      ) : (
-        <div className={`${styles.addButtons} ${importStyles.sourceControl}`}>
-          {touch && cameraAvailable() ? (
-            <button
-              type="button"
-              className={`${recipes.primary} ${importStyles.sourceButton}`}
-              disabled={!canAdd}
-              onClick={() => {
-                setProblem(null);
-                setCamera(true);
-              }}
-            >
-              <LaptopIcon path={LAPTOP_ICONS.import} />
-              Scan pages
-            </button>
-          ) : null}
-          {touch ? (
+
+        {unavailable ? (
+          <p className={`${recipes.hint} ${importStyles.sourceAside}`}>{unavailable}</p>
+        ) : !online ? (
+          <p className={`${recipes.hint} ${importStyles.sourceAside}`}>
+            Importing photos needs a connection.
+          </p>
+        ) : (
+          <div className={`${styles.addButtons} ${importStyles.sourceControl}`}>
+            {touch && cameraAvailable() ? (
+              <button
+                type="button"
+                className={`${recipes.primary} ${importStyles.sourceButton}`}
+                disabled={!canAdd}
+                onClick={() => {
+                  setProblem(null);
+                  setCamera(true);
+                }}
+              >
+                <LaptopIcon path={LAPTOP_ICONS.import} />
+                Scan pages
+              </button>
+            ) : null}
+            {touch ? (
+              <label
+                className={`${recipes.secondary} ${importStyles.sourceButton} ${canAdd ? "" : styles.off}`}
+              >
+                <input
+                  type="file"
+                  className="visually-hidden"
+                  accept="image/*"
+                  capture="environment"
+                  disabled={!canAdd}
+                  onChange={(event) => choose(event.currentTarget, true)}
+                />
+                <LaptopIcon path={LAPTOP_ICONS.import} />
+                Take photo
+              </label>
+            ) : null}
             <label
-              className={`${recipes.secondary} ${importStyles.sourceButton} ${canAdd ? "" : styles.off}`}
+              className={`${touch ? recipes.secondary : recipes.primary} ${importStyles.sourceButton} ${canAdd ? "" : styles.off}`}
             >
               <input
                 type="file"
                 className="visually-hidden"
-                accept="image/*"
-                capture="environment"
+                accept={PICKABLE}
+                multiple
                 disabled={!canAdd}
-                onChange={(event) => choose(event.currentTarget, true)}
+                onChange={(event) => choose(event.currentTarget, false)}
               />
-              <LaptopIcon path={LAPTOP_ICONS.import} />
-              Take photo
+              <UploadIcon />
+              Choose photos
             </label>
-          ) : null}
-          <label
-            className={`${touch ? recipes.secondary : recipes.primary} ${importStyles.sourceButton} ${canAdd ? "" : styles.off}`}
-          >
-            <input
-              type="file"
-              className="visually-hidden"
-              accept={PICKABLE}
-              multiple
-              disabled={!canAdd}
-              onChange={(event) => choose(event.currentTarget, false)}
-            />
-            <UploadIcon />
-            Choose photos
-          </label>
-        </div>
-      )}
+          </div>
+        )}
+      </SourceCard>
 
       {pages.length > 0 ? (
-        <>
+        // One white box the grid's width on a laptop (U24); adds nothing elsewhere.
+        <div className={importStyles.opened}>
           <h3 className={styles.pagesTitle} id="pages-title">
             {pages.length === 1 ? "1 page" : `${pages.length} pages`}, read in this order
           </h3>
@@ -414,7 +417,7 @@ export function PhotoImport({ onImported }: { onImported(jobs: ImportJobSummary[
             Reading counts as one of this month&rsquo;s AI imports. The photos are stored in your
             account with the recipe.
           </p>
-        </>
+        </div>
       ) : null}
 
       {working ? (

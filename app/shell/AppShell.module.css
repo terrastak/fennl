@@ -434,6 +434,18 @@ button.navLink {
     color: inherit;
   }
 
+  /* Timers while its panel is open beside the left panel (U24): shown as chosen, like the page
+     you're on. */
+  .sidebar .navLink.timersOpen:not(.timersRinging) {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar .navLink.timersOpen svg {
+    color: inherit;
+  }
+
   .navCount {
     font-size: var(--ui-text-label);
   }

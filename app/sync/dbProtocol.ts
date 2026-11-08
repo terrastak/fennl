@@ -65,6 +65,14 @@ export interface TrashItem {
   deletedAt: string;
   /** Who added it, when that's someone else in the household. */
   addedBy: string | null;
+  /** For its card on a laptop (U24), as the recipe list's: the cover, time and categories. */
+  cover: PhotoRef | null;
+  totalMinutes: number | null;
+  categories: string[];
+  myRating: number | null;
+  favorite: boolean;
+  /** Changed here, and the server hasn't confirmed it yet. */
+  waiting: boolean;
 }
 
 /** A recipe imported from somewhere (phase E13), to match when importing from there again. */
