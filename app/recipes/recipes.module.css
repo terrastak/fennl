@@ -2581,6 +2581,17 @@ button.stepNumber:focus-visible::after {
    buttons; the recipe's own words at 15px. Phones, touch screens and windows under 900px keep
    the page above. */
 @media (min-width: 900px) and (pointer: fine) {
+  /* A wide window (U24b, owner's request 2026-11-08): the ingredients and the method grow with
+     it, the method first, up to --recipe-method (a comfortable line, about as long as a 1280px
+     window gives it), then the ingredients a little, up to 25rem; past that the recipe stays
+     that width in the middle of the main area. The page keeps the whole width (the side padding
+     takes up the rest), so the painting behind the cover still reaches its edges. */
+  .recipePage {
+    --recipe-method: 38rem;
+    --recipe-max: calc(25rem + var(--space-6) + var(--space-1) + var(--recipe-method));
+    padding-inline: max(0px, (100% - var(--recipe-max)) / 2);
+  }
+
   /* The painting reaches the edges of the tighter page margins (AppShell.module.css). */
   .painting {
     top: calc(-1 * var(--space-5));
@@ -2895,7 +2906,13 @@ button.stepNumber:focus-visible::after {
 
   /* The ingredients beside the method: a narrower white panel with a hairline. */
   .columns {
-    grid-template-columns: min(21.25rem, 40%) minmax(0, 1fr);
+    grid-template-columns:
+      clamp(
+        min(21.25rem, 40%),
+        100% - var(--recipe-method, 38rem) - var(--space-6) - var(--space-1),
+        25rem
+      )
+      minmax(0, 1fr);
     gap: calc(var(--space-6) + var(--space-1));
   }
 
@@ -3481,9 +3498,14 @@ button.stepNumber:focus-visible::after {
   }
 
   /* Trash uses the whole main area, as the recipe list does (U24); Find duplicates keeps its
-     reading width. */
+     reading width, in the middle of a wide window (U24b). */
   .duplicatesPage {
-    max-width: 47.5rem;
+    --page-column: 47.5rem;
+    max-width: var(--page-column);
+    margin-inline-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
   }
 
   .trashPage > header > div {

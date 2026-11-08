@@ -556,7 +556,13 @@
     flex-wrap: wrap;
     align-items: center;
     column-gap: var(--space-4);
-    max-width: 47.5rem;
+    /* In the middle of a wide window (U24b). */
+    --page-column: 47.5rem;
+    max-width: var(--page-column);
+    margin-inline-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
   }
 
   .categoriesPage > * {

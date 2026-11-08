@@ -238,6 +238,16 @@
    After sending, the thank-you with a green check and Send another as icon and words. Phones,
    touch screens and windows under 900px keep the card above. */
 @media (min-width: 900px) and (pointer: fine) {
+  /* One 760px column, in the middle of a wide window (U24b). */
+  .feedbackPage {
+    --page-column: 47.5rem;
+    max-width: var(--page-column);
+    margin-inline-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
+  }
+
   .feedbackPage > header {
     margin-bottom: var(--space-6);
     padding-top: 0.375rem;

@@ -713,6 +713,7 @@
   /* The whole main area, as the recipe list (U24, owner's request 2026-11-08). */
   .importPage {
     display: block;
+    container: import-page / inline-size;
   }
 
   .importPage > header {
@@ -744,8 +745,19 @@
      what's seen, the keyboard and a screen reader all go in the same order. */
   .sources {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 17.5rem), 1fr));
+    grid-template-columns: repeat(
+      auto-fill,
+      minmax(max(min(100%, 17.5rem), (100% - 2 * var(--space-4)) / 3), 1fr)
+    );
     gap: var(--space-4);
+  }
+
+  /* Three across at most, so the six make two even rows, and all six in one row once they fit
+     at their smallest (a window about 2100px wide, U24b). */
+  @container import-page (min-width: 110rem) {
+    .sources {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
   }
 
   .sources .sourceRow {
@@ -1275,9 +1287,23 @@
   }
 
   /* --- The review screen -------------------------------------------------------------------- */
+  /* A wide window (U24b): the screen grows to 90rem, then moves to the middle of the main area
+     (--page-centre-after, tokens.css), as the recipe editor does; the bar still spans the main
+     area, its buttons in line with the screen. */
   .review {
+    --page-column: 90rem;
+    --page-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
     display: flex;
     flex-direction: column;
+    max-width: none;
+  }
+
+  .review > :not(.reviewBar) {
+    max-width: var(--page-column);
+    margin-inline-start: var(--page-start);
   }
 
   /* The bar: first, at the top, staying in view; its fill and line run to the window's edge. */
@@ -1293,6 +1319,8 @@
     min-height: 3.25rem;
     margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-8)) 0;
     padding: var(--space-2) var(--space-6);
+    padding-inline: calc(var(--space-6) + var(--page-start))
+      calc(var(--space-6) + max(0px, 100% - var(--page-column) - var(--page-start)));
     border-bottom: 0;
     background: var(--color-bg);
     border-image: linear-gradient(to top, var(--color-border-soft) 1px, var(--color-bg) 1px) fill
@@ -1361,21 +1389,21 @@
   }
 
   .review .reviewTitle {
-    margin: 1.125rem 0 0;
+    margin-block: 1.125rem 0;
     font-size: var(--title-size);
     line-height: 1.15;
     letter-spacing: -0.015em;
   }
 
   .review .reviewLede {
-    margin: 0.25rem 0 0;
+    margin-block: 0.25rem 0;
     font-size: 0.9375rem;
     line-height: 1.5;
   }
 
   .review > p:is([role="alert"], [role="status"]) {
     max-width: 47.5rem;
-    margin: var(--space-4) 0 0;
+    margin-block: var(--space-4) 0;
   }
 
   /* A possible duplicate: a white box with a small copy icon. */
