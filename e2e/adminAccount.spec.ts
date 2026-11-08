@@ -52,7 +52,8 @@ test("Needs attention lists an address that bounces; marking it handled takes it
   );
   const attention = page.getByRole("region", { name: "Needs attention" });
   const item = attention.getByRole("listitem").filter({ hasText: name });
-  await expect(item).toContainText("Needs you");
+  // Every row there needs you, so a laptop shows no "Needs you" tag on each (U23, choice 3).
+  await expect(item).not.toContainText("Needs you");
   await expect(item).toContainText(`Emails to ${email} aren’t arriving`);
   await expect(page.getByRole("region", { name: "Coming up" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Emails this week" })).toContainText("Bounced");
@@ -79,18 +80,15 @@ test("Needs attention lists an address that bounces; marking it handled takes it
   await goingOn.getByRole("button", { name: /^Hide the/ }).click();
   await expect(goingOn.getByText("No spam complaints")).toBeHidden();
 
-  // What happened: by kind, and by period.
+  // What happened: by kind, and by period (a dropdown beside the heading on a laptop, U23).
   const happened = page.getByRole("region", { name: "What happened" });
   const show = happened.getByRole("group", { name: "Show" });
-  const period = happened.getByRole("group", { name: "Period" });
+  const period = happened.getByLabel("Period");
   await expect(show.getByRole("button", { name: "Everything" })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
-  await expect(period.getByRole("button", { name: "Last 30 days" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await expect(period).toHaveValue("30");
   await show.getByRole("button", { name: "Emails" }).click();
   await expect(show.getByRole("button", { name: "Emails" })).toHaveAttribute(
     "aria-pressed",
@@ -102,13 +100,10 @@ test("Needs attention lists an address that bounces; marking it handled takes it
   );
   await show.getByRole("button", { name: "Plan and limits" }).click();
   await expect(events.getByRole("listitem").first()).toContainText(/Signed up/);
-  await period.getByRole("button", { name: "Everything" }).click();
-  await expect(period.getByRole("button", { name: "Everything" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await period.selectOption({ label: "Everything" });
+  await expect(period).toHaveValue("all");
   await expect(happened).toContainText("kept for good");
-  await period.getByRole("button", { name: "Last 90 days" }).click();
+  await period.selectOption({ label: "Last 90 days" });
   await expectAccessible(page);
 
   // "See the emails" shows the emails in What happened.

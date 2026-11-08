@@ -1,4 +1,13 @@
-import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import type { AccountDetail } from "../../shared/adminAccounts";
 import type { EmailHistoryEntry } from "../../shared/email";
 import { suggestEmail } from "../../shared/emailTypos";
@@ -6,9 +15,11 @@ import type { LimitKey } from "../../shared/entitlements";
 import { planName } from "../pages/plan";
 import { ActivityTable, type ActivityRow } from "./ActivitySection";
 import { EMAIL_PROBLEM_WORDS, dateValue, endOfDay, type AccountFacts } from "./accountView";
-import { TOOL_TITLES, type OpenTool } from "./toolList";
+import { TOOL_TITLES, type OpenTool, type ToolPrefill } from "./toolList";
 import { adminRequest, errorOf } from "./api";
 import { LIMIT_LABELS, LIMIT_ORDER, inputValue, isBytes, parseInput, showLimit } from "./limits";
+import { AdminIcon } from "./AdminIcon";
+import { usePointer } from "../recipes/usePointer";
 import styles from "./admin.module.css";
 
 // "Everything you can do" on the account page (phase U15): each tool opens its panel, with values
@@ -31,9 +42,28 @@ function longDay(iso: string): string {
 export function PasskeyMark() {
   return (
     <span className={styles.key}>
+      <AdminIcon name="key" />
       <span aria-hidden="true">passkey</span>
       <span className="visually-hidden">, asks for your passkey again</span>
     </span>
+  );
+}
+
+/** Closes the open tool: Cancel after a tool's main button on a laptop. */
+const CloseTool = createContext<(() => void) | null>(null);
+
+/**
+ * Cancel, plain words after the main button in every box that opens (U23); only on a laptop,
+ * where the box's Close is a small ✕. Elsewhere Close is the way out, as before.
+ */
+function Cancel() {
+  const close = useContext(CloseTool);
+  const laptop = usePointer();
+  if (!laptop || !close) return null;
+  return (
+    <button type="button" className={styles.plain} onClick={close}>
+      Cancel
+    </button>
   );
 }
 
@@ -58,43 +88,55 @@ export function ToolPanel({
     heading.current?.focus();
   }, [tool]);
   const title = TOOL_TITLES[tool.id];
+  const laptop = usePointer();
   return (
-    <section id={id} className={`${styles.card} ${styles.panel}`} aria-labelledby={`${id}-title`}>
-      <div className={styles.panelHead}>
-        <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
-          {title}
-        </h2>
-        <button type="button" className={styles.linkButton} onClick={onClose}>
-          Close<span className="visually-hidden"> {title}</span>
-        </button>
-      </div>
-      {tool.id === "view_as" ? <ActAs detail={detail} /> : null}
-      {tool.id === "premium" ? (
-        <ExtendPremium detail={detail} onChange={onChange} tier={tool.prefill.tier} />
-      ) : null}
-      {tool.id === "limits" ? (
-        <Overrides
-          detail={detail}
-          onChange={onChange}
-          initialKey={tool.prefill.limit}
-          initialValue={tool.prefill.value}
-        />
-      ) : null}
-      {tool.id === "email" ? <EmailTools detail={detail} onChange={onChange} /> : null}
-      {tool.id === "sign_up" ? (
-        <SignUpTools detail={detail} onChange={onChange} suggestion={tool.prefill.email} />
-      ) : null}
-      {tool.id === "password" ? <PasswordHelp detail={detail} onChange={onChange} /> : null}
-      {tool.id === "admin_log" ? (
-        <>
-          <p className={styles.muted}>
-            Every admin action on this account, newest first, with the reason given and where it
-            came from.
-          </p>
-          <ActivityTable rows={activity} />
-        </>
-      ) : null}
-    </section>
+    <CloseTool.Provider value={onClose}>
+      <section id={id} className={`${styles.card} ${styles.panel}`} aria-labelledby={`${id}-title`}>
+        <div className={styles.panelHead}>
+          <h2 id={`${id}-title`} ref={heading} tabIndex={-1}>
+            {title}
+          </h2>
+          {laptop ? (
+            <button type="button" className={styles.closeButton} title="Close" onClick={onClose}>
+              <AdminIcon name="x" />
+              <span className="visually-hidden">Close {title}</span>
+            </button>
+          ) : (
+            <button type="button" className={styles.linkButton} onClick={onClose}>
+              Close<span className="visually-hidden"> {title}</span>
+            </button>
+          )}
+        </div>
+        {tool.id === "view_as" ? <ActAs detail={detail} /> : null}
+        {tool.id === "premium" ? (
+          <ExtendPremium detail={detail} onChange={onChange} tier={tool.prefill.tier} />
+        ) : null}
+        {tool.id === "limits" ? (
+          <Overrides
+            detail={detail}
+            onChange={onChange}
+            initialKey={tool.prefill.limit}
+            initialValue={tool.prefill.value}
+          />
+        ) : null}
+        {tool.id === "email" ? (
+          <EmailTools detail={detail} onChange={onChange} focus={tool.prefill.focus} />
+        ) : null}
+        {tool.id === "sign_up" ? (
+          <SignUpTools detail={detail} onChange={onChange} suggestion={tool.prefill.email} />
+        ) : null}
+        {tool.id === "password" ? <PasswordHelp detail={detail} onChange={onChange} /> : null}
+        {tool.id === "admin_log" ? (
+          <>
+            <p className={styles.muted}>
+              Every admin action on this account, newest first, with the reason given and where it
+              came from.
+            </p>
+            <ActivityTable rows={activity} />
+          </>
+        ) : null}
+      </section>
+    </CloseTool.Provider>
   );
 }
 
@@ -193,6 +235,7 @@ function ActAs({ detail }: { detail: AccountDetail }) {
             >
               {busy ? "Opening…" : "View as this user"}
             </button>
+            <Cancel />
           </div>
         </form>
       )}
@@ -341,6 +384,7 @@ function ExtendPremium({
             Extend Premium
             <PasskeyMark />
           </button>
+          <Cancel />
         </div>
       </form>
     </>
@@ -508,6 +552,7 @@ function Overrides({
             Save exception
             <PasskeyMark />
           </button>
+          <Cancel />
         </div>
       </form>
     </>
@@ -522,6 +567,7 @@ function PasswordHelp({ detail, onChange }: { detail: AccountDetail; onChange: O
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [temporary, setTemporary] = useState<string | null>(null);
+  const laptop = usePointer();
 
   const run = async (path: string, success: (body: unknown) => void) => {
     setBusy(true);
@@ -544,6 +590,50 @@ function PasswordHelp({ detail, onChange }: { detail: AccountDetail; onChange: O
       );
     }
   };
+
+  const resetButton = (
+    <button
+      type="button"
+      className={styles.button}
+      disabled={busy}
+      onClick={() =>
+        void run("password-reset", () => setMessage(`Reset email sent to ${detail.email}.`))
+      }
+    >
+      Send a reset email
+    </button>
+  );
+  const temporaryButton = (
+    <button
+      type="button"
+      className={styles.secondary}
+      disabled={busy || detail.role === "admin"}
+      onClick={() =>
+        void run("temporary-password", (body) =>
+          setTemporary((body as { password: string }).password),
+        )
+      }
+    >
+      Set a temporary password
+      <PasskeyMark />
+    </button>
+  );
+  const signOutButton = (
+    <button
+      type="button"
+      className={styles.secondary}
+      disabled={busy}
+      onClick={() =>
+        void run("sign-out-everywhere", (body) =>
+          setMessage(
+            `Signed out of ${(body as { sessionsEnded: number }).sessionsEnded} session(s).`,
+          ),
+        )
+      }
+    >
+      Sign out everywhere now
+    </button>
+  );
 
   return (
     <>
@@ -568,45 +658,26 @@ function PasswordHelp({ detail, onChange }: { detail: AccountDetail; onChange: O
         <input type="checkbox" checked={signOut} onChange={(e) => setSignOut(e.target.checked)} />
         Also sign them out everywhere
       </label>
-      <div className={styles.row}>
-        <button
-          type="button"
-          className={styles.button}
-          disabled={busy}
-          onClick={() =>
-            void run("password-reset", () => setMessage(`Reset email sent to ${detail.email}.`))
-          }
-        >
-          Send a reset email
-        </button>
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled={busy || detail.role === "admin"}
-          onClick={() =>
-            void run("temporary-password", (body) =>
-              setTemporary((body as { password: string }).password),
-            )
-          }
-        >
-          Set a temporary password
-          <PasskeyMark />
-        </button>
-        <button
-          type="button"
-          className={styles.secondary}
-          disabled={busy}
-          onClick={() =>
-            void run("sign-out-everywhere", (body) =>
-              setMessage(
-                `Signed out of ${(body as { sessionsEnded: number }).sessionsEnded} session(s).`,
-              ),
-            )
-          }
-        >
-          Sign out everywhere now
-        </button>
-      </div>
+      {laptop ? (
+        // A laptop (U23): the two other ways first, then the main button with Cancel after it,
+        // so Cancel never sits between actions.
+        <>
+          <div className={`${styles.row} ${styles.quietRow}`}>
+            {temporaryButton}
+            {signOutButton}
+          </div>
+          <div className={styles.row}>
+            {resetButton}
+            <Cancel />
+          </div>
+        </>
+      ) : (
+        <div className={styles.row}>
+          {resetButton}
+          {temporaryButton}
+          {signOutButton}
+        </div>
+      )}
     </>
   );
 }
@@ -643,7 +714,15 @@ const UNBLOCK_RESULTS: Record<string, (email: string) => string> & {
 };
 
 /** Changing the account's email, putting back an earlier one (B7a), and Unblock (U15). */
-function EmailTools({ detail, onChange }: { detail: AccountFacts; onChange: OnChange }) {
+function EmailTools({
+  detail,
+  onChange,
+  focus,
+}: {
+  detail: AccountFacts;
+  onChange: OnChange;
+  focus: ToolPrefill["focus"];
+}) {
   const id = useId();
   const [newEmail, setNewEmail] = useState("");
   const [busy, setBusy] = useState(false);
@@ -714,6 +793,10 @@ function EmailTools({ detail, onChange }: { detail: AccountFacts; onChange: OnCh
 
   const isAdmin = detail.role === "admin";
   const problem = detail.emailProblem;
+  // One ink button (U23), with Cancel after it: the action the admin came for. Unblock while
+  // emails aren't arriving, unless a finding's "Change their address…" opened the tool.
+  const laptop = usePointer();
+  const unblockMain = problem !== null && (focus !== "change" || isAdmin);
   return (
     <>
       <p className={styles.muted}>
@@ -736,12 +819,13 @@ function EmailTools({ detail, onChange }: { detail: AccountFacts; onChange: OnCh
           <div className={styles.row}>
             <button
               type="button"
-              className={styles.button}
+              className={laptop && !unblockMain ? styles.secondary : styles.button}
               disabled={busy}
               onClick={() => void unblock()}
             >
               Unblock {detail.email}
             </button>
+            {unblockMain ? <Cancel /> : null}
           </div>
         </>
       ) : (
@@ -783,10 +867,15 @@ function EmailTools({ detail, onChange }: { detail: AccountFacts; onChange: OnCh
               onChange={(e) => setNewEmail(e.target.value)}
             />
           </div>
-          <button type="submit" className={styles.button} disabled={busy}>
+          <button
+            type="submit"
+            className={laptop && unblockMain ? styles.secondary : styles.button}
+            disabled={busy}
+          >
             Send verification link
             <PasskeyMark />
           </button>
+          {unblockMain ? null : <Cancel />}
         </form>
       )}
 
@@ -938,6 +1027,7 @@ function SignUpTools({
           Change it and send the link
           <PasskeyMark />
         </button>
+        <Cancel />
       </form>
       <h3>The address is right</h3>
       <p className={styles.muted}>Send the sign-up link to {detail.email} again.</p>

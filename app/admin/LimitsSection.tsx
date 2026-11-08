@@ -12,8 +12,12 @@ const TIER_NAMES: [string, string][] = [
   ["trial", "During a trial"],
 ];
 
-/** Every tier limit (plan_limits), editable one at a time. Changes ask for the passkey again. */
-export function LimitsSection() {
+/**
+ * Every tier limit (plan_limits), editable one at a time. Changes ask for the passkey again. On a
+ * laptop (U23) the page has a title and its line, and the limits are a white table with a quiet
+ * Change beside each value.
+ */
+export function LimitsSection({ laptop = false }: { laptop?: boolean }) {
   const [rows, setRows] = useState<PlanLimitRow[] | null>(null);
   const [editing, setEditing] = useState<{ tier: string; key: LimitKey } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -31,23 +35,35 @@ export function LimitsSection() {
   const value = (tier: string, key: LimitKey) =>
     rows?.find((r) => r.tier === tier && r.key === key);
 
+  const lede =
+    "What each plan allows. Changes reach everyone within about a minute, and ask for your passkey again. For one account, use an exception on its page instead.";
   return (
-    <section className={styles.card} aria-labelledby="limits-title">
-      <h2 id="limits-title">Plan limits</h2>
-      <p className={styles.muted}>
-        What each plan allows. Changes reach everyone within about a minute, and ask for your
-        passkey again. For one account, use an exception on its page instead.
-      </p>
+    <section className={laptop ? styles.page : styles.card} aria-labelledby="limits-title">
+      {laptop ? (
+        <header className={styles.pageHead}>
+          <h2 id="limits-title" className={styles.pageTitle}>
+            Plan limits
+          </h2>
+          <p className={styles.pageLede}>{lede}</p>
+        </header>
+      ) : (
+        <>
+          <h2 id="limits-title">Plan limits</h2>
+          <p className={styles.muted}>{lede}</p>
+        </>
+      )}
       {message ? (
         <p role="status" className={styles.notice}>
           {message}
         </p>
       ) : null}
       {rows === null ? (
-        <p role="status">Loading…</p>
+        <p role="status" className={laptop ? styles.boxNote : undefined}>
+          Loading…
+        </p>
       ) : (
-        <div className={styles.tableWrap}>
-          <table className={styles.table}>
+        <div className={laptop ? `${styles.tableWrap} ${styles.tableBox}` : styles.tableWrap}>
+          <table className={laptop ? `${styles.table} ${styles.limitTable}` : styles.table}>
             <thead>
               <tr>
                 <th scope="col">Limit</th>
@@ -68,6 +84,7 @@ export function LimitsSection() {
                       return (
                         <td key={tier}>
                           <EditLimit
+                            laptop={laptop}
                             tier={tier}
                             tierName={name}
                             limitKey={key}
@@ -87,7 +104,7 @@ export function LimitsSection() {
                         {row || tier !== "trial" ? (
                           <button
                             type="button"
-                            className={styles.linkButton}
+                            className={laptop ? styles.changeButton : styles.linkButton}
                             onClick={() => {
                               setMessage(null);
                               setEditing({ tier, key });
@@ -114,12 +131,14 @@ export function LimitsSection() {
 }
 
 function EditLimit({
+  laptop,
   tier,
   tierName,
   limitKey,
   current,
   onDone,
 }: {
+  laptop: boolean;
   tier: string;
   tierName: string;
   limitKey: LimitKey;
@@ -181,7 +200,11 @@ function EditLimit({
         <button type="submit" className={styles.button} disabled={busy}>
           Save
         </button>
-        <button type="button" className={styles.secondary} onClick={() => onDone(null, null)}>
+        <button
+          type="button"
+          className={laptop ? styles.plain : styles.secondary}
+          onClick={() => onDone(null, null)}
+        >
           Cancel
         </button>
       </div>
