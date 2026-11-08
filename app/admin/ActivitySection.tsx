@@ -66,12 +66,41 @@ function detailText(row: ActivityRow): string {
   return [parts.join(" "), ...acting].filter(Boolean).join(" · ");
 }
 
-export function ActivityTable({ rows }: { rows: ActivityRow[] | null }) {
-  if (rows === null) return <p role="status">Loading…</p>;
-  if (rows.length === 0) return <p className={styles.muted}>Nothing yet.</p>;
+/** An address that may break before its "@" on a laptop's table, never inside a word. */
+function address(email: string | null, boxed: boolean) {
+  if (!email) return "";
+  const at = email.indexOf("@");
+  if (!boxed || at < 1) return email;
   return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
+    <>
+      {email.slice(0, at)}
+      <wbr />
+      {email.slice(at)}
+    </>
+  );
+}
+
+export function ActivityTable({
+  rows,
+  boxed = false,
+}: {
+  rows: ActivityRow[] | null;
+  /** A laptop's Activity page: the table in a white box of its own (U23). */
+  boxed?: boolean;
+}) {
+  if (rows === null) {
+    return (
+      <p role="status" className={boxed ? styles.boxNote : undefined}>
+        Loading…
+      </p>
+    );
+  }
+  if (rows.length === 0) {
+    return <p className={boxed ? styles.boxNote : styles.muted}>Nothing yet.</p>;
+  }
+  return (
+    <div className={boxed ? `${styles.tableWrap} ${styles.tableBox}` : styles.tableWrap}>
+      <table className={boxed ? `${styles.table} ${styles.activityTable}` : styles.table}>
         <thead>
           <tr>
             <th scope="col">When</th>
@@ -86,9 +115,9 @@ export function ActivityTable({ rows }: { rows: ActivityRow[] | null }) {
           {rows.map((row) => (
             <tr key={row.id}>
               <td>{new Date(row.createdAt).toLocaleString()}</td>
-              <td>{row.adminEmail ?? ""}</td>
+              <td>{address(row.adminEmail, boxed)}</td>
               <td>{ACTION_NAMES[row.action] ?? row.action}</td>
-              <td>{row.targetEmail ?? ""}</td>
+              <td>{address(row.targetEmail, boxed)}</td>
               <td>{detailText(row)}</td>
               <td>
                 {[row.details?.ip, row.details?.country]
@@ -103,7 +132,7 @@ export function ActivityTable({ rows }: { rows: ActivityRow[] | null }) {
   );
 }
 
-export function ActivitySection() {
+export function ActivitySection({ laptop = false }: { laptop?: boolean }) {
   const [rows, setRows] = useState<ActivityRow[] | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +143,22 @@ export function ActivitySection() {
       cancelled = true;
     };
   }, []);
+  if (laptop) {
+    return (
+      <section className={styles.page} aria-labelledby="activity-title">
+        <header className={styles.pageHead}>
+          <h2 id="activity-title" className={styles.pageTitle}>
+            Recent admin activity
+          </h2>
+          <p className={styles.pageLede}>
+            Every admin action, newest first. It can&rsquo;t be changed or deleted, and a copy is
+            kept in locked storage.
+          </p>
+        </header>
+        <ActivityTable rows={rows} boxed />
+      </section>
+    );
+  }
   return (
     <section className={styles.card} aria-labelledby="activity-title">
       <h2 id="activity-title">Recent admin activity</h2>

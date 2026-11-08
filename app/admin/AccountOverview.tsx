@@ -26,6 +26,9 @@ import {
   timeZoneQuery,
 } from "./accountView";
 import { adminRequest, errorOf } from "./api";
+import { AdminIcon } from "./AdminIcon";
+import type { AdminIconName } from "./adminIcons";
+import { usePointer } from "../recipes/usePointer";
 import styles from "./admin.module.css";
 
 // The account page's main column (phase U15): what Fennl found, and everything that happened.
@@ -65,6 +68,9 @@ export function WhatsGoingOn({
   onAction,
   onSeeEmails,
   onReload,
+  allowInk = false,
+  noteInk = true,
+  onFormOpen,
 }: {
   accountId: string;
   overview: AccountOverview | null;
@@ -72,12 +78,21 @@ export function WhatsGoingOn({
   onAction: (finding: Finding, action: FindingAction) => void;
   onSeeEmails: () => void;
   onReload: () => Promise<void>;
+  /** On a laptop: the most urgent finding's first fix is the page's one ink button. */
+  allowInk?: boolean | undefined;
+  /** On a laptop: an open Mark handled note's button is ink (not while a tool or another note is open). */
+  noteInk?: boolean | undefined;
+  /** Mark handled's note opened (+1) or closed (-1). */
+  onFormOpen?: ((delta: number) => void) | undefined;
 }) {
   const id = useId();
+  const laptop = usePointer();
   const [showFine, setShowFine] = useState(false);
   // A message about a finding that outlives its card (a finding fixed meanwhile leaves the list).
   const [notice, setNotice] = useState<string | null>(null);
   const fine = overview?.fine ?? [];
+  const findings = overview ? inOrder(overview.findings) : [];
+  const urgent = findings.find((f) => f.level === "needs_you" && f.actions.length > 0)?.key;
   return (
     <section className={styles.card} aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`}>What&rsquo;s going on</h2>
@@ -91,63 +106,105 @@ export function WhatsGoingOn({
         <>
           <p className={styles.lede}>{summaryLine(overview.findings, fine.length)}</p>
           <div role="status">{notice ? <p className={styles.notice}>{notice}</p> : null}</div>
-          {inOrder(overview.findings).map((finding) => (
-            <FindingCard
-              key={finding.key}
-              accountId={accountId}
-              finding={finding}
-              onAction={onAction}
-              onSeeEmails={onSeeEmails}
-              onReload={onReload}
-              onNotice={setNotice}
-            />
-          ))}
-          {fine.length > 0 ? (
-            <>
-              <button
-                type="button"
-                className={`${styles.linkButton} ${styles.toggle}`}
-                aria-expanded={showFine}
-                aria-controls={`${id}-fine`}
-                onClick={() => setShowFine(!showFine)}
-              >
-                {showFine ? "Hide" : "Show"} the{" "}
-                {fine.length === 1 ? "check" : `${fine.length} checks`} that{" "}
-                {fine.length === 1 ? "is" : "are"} fine
-              </button>
-              <ul id={`${id}-fine`} className={styles.fineList} hidden={!showFine}>
-                {fine.map((line) => (
-                  <li key={line}>
-                    <span className={`${styles.tag} ${styles.tagFine}`}>Fine</span>
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : null}
+          <div className={styles.findBox}>
+            {findings.map((finding) => (
+              <FindingCard
+                key={finding.key}
+                accountId={accountId}
+                finding={finding}
+                ink={allowInk && finding.key === urgent}
+                laptop={laptop}
+                onAction={onAction}
+                onSeeEmails={onSeeEmails}
+                onReload={onReload}
+                onNotice={setNotice}
+                noteInk={noteInk}
+                onFormOpen={onFormOpen}
+              />
+            ))}
+            {fine.length > 0 ? (
+              <div className={styles.fineRow}>
+                <button
+                  type="button"
+                  className={laptop ? styles.quiet : `${styles.linkButton} ${styles.toggle}`}
+                  aria-expanded={showFine}
+                  aria-controls={`${id}-fine`}
+                  onClick={() => setShowFine(!showFine)}
+                >
+                  <AdminIcon name="chevron" className={showFine ? styles.turned : undefined} />
+                  {showFine ? "Hide" : "Show"} the{" "}
+                  {fine.length === 1 ? "check" : `${fine.length} checks`} that{" "}
+                  {fine.length === 1 ? "is" : "are"} fine
+                </button>
+                <ul id={`${id}-fine`} className={styles.fineList} hidden={!showFine}>
+                  {fine.map((line) => (
+                    <li key={line}>
+                      <span className={`${styles.tag} ${styles.tagFine}`}>
+                        <AdminIcon name="check" />
+                        Fine
+                      </span>
+                      {line}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
         </>
       )}
     </section>
   );
 }
 
+/** The small icon beside a finding's button on a laptop. */
+const ACTION_ICONS: Partial<Record<FindingAction["kind"], AdminIconName>> = {
+  change_email: "pen",
+  fix_sign_up_address: "pen",
+  unblock: "check",
+  extend_premium: "star",
+  raise_limit: "sliders",
+  send_sign_up_link: "send",
+  password_reset: "lock",
+  view_as: "eye",
+  open_feedback: "message",
+};
+
+const icon = (action: FindingAction) => ACTION_ICONS[action.kind];
+
 function FindingCard({
   accountId,
   finding,
+  ink,
+  laptop,
   onAction,
   onSeeEmails,
   onReload,
   onNotice,
+  noteInk,
+  onFormOpen,
 }: {
   accountId: string;
   finding: Finding;
+  /** On a laptop: its first button is the page's one ink button. */
+  ink: boolean;
+  laptop: boolean;
   onAction: (finding: Finding, action: FindingAction) => void;
   onSeeEmails: () => void;
   onReload: () => Promise<void>;
   onNotice: (text: string | null) => void;
+  noteInk: boolean;
+  onFormOpen?: ((delta: number) => void) | undefined;
 }) {
   const id = useId();
   const act = finding.level === "needs_you";
+  const buttonClass = (i: number) =>
+    laptop
+      ? i === 0 && ink
+        ? styles.ink
+        : styles.quiet
+      : i === 0 && act
+        ? styles.button
+        : styles.secondary;
   return (
     <article
       className={`${styles.finding} ${act ? styles.act : ""}`}
@@ -166,22 +223,36 @@ function FindingCard({
             <button
               key={`${action.kind}-${i}`}
               type="button"
-              className={i === 0 && act ? styles.button : styles.secondary}
+              className={buttonClass(i)}
               onClick={() => onAction(finding, action)}
             >
+              {icon(action) ? <AdminIcon name={icon(action) ?? "info"} /> : null}
               {action.label}
               {asksForPasskey(action.kind) ? <PasskeyMark /> : null}
             </button>
           ))}
           {aboutEmails(finding) ? (
-            <button type="button" className={styles.secondary} onClick={onSeeEmails}>
+            <button
+              type="button"
+              className={laptop ? styles.quiet : styles.secondary}
+              onClick={onSeeEmails}
+            >
+              <AdminIcon name="mail" />
               See the emails
             </button>
           ) : null}
         </div>
       ) : null}
       {act ? (
-        <Handled accountId={accountId} finding={finding} onReload={onReload} onNotice={onNotice} />
+        <Handled
+          accountId={accountId}
+          finding={finding}
+          laptop={laptop}
+          onReload={onReload}
+          onNotice={onNotice}
+          ink={noteInk}
+          onFormOpen={onFormOpen}
+        />
       ) : null}
     </article>
   );
@@ -191,16 +262,28 @@ function FindingCard({
 function Handled({
   accountId,
   finding,
+  laptop,
   onReload,
   onNotice,
+  ink,
+  onFormOpen,
 }: {
   accountId: string;
   finding: Finding;
+  laptop: boolean;
   onReload: () => Promise<void>;
   onNotice: (text: string | null) => void;
+  /** On a laptop: Mark handled is the page's one ink button. */
+  ink: boolean;
+  onFormOpen?: ((delta: number) => void) | undefined;
 }) {
   const id = useId();
   const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open || !onFormOpen) return;
+    onFormOpen(1);
+    return () => onFormOpen(-1);
+  }, [open, onFormOpen]);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -270,7 +353,7 @@ function Handled({
         <button
           ref={putBackRef}
           type="button"
-          className={styles.linkButton}
+          className={laptop ? styles.quiet : styles.linkButton}
           aria-describedby={`${id}-handled`}
           disabled={busy}
           onClick={() => void undo()}
@@ -284,7 +367,7 @@ function Handled({
     <div className={styles.handled}>
       {errorLine}
       {open ? (
-        <form className={styles.stack} onSubmit={(e) => void mark(e)}>
+        <form className={`${styles.stack} ${styles.handledForm}`} onSubmit={(e) => void mark(e)}>
           <div className={styles.field}>
             <label htmlFor={`${id}-note`}>Note (optional, kept in the admin log)</label>
             <input
@@ -295,12 +378,16 @@ function Handled({
             />
           </div>
           <div className={styles.row}>
-            <button type="submit" className={styles.button} disabled={busy}>
+            <button
+              type="submit"
+              className={laptop ? (ink ? styles.ink : styles.quiet) : styles.button}
+              disabled={busy}
+            >
               Mark handled
             </button>
             <button
               type="button"
-              className={styles.secondary}
+              className={laptop ? styles.plain : styles.secondary}
               onClick={() => {
                 setOpen(false);
                 setFocusNext("mark");
@@ -314,7 +401,7 @@ function Handled({
         <button
           ref={markRef}
           type="button"
-          className={styles.linkButton}
+          className={laptop ? `${styles.quiet} ${styles.markButton}` : styles.linkButton}
           aria-label={`Mark handled: ${finding.title}`}
           onClick={() => setOpen(true)}
         >
@@ -339,11 +426,86 @@ export function WhatHappened({
   headingRef: RefObject<HTMLHeadingElement | null>;
 }) {
   const id = useId();
+  const laptop = usePointer();
   const [days, setDays] = useState<number | null>(30);
   const now = new Date();
   const { shown, hidden } = overview
     ? historyShown(overview.history, filter, days, now.getTime())
     : { shown: [], hidden: 0 };
+  if (laptop) {
+    // On a laptop (U23, choice 5): the period a dropdown beside the heading, the six kinds a small
+    // switch, and the time, the kind and "Problem" in their own columns.
+    return (
+      <section className={styles.card} aria-labelledby={`${id}-title`}>
+        <div className={styles.happenedHead}>
+          <h2 id={`${id}-title`} ref={headingRef} tabIndex={-1} className={styles.quietFocus}>
+            What happened
+          </h2>
+          <label className={styles.periodPick} htmlFor={`${id}-period`}>
+            Period
+            <select
+              id={`${id}-period`}
+              value={days === null ? "all" : String(days)}
+              onChange={(e) => setDays(e.target.value === "all" ? null : Number(e.target.value))}
+            >
+              {PERIODS.map((p) => (
+                <option key={p.label} value={p.days === null ? "all" : String(p.days)}>
+                  {p.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <p className={styles.lede}>Everything on this account, newest first, in plain words.</p>
+        <div className={styles.segSwitch} role="group" aria-label="Show">
+          {HISTORY_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              type="button"
+              className={styles.segPart}
+              aria-pressed={filter === f.id}
+              onClick={() => onFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {!overview ? (
+          <p role="status" className={styles.boxNote}>
+            Loading…
+          </p>
+        ) : (
+          <>
+            {shown.length > 0 ? (
+              <ul className={`${styles.rows} ${styles.tlBox}`} aria-label="Events, newest first">
+                {shown.map((entry, i) => (
+                  <li key={`${entry.at}-${i}`} className={styles.tlItem}>
+                    <span className={styles.tlWhen}>{entryTime(entry.at, now)}</span>
+                    <span className={styles.tlKind}>
+                      {CATEGORY_WORDS[entry.category]}
+                      <span className="visually-hidden">:</span>
+                    </span>
+                    <span className={styles.tlWhat}>
+                      <span className={styles.tlText}>{entry.text}</span>
+                      {entry.detail ? (
+                        <span className={styles.tlDetail}>{entry.detail}</span>
+                      ) : null}
+                    </span>
+                    <span className={styles.tlProb}>
+                      {entry.problem ? <span className={styles.prob}>Problem</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            <p className={styles.hint} role="status">
+              {periodNote(days, shown.length, hidden)}
+            </p>
+          </>
+        )}
+      </section>
+    );
+  }
   return (
     <section className={styles.card} aria-labelledby={`${id}-title`}>
       <h2 id={`${id}-title`} ref={headingRef} tabIndex={-1} className={styles.quietFocus}>
@@ -473,7 +635,20 @@ export function Facts({
   onOpenFeedback: () => void;
 }) {
   const id = useId();
+  const laptop = usePointer();
   const problem = detail.emailProblem;
+  // On a laptop the value sits on the right of a narrow column: a long address breaks at its @.
+  const at = detail.email.lastIndexOf("@");
+  const email =
+    laptop && at > 0 ? (
+      <>
+        {detail.email.slice(0, at)}
+        <wbr />
+        {detail.email.slice(at)}
+      </>
+    ) : (
+      detail.email
+    );
   const usage = detail.usage;
   const maxRecipes = detail.plan?.max_recipes ?? null;
   const maxText = detail.plan?.max_text_bytes ?? null;
@@ -490,7 +665,7 @@ export function Facts({
         <div>
           <dt>Email</dt>
           <dd>
-            {detail.email} · {verifiedText(detail.emailVerified, detail.emailVerifiedAt)}
+            {email} · {verifiedText(detail.emailVerified, detail.emailVerifiedAt)}
             {problem ? (
               <>
                 {" · "}

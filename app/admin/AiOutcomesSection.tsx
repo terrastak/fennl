@@ -35,7 +35,7 @@ function comparisonText(c: Comparison): string {
   return `${c.better} closer · ${c.same} same · ${c.worse} further (of ${judged} saved)`;
 }
 
-export function AiOutcomesSection() {
+export function AiOutcomesSection({ laptop = false }: { laptop?: boolean }) {
   const kindId = useId();
   const periodId = useId();
   const [kind, setKind] = useState<PeriodKind>("month");
@@ -60,15 +60,20 @@ export function AiOutcomesSection() {
 
   const choices = data?.periods[kind] ?? [];
   const s = data?.summary;
+  // On a laptop (U23) a heading above white boxes, as the rest of the page.
+  const Title = laptop ? "h3" : "h2";
+  const box = laptop ? `${styles.tableWrap} ${styles.tableBox}` : styles.tableWrap;
   return (
-    <section className={styles.card} aria-labelledby="ai-outcomes-title">
-      <h2 id="ai-outcomes-title">How AI reads turned out</h2>
-      <p className={styles.muted}>
+    <section className={laptop ? styles.block : styles.card} aria-labelledby="ai-outcomes-title">
+      <Title id="ai-outcomes-title" className={laptop ? styles.blockTitle : undefined}>
+        How AI reads turned out
+      </Title>
+      <p className={laptop ? styles.lede : styles.muted}>
         When a person saves a recipe the AI read, each model&rsquo;s answer is compared with what
         they kept. &ldquo;Closer&rdquo; means the stronger model&rsquo;s answer needed fewer
         changes. Only these scores are kept, never the recipes, for two years.
       </p>
-      <div className={styles.filters}>
+      <div className={laptop ? `${styles.filters} ${styles.pickRow}` : styles.filters}>
         <label htmlFor={kindId}>Show by</label>
         <select
           id={kindId}
@@ -108,12 +113,12 @@ export function AiOutcomesSection() {
       ) : !data || !s ? (
         <p role="status">Loading…</p>
       ) : s.drafts === 0 ? (
-        <p className={styles.muted}>
+        <p className={laptop ? styles.boxNote : styles.muted}>
           No drafts read by the AI were saved or removed in {data.label}.
         </p>
       ) : (
         <>
-          <dl className={styles.details}>
+          <dl className={laptop ? styles.infoRows : styles.details}>
             <div>
               <dt>Drafts in {data.label}</dt>
               <dd>
@@ -122,7 +127,7 @@ export function AiOutcomesSection() {
             </div>
           </dl>
 
-          <div className={styles.tableWrap}>
+          <div className={box}>
             <table className={styles.table}>
               <caption>Is the stronger model worth it?</caption>
               <thead>
@@ -160,7 +165,7 @@ export function AiOutcomesSection() {
             </table>
           </div>
 
-          <div className={styles.tableWrap}>
+          <div className={box}>
             <table className={styles.table}>
               <caption>By model: the answer people were shown</caption>
               <thead>
@@ -188,7 +193,7 @@ export function AiOutcomesSection() {
             </table>
           </div>
 
-          <div className={styles.tableWrap}>
+          <div className={box}>
             <table className={styles.table}>
               <caption>By kind of import</caption>
               <thead>
@@ -212,7 +217,7 @@ export function AiOutcomesSection() {
             </table>
           </div>
 
-          <p className={styles.muted}>
+          <p className={laptop ? `${styles.hint} ${styles.underBox}` : styles.muted}>
             Fennl&rsquo;s instructions to the AI in this period:{" "}
             {s.setups.map((x) => `version ${x.setup} (${x.drafts})`).join(", ")}. A new version
             means Fennl changed how it asks; a new model name means the AI itself changed.

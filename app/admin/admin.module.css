@@ -819,3 +819,2148 @@ a.secondary {
 .num {
   font-weight: var(--weight-semibold);
 }
+
+/* ---------------------------------------------------------------------------------------------
+   The admin console on a laptop (U23, the approved mockup and owner's choices 2026-11-07): its own
+   frame with a left panel built like the app's (AdminPanel.tsx), Fennl's look: 14 px text, 30 px
+   buttons, tighter rows, white boxes with a hairline edge, no heavy outlines. One ink button per
+   screen; Cancel plain words after it; every other action quiet icon and words with a soft grey
+   fill when pointed at; the coral line down the left only for "Needs you" findings. Tokens only.
+
+   Every rule is inside the media query (and the classes it adds are only rendered on a laptop,
+   usePointer), so phones, touch screens and windows under 900px look exactly as before.
+   --------------------------------------------------------------------------------------------- */
+
+/* The small icons beside words (AdminIcon.tsx) are drawn on a laptop only. */
+.icon {
+  display: none;
+}
+
+@media (min-width: 900px) and (pointer: fine) {
+  svg.icon {
+    display: block;
+    flex: none;
+    width: var(--icon);
+    height: var(--icon);
+  }
+
+  svg.turned {
+    transform: rotate(180deg);
+  }
+
+  /* --- The frame and the left panel ---------------------------------------------------------- */
+  .frame {
+    display: grid;
+    grid-template-columns: var(--sidebar-width) minmax(0, 1fr);
+    min-height: 100dvh;
+  }
+
+  .skipLink {
+    position: absolute;
+    top: var(--space-3);
+    left: var(--space-3);
+    z-index: 100;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-size: var(--ui-text);
+    font-weight: var(--button-weight);
+    text-decoration: none;
+    transform: translateY(-200%);
+  }
+
+  .skipLink:focus {
+    transform: none;
+    color: var(--button-ink-text);
+  }
+
+  .sidePanel {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    overflow-y: auto;
+    background: var(--color-sidebar);
+    border-right: 1px solid var(--color-border-soft);
+    scrollbar-width: thin;
+  }
+
+  .panelTop {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-3) var(--space-2);
+  }
+
+  .panelBrand,
+  .entryBrand {
+    --logo-gap: var(--space-2);
+    --logo-wordmark-size: var(--text-lg);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin: 0;
+    padding-left: var(--space-1);
+  }
+
+  .panelBrand svg,
+  .entryBrand svg {
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+
+  /* "Admin" beside the Fennl name, so the console is never mistaken for the app. */
+  .adminTag {
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-tag);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    text-transform: uppercase;
+  }
+
+  /* Find an account: the app's search box, with the "/" key until something is typed. */
+  .find {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: var(--control);
+    padding: 0 var(--space-1) 0 var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+  }
+
+  .find:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+  }
+
+  .findField {
+    flex: 1;
+    min-width: 0;
+    min-height: calc(var(--control) - 2px);
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--ui-text);
+    text-overflow: ellipsis;
+  }
+
+  .findField:focus {
+    outline: none;
+  }
+
+  .findField::placeholder {
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+
+  .findField::-webkit-search-cancel-button {
+    appearance: none;
+  }
+
+  .findKey {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    min-width: 1.125rem;
+    height: 1.125rem;
+    margin-right: var(--space-1);
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-tag);
+    box-shadow:
+      inset 0 0 0 1px var(--color-border),
+      inset 0 -1px 0 var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+    line-height: 1;
+  }
+
+  .findKey[hidden] {
+    display: none;
+  }
+
+  .findGo {
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--action-text);
+    cursor: pointer;
+  }
+
+  .findGo:hover {
+    background: var(--hover-fill);
+  }
+
+  .panelNav {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+    padding: var(--space-2) var(--space-3) 0;
+  }
+
+  .panelGroup + .panelGroup {
+    margin-top: var(--space-3);
+  }
+
+  .panelHeading {
+    display: flex;
+    align-items: center;
+    min-height: 1.75rem;
+    margin: 0 var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .panelList {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .panelBottom {
+    margin-top: auto;
+    padding-top: var(--space-3);
+  }
+
+  .panelLink {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    width: 100%;
+    min-height: var(--row);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .panelLink svg.icon {
+    color: var(--color-text-muted);
+  }
+
+  .panelLink:hover,
+  .panelLink[data-within] {
+    background: var(--hover-fill);
+  }
+
+  .panelLink[aria-current="page"] {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .panelLink[aria-current="page"] svg.icon {
+    color: inherit;
+  }
+
+  .panelCount {
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panelLink[aria-current="page"] .panelCount {
+    color: inherit;
+  }
+
+  /* "3 new": a small filled count, as Timers' in the app's panel. */
+  .panelNew {
+    margin-left: auto;
+    padding: 0 0.375rem;
+    border-radius: var(--radius-full);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    line-height: 1.5;
+  }
+
+  .panelFoot {
+    padding: 0 var(--space-3) var(--space-4);
+  }
+
+  .panelSession {
+    display: grid;
+    margin: var(--space-2) var(--space-2) 0;
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-soft);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+
+  .frameMain {
+    min-width: 0;
+    max-width: 76rem;
+    padding: var(--space-5) var(--space-8) var(--space-10);
+    font-size: var(--ui-text);
+    line-height: var(--ui-leading);
+    outline: none;
+  }
+
+  /* --- A page's title, and the white boxes of rows ---------------------------------------- */
+  .pageHead {
+    margin-bottom: var(--space-5);
+    padding-top: 0.375rem;
+  }
+
+  .pageTitle {
+    margin: 0;
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    outline: none;
+  }
+
+  .pageLede {
+    max-width: 62ch;
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .blockTitle {
+    margin: 0 0 var(--space-2);
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .rows,
+  .boxNote,
+  .statRow,
+  .findBox,
+  .facts,
+  .tools {
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .rows {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow: clip;
+  }
+
+  .boxNote {
+    margin: 0;
+    padding: var(--space-3) var(--space-4);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text);
+  }
+
+  .rowItem {
+    position: relative;
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .rowItem:first-child {
+    border-top: 0;
+  }
+
+  /* A row that opens something: the whole row is the button's target, filled when pointed at. */
+  .rowOpen::after,
+  .rowName::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .attnRow:hover,
+  .matchRow:hover {
+    background: var(--hover-fill);
+  }
+
+  /* Names in lists are underlined only when pointed at. */
+  .nameButton {
+    min-height: 1.5rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-text);
+    font: inherit;
+    font-weight: var(--weight-semibold);
+    text-align: left;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  .nameButton:hover,
+  .rowItem:hover .rowName {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* --- Buttons: ink, quiet, soft grey and plain ---------------------------------------------- */
+  .button,
+  .ink,
+  .secondary,
+  .quiet,
+  .soft,
+  .plain {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.375rem;
+    min-height: var(--button-height);
+    max-width: 100%;
+    padding: 0 var(--space-3);
+    border: 0;
+    border-radius: var(--radius-control);
+    font: inherit;
+    font-size: var(--ui-text);
+    line-height: 1.2;
+    text-align: center;
+    text-decoration: none;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+  }
+
+  /* Ink: where a form or decision is finished, at most one a screen. */
+  .button,
+  .ink {
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .button:not(:disabled):hover,
+  .ink:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  /* Quiet: icon and words, no fill or line until pointed at. */
+  .secondary,
+  .quiet {
+    padding: 0 0.625rem;
+    background: transparent;
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+
+  :is(.secondary, .quiet) svg.icon {
+    color: var(--color-text-muted);
+  }
+
+  :is(.secondary, .quiet, .plain):not(:disabled):hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  :is(.secondary, .quiet):not(:disabled):hover svg.icon {
+    color: var(--color-text);
+  }
+
+  /* Soft grey: View as, beside the account's name. */
+  .soft {
+    background: var(--hover-fill);
+    color: var(--color-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .soft:not(:disabled):hover,
+  .soft[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--color-border) 70%, var(--color-surface-sunken));
+  }
+
+  /* Plain: Cancel, after the main button. */
+  .plain {
+    padding: 0 var(--space-2);
+    background: transparent;
+    color: var(--color-text);
+    font-weight: var(--weight-regular);
+  }
+
+  :is(.button, .ink, .secondary, .quiet, .soft, .plain):disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+  }
+
+  a.button:hover {
+    color: var(--button-ink-text);
+  }
+
+  a.secondary:hover {
+    color: var(--color-text);
+  }
+
+  .linkButton {
+    min-height: 1.5rem;
+    text-underline-offset: 2px;
+  }
+
+  /* "passkey" with a small key, on what asks for it again. */
+  .key {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.1875rem;
+    white-space: nowrap;
+    margin-left: var(--space-1);
+    font-size: var(--ui-text-eyebrow);
+    font-weight: var(--weight-regular);
+    opacity: 0.8;
+  }
+
+  .key svg.icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    color: inherit;
+  }
+
+  /* --- Fields, cards, notes ------------------------------------------------------------------ */
+  .card {
+    margin-bottom: var(--space-5);
+    padding: var(--space-4) var(--space-5);
+    border: 0;
+    border-radius: var(--radius-pop);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .card h2 {
+    margin-bottom: var(--space-2);
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+
+  .card h3 {
+    margin: var(--space-4) 0 var(--space-1);
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .muted {
+    margin-bottom: var(--space-3);
+    font-size: var(--ui-text);
+  }
+
+  .stack {
+    gap: var(--space-3);
+  }
+
+  .row {
+    gap: var(--space-2);
+  }
+
+  .field {
+    gap: var(--space-1);
+  }
+
+  .card .field {
+    max-width: 32rem;
+  }
+
+  .field label,
+  .choices legend {
+    font-size: var(--ui-text);
+    font-weight: var(--weight-medium);
+  }
+
+  .field input,
+  .field select,
+  .field textarea,
+  .choice input:not([type="radio"], [type="checkbox"]) {
+    min-height: var(--control);
+    padding: 0 var(--space-3);
+    border-radius: var(--radius-control);
+    font-size: var(--ui-text);
+  }
+
+  .field textarea {
+    padding: 0.375rem var(--space-3);
+    line-height: 1.45;
+  }
+
+  .choice {
+    font-size: var(--ui-text);
+  }
+
+  .choice input[type="radio"],
+  .choice input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+  }
+
+  .hint {
+    font-size: var(--ui-text-label);
+    line-height: 1.45;
+  }
+
+  .table {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .table th,
+  .table td {
+    padding: 0.4375rem var(--space-2);
+    border-bottom-color: var(--color-border-soft);
+  }
+
+  .table thead th {
+    color: var(--color-text-muted);
+    font-weight: var(--weight-medium);
+  }
+
+  /* A warning: the shared warm note (pale warm fill, a coloured sign, dark text). */
+  .error {
+    position: relative;
+    margin: 0 0 var(--space-3);
+    padding: 0.625rem var(--space-3) 0.625rem calc(var(--space-3) + var(--icon) + var(--space-2));
+    border: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-warm-soft);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  /* A message that something was done: the shared grey bar with a green check. */
+  .notice {
+    position: relative;
+    margin: 0 0 var(--space-3);
+    padding: 0.5rem var(--space-3) 0.5rem calc(var(--space-3) + var(--icon) + var(--space-2));
+    border: 0;
+    border-radius: var(--radius-pop);
+    background: var(--color-surface-sunken);
+    color: var(--color-text);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .notice > p {
+    margin: 0;
+  }
+
+  .notice > p + p {
+    margin-top: var(--space-1);
+  }
+
+  .error::before,
+  .notice::before {
+    content: "";
+    position: absolute;
+    top: calc(0.5rem + 0.1em);
+    left: var(--space-3);
+    width: var(--icon);
+    height: var(--icon);
+    background: var(--color-success);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m5 12.5 4.5 4.5L19 7.5'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+
+  .error::before {
+    top: calc(0.625rem + 0.1em);
+    background: var(--color-warm-text);
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20zM12 10v4M12 17h.01'/%3E%3C/svg%3E");
+  }
+
+  /* --- Needs attention ------------------------------------------------------------------------ */
+  .attnCols {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: var(--space-6);
+  }
+
+  .attnMain {
+    flex: 999 1 30rem;
+    min-width: 0;
+  }
+
+  .attnSide {
+    flex: 1 1 20rem;
+    min-width: 0;
+  }
+
+  .attnSide .blockTitle,
+  .sub2 .blockTitle {
+    font-size: var(--subheading-size);
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0;
+  }
+
+  .attnRow {
+    display: grid;
+    grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    padding: 0.625rem var(--space-2) 0.625rem var(--space-4);
+  }
+
+  .attnWho,
+  .attnWhat,
+  .soonWhat {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .attnName {
+    font-weight: var(--weight-semibold);
+    overflow-wrap: anywhere;
+  }
+
+  .attnWho > .attnEmail {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .attnEmail,
+  .attnMore {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  /* A long address breaks before its "@" (breakBeforeAt), and only mid-word if still too long. */
+  .attnTitle {
+    min-width: 0;
+    overflow-wrap: break-word;
+  }
+
+  .attnWhen {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    white-space: nowrap;
+  }
+
+  .rowOpen {
+    padding-right: 0.375rem;
+  }
+
+  .sub2 {
+    margin-top: var(--space-6);
+  }
+
+  .statRow {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .statRow li {
+    display: grid;
+    gap: 0.125rem;
+    padding: var(--space-3) var(--space-4);
+    border-left: 1px solid var(--color-border-soft);
+  }
+
+  .statRow li:first-child {
+    border-left: 0;
+  }
+
+  .statNum {
+    font-family: var(--font-display);
+    font-variation-settings: var(--font-display-settings);
+    font-size: var(--heading-size);
+    line-height: 1.2;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .statLabel {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .soonRow {
+    display: grid;
+    grid-template-columns: 3.5rem minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-1) var(--space-3);
+    padding: 0.625rem var(--space-2) 0.625rem var(--space-4);
+  }
+
+  .soonDate {
+    padding-top: 0.0625rem;
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+
+  .soonButton {
+    margin-top: -0.25rem;
+  }
+
+  .soonPeople {
+    display: grid;
+    grid-column: 2 / -1;
+    gap: var(--space-1);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* --- Accounts (search results) ------------------------------------------------------------- */
+  .matchRow {
+    display: grid;
+    grid-template-columns: minmax(8rem, 1fr) minmax(0, 1.4fr) auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-4);
+    padding: 0.5rem var(--space-4);
+  }
+
+  .matchEmail {
+    overflow-wrap: anywhere;
+  }
+
+  .matchMeta {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* --- An account's page ---------------------------------------------------------------------- */
+  .back {
+    margin: 0 0 var(--space-2) -0.625rem;
+    font-size: var(--ui-text);
+  }
+
+  .backButton {
+    color: var(--color-text-muted);
+    font-weight: var(--weight-regular);
+  }
+
+  .head {
+    gap: var(--space-3) var(--space-6);
+    margin-bottom: var(--space-5);
+  }
+
+  .head > div {
+    flex: 1 1 24rem;
+    min-width: 0;
+  }
+
+  .head h1 {
+    font-size: var(--title-size);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+  }
+
+  .sub {
+    margin-top: var(--space-1);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.5;
+  }
+
+  /* Each part of the top line stays whole when the line wraps. */
+  .subPart {
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  .cols {
+    gap: var(--space-6);
+  }
+
+  .mainCol {
+    flex: 999 1 25rem;
+  }
+
+  /* Wide enough for "Extend or give Premium…" and its "passkey" on one line. */
+  .side {
+    flex: 1 1 18rem;
+  }
+
+  /* What's going on, What happened, Account and Everything you can do: a heading above a white
+     box, as Settings. An open tool stays a white box of its own. */
+  .mainCol > .card:not(.panel),
+  .side > .card {
+    margin-bottom: var(--space-6);
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .mainCol > .card:not(.panel) > h2,
+  .side > .card > h2 {
+    margin-bottom: var(--space-1);
+  }
+
+  .side > .card > h2 {
+    margin-bottom: var(--space-2);
+  }
+
+  .lede {
+    margin: 0 0 var(--space-3);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* Findings: rows of one box; "Needs you" with the coral line down its left. */
+  .findBox {
+    overflow: clip;
+  }
+
+  .findBox > .finding {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-3);
+    margin: 0;
+    padding: var(--space-3) var(--space-3) 0.875rem var(--space-4);
+    border: 0;
+    border-top: 1px solid var(--color-border-soft);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .findBox > .finding:first-child {
+    border-top: 0;
+  }
+
+  .findBox > .finding.act {
+    box-shadow: inset 3px 0 0 var(--color-warm);
+  }
+
+  .finding > *,
+  .finding > .handled > * {
+    grid-column: 1 / -1;
+  }
+
+  .finding > .fTop {
+    grid-row: 1;
+    grid-column: 1;
+    min-height: var(--control-sm);
+  }
+
+  /* "Mark handled…" at the top right of its finding. */
+  .finding > .handled {
+    display: contents;
+  }
+
+  .finding > .handled > .markButton {
+    grid-row: 1;
+    grid-column: 2;
+    align-self: start;
+    min-height: var(--control-sm);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-regular);
+    color: var(--color-text-muted);
+    white-space: nowrap;
+  }
+
+  .finding > .handled > p {
+    margin: var(--space-3) 0 var(--space-1);
+    padding-top: var(--space-2);
+    border-top: 1px solid var(--color-border-soft);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .finding > .handled > .quiet {
+    justify-self: start;
+    margin-left: -0.625rem;
+  }
+
+  .handledForm {
+    margin-top: var(--space-3);
+    padding: var(--space-3);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface-sunken);
+  }
+
+  .handledForm input {
+    background: var(--color-surface);
+  }
+
+  .finding h3 {
+    margin: var(--space-1) 0 var(--space-1);
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    line-height: 1.35;
+    letter-spacing: 0;
+  }
+
+  .finding p {
+    margin: 0 0 var(--space-2);
+    font-size: var(--ui-text);
+    line-height: 1.45;
+  }
+
+  .finding .why {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .actions {
+    gap: var(--space-1) var(--space-2);
+    margin-top: var(--space-1);
+  }
+
+  .actions > .quiet:first-child {
+    margin-left: -0.625rem;
+  }
+
+  .fTop {
+    gap: var(--space-1) var(--space-2);
+  }
+
+  .since {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .tag {
+    gap: 0.25rem;
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-tag);
+    font-size: var(--ui-text-eyebrow);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+  }
+
+  .tag svg {
+    width: 0.75rem;
+    height: 0.75rem;
+  }
+
+  .fineRow {
+    padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .fineRow > .quiet {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-regular);
+  }
+
+  .fineList {
+    gap: var(--space-1);
+    margin: var(--space-1) 0 var(--space-2) var(--space-2);
+  }
+
+  .fineList li {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .tagFine svg.icon {
+    width: 0.75rem;
+    height: 0.75rem;
+    color: var(--color-success);
+  }
+
+  /* What happened: the period a dropdown beside the heading, the kinds a small switch, and the
+     time, the kind and "Problem" in their own columns. */
+  .happenedHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-1);
+  }
+
+  .card .happenedHead > h2 {
+    margin: 0;
+  }
+
+  .periodPick {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .periodPick select {
+    min-height: var(--control-sm);
+    padding: 0 var(--space-1) 0 var(--space-2);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* A small switch whose chosen part is raised and bold (as Settings' Units). */
+  .segSwitch {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    max-width: 100%;
+    margin-bottom: var(--space-3);
+    padding: 2px;
+    border-radius: calc(var(--radius-control) + 1px);
+    background: var(--color-surface-sunken);
+  }
+
+  .segPart {
+    min-height: var(--chip);
+    padding: 0 0.625rem;
+    border: 0;
+    border-radius: 0.3125rem;
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--ui-text-secondary);
+    font-weight: var(--weight-medium);
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .segPart:hover {
+    background: color-mix(in srgb, var(--color-border) 55%, transparent);
+    color: var(--color-text);
+  }
+
+  .segPart[aria-pressed="true"] {
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+    box-shadow:
+      0 1px 2px color-mix(in srgb, var(--color-text) 14%, transparent),
+      0 0 0 1px color-mix(in srgb, var(--color-text) 5%, transparent);
+  }
+
+  .tlBox {
+    container-type: inline-size;
+  }
+
+  .tlItem {
+    display: grid;
+    grid-template-columns: 7rem 4.25rem minmax(0, 1fr) auto;
+    grid-template-areas: "when kind what prob";
+    align-items: baseline;
+    gap: var(--space-1) var(--space-3);
+    padding: 0.5625rem var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .tlItem:first-child {
+    border-top: 0;
+  }
+
+  .tlItem > .tlWhen {
+    grid-area: when;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .tlItem > .tlKind {
+    grid-area: kind;
+    margin: 0;
+    font-size: var(--ui-text-eyebrow);
+  }
+
+  .tlWhat {
+    display: grid;
+    grid-area: what;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .tlWhat > .tlText {
+    overflow-wrap: anywhere;
+  }
+
+  .tlWhat > .tlDetail {
+    margin: 0;
+    font-size: var(--ui-text-secondary);
+  }
+
+  .tlProb {
+    grid-area: prob;
+  }
+
+  .tlProb .prob {
+    margin-left: 0;
+    padding: 0.0625rem 0.375rem;
+    border-radius: var(--radius-tag);
+    font-size: var(--ui-text-eyebrow);
+  }
+
+  /* A narrow column (a 1024 px window): the kind and "Problem" go on the time's line. */
+  @container (max-width: 34rem) {
+    .tlItem {
+      grid-template-columns: auto auto minmax(0, 1fr);
+      grid-template-areas:
+        "when kind prob"
+        "what what what";
+      row-gap: 0.125rem;
+    }
+
+    .tlProb {
+      justify-self: start;
+    }
+  }
+
+  .card .hint[role="status"] {
+    margin-top: var(--space-2);
+  }
+
+  /* Account: a compact list, the name on the left and the value on the right. */
+  .facts {
+    gap: 0;
+    overflow: clip;
+  }
+
+  .facts > div {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: baseline;
+    gap: var(--space-3);
+    padding: 0.5rem var(--space-3);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .facts > div:first-child {
+    border-top: 0;
+  }
+
+  .facts dt {
+    font-size: var(--ui-text-secondary);
+  }
+
+  .facts dd {
+    font-size: var(--ui-text);
+    text-align: right;
+    overflow-wrap: break-word;
+    /* A value that wraps does so in even lines, never a word left alone ("until Nov / 16"). */
+    text-wrap: balance;
+  }
+
+  .facts .meter {
+    height: 0.375rem;
+    margin-top: var(--space-1);
+  }
+
+  .facts .linkButton {
+    min-height: 0;
+  }
+
+  /* Everything you can do: quiet rows, each with a small icon, "passkey" at the right. */
+  .tools {
+    gap: 0;
+    padding: var(--space-1);
+  }
+
+  .tools .secondary {
+    justify-content: flex-start;
+    width: 100%;
+    min-height: var(--row);
+    padding: 0 var(--space-2);
+    font-weight: var(--weight-regular);
+    text-align: left;
+  }
+
+  .tools .secondary[aria-expanded="true"] {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .tools .key {
+    margin-left: auto;
+    padding-left: var(--space-2);
+    color: var(--color-text-muted);
+    opacity: 1;
+  }
+
+  .tools + .hint {
+    margin-top: var(--space-2);
+  }
+
+  /* An open tool: a white box of its own, its title smaller, a small ✕ to close it. */
+  .mainCol > .panel {
+    box-shadow:
+      0 0 0 1px var(--color-border),
+      0 1px 3px color-mix(in srgb, var(--color-text) 6%, transparent);
+  }
+
+  .card.panel .panelHead {
+    align-items: center;
+    margin-bottom: var(--space-2);
+  }
+
+  .card.panel .panelHead h2 {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0;
+  }
+
+  .closeButton {
+    display: grid;
+    place-items: center;
+    width: var(--control-sm);
+    height: var(--control-sm);
+    margin-right: calc(-1 * var(--space-2));
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+
+  .closeButton:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  /* --- Signing in, the passkey and acting as someone: one small white box in the middle ------ */
+  .entry {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100dvh;
+    padding: var(--space-8) var(--space-4);
+    font-size: var(--ui-text);
+    outline: none;
+  }
+
+  .entryBrand {
+    margin-bottom: var(--space-5);
+  }
+
+  .entry .narrow {
+    width: 100%;
+    max-width: 24rem;
+  }
+
+  .entry .title {
+    margin-bottom: var(--space-3);
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .entry .card {
+    margin: 0;
+    padding: var(--space-5);
+  }
+
+  .entry .card .muted:last-child {
+    margin-bottom: 0;
+  }
+
+  .entry .stack > .button,
+  .entry .card > .button,
+  .entry form .secondary {
+    width: 100%;
+  }
+
+  .entry form .secondary {
+    background: var(--hover-fill);
+  }
+
+  .entryOut {
+    min-height: 1.5rem;
+    margin-top: var(--space-3);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--ui-text-secondary);
+    cursor: pointer;
+  }
+
+  .entryOut:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+}
+
+/* The rest of the console on a laptop (U23 part 2): Feedback as a list with the open message
+   beside it, Codes and sign-up, Plan limits, AI imports, Activity and Your admin account. Lists
+   are white tables with quiet header names; settings are Settings' white boxes of rows. */
+@media (min-width: 900px) and (pointer: fine) {
+  .block {
+    margin-bottom: var(--space-6);
+  }
+
+  .blockHead {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    margin-bottom: var(--space-2);
+  }
+
+  .blockHead > .blockTitle {
+    margin: 0;
+  }
+
+  .page > .lede,
+  .block > .lede {
+    margin-top: calc(-1 * var(--space-1));
+    color: var(--color-text-muted);
+  }
+
+  .underBox {
+    margin-top: var(--space-2);
+  }
+
+  .underBox > .muted {
+    margin-bottom: var(--space-1);
+  }
+
+  .outdent {
+    margin-left: -0.625rem;
+  }
+
+  /* Numbers in a table's own column: lined up on the right. */
+  .tableBox .figure {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  /* A grey tag: Turned off, Expired, All used, Read on… */
+  .tagOff {
+    background: var(--color-surface-sunken);
+    color: var(--color-text-muted);
+  }
+
+  /* --- A white table: quiet header names, hairline rows, no line under the last ------------- */
+  .tableBox {
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+    scrollbar-width: thin;
+  }
+
+  .tableBox + .tableBox,
+  .tableBox + .hint + .tableBox {
+    margin-top: var(--space-4);
+  }
+
+  .tableBox .table {
+    font-size: var(--ui-text);
+  }
+
+  .tableBox .table caption {
+    padding: var(--space-3) var(--space-4) var(--space-1);
+    font-size: var(--ui-text);
+  }
+
+  .tableBox .table th,
+  .tableBox .table td {
+    padding: 0.5625rem var(--space-3);
+    vertical-align: baseline;
+  }
+
+  .tableBox .table :is(th, td):first-child {
+    padding-left: var(--space-4);
+  }
+
+  .tableBox .table :is(th, td):last-child {
+    padding-right: var(--space-4);
+  }
+
+  .tableBox .table thead th {
+    padding-block: var(--space-2);
+    font-size: var(--ui-text-secondary);
+    white-space: nowrap;
+  }
+
+  .tableBox .table tbody tr:last-child > * {
+    border-bottom: 0;
+  }
+
+  .tableBox .table th[scope="row"] {
+    font-weight: var(--weight-medium);
+  }
+
+  /* A row that opens something: filled when pointed at, the whole row the code's target. */
+  .clickRow {
+    position: relative;
+  }
+
+  .clickRow:hover {
+    background: var(--hover-fill);
+  }
+
+  .clickRow:hover .rowName {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .clickRow .nameButton:focus-visible {
+    outline-offset: 1px;
+  }
+
+  /* Codes nobody can use any more: their details in grey. */
+  .clickRow[data-done] > td + td {
+    color: var(--color-text-muted);
+  }
+
+  .codeTable td:first-child {
+    white-space: nowrap;
+  }
+
+  .codeTable .code {
+    letter-spacing: 0.04em;
+  }
+
+  /* --- A white box of facts: the name on the left, the value beside it ---------------------- */
+  .infoRows {
+    display: block;
+    margin: 0 0 var(--space-6);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .infoRows > div {
+    display: grid;
+    grid-template-columns: minmax(8rem, 15rem) minmax(0, 1fr);
+    gap: var(--space-1) var(--space-4);
+    padding: 0.5625rem var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  .infoRows > div:first-child {
+    border-top: 0;
+  }
+
+  .infoRows dt {
+    color: var(--color-text-muted);
+  }
+
+  .infoRows dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* --- Settings' white box of rows, and its On/Off switch ----------------------------------- */
+  .setBox {
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .setRow,
+  .setBox > .setField {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--color-border-soft);
+  }
+
+  :is(.setRow, .setField):first-child {
+    border-top: 0;
+  }
+
+  .setRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-6);
+    min-height: 3.5rem;
+  }
+
+  .setText {
+    display: grid;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .setName {
+    font-weight: var(--weight-medium);
+  }
+
+  .setHelp {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    line-height: 1.45;
+  }
+
+  .switch {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: var(--space-2);
+    min-height: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* The input covers the word and the track, so a click anywhere on them turns it on or off. */
+  .switchInput {
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .switchInput:disabled {
+    cursor: progress;
+  }
+
+  .track {
+    position: relative;
+    width: 2rem;
+    height: 1.125rem;
+    border-radius: var(--radius-full);
+    background: var(--color-surface);
+    box-shadow: inset 0 0 0 1px var(--color-text-muted);
+    transition: background-color var(--duration-fast);
+  }
+
+  .track::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background: var(--color-text-muted);
+    transition:
+      transform var(--duration-fast) var(--ease-out),
+      background-color var(--duration-fast);
+  }
+
+  .switchInput:checked ~ .track {
+    background: var(--color-accent);
+    box-shadow: none;
+  }
+
+  .switchInput:checked ~ .track::after {
+    top: 2px;
+    left: 2px;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--color-surface);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--color-text) 25%, transparent);
+    transform: translateX(0.875rem);
+  }
+
+  .switchInput:focus-visible ~ .track {
+    outline: var(--focus-width) solid var(--color-focus);
+    outline-offset: 2px;
+  }
+
+  /* A setting with a field: its name and explanation on the left, the field on the right. */
+  .setBox > .setField {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 9rem;
+    grid-template-areas:
+      "name field"
+      "help field";
+    align-items: center;
+    gap: 0.125rem var(--space-6);
+    max-width: none;
+  }
+
+  .setBox > .setField:not(:has(> .hint)) {
+    grid-template-areas: "name field";
+  }
+
+  .setBox > .setWide {
+    grid-template-columns: minmax(0, 1fr) minmax(12rem, 22rem);
+  }
+
+  .setField > label {
+    grid-area: name;
+  }
+
+  .setField > :is(input, select) {
+    grid-area: field;
+    min-width: 0;
+  }
+
+  .setField > .hint {
+    grid-area: help;
+    max-width: 62ch;
+  }
+
+  .setField > .setCheck {
+    justify-self: end;
+    width: 1rem;
+    height: 1rem;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--color-accent);
+  }
+
+  /* Show by and Period above How AI reads turned out: small dropdowns beside their names. */
+  .pickRow {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .pickRow label + select {
+    margin-right: var(--space-3);
+  }
+
+  .pickRow select {
+    min-height: var(--control-sm);
+    padding: 0 var(--space-1) 0 var(--space-2);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  /* --- Plan limits: each value with a quiet Change beside it -------------------------------- */
+  .limitTable td {
+    white-space: nowrap;
+  }
+
+  /* Relative, so its hidden words stay inside the table's scroller (no blank page scroll). */
+  .changeButton {
+    position: relative;
+    min-height: 1.5rem;
+    margin-left: var(--space-1);
+    padding: 0 0.375rem;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--ui-text-secondary);
+    cursor: pointer;
+  }
+
+  .changeButton:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .limitTable td .stack {
+    min-width: 13rem;
+    white-space: normal;
+  }
+
+  /* --- Activity: fixed columns, the time on one line; an address breaks before its "@" and a
+     long one, or long details, inside the column rather than widening the page. */
+  .activityTable {
+    table-layout: fixed;
+  }
+
+  .activityTable th:nth-child(1) {
+    width: 10.5rem;
+  }
+
+  .activityTable th:nth-child(2),
+  .activityTable th:nth-child(4) {
+    width: 18%;
+  }
+
+  .activityTable th:nth-child(3) {
+    width: 9.5rem;
+  }
+
+  .activityTable th:nth-child(6) {
+    width: 7rem;
+  }
+
+  .activityTable td {
+    overflow-wrap: anywhere;
+  }
+
+  .activityTable td:first-child {
+    white-space: nowrap;
+  }
+
+  .activityTable td:nth-child(2),
+  .activityTable td:nth-child(4),
+  .activityTable td:last-child {
+    font-size: var(--ui-text-secondary);
+  }
+
+  /* --- Codes: a code's own page ------------------------------------------------------------- */
+  .codeDetail {
+    display: grid;
+    gap: var(--space-4);
+  }
+
+  .codeDetail > .back {
+    margin-bottom: calc(-1 * var(--space-2));
+  }
+
+  .codeDetail > .codeTitle {
+    margin: 0;
+    font-size: var(--heading-size);
+  }
+
+  .codeDetail > .infoRows,
+  .codeDetail > .card {
+    margin: 0;
+  }
+
+  .codeDetail > .blockTitle {
+    margin: var(--space-2) 0 calc(-1 * var(--space-2));
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0;
+  }
+
+  .codeDetail > div:last-child,
+  .codeDetail > .card .row:last-child > .secondary:first-child {
+    margin-left: -0.625rem;
+  }
+
+  .codeDetail > .card > h4 {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-variation-settings: normal;
+    font-size: var(--subheading-size);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0;
+  }
+
+  /* --- Feedback: the list with the open message beside it ---------------------------------- */
+  .mailCols {
+    display: grid;
+    grid-template-columns: minmax(15rem, 21rem) minmax(0, 1fr);
+    align-items: start;
+    gap: var(--space-5);
+  }
+
+  /* Too narrow for both (the largest text size on a small laptop): the message under the list. */
+  .mailPage {
+    container: mail / inline-size;
+  }
+
+  @container mail (max-width: 36rem) {
+    .mailCols {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .mailCols .mailPane {
+      position: static;
+    }
+  }
+
+  .mailRow {
+    display: grid;
+    gap: 0.1875rem;
+    width: 100%;
+    padding: 0.625rem var(--space-4);
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+    font: inherit;
+    font-size: var(--ui-text);
+    line-height: 1.4;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .mailRow:focus-visible {
+    outline-offset: -2px;
+  }
+
+  .mailRow:hover {
+    background: var(--hover-fill);
+  }
+
+  /* The open message: a blue line on its left as well as the fill, so not by colour alone. */
+  .mailRow[aria-current="true"] {
+    background: var(--color-accent-soft);
+    box-shadow: inset 3px 0 0 var(--color-accent);
+  }
+
+  .mailTop {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .mailTop > .dot {
+    flex: none;
+    width: 0.5rem;
+    height: 0.5rem;
+  }
+
+  .mailFrom {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    font-weight: var(--weight-medium);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mailRow[data-new] .mailFrom {
+    font-weight: var(--weight-semibold);
+  }
+
+  .mailDate {
+    flex: none;
+    margin-left: auto;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mailSnippet {
+    display: -webkit-box;
+    overflow: hidden;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    overflow-wrap: anywhere;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+  }
+
+  .mailStatus {
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-label);
+  }
+
+  .mailEmpty {
+    padding-block: var(--space-6);
+    text-align: center;
+  }
+
+  .mailPane {
+    position: sticky;
+    top: var(--space-5);
+    display: grid;
+    gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-4) var(--space-5) var(--space-5);
+    border-radius: var(--radius-pop);
+    background: var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .mailPaneHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+  }
+
+  .mailWho {
+    min-width: 0;
+  }
+
+  .mailName {
+    margin: 0;
+    font-size: var(--heading-size);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+
+  .mailMeta {
+    margin: 0.125rem 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--ui-text-secondary);
+    overflow-wrap: anywhere;
+  }
+
+  .mailPane .feedbackMessage {
+    padding: 0;
+    border: 0;
+    font-size: var(--ui-text);
+    line-height: 1.55;
+  }
+
+  .mailPane > .notice,
+  .mailPane > .error {
+    margin: 0;
+  }
+
+  .mailActions,
+  .quietRow {
+    gap: var(--space-1);
+    margin-left: -0.625rem;
+  }
+
+  .mailActions > .ink {
+    margin-left: 0.625rem;
+    margin-right: var(--space-2);
+  }
+
+  .mailPane > .infoRows {
+    margin: 0;
+    background: transparent;
+    box-shadow: 0 0 0 1px var(--color-border-soft);
+  }
+
+  .mailPaneHead > .mailStatus {
+    padding-top: 0.25rem;
+    white-space: nowrap;
+  }
+
+  .mailPane .infoRows dd {
+    overflow-wrap: break-word;
+  }
+
+  .mailPane .infoRows > div {
+    grid-template-columns: 7rem minmax(0, 1fr);
+    padding: 0.4375rem var(--space-3);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .mailNote {
+    display: grid;
+    gap: var(--space-1);
+  }
+
+  .mailNote .field {
+    max-width: none;
+  }
+
+  .mailNote .row {
+    margin-left: -0.625rem;
+  }
+}
+
+@media (min-width: 900px) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .track,
+  .track::after {
+    transition: none;
+  }
+}
+
+/* Windows contrast themes draw no fills or shadows: boxes, buttons, tags and the chosen parts
+   keep an edge, and "Needs you" a thick line down its left. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .rows,
+  .boxNote,
+  .statRow,
+  .findBox,
+  .facts,
+  .tools,
+  .card,
+  .segSwitch,
+  .button,
+  .ink,
+  .secondary,
+  .quiet,
+  .soft,
+  .adminTag,
+  .panelNew,
+  .error,
+  .notice {
+    border: 1px solid;
+  }
+
+  .mainCol > .card:not(.panel),
+  .side > .card {
+    border: 0;
+  }
+
+  .findBox > .finding.act {
+    border-left: 4px solid;
+  }
+
+  .panelLink[aria-current="page"],
+  .segPart[aria-pressed="true"] {
+    border: 2px solid;
+  }
+
+  .panelLink[data-within] {
+    border: 1px solid;
+  }
+
+  /* Find an account: its box shadow is gone in these themes, so an outline shows the focus. */
+  .find:focus-within {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .error::before,
+  .notice::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .tableBox,
+  .infoRows,
+  .setBox,
+  .mailPane,
+  .tagOff {
+    border: 1px solid;
+  }
+
+  .mailRow[aria-current="true"] {
+    border-left: 4px solid;
+  }
+
+  .track {
+    forced-color-adjust: none;
+    border: 1px solid CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .track::after {
+    top: 2px;
+    left: 2px;
+    background: CanvasText;
+  }
+
+  .switchInput:checked ~ .track {
+    background: Highlight;
+  }
+
+  .switchInput:checked ~ .track::after {
+    top: 1px;
+    left: 1px;
+    background: HighlightText;
+  }
+
+  .switchInput:focus-visible ~ .track {
+    outline-color: Highlight;
+  }
+}

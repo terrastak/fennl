@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useId, useRef, useState, type FormEvent } from "react";
 import type { Finding, FindingAction } from "../../shared/accountFindings";
 import type { AccountDetail, AccountMatch } from "../../shared/adminAccounts";
 import { verifiedText } from "../account/verified";
@@ -16,6 +16,9 @@ import {
   timeZoneQuery,
 } from "./accountView";
 import { adminRequest } from "./api";
+import { AdminIcon } from "./AdminIcon";
+import type { AdminIconName } from "./adminIcons";
+import { usePointer } from "../recipes/usePointer";
 import { toolList, waitingSignUp, type OpenTool, type ToolId } from "./toolList";
 import styles from "./admin.module.css";
 
@@ -36,6 +39,7 @@ export function AccountsSection({
   onOpen: (id: string, query: string) => void;
 }) {
   const id = useId();
+  const laptop = usePointer();
   const [query, setQuery] = useState(startQuery);
   const [matches, setMatches] = useState<AccountMatch[] | null>(null);
 
@@ -65,6 +69,10 @@ export function AccountsSection({
     event.preventDefault();
     setMatches(await find(query.trim()));
   };
+
+  if (laptop) {
+    return <LaptopAccounts query={startQuery.trim()} matches={matches} onOpen={onOpen} />;
+  }
 
   return (
     <section className={styles.card} aria-labelledby={`${id}-title`}>
@@ -112,7 +120,81 @@ export function AccountsSection({
   );
 }
 
+/**
+ * Accounts on a laptop (U23): the search is Find an account in the left panel, so this is its
+ * results, one row each in a white box (as the codes table): the name, underlined only when
+ * pointed at, then the email, whether it's verified and when they joined.
+ */
+function LaptopAccounts({
+  query,
+  matches,
+  onOpen,
+}: {
+  query: string;
+  matches: AccountMatch[] | null;
+  onOpen: (id: string, query: string) => void;
+}) {
+  const id = useId();
+  return (
+    <section className={styles.page} aria-labelledby={`${id}-title`}>
+      <header className={styles.pageHead}>
+        <h2 id={`${id}-title`} className={styles.pageTitle}>
+          Accounts
+        </h2>
+        <p className={styles.pageLede}>
+          {query.length >= 2 ? (
+            <>Accounts whose email or name has &ldquo;{query}&rdquo; in it.</>
+          ) : (
+            <>
+              Find an account with the box at the top of the left panel, by email or name. Press /
+              to go there from anywhere.
+            </>
+          )}
+        </p>
+      </header>
+      {query.length < 2 ? null : matches === null ? (
+        <p role="status" className={styles.boxNote}>
+          Looking…
+        </p>
+      ) : matches.length === 0 ? (
+        <p className={styles.boxNote} role="status">
+          No accounts match.
+        </p>
+      ) : (
+        <ul className={styles.rows} aria-label="Matching accounts">
+          {matches.map((m) => (
+            <li key={m.id} className={`${styles.rowItem} ${styles.matchRow}`}>
+              <button
+                type="button"
+                className={`${styles.nameButton} ${styles.rowName}`}
+                onClick={() => onOpen(m.id, query)}
+              >
+                {m.name || "(no name)"}
+              </button>
+              <span className={styles.matchEmail}>{m.email}</span>
+              <span className={styles.matchMeta}>
+                {verifiedText(m.emailVerified, m.emailVerifiedAt)} · joined {when(m.createdAt)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
+
+/** The small icon beside each tool on a laptop. */
+const TOOL_ICONS: Record<ToolId, AdminIconName> = {
+  view_as: "eye",
+  premium: "star",
+  limits: "sliders",
+  email: "mail",
+  sign_up: "mail",
+  password: "lock",
+  admin_log: "history",
+};
 
 /** The tool a finding's button opens, with its values filled in. */
 function toolFor(detail: AccountDetail, action: FindingAction): OpenTool | null {
@@ -122,9 +204,11 @@ function toolFor(detail: AccountDetail, action: FindingAction): OpenTool | null 
     case "raise_limit":
       return { id: "limits", prefill: { limit: action.limit, value: action.value } };
     case "change_email":
-      return { id: waitingSignUp(detail) ? "sign_up" : "email", prefill: {} };
+      return waitingSignUp(detail)
+        ? { id: "sign_up", prefill: {} }
+        : { id: "email", prefill: { focus: "change" } };
     case "unblock":
-      return { id: "email", prefill: {} };
+      return { id: "email", prefill: { focus: "unblock" } };
     case "fix_sign_up_address":
       return { id: "sign_up", prefill: action.email ? { email: action.email } : {} };
     case "send_sign_up_link":
@@ -149,11 +233,14 @@ export function AccountPage({
   backLabel,
   onBack,
   onOpenFeedback,
+  onFindingsChanged,
 }: {
   id: string;
   backLabel: string;
   onBack: () => void;
   onOpenFeedback: (feedbackId: string | null) => void;
+  /** A change here may change Needs attention's count in the left panel (a laptop). */
+  onFindingsChanged?: (() => void) | undefined;
 }) {
   const panelId = useId();
   const [detail, setDetail] = useState<AccountFacts | null>(null);
@@ -164,6 +251,11 @@ export function AccountPage({
   const [tool, setTool] = useState<OpenTool | null>(null);
   const [opened, setOpened] = useState(0);
   const [filter, setFilter] = useState<HistoryFilter>("all");
+  // On a laptop one ink button (U23): the most urgent finding's first fix, unless a box is open
+  // (a tool, or Mark handled's note), whose own button is then the one.
+  const laptop = usePointer();
+  const [formsOpen, setFormsOpen] = useState(0);
+  const onFormOpen = useCallback((delta: number) => setFormsOpen((n) => n + delta), []);
   const title = useRef<HTMLHeadingElement>(null);
   const historyHeading = useRef<HTMLHeadingElement>(null);
   const base = `/api/admin/accounts/${encodeURIComponent(id)}`;
@@ -215,7 +307,14 @@ export function AccountPage({
   const changed = async (next: AccountDetail | null) => {
     if (next) setDetail(next as AccountFacts);
     await Promise.all([loadOverview(), loadActivity()]);
+    onFindingsChanged?.();
   };
+
+  /** After Mark handled or putting it back. */
+  const reloadOverview = useCallback(async () => {
+    await loadOverview();
+    onFindingsChanged?.();
+  }, [loadOverview, onFindingsChanged]);
 
   const open = (next: OpenTool) => {
     setTool(next);
@@ -237,7 +336,14 @@ export function AccountPage({
     historyHeading.current?.focus();
   };
 
-  const back = (
+  const back = laptop ? (
+    <div className={styles.back}>
+      <button type="button" className={`${styles.quiet} ${styles.backButton}`} onClick={onBack}>
+        <AdminIcon name="arrowLeft" />
+        {backLabel}
+      </button>
+    </div>
+  ) : (
     <div className={styles.back}>
       <button type="button" className={styles.linkButton} onClick={onBack}>
         <span aria-hidden="true">‹ </span>
@@ -278,9 +384,20 @@ export function AccountPage({
     waitingSignUp(detail) ? "Not verified yet" : planWords(detail),
     `Signed up ${shortDay(new Date(detail.createdAt), now)}`,
     detail.lastSeenAt
-      ? `Last seen ${entryTimeInline(detail.lastSeenAt, now)}${lastDevice ? `, on ${lastDevice.label}` : ""}`
+      ? `Last seen ${entryTimeInline(detail.lastSeenAt, now)}${lastDevice ? `${laptop ? " · " : ", on "}${lastDevice.label}` : ""}`
       : "Never signed in",
   ];
+  // On a laptop each part stays whole when the line wraps.
+  const subLine = laptop
+    ? sub
+        .flatMap((part) => part.split(" · "))
+        .map((part, i) => (
+          <Fragment key={i}>
+            {i > 0 ? "\u00a0· " : null}
+            <span className={styles.subPart}>{part}</span>
+          </Fragment>
+        ))
+    : sub.join(" · ");
 
   return (
     <>
@@ -290,12 +407,12 @@ export function AccountPage({
           <h1 ref={title} tabIndex={-1}>
             {name}
           </h1>
-          <p className={styles.sub}>{sub.join(" · ")}</p>
+          <p className={styles.sub}>{subLine}</p>
         </div>
         {detail.role !== "admin" ? (
           <button
             type="button"
-            className={styles.button}
+            className={laptop ? styles.soft : styles.button}
             aria-expanded={tool?.id === "view_as"}
             aria-controls={tool?.id === "view_as" ? panelId : undefined}
             onClick={() => open({ id: "view_as", prefill: {} })}
@@ -325,7 +442,10 @@ export function AccountPage({
             failed={overviewFailed}
             onAction={onAction}
             onSeeEmails={seeEmails}
-            onReload={loadOverview}
+            onReload={reloadOverview}
+            allowInk={laptop && tool === null && formsOpen === 0}
+            noteInk={tool === null && formsOpen <= 1}
+            onFormOpen={onFormOpen}
           />
           <WhatHappened
             overview={overview}
@@ -349,6 +469,7 @@ export function AccountPage({
                   aria-controls={tool?.id === t.id ? panelId : undefined}
                   onClick={() => open({ id: t.id as ToolId, prefill: t.prefill ?? {} })}
                 >
+                  <AdminIcon name={TOOL_ICONS[t.id]} />
                   {t.label}
                   {t.passkey ? <PasskeyMark /> : null}
                 </button>
@@ -359,6 +480,7 @@ export function AccountPage({
                   className={styles.secondary}
                   onClick={() => open({ id: "sign_up", prefill: {} })}
                 >
+                  <AdminIcon name="send" />
                   Send the sign-up link again
                 </button>
               ) : null}

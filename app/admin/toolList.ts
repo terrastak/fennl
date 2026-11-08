@@ -13,6 +13,8 @@ export interface ToolPrefill {
   limit?: LimitKey | undefined;
   value?: number | null | undefined;
   email?: string | undefined;
+  /** Which part of the email tool the admin came for, so its button is the main one (U23). */
+  focus?: "change" | "unblock" | undefined;
 }
 
 export interface OpenTool {

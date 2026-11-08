@@ -1,9 +1,15 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 import type { AdminCode, AdminCodeUse, CodeChanges, NewCode } from "../../shared/codes";
+import { AdminIcon } from "./AdminIcon";
 import styles from "./admin.module.css";
 
 // Codes that give free Premium (phase B5), and the invite-only sign-up switch. The server checks
 // everything again and records each change in the audit log.
+//
+// On a laptop (U23, owner's choices 2026-11-07) the page has a title and its line, sign-up is an
+// On/Off switch above the codes ("Invite-only", as Show nutrition in Settings), and the codes are a
+// white table: each code bold and underlined when its row is pointed at, each status a tag in
+// words, the details of codes nobody can use any more in grey. New code is the one ink button.
 
 const ERRORS: Record<string, string> = {
   invalid_label: "Give the code a name (up to 100 characters).",
@@ -72,7 +78,8 @@ const STATUS: Record<AdminCode["status"], string> = {
 
 // ---------------------------------------------------------------------------------------------
 
-export function SignUpSwitch() {
+export function SignUpSwitch({ laptop = false }: { laptop?: boolean }) {
+  const id = useId();
   const [required, setRequired] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -85,7 +92,7 @@ export function SignUpSwitch() {
   }, []);
 
   const flip = async () => {
-    if (required === null) return;
+    if (required === null || busy) return;
     setBusy(true);
     setError(null);
     const { ok, json } = await send("/api/admin/settings", "PUT", {
@@ -95,6 +102,59 @@ export function SignUpSwitch() {
     if (ok) setRequired((json as { signUpRequiresCode: boolean }).signUpRequiresCode);
     else setError(errorText(json));
   };
+
+  if (laptop) {
+    return (
+      <section className={styles.block} aria-labelledby="sign-up-title">
+        <h3 id="sign-up-title" className={styles.blockTitle}>
+          Sign-up
+        </h3>
+        {error ? (
+          <p role="alert" className={styles.error}>
+            {error}
+          </p>
+        ) : null}
+        {required === null ? (
+          error ? null : (
+            <p role="status" className={styles.boxNote}>
+              Loading…
+            </p>
+          )
+        ) : (
+          <div className={styles.setBox}>
+            <div className={styles.setRow}>
+              <div className={styles.setText}>
+                <label htmlFor={`${id}-switch`} className={styles.setName}>
+                  Invite-only
+                </label>
+                <p id={`${id}-help`} className={styles.setHelp} role="status">
+                  {required
+                    ? "Creating an account needs an invite code. Turn this off to let anyone sign up."
+                    : "Open: anyone can create an account. Promo codes are optional."}
+                </p>
+              </div>
+              {/* The knob moves and the word says it, so it isn't shown by colour alone. */}
+              <span className={styles.switch}>
+                <span aria-hidden="true">{required ? "On" : "Off"}</span>
+                <input
+                  id={`${id}-switch`}
+                  type="checkbox"
+                  role="switch"
+                  className={styles.switchInput}
+                  checked={required}
+                  // Not disabled while saving: a disabled control drops the keyboard focus.
+                  aria-disabled={busy || undefined}
+                  aria-describedby={`${id}-help`}
+                  onChange={() => void flip()}
+                />
+                <span className={styles.track} aria-hidden="true" />
+              </span>
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section className={styles.card} aria-labelledby="sign-up-title">
@@ -124,7 +184,7 @@ export function SignUpSwitch() {
 
 // ---------------------------------------------------------------------------------------------
 
-export function CodesSection() {
+export function CodesSection({ laptop = false }: { laptop?: boolean }) {
   const [codes, setCodes] = useState<AdminCode[] | null>(null);
   const [view, setView] = useState<
     { kind: "list" } | { kind: "new" } | { kind: "code"; id: string }
@@ -155,10 +215,13 @@ export function CodesSection() {
     await load();
   };
 
+  const Title = laptop ? "h3" : "h2";
   return (
-    <section className={styles.card} aria-labelledby="codes-title">
-      <div className={styles.headingRow}>
-        <h2 id="codes-title">Invite and promo codes</h2>
+    <section className={laptop ? styles.block : styles.card} aria-labelledby="codes-title">
+      <div className={laptop ? styles.blockHead : styles.headingRow}>
+        <Title id="codes-title" className={laptop ? styles.blockTitle : undefined}>
+          Invite and promo codes
+        </Title>
         {view.kind === "list" ? (
           <button
             type="button"
@@ -168,6 +231,7 @@ export function CodesSection() {
               setView({ kind: "new" });
             }}
           >
+            <AdminIcon name="plus" />
             New code
           </button>
         ) : null}
@@ -178,13 +242,76 @@ export function CodesSection() {
         </p>
       ) : null}
       {view.kind === "new" ? (
-        <NewCodeForm onDone={backToList} />
+        laptop ? (
+          <div className={styles.card}>
+            <NewCodeForm onDone={backToList} laptop />
+          </div>
+        ) : (
+          <NewCodeForm onDone={backToList} />
+        )
       ) : view.kind === "code" ? (
-        <CodeDetail id={view.id} onBack={backToList} />
+        <CodeDetail id={view.id} onBack={backToList} laptop={laptop} />
       ) : codes === null ? (
-        <p role="status">Loading…</p>
+        <p role="status" className={laptop ? styles.boxNote : undefined}>
+          Loading…
+        </p>
       ) : codes.length === 0 ? (
-        <p className={styles.muted}>No codes yet.</p>
+        <p className={laptop ? styles.boxNote : styles.muted}>No codes yet.</p>
+      ) : laptop ? (
+        <>
+          <div className={`${styles.tableWrap} ${styles.tableBox}`}>
+            <table className={`${styles.table} ${styles.codeTable}`}>
+              <thead>
+                <tr>
+                  <th scope="col">Code</th>
+                  <th scope="col">Name</th>
+                  <th scope="col">Gives</th>
+                  <th scope="col">Used</th>
+                  <th scope="col">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {codes.map((code) => (
+                  <tr
+                    key={code.id}
+                    className={styles.clickRow}
+                    data-done={code.status === "active" ? undefined : ""}
+                  >
+                    <td>
+                      <button
+                        type="button"
+                        className={`${styles.nameButton} ${styles.rowName} ${styles.code}`}
+                        onClick={() => {
+                          setNotice(null);
+                          setView({ kind: "code", id: code.id });
+                        }}
+                      >
+                        {code.code}
+                      </button>
+                    </td>
+                    <td>{code.label}</td>
+                    <td>{gives(code)}</td>
+                    <td>
+                      {code.uses}
+                      {code.maxUses !== null ? ` of ${code.maxUses}` : ""}
+                    </td>
+                    <td>
+                      <span
+                        className={`${styles.tag} ${code.status === "active" ? styles.tagFine : styles.tagOff}`}
+                      >
+                        {code.status === "active" ? <AdminIcon name="check" /> : null}
+                        {STATUS[code.status]}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className={`${styles.hint} ${styles.underBox}`}>
+            Click a code to see who used it, change it or turn it off.
+          </p>
+        </>
       ) : (
         <div className={styles.tableWrap}>
           <table className={styles.table}>
@@ -231,7 +358,13 @@ export function CodesSection() {
 
 // ---------------------------------------------------------------------------------------------
 
-function NewCodeForm({ onDone }: { onDone: (message: string | null) => Promise<void> }) {
+function NewCodeForm({
+  onDone,
+  laptop = false,
+}: {
+  onDone: (message: string | null) => Promise<void>;
+  laptop?: boolean;
+}) {
   const id = useId();
   const [label, setLabel] = useState("");
   const [code, setCode] = useState("");
@@ -413,7 +546,11 @@ function NewCodeForm({ onDone }: { onDone: (message: string | null) => Promise<v
         <button type="submit" className={styles.button} disabled={busy}>
           {busy ? "Creating…" : "Create code"}
         </button>
-        <button type="button" className={styles.secondary} onClick={() => void onDone(null)}>
+        <button
+          type="button"
+          className={laptop ? styles.plain : styles.secondary}
+          onClick={() => void onDone(null)}
+        >
           Cancel
         </button>
       </div>
@@ -426,10 +563,13 @@ function NewCodeForm({ onDone }: { onDone: (message: string | null) => Promise<v
 function CodeDetail({
   id,
   onBack,
+  laptop = false,
 }: {
   id: string;
   onBack: (message: string | null) => Promise<void>;
+  laptop?: boolean;
 }) {
+  const Sub = laptop ? "h4" : "h3";
   const formId = useId();
   const [data, setData] = useState<{ code: AdminCode; uses: AdminCodeUse[] } | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -515,19 +655,24 @@ function CodeDetail({
   };
 
   return (
-    <div className={styles.stack}>
-      <div className={styles.row}>
-        <button type="button" className={styles.secondary} onClick={() => void onBack(null)}>
+    <div className={laptop ? styles.codeDetail : styles.stack}>
+      <div className={laptop ? styles.back : styles.row}>
+        <button
+          type="button"
+          className={laptop ? `${styles.quiet} ${styles.backButton}` : styles.secondary}
+          onClick={() => void onBack(null)}
+        >
+          <AdminIcon name="arrowLeft" />
           Back to codes
         </button>
       </div>
-      <h3 className={styles.code}>{code.code}</h3>
+      <Sub className={laptop ? `${styles.code} ${styles.codeTitle}` : styles.code}>{code.code}</Sub>
       {error ? (
         <p role="alert" className={styles.error}>
           {error}
         </p>
       ) : null}
-      <dl className={styles.details}>
+      <dl className={laptop ? styles.infoRows : styles.details}>
         <div>
           <dt>Gives</dt>
           <dd>{gives(code)}</dd>
@@ -553,7 +698,11 @@ function CodeDetail({
         </div>
       </dl>
 
-      <form className={styles.stack} onSubmit={save} aria-label="Change this code">
+      <form
+        className={laptop ? `${styles.card} ${styles.stack}` : styles.stack}
+        onSubmit={save}
+        aria-label="Change this code"
+      >
         <div className={styles.field}>
           <label htmlFor={`${formId}-label`}>Name</label>
           <input
@@ -607,8 +756,8 @@ function CodeDetail({
       </form>
 
       {code.disabledAt ? null : (
-        <div className={styles.stack}>
-          <h3>Turn off</h3>
+        <div className={laptop ? `${styles.card} ${styles.stack}` : styles.stack}>
+          <Sub>Turn off</Sub>
           <p className={styles.hint}>
             Nobody new can use it. People who already used it keep their Premium unless you end it
             below.
@@ -624,17 +773,18 @@ function CodeDetail({
           </label>
           <div className={styles.row}>
             <button type="button" className={styles.secondary} onClick={turnOff} disabled={busy}>
+              <AdminIcon name="off" />
               Turn off this code
             </button>
           </div>
         </div>
       )}
 
-      <h3>Who used it</h3>
+      <Sub className={laptop ? styles.blockTitle : undefined}>Who used it</Sub>
       {uses.length === 0 ? (
-        <p className={styles.muted}>Nobody yet.</p>
+        <p className={laptop ? styles.boxNote : styles.muted}>Nobody yet.</p>
       ) : (
-        <div className={styles.tableWrap}>
+        <div className={laptop ? `${styles.tableWrap} ${styles.tableBox}` : styles.tableWrap}>
           <table className={styles.table}>
             <thead>
               <tr>
@@ -662,9 +812,18 @@ function CodeDetail({
           </table>
         </div>
       )}
-      <button type="button" className={styles.linkButton} onClick={() => void reload()}>
-        Refresh
-      </button>
+      {laptop ? (
+        <div>
+          <button type="button" className={styles.quiet} onClick={() => void reload()}>
+            <AdminIcon name="refresh" />
+            Refresh
+          </button>
+        </div>
+      ) : (
+        <button type="button" className={styles.linkButton} onClick={() => void reload()}>
+          Refresh
+        </button>
+      )}
     </div>
   );
 }

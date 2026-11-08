@@ -103,9 +103,12 @@ test("an admin sets up a passkey, then signs in with it", async ({ page, context
     "Household, no end date",
   );
 
-  // The invite-only switch.
-  const signUp = page.getByRole("region", { name: "Sign-up" });
-  await expect(signUp.getByRole("status")).toHaveText(/^Open|^Invite-only/);
+  // The invite-only switch (on a computer an On/Off switch above the codes, U23).
+  const signUp = page.getByRole("region", { name: "Sign-up", exact: true });
+  await expect(signUp.getByRole("switch", { name: "Invite-only" })).toBeVisible();
+  await expect(signUp.getByRole("status")).toHaveText(
+    /^Open: anyone|^Creating an account needs an invite code/,
+  );
 });
 
 test("an admin helps an account: limits, an exception, and a temporary password", async ({
@@ -288,23 +291,25 @@ test("an admin reads feedback, replies by email, and marks it done", async ({
   await expect(item).toContainText("New");
   await expectAccessible(page);
 
-  // Opening it marks it read.
-  await item.getByRole("button", { expanded: false }).click();
+  // Opening it marks it read. On a computer the message opens beside the list (U23).
+  await item.getByRole("button").click();
+  await expect(item.getByRole("button")).toHaveAttribute("aria-current", "true");
   await expect(item).toContainText("Read on");
-  await expect(item).toContainText(testerEmail);
-  const reply = item.getByRole("link", { name: "Reply by email" });
+  const open = inbox.getByRole("region", { name: "Lena Park" });
+  await expect(open).toContainText(testerEmail);
+  const reply = open.getByRole("link", { name: "Reply by email" });
   await expect(reply).toHaveAttribute("href", new RegExp(`^mailto:${testerEmail}\\?subject=`));
   await expectAccessible(page);
 
   // Replied (and undone), a private note, then done.
-  await item.getByRole("button", { name: "Mark as replied" }).click();
+  await open.getByRole("button", { name: "Mark as replied" }).click();
   await expect(item).toContainText("Replied on");
-  await item.getByRole("button", { name: "Undo “replied”" }).click();
-  await expect(item.getByRole("button", { name: "Mark as replied" })).toBeVisible();
-  await item.getByLabel("Private note (only admins see it)").fill("Asked which phone she uses");
-  await item.getByRole("button", { name: "Save note" }).click();
-  await expect(item.getByRole("status")).toHaveText("Note saved.");
-  await item.getByRole("button", { name: "Mark done" }).click();
+  await open.getByRole("button", { name: "Undo “replied”" }).click();
+  await expect(open.getByRole("button", { name: "Mark as replied" })).toBeVisible();
+  await open.getByLabel("Private note (only admins see it)").fill("Asked which phone she uses");
+  await open.getByRole("button", { name: "Save note" }).click();
+  await expect(open.getByRole("status")).toHaveText("Note saved.");
+  await open.getByRole("button", { name: "Mark done" }).click();
   await expect(item).toContainText("Done on");
 
   await inbox.getByRole("button", { name: /^Done/ }).click();
@@ -312,8 +317,11 @@ test("an admin reads feedback, replies by email, and marks it done", async ({
 
   // Straight to the sender's account page.
   const done = inbox.getByRole("listitem").filter({ hasText: message });
-  await done.getByRole("button", { expanded: false }).click();
-  await done.getByRole("button", { name: "Open their account" }).click();
+  await done.getByRole("button").click();
+  await inbox
+    .getByRole("region", { name: "Lena Park" })
+    .getByRole("button", { name: "Open their account" })
+    .click();
   await expect(page.getByRole("heading", { level: 1, name: "Lena Park" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Back to feedback" })).toBeVisible();
 });

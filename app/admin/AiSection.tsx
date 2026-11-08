@@ -8,7 +8,7 @@ import styles from "./admin.module.css";
 // The AI imports section (phase E7): what the AI has cost this month, by model and by household,
 // and the Fennl-wide settings. Changes ask for the passkey again and go in the audit log.
 
-export function AiSection() {
+export function AiSection({ laptop = false }: { laptop?: boolean }) {
   const [overview, setOverview] = useState<AdminAiOverview | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -37,6 +37,130 @@ export function AiSection() {
   if (!overview) return <p role="status">Loading…</p>;
   const { settings } = overview;
   const reads = overview.reads;
+  const readsText = `${reads}${
+    reads > 0
+      ? `, ${overview.secondLooks} with a second look (${Math.round(
+          (overview.secondLooks / reads) * 100,
+        )}%)`
+      : ""
+  }${overview.rereads > 0 ? `, ${overview.rereads} read again` : ""}`;
+
+  if (laptop) {
+    // A laptop (U23): the page's title, this month as a white box of rows, the tables in white
+    // boxes, then how the reads turned out and the settings (Save the one ink button).
+    return (
+      <section className={styles.page} aria-labelledby="ai-title">
+        <header className={styles.pageHead}>
+          <h2 id="ai-title" className={styles.pageTitle}>
+            AI imports
+          </h2>
+        </header>
+        {overview.provider === null ? (
+          <p role="status" className={styles.notice}>
+            No AI is set up on this server, so AI imports are unavailable. Add the ANTHROPIC_API_KEY
+            secret (docs/setup/e7-ai-import.md).
+          </p>
+        ) : null}
+        {overview.paused ? (
+          <p role="status" className={styles.error}>
+            Paused: this month&rsquo;s estimated cost has reached the pause amount, so AI imports
+            are refused for everyone until the month ends. Raise the pause amount below to restart
+            them now.
+          </p>
+        ) : null}
+        <dl className={styles.infoRows}>
+          <div>
+            <dt>Estimated cost this month ({overview.month}, UTC)</dt>
+            <dd>{dollars(overview.spentMicroUsd)}</dd>
+          </div>
+          <div>
+            <dt>Imports read</dt>
+            <dd>{readsText}</dd>
+          </div>
+          <div>
+            <dt>Alert and pause</dt>
+            <dd>
+              Email at ${centsAsDollars(settings.alertCents)}, pause at $
+              {centsAsDollars(settings.pauseCents)}
+            </dd>
+          </div>
+        </dl>
+        <div className={styles.block}>
+          {overview.byModel.length > 0 ? (
+            <div className={`${styles.tableWrap} ${styles.tableBox}`}>
+              <table className={styles.table}>
+                <caption className="visually-hidden">Cost this month by model</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Model</th>
+                    <th scope="col" className={styles.figure}>
+                      Calls
+                    </th>
+                    <th scope="col" className={styles.figure}>
+                      Estimated cost
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.byModel.map((m) => (
+                    <tr key={m.model}>
+                      <th scope="row">{m.model}</th>
+                      <td className={styles.figure}>{m.calls}</td>
+                      <td className={styles.figure}>{dollars(m.costMicroUsd)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className={styles.boxNote}>Nothing has been read with the AI this month.</p>
+          )}
+        </div>
+
+        {overview.households.length > 0 ? (
+          <section className={styles.block} aria-labelledby="ai-households-title">
+            <h3 id="ai-households-title" className={styles.blockTitle}>
+              Households this month
+            </h3>
+            <p className={styles.lede}>The 25 that cost most.</p>
+            <div className={`${styles.tableWrap} ${styles.tableBox}`}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th scope="col">Household</th>
+                    <th scope="col" className={styles.figure}>
+                      AI imports
+                    </th>
+                    <th scope="col" className={styles.figure}>
+                      Estimated cost
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {overview.households.map((h) => (
+                    <tr key={h.householdId}>
+                      <th scope="row">{h.name}</th>
+                      <td className={styles.figure}>{h.imports}</td>
+                      <td className={styles.figure}>{dollars(h.costMicroUsd)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
+        <AiOutcomesSection laptop />
+
+        <AiSettingsForm
+          laptop
+          settings={settings}
+          onSaved={(next) => setOverview({ ...overview, settings: next })}
+        />
+      </section>
+    );
+  }
+
   return (
     <>
       <section className={styles.card} aria-labelledby="ai-title">
@@ -145,9 +269,11 @@ export function AiSection() {
 }
 
 function AiSettingsForm({
+  laptop = false,
   settings,
   onSaved,
 }: {
+  laptop?: boolean;
   settings: AdminAiSettings;
   onSaved: (settings: AdminAiSettings) => void;
 }) {
@@ -196,6 +322,120 @@ function AiSettingsForm({
       );
     }
   };
+
+  if (laptop) {
+    // A laptop (U23): Settings' white box of rows, each a name and its explanation on the left
+    // and the field on the right; Save, the page's one ink button, under the box.
+    return (
+      <section className={styles.block} aria-labelledby="ai-settings-title">
+        <h3 id="ai-settings-title" className={styles.blockTitle}>
+          AI settings
+        </h3>
+        <p className={styles.lede}>
+          For all of Fennl. Each household&rsquo;s own limits (AI imports a month, and the hidden
+          cost backstop) are with the plan limits. Changes ask for your passkey again.
+        </p>
+        {message ? (
+          <p role="status" className={styles.notice}>
+            {message}
+          </p>
+        ) : null}
+        <form onSubmit={save}>
+          <div className={styles.setBox}>
+            <div className={`${styles.field} ${styles.setField}`}>
+              <label htmlFor={`${id}-alert`}>
+                Email me when the month&rsquo;s cost reaches ($)
+              </label>
+              <input
+                id={`${id}-alert`}
+                inputMode="decimal"
+                value={alert}
+                onChange={(e) => setAlert(e.target.value)}
+              />
+            </div>
+            <div className={`${styles.field} ${styles.setField}`}>
+              <label htmlFor={`${id}-pause`}>Pause AI imports for everyone at ($)</label>
+              <input
+                id={`${id}-pause`}
+                inputMode="decimal"
+                value={pause}
+                onChange={(e) => setPause(e.target.value)}
+              />
+            </div>
+            <div className={`${styles.field} ${styles.setField} ${styles.setWide}`}>
+              <label htmlFor={`${id}-models`}>Models, cheapest first</label>
+              <input
+                id={`${id}-models`}
+                value={models}
+                onChange={(e) => setModels(e.target.value)}
+                aria-describedby={`${id}-models-hint`}
+              />
+              <p id={`${id}-models-hint`} className={styles.hint}>
+                Every import is read by the first. &ldquo;Read again&rdquo; uses the next one after
+                the model whose answer the person sees (the second, unless a second look happened).
+              </p>
+            </div>
+            <div className={`${styles.field} ${styles.setField}`}>
+              <label htmlFor={`${id}-second`}>Automatic second look</label>
+              <input
+                id={`${id}-second`}
+                type="checkbox"
+                className={styles.setCheck}
+                checked={secondLook}
+                onChange={(e) => setSecondLook(e.target.checked)}
+                aria-describedby={`${id}-second-hint`}
+              />
+              <p id={`${id}-second-hint`} className={styles.hint}>
+                When on, a read whose amounts look doubtful is read again by the next model at once,
+                not counted as another import: an amount the first model only guessed, or amounts in
+                the method that don&rsquo;t add up to the ingredient list (on photos, screenshots
+                and PDFs). A word it couldn&rsquo;t read is only highlighted for the person. On
+                unless turned off.
+              </p>
+            </div>
+            <div className={`${styles.field} ${styles.setField}`}>
+              <label htmlFor={`${id}-missing`}>
+                Second look when this many ingredients have no amount
+              </label>
+              <input
+                id={`${id}-missing`}
+                inputMode="numeric"
+                value={missing}
+                onChange={(e) => setMissing(e.target.value)}
+                aria-describedby={`${id}-off-hint`}
+              />
+            </div>
+            <div className={`${styles.field} ${styles.setField}`}>
+              <label htmlFor={`${id}-odd`}>
+                Second look when cups, tablespoons and the like go above
+              </label>
+              <input
+                id={`${id}-odd`}
+                inputMode="numeric"
+                value={odd}
+                onChange={(e) => setOdd(e.target.value)}
+                aria-describedby={`${id}-off-hint`}
+              />
+              <p id={`${id}-off-hint`} className={styles.hint}>
+                0 turns the check off. A read with a doubtful amount, or missing a title,
+                ingredients or method, always gets a second look.
+              </p>
+            </div>
+          </div>
+          {error ? (
+            <p role="alert" className={`${styles.error} ${styles.underBox}`}>
+              {error}
+            </p>
+          ) : null}
+          <div className={`${styles.row} ${styles.underBox}`}>
+            <button type="submit" className={styles.ink} disabled={busy}>
+              Save
+            </button>
+          </div>
+        </form>
+      </section>
+    );
+  }
 
   return (
     <section className={styles.card} aria-labelledby="ai-settings-title">

@@ -9,6 +9,12 @@ import { ActivitySection } from "./ActivitySection";
 import { FeedbackSection } from "./FeedbackSection";
 import { CodesSection, SignUpSwitch } from "./CodesSection";
 import { LimitsSection } from "./LimitsSection";
+import { AdminPanel } from "./AdminPanel";
+import { AdminIcon } from "./AdminIcon";
+import { SECTIONS, useSlashToFind, type SectionId } from "./adminSections";
+import { timeZoneQuery, type AttentionOverview } from "./accountView";
+import { Logo } from "../shell/Logo";
+import { usePointer } from "../recipes/usePointer";
 import styles from "./admin.module.css";
 
 function time(iso: string | null): string {
@@ -35,13 +41,36 @@ export function AdminApp() {
     await refresh();
   };
 
+  // On a laptop (U23) the console is a left panel beside the page once signed in, and the other
+  // screens one small box in the middle; elsewhere the top bar and the row of buttons as before.
+  const laptop = usePointer();
+  // Signed in, the same tree on every screen (Home draws its own frame), so an open account and
+  // its tools stay put when a window is made narrower or wider.
+  if (state.kind === "ready") {
+    return <Home me={state.me} refresh={refresh} signOut={signOut} laptop={laptop} />;
+  }
+  if (laptop) {
+    return (
+      <main id="main" className={styles.entry} tabIndex={-1}>
+        <p className={styles.entryBrand}>
+          <Logo />
+          <span className={styles.adminTag}>Admin</span>
+        </p>
+        <Screen state={state} refresh={refresh} signOut={signOut} />
+        {state.kind === "passkey_sign_in" ? (
+          <button type="button" className={styles.entryOut} onClick={() => void signOut()}>
+            Sign out
+          </button>
+        ) : null}
+      </main>
+    );
+  }
+
   return (
     <>
       <header className={styles.bar}>
         <p className={styles.brand}>Fennl admin</p>
-        {state.kind === "ready" ||
-        state.kind === "not_admin" ||
-        state.kind === "passkey_sign_in" ? (
+        {state.kind === "not_admin" || state.kind === "passkey_sign_in" ? (
           <button type="button" className={styles.barButton} onClick={signOut}>
             Sign out
           </button>
@@ -128,7 +157,8 @@ function Screen({
         </Narrow>
       );
     case "ready":
-      return <Home me={state.me} refresh={refresh} />;
+      // Drawn by AdminApp itself (Home).
+      return null;
   }
 }
 
@@ -267,7 +297,13 @@ function PasskeySetup({ refresh }: { refresh: () => Promise<void> }) {
   );
 }
 
-function AddBackupPasskey({ refresh }: { refresh: () => Promise<void> }) {
+function AddBackupPasskey({
+  refresh,
+  laptop = false,
+}: {
+  refresh: () => Promise<void>;
+  laptop?: boolean;
+}) {
   const [message, setMessage] = useState<string | null>(null);
   const add = async () => {
     setMessage(null);
@@ -282,25 +318,17 @@ function AddBackupPasskey({ refresh }: { refresh: () => Promise<void> }) {
           {message}
         </p>
       ) : null}
-      <button type="button" className={styles.secondary} onClick={add}>
+      <button
+        type="button"
+        className={laptop ? `${styles.quiet} ${styles.outdent}` : styles.secondary}
+        onClick={add}
+      >
+        {laptop ? <AdminIcon name="key" /> : null}
         Add a backup passkey
       </button>
     </>
   );
 }
-
-const SECTIONS = [
-  { id: "attention", name: "Needs attention" },
-  { id: "accounts", name: "Accounts" },
-  { id: "feedback", name: "Feedback" },
-  { id: "codes", name: "Codes and sign-up" },
-  { id: "limits", name: "Plan limits" },
-  { id: "ai", name: "AI imports" },
-  { id: "activity", name: "Activity" },
-  { id: "you", name: "Your admin account" },
-] as const;
-
-type SectionId = (typeof SECTIONS)[number]["id"];
 
 const BACK_LABELS: Partial<Record<SectionId, string>> = {
   attention: "Back to Needs attention",
@@ -308,7 +336,17 @@ const BACK_LABELS: Partial<Record<SectionId, string>> = {
   feedback: "Back to feedback",
 };
 
-function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
+function Home({
+  me,
+  refresh,
+  signOut,
+  laptop,
+}: {
+  me: AdminMe;
+  refresh: () => Promise<void>;
+  signOut: () => Promise<void>;
+  laptop: boolean;
+}) {
   // The account just acted as (/admin?account=…) opens straight away; otherwise Needs attention.
   const [account, setAccount] = useState<string | null>(() =>
     new URLSearchParams(window.location.search).get("account"),
@@ -340,6 +378,27 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
     };
   }, []);
 
+  // The left panel on a laptop: how many accounts need you, and Find an account ("/" jumps to it).
+  const [attentionCount, setAttentionCount] = useState<number | null>(null);
+  const [searchRun, setSearchRun] = useState(0);
+  const findRef = useRef<HTMLInputElement>(null);
+  useSlashToFind(findRef, laptop);
+  const countAttention = useCallback(() => {
+    void adminRequest<AttentionOverview>(`/api/admin/attention${timeZoneQuery()}`).then(
+      (result) => {
+        if (result.ok) setAttentionCount((result.body as AttentionOverview).items.length);
+      },
+    );
+  }, []);
+  // Opened on an account (back from acting as someone), Needs attention isn't loaded to count.
+  // Once Needs attention has counted, it isn't asked again here.
+  const countAsked = useRef(false);
+  useEffect(() => {
+    if (!laptop || countAsked.current || section === "attention" || attentionCount !== null) return;
+    countAsked.current = true;
+    countAttention();
+  }, [laptop, section, attentionCount, countAttention]);
+
   const show = (next: SectionId) => {
     setAccount(null);
     setFeedbackOpen(null);
@@ -368,34 +427,8 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
     </nav>
   );
 
-  if (account) {
-    return (
-      <>
-        {nav}
-        <AccountPage
-          key={account}
-          id={account}
-          backLabel={BACK_LABELS[section] ?? "Back to search"}
-          onBack={() => {
-            focusTitle.current = true;
-            setAccount(null);
-          }}
-          onOpenFeedback={(feedbackId) => {
-            setAccount(null);
-            setFeedbackOpen(feedbackId);
-            setSection("feedback");
-          }}
-        />
-      </>
-    );
-  }
-
-  return (
+  const sections = (
     <>
-      <h1 ref={titleRef} className={styles.title} tabIndex={-1}>
-        Admin console
-      </h1>
-      {nav}
       {section === "attention" ? (
         <AttentionSection
           onFind={(q) => {
@@ -403,10 +436,12 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
             setSection("accounts");
           }}
           onOpen={(userId) => openAccount(userId, "attention")}
+          onCount={setAttentionCount}
         />
       ) : null}
       {section === "accounts" ? (
         <AccountsSection
+          key={searchRun}
           query={query}
           onOpen={(userId, q) => {
             setQuery(q);
@@ -422,20 +457,152 @@ function Home({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
         />
       ) : null}
       {section === "codes" ? (
-        <>
-          <CodesSection />
-          <SignUpSwitch />
-        </>
+        laptop ? (
+          <section className={styles.page} aria-labelledby="codes-page-title">
+            <header className={styles.pageHead}>
+              <h2 id="codes-page-title" className={styles.pageTitle}>
+                Codes and sign-up
+              </h2>
+              <p className={styles.pageLede}>
+                Codes give free Premium. They never touch money: price discounts are Stripe
+                promotion codes.
+              </p>
+            </header>
+            <SignUpSwitch laptop />
+            <CodesSection laptop />
+          </section>
+        ) : (
+          <>
+            <CodesSection />
+            <SignUpSwitch />
+          </>
+        )
       ) : null}
-      {section === "limits" ? <LimitsSection /> : null}
-      {section === "ai" ? <AiSection /> : null}
-      {section === "activity" ? <ActivitySection /> : null}
-      {section === "you" ? <You me={me} refresh={refresh} /> : null}
+      {section === "limits" ? <LimitsSection laptop={laptop} /> : null}
+      {section === "ai" ? <AiSection laptop={laptop} /> : null}
+      {section === "activity" ? <ActivitySection laptop={laptop} /> : null}
+      {section === "you" ? <You me={me} refresh={refresh} laptop={laptop} /> : null}
     </>
+  );
+
+  const accountPage = account ? (
+    <AccountPage
+      key={account}
+      id={account}
+      backLabel={BACK_LABELS[section] ?? "Back to search"}
+      onBack={() => {
+        focusTitle.current = true;
+        setAccount(null);
+      }}
+      onOpenFeedback={(feedbackId) => {
+        setAccount(null);
+        setFeedbackOpen(feedbackId);
+        setSection("feedback");
+      }}
+      onFindingsChanged={laptop ? countAttention : undefined}
+    />
+  ) : null;
+
+  // A laptop: the left panel beside the page (U23); elsewhere the top bar, the page's title and
+  // the row of buttons, as before. The account page and the sections keep their place in the tree
+  // either way.
+  return (
+    <div className={laptop ? styles.frame : undefined}>
+      {laptop ? (
+        <a className={styles.skipLink} href="#main">
+          Skip to content
+        </a>
+      ) : null}
+      {laptop ? (
+        <AdminPanel
+          me={me}
+          section={section}
+          accountOpen={account !== null}
+          attentionCount={attentionCount}
+          newFeedback={newFeedback}
+          findRef={findRef}
+          onShow={show}
+          onFind={(q) => {
+            setQuery(q);
+            setSearchRun((n) => n + 1);
+            show("accounts");
+          }}
+          onSignOut={() => void signOut()}
+        />
+      ) : (
+        <header className={styles.bar}>
+          <p className={styles.brand}>Fennl admin</p>
+          <button type="button" className={styles.barButton} onClick={() => void signOut()}>
+            Sign out
+          </button>
+        </header>
+      )}
+      <main id="main" className={laptop ? styles.frameMain : styles.main} tabIndex={-1}>
+        {accountPage ? null : (
+          <h1 ref={titleRef} className={laptop ? "visually-hidden" : styles.title} tabIndex={-1}>
+            Admin console
+          </h1>
+        )}
+        {laptop ? null : nav}
+        {accountPage ?? sections}
+      </main>
+    </div>
   );
 }
 
-function You({ me, refresh }: { me: AdminMe; refresh: () => Promise<void> }) {
+function You({
+  me,
+  refresh,
+  laptop,
+}: {
+  me: AdminMe;
+  refresh: () => Promise<void>;
+  laptop: boolean;
+}) {
+  if (laptop) {
+    // A laptop (U23): the page's title, then its facts as a white box of rows, as Settings.
+    return (
+      <section className={styles.page} aria-labelledby="you-title">
+        <header className={styles.pageHead}>
+          <h2 id="you-title" className={styles.pageTitle}>
+            Your admin account
+          </h2>
+          <p className={styles.pageLede}>Signed in as {me.name}</p>
+        </header>
+        <dl className={styles.infoRows}>
+          <div>
+            <dt>Account</dt>
+            <dd>{me.email}</dd>
+          </div>
+          <div>
+            <dt>Signed in</dt>
+            <dd>{time(me.signedInAt)}</dd>
+          </div>
+          <div>
+            <dt>Session ends</dt>
+            <dd>{time(me.expiresAt)} (30 minutes without use, 8 hours at most)</dd>
+          </div>
+          <div>
+            <dt>Passkeys</dt>
+            <dd>
+              {me.passkeys.length
+                ? me.passkeys.map((p) => `${p.name ?? "Passkey"} (${time(p.createdAt)})`).join(", ")
+                : "None"}
+            </dd>
+          </div>
+        </dl>
+        <div className={styles.underBox}>
+          {me.passkeys.length < 2 ? (
+            <p className={styles.muted}>
+              Add a second passkey (another device, or a security key) so losing one doesn&rsquo;t
+              lock you out.
+            </p>
+          ) : null}
+          <AddBackupPasskey refresh={refresh} laptop />
+        </div>
+      </section>
+    );
+  }
   return (
     <section className={styles.card} aria-labelledby="you-title">
       <h2 id="you-title">Signed in as {me.name}</h2>
