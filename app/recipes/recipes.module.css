@@ -4320,16 +4320,8 @@ button.stepNumber:focus-visible::after {
     min-width: 0;
   }
 
-  /* Two across a phone, as the recipe list; one across when two would be narrower than about
-     eight words' width (a larger text size on a small phone), so the buttons' words still fit. */
-  @media (max-width: 599px) {
-    .twoUp.trashGrid {
-      grid-template-columns: repeat(
-        auto-fit,
-        minmax(max(8.25rem, calc((100% - var(--space-3)) / 2)), 1fr)
-      );
-    }
-  }
+  /* Two across a phone at every text size, exactly as the recipe list (.twoUp; owner's choice
+     2026-11-09); a button's words wrap onto a second line when the card is narrow. */
 
   .trashCardLink {
     display: flex;
