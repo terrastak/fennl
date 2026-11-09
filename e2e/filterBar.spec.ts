@@ -221,8 +221,8 @@ test("Never more than two lines, nothing cut off at the side, and the cards move
   await expect(barMenu(page)).toHaveCount(0);
   await expect(fold).toBeFocused();
 
-  // A big window: no folding into "+N more". The list keeps today's width (the laptop look,
-  // U23, may widen it), so the six take two lines there too; three take one.
+  // A big window: no folding into "+N more". The list takes the whole window (U24b), so the six
+  // take two lines at most; three take one.
   await page.setViewportSize({ width: 1920, height: 1000 });
   await expect(chip(page, "45 min or less")).toBeVisible();
   await expect(bar.getByRole("button", { name: /^\d+ more filters?$/ })).toHaveCount(0);

@@ -11,7 +11,7 @@ import { PhotoImport } from "../scan/PhotoImport";
 import { LaptopIcon } from "../recipes/LaptopIcon";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 import { usePointer } from "../recipes/usePointer";
-import { SourceIcon, UploadIcon } from "./SourceRow";
+import { SourceCard, SourceIcon, UploadIcon } from "./SourceRow";
 import {
   finishLeavingDiscards,
   importJobs,
@@ -171,62 +171,66 @@ export function ImportPage() {
           className={`${styles.section} ${styles.sourceRow}`}
           aria-labelledby="import-page-title"
         >
-          <SourceIcon path={LAPTOP_ICONS.globe} />
-          <h2 id="import-page-title">From a web page</h2>
-          <p>
-            The Fennl extension for Chrome is on its way. Until then, save the recipe&rsquo;s page
-            in your browser ({MAC ? "⌘S" : "Ctrl+S"}, or File › Save Page As), then choose the saved
-            file here.
-          </p>
-          <label
-            className={`${recipes.primary} ${styles.sourceButton} ${reading ? styles.off : ""}`}
-            aria-disabled={reading}
-          >
-            <input
-              type="file"
-              className="visually-hidden"
-              accept=".html,.htm,text/html"
-              disabled={reading}
-              onChange={(event) => {
-                const file = event.currentTarget.files?.[0];
-                event.currentTarget.value = "";
-                void read(file);
-              }}
-            />
-            <UploadIcon />
-            Import a saved web page
-          </label>
+          <SourceCard>
+            <SourceIcon path={LAPTOP_ICONS.globe} />
+            <h2 id="import-page-title">From a web page</h2>
+            <p>
+              The Fennl extension for Chrome is on its way. Until then, save the recipe&rsquo;s page
+              in your browser ({MAC ? "⌘S" : "Ctrl+S"}, or File › Save Page As), then choose the
+              saved file here.
+            </p>
+            <label
+              className={`${recipes.primary} ${styles.sourceButton} ${reading ? styles.off : ""}`}
+              aria-disabled={reading}
+            >
+              <input
+                type="file"
+                className="visually-hidden"
+                accept=".html,.htm,text/html"
+                disabled={reading}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  event.currentTarget.value = "";
+                  void read(file);
+                }}
+              />
+              <UploadIcon />
+              Import a saved web page
+            </label>
+          </SourceCard>
         </section>
 
         <section
           className={`${styles.section} ${styles.sourceRow}`}
           aria-labelledby="import-paste-title"
         >
-          <SourceIcon path={LAPTOP_ICONS.paste} />
-          <h2 id="import-paste-title">Paste a recipe</h2>
-          <p>
-            Copy a recipe from an email, note, document or message and paste it here. Fennl reads it
-            for you to check before anything is saved.
-          </p>
-          <button
-            ref={pasteButton}
-            type="button"
-            className={`${recipes.primary} ${styles.sourceButton}`}
-            aria-expanded={pasteOpen}
-            aria-controls={pasteOpen ? "import-paste-form" : undefined}
-            disabled={reading && !pasteOpen}
-            onClick={() => {
-              if (pasteOpen) {
-                closePaste();
-                return;
-              }
-              setPasteOpen(true);
-              requestAnimationFrame(() => pasteBox.current?.focus());
-            }}
-          >
-            <LaptopIcon path={LAPTOP_ICONS.paste} />
-            Paste a recipe…
-          </button>
+          <SourceCard>
+            <SourceIcon path={LAPTOP_ICONS.paste} />
+            <h2 id="import-paste-title">Paste a recipe</h2>
+            <p>
+              Copy a recipe from an email, note, document or message and paste it here. Fennl reads
+              it for you to check before anything is saved.
+            </p>
+            <button
+              ref={pasteButton}
+              type="button"
+              className={`${recipes.primary} ${styles.sourceButton}`}
+              aria-expanded={pasteOpen}
+              aria-controls={pasteOpen ? "import-paste-form" : undefined}
+              disabled={reading && !pasteOpen}
+              onClick={() => {
+                if (pasteOpen) {
+                  closePaste();
+                  return;
+                }
+                setPasteOpen(true);
+                requestAnimationFrame(() => pasteBox.current?.focus());
+              }}
+            >
+              <LaptopIcon path={LAPTOP_ICONS.paste} />
+              Paste a recipe…
+            </button>
+          </SourceCard>
           {pasteOpen ? (
             <div id="import-paste-form" className={`${styles.pasteForm} ${styles.subform}`}>
               <label htmlFor="import-paste" className="visually-hidden">

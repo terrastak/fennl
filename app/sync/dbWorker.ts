@@ -614,14 +614,37 @@ function getCategories(): CategoryData {
 /** What's in Trash (phase C9), most recently deleted first. */
 function listTrash(): TrashItem[] {
   const names = new Map(members().map((m) => [m.userId, m.name]));
-  return values<Recipe>("recipe")
-    .filter((recipe) => recipe.deletedAt && !recipe.expungedAt)
-    .map((recipe) => ({
-      id: recipe.id,
-      title: recipe.title,
-      deletedAt: recipe.deletedAt ?? "",
-      addedBy: recipe.ownerUserId === userId ? null : (names.get(recipe.ownerUserId) ?? null),
-    }))
+  const trashed = values<Recipe>("recipe").filter(
+    (recipe) => recipe.deletedAt && !recipe.expungedAt,
+  );
+  if (trashed.length === 0) return [];
+  // What its card shows on a laptop (U24), worked out as the recipe list does.
+  const waiting = new Set(
+    database().selectValues("select distinct key from outbox where kind = 'recipe'") as string[],
+  );
+  const categories = recipeCategories();
+  const mine = new Map(
+    values<RecipeOpinion>("opinion", "and key like ?", [`%|${userId}`])
+      .filter((o) => !o.deletedAt)
+      .map((o) => [o.recipeId, o]),
+  );
+  const coverOf = covers();
+  return trashed
+    .map((recipe) => {
+      const photo = coverOf.get(recipe.id);
+      return {
+        id: recipe.id,
+        title: recipe.title,
+        deletedAt: recipe.deletedAt ?? "",
+        addedBy: recipe.ownerUserId === userId ? null : (names.get(recipe.ownerUserId) ?? null),
+        cover: photo ? { hash: photo.imageHash, width: photo.width, height: photo.height } : null,
+        totalMinutes: recipe.times.total.minutes,
+        categories: categories.get(recipe.id) ?? [],
+        myRating: mine.get(recipe.id)?.rating ?? null,
+        favorite: mine.get(recipe.id)?.favorite ?? false,
+        waiting: waiting.has(recipe.id),
+      };
+    })
     .sort((a, b) => b.deletedAt.localeCompare(a.deletedAt));
 }
 

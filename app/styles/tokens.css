@@ -71,6 +71,13 @@
 
   --sidebar-width: 16rem;
   --content-max: 72rem;
+  /* A page column on a wide laptop window (U24b): Settings, Account, the editor and the like keep
+     their width and stay at the left until the space beside them is wider than this, then move
+     towards the middle, centred once there is this much on each side. So a 1280px window looks as
+     before, and a 1920px one has the column in the middle of the main area. Used as
+     margin-inline-start: max(0px, min(100% - W - var(--page-centre-after), (100% - W) / 2)),
+     W being the column's width. */
+  --page-centre-after: 16rem;
   --tap-target: 2.75rem;
   /* The phone's top bar (app/shell/AppShell.module.css), which stays at the top as the page scrolls. */
   --top-bar-height: 3.75rem;

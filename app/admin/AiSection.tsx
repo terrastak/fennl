@@ -49,7 +49,7 @@ export function AiSection({ laptop = false }: { laptop?: boolean }) {
     // A laptop (U23): the page's title, this month as a white box of rows, the tables in white
     // boxes, then how the reads turned out and the settings (Save the one ink button).
     return (
-      <section className={styles.page} aria-labelledby="ai-title">
+      <section className={`${styles.page} ${styles.settingsPage}`} aria-labelledby="ai-title">
         <header className={styles.pageHead}>
           <h2 id="ai-title" className={styles.pageTitle}>
             AI imports

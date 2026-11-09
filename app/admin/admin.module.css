@@ -1121,13 +1121,37 @@ a.secondary {
     overflow-wrap: anywhere;
   }
 
+  /* The whole window beside the left panel, however wide (U24b): the lists and tables grow with
+     it. An account's page keeps its two columns at 76rem and moves to the middle once there is
+     room (--page-centre-after, tokens.css), so its sentences stay a comfortable length. */
   .frameMain {
     min-width: 0;
-    max-width: 76rem;
+    max-width: none;
     padding: var(--space-5) var(--space-8) var(--space-10);
     font-size: var(--ui-text);
     line-height: var(--ui-leading);
     outline: none;
+  }
+
+  .frameMain:has(.cols) {
+    --page-column: 76rem;
+    max-width: var(--page-column);
+    margin-inline-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
+  }
+
+  /* Codes and sign-up, Plan limits and AI imports: tables of a few short columns and boxes of
+     settings, whose labels and values only drift apart past 100rem, so they stop there and move
+     to the middle (U24b). */
+  .settingsPage {
+    --page-column: 100rem;
+    max-width: var(--page-column);
+    margin-inline-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
   }
 
   /* --- A page's title, and the white boxes of rows ---------------------------------------- */
@@ -1527,7 +1551,9 @@ a.secondary {
 
   .attnRow {
     display: grid;
-    grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto auto;
+    /* The name and address column widens with a wide window (U24b), so less of the address is
+       cut short. */
+    grid-template-columns: minmax(8rem, max(12rem, 20%)) minmax(0, 1fr) auto auto;
     align-items: center;
     gap: var(--space-1) var(--space-4);
     padding: 0.625rem var(--space-2) 0.625rem var(--space-4);
@@ -2233,14 +2259,21 @@ a.secondary {
     margin: 0;
   }
 
+  /* A paragraph that explains a page or a block: the page lede's measure, so its lines stay a
+     comfortable length however wide the window (U24b). */
   .page > .lede,
   .block > .lede {
+    max-width: 62ch;
     margin-top: calc(-1 * var(--space-1));
     color: var(--color-text-muted);
   }
 
   .underBox {
     margin-top: var(--space-2);
+  }
+
+  .hint.underBox {
+    max-width: 62ch;
   }
 
   .underBox > .muted {
@@ -2597,8 +2630,10 @@ a.secondary {
     width: 18%;
   }
 
+  /* What happened: wider on a wide window (U24b), so "Admin role changed (database)" fits on one
+     line once there is room. */
   .activityTable th:nth-child(3) {
-    width: 9.5rem;
+    width: max(9.5rem, 14%);
   }
 
   .activityTable th:nth-child(6) {
@@ -2663,9 +2698,11 @@ a.secondary {
   }
 
   /* --- Feedback: the list with the open message beside it ---------------------------------- */
+  /* The list, then the open message. On a wide window (U24b) the message stops at a reading
+     width and the list takes the rest; up to about 1430px it is as before. */
   .mailCols {
     display: grid;
-    grid-template-columns: minmax(15rem, 21rem) minmax(0, 1fr);
+    grid-template-columns: minmax(21rem, 1fr) minmax(0, 40rem);
     align-items: start;
     gap: var(--space-5);
   }

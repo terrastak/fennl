@@ -8,7 +8,13 @@ import { SyncNotices } from "../sync/SyncNotices";
 import { SyncStatusLine } from "../sync/SyncStatusLine";
 import { useTrashCount } from "../sync/useSync";
 import { FloatingTimers, TimersDialog } from "../timers/Timers";
-import { openTimers, useSoonest } from "../timers/timersView";
+import {
+  openTimers,
+  openTimersFromLeft,
+  timersSide,
+  useSoonest,
+  useView,
+} from "../timers/timersView";
 import styles from "./AppShell.module.css";
 import {
   AccountIcon,
@@ -218,14 +224,19 @@ function TimersButton({
   compact?: boolean;
 }) {
   const { count, text, ringing } = useSoonest();
+  const view = useView();
   const label = count > 0 ? `Timers, ${count} ${count === 1 ? "timer" : "timers"}` : "Timers";
+  // The left panel's Timers opens the panel beside it, and shows as chosen while it's open (U24).
+  const open = !compact && view !== null && view.kind !== "start" && timersSide() === "left";
   return (
     <button
       type="button"
-      className={ringing ? `${className} ${styles.timersRinging}` : className}
+      className={[className, ringing ? styles.timersRinging : "", open ? styles.timersOpen : ""]
+        .filter(Boolean)
+        .join(" ")}
       aria-haspopup="dialog"
       aria-label={label}
-      onClick={openTimers}
+      onClick={compact ? openTimers : openTimersFromLeft}
     >
       <TimerIcon />
       {compact ? (

@@ -458,7 +458,10 @@ function Home({
       ) : null}
       {section === "codes" ? (
         laptop ? (
-          <section className={styles.page} aria-labelledby="codes-page-title">
+          <section
+            className={`${styles.page} ${styles.settingsPage}`}
+            aria-labelledby="codes-page-title"
+          >
             <header className={styles.pageHead}>
               <h2 id="codes-page-title" className={styles.pageTitle}>
                 Codes and sign-up

@@ -419,6 +419,24 @@
    panel under its button; nutrition a row with a button that says what it does. Phones, touch screens and windows under 900px keep the
    editor above. The import review screen's form takes the field rules too (.laptopFields, U23 slice 6). */
 @media (min-width: 900px) and (pointer: fine) {
+  /* A wide window (U24b, owner's request 2026-11-08): the editor keeps its 960px column, moved to
+     the middle of the main area once there is room (--page-centre-after, tokens.css). The editor
+     itself takes the whole width, so its bar's fill and line span the main area from the left
+     panel to the window's edge, its heading and buttons in line with the column. */
+  .editor {
+    --page-column: 60rem;
+    --page-start: max(
+      0px,
+      min(100% - var(--page-column) - var(--page-centre-after), (100% - var(--page-column)) / 2)
+    );
+    max-width: none;
+  }
+
+  .editor > :not(.head) {
+    max-width: var(--page-column);
+    margin-inline-start: var(--page-start);
+  }
+
   /* --- The bar ----------------------------------------------------------------------------- */
   .editor .head {
     position: sticky;
@@ -431,6 +449,8 @@
     min-height: 4rem;
     margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-8)) 0;
     padding: var(--space-2) var(--space-8);
+    padding-inline: calc(var(--space-8) + var(--page-start))
+      calc(var(--space-8) + max(0px, 100% - var(--page-column) - var(--page-start)));
     border-bottom: 1px solid var(--color-border-soft);
     background: var(--color-bg);
     /* The bar's fill and its line run on to the window's right edge, past the editor's width. A

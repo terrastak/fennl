@@ -434,12 +434,29 @@ button.navLink {
     color: inherit;
   }
 
+  /* Timers while its panel is open beside the left panel (U24): shown as chosen, like the page
+     you're on. */
+  .sidebar .navLink.timersOpen:not(.timersRinging) {
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .sidebar .navLink.timersOpen svg {
+    color: inherit;
+  }
+
   .navCount {
     font-size: var(--ui-text-label);
   }
 
-  /* The page margins beside the left panel (U23 slice 2): tighter, as in the mockups. */
+  /* The page margins beside the left panel (U23 slice 2): tighter, as in the mockups. The main
+     area takes the whole window beside the left panel, however wide (U24b, owner's request
+     2026-11-08): lists and grids grow with it, and each page with a column of its own (Settings,
+     the recipe editor, a recipe's page…) keeps that width and moves to the middle once the window
+     has room (--page-centre-after, tokens.css). */
   .main {
+    max-width: none;
     padding: var(--space-5) var(--space-8) var(--space-10);
   }
 }

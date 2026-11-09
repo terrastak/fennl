@@ -38,7 +38,10 @@ export function LimitsSection({ laptop = false }: { laptop?: boolean }) {
   const lede =
     "What each plan allows. Changes reach everyone within about a minute, and ask for your passkey again. For one account, use an exception on its page instead.";
   return (
-    <section className={laptop ? styles.page : styles.card} aria-labelledby="limits-title">
+    <section
+      className={laptop ? `${styles.page} ${styles.settingsPage}` : styles.card}
+      aria-labelledby="limits-title"
+    >
       {laptop ? (
         <header className={styles.pageHead}>
           <h2 id="limits-title" className={styles.pageTitle}>

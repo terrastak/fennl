@@ -939,6 +939,25 @@
     background: color-mix(in srgb, var(--color-text) 14%, transparent);
   }
 
+  /* Opened from the left panel's Timers button (U24, owner's request 2026-11-08): from the left,
+     its left edge right beside the left panel, which stays undimmed with Timers shown as chosen.
+     A click on the left panel still lands on the backdrop, so it closes the panel as a click
+     anywhere outside does. It slides out from under the left panel's edge. */
+  .dialog.fromLeft {
+    /* Never past the window's right edge, even at the largest text size in a narrow window. */
+    width: min(27.5rem, 100vw - var(--sidebar-width, 15rem));
+    margin: 0 auto 0 var(--sidebar-width, 15rem);
+    animation: timers-from-left var(--duration-base) var(--ease-out);
+  }
+
+  .dialog.fromLeft::backdrop {
+    background: linear-gradient(
+      to right,
+      transparent var(--sidebar-width, 15rem),
+      color-mix(in srgb, var(--color-text) 22%, transparent) var(--sidebar-width, 15rem)
+    );
+  }
+
   .panelHead {
     align-items: flex-start;
     gap: var(--space-2);
@@ -2144,7 +2163,23 @@
   }
 }
 
+@keyframes timers-from-left {
+  from {
+    transform: translateX(-100%);
+    clip-path: inset(0 0 0 100%);
+  }
+
+  to {
+    transform: none;
+    clip-path: inset(0);
+  }
+}
+
 @media (min-width: 900px) and (pointer: fine) and (prefers-reduced-motion: reduce) {
+  .dialog.fromLeft {
+    animation: none;
+  }
+
   .track,
   .track::after,
   .howTheyWork summary svg.howIcon {
@@ -2176,6 +2211,10 @@
 
   .dialog {
     border-left: 1px solid;
+  }
+
+  .dialog.fromLeft {
+    border-right: 1px solid;
   }
 
   .chip[aria-pressed="true"],
