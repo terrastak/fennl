@@ -13,7 +13,6 @@ import { dayText, localDay, trashText } from "./format";
 import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
 import styles from "./recipes.module.css";
-import { usePointer } from "./usePointer";
 
 // Trash (phase C9): recipes moved to Trash, each kept for 30 days and then deleted for good
 // (worker/sync/trash.ts). Each can be put back, or deleted for good now; "Empty Trash" deletes
@@ -23,13 +22,18 @@ import { usePointer } from "./usePointer";
 // and Delete for good quiet buttons with small icons, "Empty Trash…" in red words beside the
 // count, the question in a pale red strip under its row (a soft red "Delete for good" with the
 // keyboard focus, then Cancel in plain words), and what happened in the shared done bar above
-// the list. Phones keep the page as it was.
+// the list. Phones kept their list of rows until U24 (below).
 //
 // U24 (owner's request 2026-11-08): on a laptop Trash uses the whole main area like the recipe
 // list, and shows the recipes as the list's own cards in the list's grid (the photo or first
 // letter, the title, stars and time, the categories), each saying when it went to Trash and how
 // long it stays, with Put back and Delete for good as quiet words at its foot. Delete for good's
 // question takes the foot of its card, in the same pale red; Empty Trash's stays under the count.
+//
+// U24 (owner's choice 2026-11-08, "yes, phones should get the Trash cards too"): phones, touch
+// screens and narrow windows show the same cards, two across on a phone as the recipe list shows
+// them, with Put back and Delete for good on the card in touch sizes (one above the other when they
+// don't fit side by side) and the question on the card; the heading and count line as the list's.
 
 const recipesText = (n: number) => `${n} ${n === 1 ? "recipe" : "recipes"}`;
 
@@ -94,7 +98,7 @@ function Confirm({
   );
 }
 
-/** One recipe in Trash as the recipe list's card, on a laptop (U24). */
+/** One recipe in Trash as the recipe list's card (U24). */
 function TrashCard({
   item,
   asking,
@@ -172,7 +176,6 @@ function TrashCard({
 
 export function TrashPage() {
   const items = useTrash();
-  const laptop = usePointer();
   const status = useSyncStatus();
   const editable = canEdit(status);
   const online = status.phase !== "offline" && status.phase !== "starting";
@@ -292,74 +295,23 @@ export function TrashPage() {
             ) : null}
           </div>
           <ul
-            className={laptop ? `${styles.grid} ${styles.trashGrid}` : styles.trashList}
+            className={`${styles.grid} ${styles.twoUp} ${styles.trashGrid}`}
             aria-label="Recipes in Trash"
           >
-            {list.map((item) =>
-              laptop ? (
-                <TrashCard
-                  key={item.id}
-                  item={item}
-                  asking={asking === item.id}
-                  busy={busy}
-                  editable={editable}
-                  online={online}
-                  onRestore={() => void restore(item)}
-                  onAsk={() => setAsking(item.id)}
-                  onConfirm={() => void deleteForGood([item.id])}
-                  onCancel={() => cancel(item.id)}
-                />
-              ) : (
-                <li
-                  key={item.id}
-                  className={`${styles.trashItem} ${asking === item.id ? styles.trashAsking : ""}`}
-                >
-                  <div className={styles.trashText}>
-                    <Link href={`/recipes/${item.id}`} className={styles.trashTitle}>
-                      {item.title || "Untitled"}
-                    </Link>
-                    <span className={styles.hint}>
-                      {item.addedBy ? `Added by ${item.addedBy} · ` : ""}
-                      Moved to Trash {dayText(localDay(new Date(item.deletedAt)))} ·{" "}
-                      {trashText(item.deletedAt)}
-                    </span>
-                  </div>
-                  {asking === item.id ? (
-                    <Confirm
-                      question={`Delete “${item.title || "Untitled"}” for good?`}
-                      action="Delete for good"
-                      busy={busy}
-                      onConfirm={() => void deleteForGood([item.id])}
-                      onCancel={() => cancel(item.id)}
-                    />
-                  ) : (
-                    <div className={styles.trashButtons}>
-                      <button
-                        type="button"
-                        className={`${styles.primary} ${styles.putBack}`}
-                        disabled={!editable}
-                        onClick={() => void restore(item)}
-                      >
-                        <LaptopIcon path={LAPTOP_ICONS.undo} />
-                        Put back
-                        <span className="visually-hidden"> {item.title || "Untitled"}</span>
-                      </button>
-                      <button
-                        type="button"
-                        className={`${styles.textButton} ${styles.deleteForGood}`}
-                        disabled={!online || busy}
-                        data-trash-delete={item.id}
-                        onClick={() => setAsking(item.id)}
-                      >
-                        <LaptopIcon path={LAPTOP_ICONS.trash} />
-                        Delete for good
-                        <span className="visually-hidden"> {item.title || "Untitled"}</span>
-                      </button>
-                    </div>
-                  )}
-                </li>
-              ),
-            )}
+            {list.map((item) => (
+              <TrashCard
+                key={item.id}
+                item={item}
+                asking={asking === item.id}
+                busy={busy}
+                editable={editable}
+                online={online}
+                onRestore={() => void restore(item)}
+                onAsk={() => setAsking(item.id)}
+                onConfirm={() => void deleteForGood([item.id])}
+                onCancel={() => cancel(item.id)}
+              />
+            ))}
           </ul>
         </>
       )}

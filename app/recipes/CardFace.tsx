@@ -8,7 +8,7 @@ import styles from "./recipes.module.css";
 
 // What a recipe's card in the list shows (phase C5, U17 mockup): the cover photo or the first
 // letter, the title, who added it, stars and time, and the categories. Shared by the recipe list
-// and, since U24, Trash on a laptop, so a recipe looks the same in both.
+// and, since U24, Trash, so a recipe looks the same in both.
 
 /** What a card needs to know about a recipe. */
 export type CardRecipe = Pick<
