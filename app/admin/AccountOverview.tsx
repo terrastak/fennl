@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type RefObject } from "react";
-import type { Finding, FindingAction } from "../../shared/accountFindings";
+import type { Finding, FindingAction, HistoryEntry } from "../../shared/accountFindings";
 import { usageLevel } from "../../shared/limits";
 import { verifiedText } from "../account/verified";
 import { formatBytes } from "../pages/plan";
@@ -415,11 +415,13 @@ function Handled({
 // ---------------------------------------------------------------------------------------------
 
 export function WhatHappened({
+  accountId,
   overview,
   filter,
   onFilter,
   headingRef,
 }: {
+  accountId: string;
   overview: AccountOverview | null;
   filter: HistoryFilter;
   onFilter: (next: HistoryFilter) => void;
@@ -428,6 +430,9 @@ export function WhatHappened({
   const id = useId();
   const laptop = usePointer();
   const [days, setDays] = useState<number | null>(30);
+  // The email whose copy is open (U26), one at a time.
+  const [openEmail, setOpenEmail] = useState<string | null>(null);
+  const toggle = (emailId: string) => setOpenEmail((open) => (open === emailId ? null : emailId));
   const now = new Date();
   const { shown, hidden } = overview
     ? historyShown(overview.history, filter, days, now.getTime())
@@ -493,7 +498,17 @@ export function WhatHappened({
                     </span>
                     <span className={styles.tlProb}>
                       {entry.problem ? <span className={styles.prob}>Problem</span> : null}
+                      {entry.email ? (
+                        <EmailLink
+                          email={entry.email}
+                          open={openEmail === entry.email.id}
+                          onToggle={toggle}
+                        />
+                      ) : null}
                     </span>
+                    {entry.email && openEmail === entry.email.id ? (
+                      <EmailCopy accountId={accountId} email={entry.email} />
+                    ) : null}
                   </li>
                 ))}
               </ul>
@@ -560,6 +575,18 @@ export function WhatHappened({
                       {entry.problem ? <span className={styles.prob}>Problem</span> : null}
                     </p>
                     {entry.detail ? <p className={styles.tlDetail}>{entry.detail}</p> : null}
+                    {entry.email ? (
+                      <p className={styles.tlDetail}>
+                        <EmailLink
+                          email={entry.email}
+                          open={openEmail === entry.email.id}
+                          onToggle={toggle}
+                        />
+                      </p>
+                    ) : null}
+                    {entry.email && openEmail === entry.email.id ? (
+                      <EmailCopy accountId={accountId} email={entry.email} />
+                    ) : null}
                   </div>
                 </li>
               ))}
@@ -575,6 +602,119 @@ export function WhatHappened({
 }
 
 // ---------------------------------------------------------------------------------------------
+
+type EmailRef = NonNullable<HistoryEntry["email"]>;
+
+/** Resend's page for an email (U26); signing in to Resend is needed to see it. */
+function resendUrl(resendId: string): string {
+  return `https://resend.com/emails/${encodeURIComponent(resendId)}`;
+}
+
+/**
+ * An email line's link (U26): Show email for one Fennl kept a copy of, else Open in Resend for an
+ * older one Resend knows. Nothing when there's neither.
+ */
+function EmailLink({
+  email,
+  open,
+  onToggle,
+}: {
+  email: EmailRef;
+  open: boolean;
+  onToggle: (emailId: string) => void;
+}) {
+  if (email.copy) {
+    return (
+      <button
+        type="button"
+        className={styles.emailToggle}
+        aria-expanded={open}
+        onClick={() => onToggle(email.id)}
+      >
+        {open ? "Hide email" : "Show email"}
+        <span aria-hidden="true">{open ? " ▴" : " ▾"}</span>
+      </button>
+    );
+  }
+  if (email.resendId) {
+    return (
+      <a
+        className={styles.emailToggle}
+        href={resendUrl(email.resendId)}
+        target="_blank"
+        rel="noreferrer"
+      >
+        Open in Resend<span aria-hidden="true"> ↗</span>
+        <span className="visually-hidden"> (opens in a new tab)</span>
+      </a>
+    );
+  }
+  return null;
+}
+
+/**
+ * Fennl's copy of an email (U26), shown as the person got it in a frame that runs nothing and
+ * whose links do nothing; a link that works like a key to the account was replaced before it was
+ * kept. Open in Resend beside it when Resend knows the email.
+ */
+function EmailCopy({ accountId, email }: { accountId: string; email: EmailRef }) {
+  const [copy, setCopy] = useState<{ subject: string | null; html: string } | "failed" | null>(
+    null,
+  );
+  const [height, setHeight] = useState(320);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(
+      `/api/admin/accounts/${encodeURIComponent(accountId)}/emails/${encodeURIComponent(email.id)}`,
+    )
+      .then((res) =>
+        res.ok ? (res.json() as Promise<{ subject: string | null; html: string }>) : null,
+      )
+      .then((body) => {
+        if (!cancelled) setCopy(body ?? "failed");
+      })
+      .catch(() => {
+        if (!cancelled) setCopy("failed");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, email.id]);
+  return (
+    <div className={styles.emailCopy}>
+      {email.resendId ? (
+        <p className={styles.emailCopyHead}>
+          <a href={resendUrl(email.resendId)} target="_blank" rel="noreferrer">
+            Open in Resend<span aria-hidden="true"> ↗</span>
+            <span className="visually-hidden"> (opens in a new tab)</span>
+          </a>
+        </p>
+      ) : null}
+      {copy === null ? (
+        <p role="status" className={styles.tlDetail}>
+          Loading…
+        </p>
+      ) : copy === "failed" ? (
+        <p role="alert" className={styles.tlDetail}>
+          The email couldn’t be loaded. Try again in a moment.
+        </p>
+      ) : (
+        <iframe
+          className={styles.emailFrame}
+          title={copy.subject ? `The email “${copy.subject}”` : "The email"}
+          // No scripts, no forms, no leaving the frame; links are switched off below.
+          sandbox="allow-same-origin"
+          srcDoc={`${copy.html}<style>a{pointer-events:none}</style>`}
+          style={{ height }}
+          onLoad={(e) => {
+            const body = e.currentTarget.contentDocument?.documentElement;
+            if (body) setHeight(body.scrollHeight + 2);
+          }}
+        />
+      )}
+    </div>
+  );
+}
 
 /** A usage bar with its words; over the limit says so in words too. */
 function Meter({

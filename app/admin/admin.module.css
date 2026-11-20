@@ -645,6 +645,50 @@ a.secondary {
   overflow-wrap: anywhere;
 }
 
+/* An email line's Show email or Open in Resend (U26). */
+.emailToggle {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.emailToggle:hover {
+  text-decoration: underline;
+}
+
+/* Fennl's copy of an email, under its line (U26). */
+.emailCopy {
+  grid-column: 1 / -1;
+  max-width: 36rem;
+  margin: var(--space-2) 0 var(--space-1);
+}
+
+.emailCopyHead {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.emailCopyHead a {
+  color: var(--color-accent);
+}
+
+.emailFrame {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-md);
+}
+
 .tlDetail {
   margin: var(--space-1) 0 0;
   color: var(--color-text-muted);
@@ -2032,7 +2076,10 @@ a.secondary {
   }
 
   .tlProb {
+    display: flex;
     grid-area: prob;
+    gap: var(--space-2);
+    align-items: baseline;
   }
 
   .tlProb .prob {

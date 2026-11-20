@@ -6,6 +6,7 @@ import { isQuickSearchList } from "../shared/quickSearches";
 import { isUnitSystem } from "../shared/scale";
 import { healthStatus } from "../shared/health";
 import { inBackground, recordFailedSignInFrom, removeOldAccountEvents } from "./account/events";
+import { markResetLinkUsed } from "./email/links";
 import { removeUnverifiedAccounts } from "./account/purge";
 import { accountRoutes } from "./account/routes";
 import { signUpRoutes, withSignUpProof } from "./account/signUpRoutes";
@@ -166,7 +167,13 @@ app.on(["GET", "POST"], "/api/auth/*", async (c) => {
   const signUpOrIn = path === "/api/auth/sign-up/email" || path === "/api/auth/sign-in/email";
   const copy = path === "/api/auth/sign-in/email" ? c.req.raw.clone() : null;
   const attempt = copy?.clone() ?? null;
+  // Choosing a new password from the emailed link: that email shows its link was used (U26).
+  const reset =
+    path === "/api/auth/reset-password" && c.req.method === "POST" ? c.req.raw.clone() : null;
   const response = await auth.handler(c.req.raw);
+  if (reset && response.ok) {
+    await inBackground(c, markResetLinkUsed(c.env, reset));
+  }
   // A wrong password (U15): kept against the account whose address was typed, after the answer
   // is sent and without touching it, so it tells nobody whether the address has an account.
   if (attempt && response.status === 401) {

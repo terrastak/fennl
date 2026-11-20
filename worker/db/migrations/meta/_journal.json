@@ -302,6 +302,13 @@
       "when": 1793909168468,
       "tag": "0042_quick_searches",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1795214835735,
+      "tag": "0043_email_copies",
+      "breakpoints": true
     }
   ]
 }

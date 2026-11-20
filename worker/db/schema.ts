@@ -924,9 +924,24 @@ export const emailMessage = sqliteTable(
     statusAt: integer("status_at", { mode: "timestamp_ms" }).notNull(),
     /** The mail server's reason for a bounce, or why it wasn't sent (at most 500 characters). */
     detail: text("detail"),
+    /** The subject, as sent (U26). Null for emails recorded before U26. */
+    subject: text("subject"),
+    /**
+     * Fennl's copy of the email as sent (U26), its HTML with any link that works like a key to
+     * the account (verifying an address, choosing a password) replaced by a note. Null before U26.
+     */
+    copyHtml: text("copy_html"),
+    /**
+     * SHA-256 of what identifies the email's link when it's used (U26): the token in a verify or
+     * reset link, or the ref on a photo email's Account link. Null for emails without one.
+     */
+    linkRef: text("link_ref"),
+    /** When the email's link did its job (U26): address verified, password chosen, page opened. */
+    linkUsedAt: integer("link_used_at", { mode: "timestamp_ms" }),
   },
   (table) => [
     uniqueIndex("email_message_provider_idx").on(table.providerId),
+    index("email_message_link_idx").on(table.linkRef),
     index("email_message_user_idx").on(table.userId, table.sentAt),
     index("email_message_sent_idx").on(table.sentAt),
   ],

@@ -28,6 +28,22 @@ export function AccountPage() {
   const [plan, setPlan] = useState<Entitlements | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Opened from a photo email's button (U26): tell Fennl, so the console shows it was used, and
+  // take the ref out of the address.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("email");
+    if (!ref) return;
+    void fetch("/api/account/email-link", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ref }),
+    }).catch(() => {});
+    params.delete("email");
+    const rest = params.toString();
+    window.history.replaceState(window.history.state, "", `/account${rest ? `?${rest}` : ""}`);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     void authClient.listAccounts().then(({ data }) => {

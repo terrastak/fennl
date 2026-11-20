@@ -33,7 +33,7 @@ function paragraphHtml(p: Paragraph): string {
  */
 function layout(
   paragraphs: Paragraph[],
-  button?: { label: string; url: string },
+  button?: { label: string; url: string } | { removed: string },
   after: Paragraph[] = [],
 ): string {
   const body = paragraphs.map(paragraphHtml).join("\n");
@@ -47,10 +47,32 @@ function layout(
 <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px">
 <p style="margin:0 0 24px;font-size:20px;font-weight:600;color:#24406b">Fennl</p>
 ${body}
-${button ? buttonHtml(button) : ""}${rest}
+${button ? ("removed" in button ? removedHtml(button.removed) : buttonHtml(button)) : ""}${rest}
 </div>
 </body>
 </html>`;
+}
+
+/** In Fennl's copy (U26), where a button whose link works like a key to the account was. */
+function removedHtml(note: string): string {
+  return `<p style="margin:24px 0;padding:8px 12px;border:1px dashed #b9bdb5;border-radius:8px;background:#f6f5f0;color:#5b625c;font-size:14px">${escapeHtml(note)}</p>`;
+}
+
+/**
+ * An email whose button's link works like a key to the account (verifying an address, choosing a
+ * password): the HTML sent, and Fennl's copy with the button replaced by a note saying what was
+ * there (U26), so a copy in the database never holds a working link.
+ */
+function withSecretButton(
+  paragraphs: Paragraph[],
+  button: { label: string; url: string },
+  removed: string,
+  after: Paragraph[] = [],
+): { html: string; copyHtml: string } {
+  return {
+    html: layout(paragraphs, button, after),
+    copyHtml: layout(paragraphs, { removed }, after),
+  };
 }
 
 function buttonHtml(button: { label: string; url: string }): string {
@@ -74,7 +96,11 @@ export function verificationEmail(to: { email: string; name: string }, url: stri
     to: to.email,
     subject: "Verify your email for Fennl",
     text: `${lines[0]}\n\n${lines[1]}\n\n${url}\n\n${lines[2]}\n`,
-    html: layout(lines, { label: "Verify my email", url }),
+    ...withSecretButton(
+      lines,
+      { label: "Verify my email", url },
+      "The button to verify the email address was here. Its link is removed for safety.",
+    ),
   };
 }
 
@@ -88,7 +114,11 @@ export function passwordResetEmail(to: { email: string; name: string }, url: str
     to: to.email,
     subject: "Reset your Fennl password",
     text: `${lines[0]}\n\n${lines[1]}\n\n${url}\n\n${lines[2]}\n`,
-    html: layout(lines, { label: "Choose a new password", url }),
+    ...withSecretButton(
+      lines,
+      { label: "Choose a new password", url },
+      "The button to choose a new password was here. Its link is removed for safety.",
+    ),
   };
 }
 
@@ -158,7 +188,11 @@ export function emailChangeEmail(
     to: to.email,
     subject: "Verify your new email for Fennl",
     text: `${lines[0]}\n\n${lines[1]}\n\n${url}\n\n${lines[2]}\n`,
-    html: layout(lines, { label: "Verify my new email", url }),
+    ...withSecretButton(
+      lines,
+      { label: "Verify my new email", url },
+      "The button to verify the new email address was here. Its link is removed for safety.",
+    ),
   };
 }
 

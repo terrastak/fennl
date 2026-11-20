@@ -1702,6 +1702,16 @@ Small changes the owner asked for while using the app before Stages G and H. Moc
   - Tests: `worker/email/email.test.ts` (every version's words), `worker/images/housekeeping.test.ts` (the grace period sends the trial wording with the Account page link), `worker/codes/codes.test.ts` (`lastEndedGrant`).
 - **You check**: replies to these emails go to the address Fennl sends from (`EMAIL_FROM`); make sure that inbox reaches you, since the emails now invite replies.
 
+### U26. The emails sent to an account, readable in the admin console (owner's choices 2026-11-20)
+- **Asked**: "Now that emails have changed - and may change again in the future - i think the admin panel needs a way for admin to view the actual email text of what was sent to a user." Also whether an email was viewed: decided not to track opens (owner's choice: "it does not sound reliable"; Resend's own tracking page, read 2026-11-20, says open tracking "is generally not accurate" and recommends turning it off for emails like Fennl's). A link to Resend's copy as well (owner's choice), and a line when someone used an email's link (owner's choice). The owner checked the address of an email in Resend's dashboard: `resend.com/emails/<Resend's id>`.
+- **Built (2026-11-20)** (migration `0043`, `worker/email/delivery.ts`, `links.ts`, `templates.ts`, `worker/auth/options.ts`, `worker/index.ts`, `worker/account/routes.ts`, `emailChange.ts`, `worker/images/grace.ts`, `worker/admin/accountRecords.ts`, `attentionRoutes.ts`, `shared/accountFindings.ts`, `app/admin/AccountOverview.tsx`, `accountView.ts`, `admin.module.css`, `app/pages/AccountPage.tsx`):
+  - **Fennl keeps a copy of every email** it sends for an account (subject and HTML), 90 days like the record. A link that works like a key to the account (the sign-up link, a password reset, a new address) is replaced before the copy is kept by a note saying what was there ("The button to choose a new password was here. Its link is removed for safety.").
+  - **On the account page**, What happened names each email by its subject as sent (older ones as before), and **Show email** opens the copy under its line, in a frame that runs nothing and whose links do nothing, with **Open in Resend ↗** above it (Resend's dashboard, where signing in to Resend is needed). An email from before U26 has no copy, so its line offers Open in Resend only.
+  - **When the link was used**, as a second line: "Link used today, 3:06 PM: the password was changed" (or the email was verified, the new address was confirmed), and on photo emails "Subscribe to Premium opened Nov 18, 6:40 PM". Recorded only when the link did its job, so a mail scanner opening links can't fake it; the photo email's button counts only when the person reaches their Account page from it signed in (also after signing in on the way), never while an admin acts as them.
+  - Owner's choice: no words that don't help. The line under What happened no longer says "Nothing older is hidden: this is everything kept." (nor "and nothing older" when it's empty); a mock-up's "Exactly as sent · Subject · date" above the copy was left out too, since the line already says it.
+  - Tests: `worker/email/copies.test.ts` (copies without links, each kind of link used), `worker/admin/attention.test.ts` (the subject, the link used, the copy and Open in Resend), `worker/images/housekeeping.test.ts`, `app/admin/accountView.test.ts`, and opening a copy in `e2e/adminAccount.spec.ts`.
+- **You check**: once live, open an account in the admin console, choose Emails under What happened, and press Show email on a recent one; press Open in Resend (signed in to Resend) and the same email should open there. Emails sent before this change show only Open in Resend. The privacy policy (H2) must say copies of account emails are kept 90 days.
+
 ## Stage G: Premium sharing and history
 
 **Waiting (owner, 2026-10-23):** Stages G and H start only after the owner has used the app on their own for a while and likes how it works. Changes found in that use come first, as their own small changes.
@@ -2049,5 +2059,6 @@ Why Claude Haiku first, and what else was considered. Prices came from third-par
 | U16 | Done 2026-11-04 (merged as #124, titled "U14, part 1" by mistake, and #126; live) |
 | U17 | Built 2026-11-04, waiting for review |
 | U19 | Built 2026-11-05, waiting for review |
-| U25 | Built 2026-11-20, waiting for review |
+| U25 | Done 2026-11-20 (merged as #157; live) |
+| U26 | Built 2026-11-20, waiting for review |
 | All others | Not started |

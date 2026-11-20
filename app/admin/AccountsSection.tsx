@@ -448,6 +448,7 @@ export function AccountPage({
             onFormOpen={onFormOpen}
           />
           <WhatHappened
+            accountId={detail.id}
             overview={overview}
             filter={filter}
             onFilter={setFilter}

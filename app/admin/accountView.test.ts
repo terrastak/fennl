@@ -52,8 +52,8 @@ describe("What happened", () => {
       "1 older entry before 30 days ago. Choose a longer period to see it.",
     );
     // Nothing older: no pointing at a longer period that would show nothing more.
-    expect(periodNote(30, 0, 0)).toMatch(/^Nothing here yet, and nothing older\. Emails/);
-    expect(periodNote(90, 3, 0)).toMatch(/^Nothing older is hidden: this is everything kept\. /);
+    expect(periodNote(30, 0, 0)).toMatch(/^Nothing here yet\. Emails/);
+    expect(periodNote(90, 3, 0)).toMatch(/^Emails, sign-ins and devices are kept for 90 days/);
     expect(periodNote(90, 3, 0)).not.toContain("Choose");
     expect(periodNote(null, 3, 0)).toMatch(/^Emails, sign-ins and devices are kept for 90 days/);
   });

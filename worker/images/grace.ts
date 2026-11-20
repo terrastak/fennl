@@ -114,7 +114,12 @@ export async function photoGracePeriods(
   now = Date.now(),
   appOrigin: string | null = null,
 ): Promise<GraceReport> {
-  const accountUrl = appOrigin ? `${appOrigin}/account` : null;
+  // Each email's button carries a ref of its own, so its record shows when the person opened
+  // the Account page from it, signed in (U26, POST /api/account/email-link).
+  const button = () => {
+    const ref = crypto.randomUUID();
+    return { ref, url: appOrigin ? `${appOrigin}/account?email=${ref}` : null };
+  };
   const d1 = db.$client;
   const report: GraceReport = { started: 0, reminded: 0, ended: 0, deleted: 0 };
   const [owners, opened] = await Promise.all([
@@ -185,11 +190,13 @@ export async function photoGracePeriods(
         if (started.results.length > 0) {
           report.started += 1;
           const ended = await premiumEnded(db, householdId, now);
+          const link = button();
           await email(userId, (to) =>
             send({
-              ...photoGraceStartedEmail(to, new Date(deleteAfter), ended, accountUrl),
+              ...photoGraceStartedEmail(to, new Date(deleteAfter), ended, link.url),
               kind: "photo_grace_started",
               userId,
+              linkRef: link.url ? link.ref : undefined,
             }),
           );
         }
@@ -223,17 +230,13 @@ export async function photoGracePeriods(
       if (marked.results.length > 0) {
         report.reminded += 1;
         const ended = await premiumEnded(db, householdId, now);
+        const link = button();
         await email(userId, (to) =>
           send({
-            ...photoGraceReminderEmail(
-              to,
-              new Date(grace.deleteAfter),
-              daysLeft,
-              ended,
-              accountUrl,
-            ),
+            ...photoGraceReminderEmail(to, new Date(grace.deleteAfter), daysLeft, ended, link.url),
             kind: "photo_grace_reminder",
             userId,
+            linkRef: link.url ? link.ref : undefined,
           }),
         );
       }

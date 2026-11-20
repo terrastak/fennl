@@ -94,6 +94,11 @@ export interface HistoryEntry {
   /** Tied to a finding: marked "Problem". */
   problem: boolean;
   /**
+   * An email's line (U26): its record, whether Fennl kept a copy to show, and Resend's id for it,
+   * for "Open in Resend" (null in local development and previews without Resend).
+   */
+  email?: { id: string; copy: boolean; resendId: string | null };
+  /**
    * Kept for good (sign-up, codes, plan changes, feedback, admin actions); the rest is kept 90
    * days, so "Everything" shows these.
    */
@@ -163,6 +168,11 @@ export interface AccountRecords {
     status: string;
     statusAt: number;
     detail: string | null;
+    /** Since U26: the subject as sent, whether Fennl kept a copy, Resend's id, the link used. */
+    subject?: string | null;
+    hasCopy?: boolean;
+    providerId?: string | null;
+    linkUsedAt?: number | null;
   }[];
   /** Account events in the last 90 days, newest first. */
   events: AccountEvent[];
@@ -341,6 +351,15 @@ const EMAIL_WORDS: Record<string, string> = {
   photo_grace_reminder: "A reminder that photos will be deleted",
 };
 const emailWords = (kind: string) => EMAIL_WORDS[kind] ?? "An email";
+
+/** What using an email's link did (U26), by the email's kind. */
+const LINK_USED_WORDS: Record<string, (when: string) => string> = {
+  verification: (when) => `Link used ${when}: the email was verified`,
+  password_reset: (when) => `Link used ${when}: the password was changed`,
+  email_change: (when) => `Link used ${when}: the new address was confirmed`,
+  photo_grace_started: (when) => `Subscribe to Premium opened ${when}`,
+  photo_grace_reminder: (when) => `Subscribe to Premium opened ${when}`,
+};
 
 const STATUS_WORDS: Record<string, string> = {
   sent: "was sent",
@@ -1137,26 +1156,48 @@ function historyEntries(r: AccountRecords, now: number, timeZone: string, proble
     at: number,
     category: HistoryCategory,
     text: string,
-    options: { detail?: string | null; problem?: boolean; keptForGood?: boolean } = {},
+    options: {
+      detail?: string | null;
+      problem?: boolean;
+      keptForGood?: boolean;
+      email?: HistoryEntry["email"];
+    } = {},
   ) =>
     out.push({
       at: new Date(at).toISOString(),
       category,
       text,
       ...(options.detail ? { detail: options.detail } : {}),
+      ...(options.email ? { email: options.email } : {}),
       problem: options.problem ?? false,
       keptForGood: options.keptForGood ?? false,
     });
 
-  // Emails.
+  // Emails: named by their subject as sent (U26), else by their kind.
+  const clock = (ms: number) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(ms);
   for (const e of r.emails) {
+    const used = e.linkUsedAt ? LINK_USED_WORDS[e.kind] : undefined;
+    const detail = [
+      used && e.linkUsedAt ? used(`${d.relativeDay(e.linkUsedAt)}, ${clock(e.linkUsedAt)}`) : null,
+      e.detail ? `The mail server said: ${e.detail}` : null,
+    ].filter((line): line is string => line !== null);
     add(
       e.sentAt,
       "email",
-      `${emailWords(e.kind)} to ${e.toAddress} ${STATUS_WORDS[e.status] ?? e.status}.`,
+      `${e.subject ? `“${e.subject}”` : emailWords(e.kind)} to ${e.toAddress} ${STATUS_WORDS[e.status] ?? e.status}.`,
       {
-        detail: e.detail ? `The mail server said: ${e.detail}` : null,
+        detail: detail.length > 0 ? detail.join(". ") : null,
         problem: PROBLEM_STATUSES.has(e.status) || problems.has(e.id),
+        email: {
+          id: e.id,
+          copy: e.hasCopy ?? false,
+          resendId: e.providerId && !e.providerId.startsWith("dev-") ? e.providerId : null,
+        },
       },
     );
   }

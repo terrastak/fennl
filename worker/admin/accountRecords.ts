@@ -155,8 +155,22 @@ async function gatherRecords(
       .from(session)
       .where(and(oneOf(session.userId, userIds), isNull(session.impersonatedBy)))
       .all(),
+    // Everything but the copies themselves (U26), which the console fetches one at a time.
     db
-      .select()
+      .select({
+        id: emailMessage.id,
+        userId: emailMessage.userId,
+        kind: emailMessage.kind,
+        toAddress: emailMessage.toAddress,
+        sentAt: emailMessage.sentAt,
+        status: emailMessage.status,
+        statusAt: emailMessage.statusAt,
+        detail: emailMessage.detail,
+        subject: emailMessage.subject,
+        providerId: emailMessage.providerId,
+        linkUsedAt: emailMessage.linkUsedAt,
+        hasCopy: sql<number>`${emailMessage.copyHtml} is not null`,
+      })
       .from(emailMessage)
       .where(and(oneOf(emailMessage.userId, userIds), gt(emailMessage.sentAt, emailsSince)))
       .orderBy(desc(emailMessage.sentAt))
@@ -314,6 +328,10 @@ async function gatherRecords(
         status: e.status,
         statusAt: e.statusAt.getTime(),
         detail: e.detail,
+        subject: e.subject,
+        hasCopy: Boolean(e.hasCopy),
+        providerId: e.providerId,
+        linkUsedAt: ms(e.linkUsedAt),
       })),
       events: events.flatMap((e) => {
         const parsed = parseAccountEvent({
