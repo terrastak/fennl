@@ -468,7 +468,12 @@ async function scheduled(controller: ScheduledController, env: Env) {
   // objects of every photo removed, and once a day a check of the rows against R2.
   const unused = await markUnusedImages(db);
   if (unused > 0) console.log(`Removed ${unused} photo(s) nothing has shown for a week`);
-  const grace = await photoGracePeriods(db, createEmailSender(env));
+  const grace = await photoGracePeriods(
+    db,
+    createEmailSender(env),
+    Date.now(),
+    env.APP_HOSTNAME ? `https://${env.APP_HOSTNAME}` : null,
+  );
   if (Object.values(grace).some((n) => n > 0)) console.log("Photo grace periods", grace);
   const purged = await purgeDeletedImages(db, env.IMAGES);
   if (purged > 0) console.log(`Deleted the stored copies of ${purged} removed photo(s)`);

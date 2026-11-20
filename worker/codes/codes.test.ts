@@ -4,7 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { AdminCode, AdminCodeUse } from "../../shared/codes";
 import type { Entitlements } from "../../shared/entitlements";
 import { database } from "../db/client";
-import { adminAuditLog, premiumGrant, promoCode, session, user } from "../db/schema";
+import { adminAuditLog, adminGrant, premiumGrant, promoCode, session, user } from "../db/schema";
 import { writeSetting } from "../settings/settings";
 import {
   PASSWORD,
@@ -15,7 +15,7 @@ import {
   type Visitor,
 } from "../test/visitor";
 import { createCode } from "./admin";
-import { activeGrant, generateCode, normalizeCode, redeemCode } from "./codes";
+import { activeGrant, generateCode, lastEndedGrant, normalizeCode, redeemCode } from "./codes";
 import { SIGN_UP_CODE_COOKIE, checkSignUp, grantSignUpCode } from "./signUp";
 
 const db = () => database(env.DB);
@@ -379,6 +379,35 @@ describe("using a code from the Account page", () => {
     const householdId = (await v.session())!.session.activeOrganizationId!;
     expect(await activeGrant(db(), householdId)).not.toBeNull();
     expect(await activeGrant(db(), householdId, new Date(Date.now() + 6 * DAY))).toBeNull();
+  });
+
+  it("says which free Premium ended last, for the photo emails", async () => {
+    await inviteOnly(false);
+    const v = await signUpConfirmed(email("lastended"));
+    const s = (await v.session())!;
+    const householdId = s.session.activeOrganizationId!;
+    expect(await lastEndedGrant(db(), householdId)).toBeNull();
+    await redeem(v, (await makeCode({ days: 5 })).code);
+    // Still going: nothing has ended.
+    expect(await lastEndedGrant(db(), householdId)).toBeNull();
+    const later = new Date(Date.now() + 6 * DAY);
+    const codeEnded = await lastEndedGrant(db(), householdId, later);
+    expect(codeEnded?.source).toBe("promo_code");
+    // Premium given from the admin console that ended after the code's.
+    const adminEnd = new Date(Date.now() + 5.5 * DAY);
+    await db().insert(adminGrant).values({
+      id: crypto.randomUUID(),
+      householdId,
+      userId: s.user.id,
+      tier: "individual",
+      startsAt: new Date(),
+      endsAt: adminEnd,
+      createdAt: new Date(),
+    });
+    expect(await lastEndedGrant(db(), householdId, later)).toEqual({
+      source: "admin_grant",
+      endedAt: adminEnd,
+    });
   });
 
   it("is limited in how fast codes can be tried", async () => {

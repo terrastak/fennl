@@ -7,16 +7,47 @@ function escapeHtml(value: string): string {
   );
 }
 
-/** Plain, readable HTML with inline styles and no images or tracking, so it lands in inboxes. */
-function layout(paragraphs: string[], button?: { label: string; url: string }): string {
-  const body = paragraphs.map((p) => `<p style="margin:0 0 16px">${escapeHtml(p)}</p>`).join("\n");
+/** A paragraph: plain text, or parts of it in bold. A line break ("\n") is kept. */
+type Paragraph = string | Array<string | { bold: string }>;
+
+function paragraphText(p: Paragraph): string {
+  return typeof p === "string"
+    ? p
+    : p.map((part) => (typeof part === "string" ? part : part.bold)).join("");
+}
+
+function paragraphHtml(p: Paragraph): string {
+  const parts = typeof p === "string" ? [p] : p;
+  const inner = parts
+    .map((part) =>
+      typeof part === "string" ? escapeHtml(part) : `<strong>${escapeHtml(part.bold)}</strong>`,
+    )
+    .join("")
+    .replace(/\n/g, "<br>");
+  return `<p style="margin:0 0 16px">${inner}</p>`;
+}
+
+/**
+ * Plain, readable HTML with inline styles and no images or tracking, so it lands in inboxes. The
+ * button, if any, comes after the paragraphs, then the paragraphs `after` it.
+ */
+function layout(
+  paragraphs: Paragraph[],
+  button?: { label: string; url: string },
+  after: Paragraph[] = [],
+): string {
+  const body = paragraphs.map(paragraphHtml).join("\n");
+  const rest =
+    after.length > 0
+      ? `\n<div style="margin-top:24px">${after.map(paragraphHtml).join("\n")}</div>`
+      : "";
   return `<!doctype html>
 <html lang="en">
 <body style="margin:0;padding:24px;background:#f6f5f0;color:#1d2420;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;font-size:16px;line-height:1.5">
 <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px">
 <p style="margin:0 0 24px;font-size:20px;font-weight:600;color:#24406b">Fennl</p>
 ${body}
-${button ? buttonHtml(button) : ""}
+${button ? buttonHtml(button) : ""}${rest}
 </div>
 </body>
 </html>`;
@@ -160,47 +191,146 @@ function longDate(when: Date): string {
   });
 }
 
+/** "January 7", for a date already given in full. */
+function monthDay(when: Date): string {
+  return when.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" });
+}
+
 /**
- * The start of the 90-day photo grace period (phase D3): the person's plan no longer includes
- * photos. Nothing to click; the app says the same in Settings.
+ * What the person had before their plan stopped including photos, so the photo emails can say
+ * what ended: free Premium from an invite or promo code, Premium given from the admin console
+ * (both called a trial), a paid subscription (Stage I), or not known.
+ */
+export type PremiumEnded =
+  { kind: "code" | "admin" | "subscription"; endedAt: Date } | { kind: "unknown" };
+
+const SIGN_OFF = "Happy cooking,\nThe Fennl team";
+
+/** The photo emails' button: the Account page for now (codes), checkout once billing exists. */
+function subscribeButton(accountUrl: string | null) {
+  return accountUrl ? { label: "Subscribe to Premium", url: accountUrl } : undefined;
+}
+
+/** The plain-text version of an email with a button between its paragraphs. */
+function plainText(
+  before: Paragraph[],
+  button: { label: string; url: string } | undefined,
+  after: Paragraph[],
+): string {
+  const parts = [...before.map(paragraphText)];
+  if (button) parts.push(`${button.label}: ${button.url}`);
+  parts.push(...after.map(paragraphText));
+  return `${parts.join("\n\n")}\n`;
+}
+
+/** How to keep the photos, by what ended (wording approved by the owner 2026-11-20). */
+function keepPhotos(ended: PremiumEnded, before: string, again: boolean): Paragraph {
+  if (ended.kind === "subscription") {
+    return [
+      {
+        bold: `To keep your photos, you can subscribe to Premium${again ? " again" : ""} before ${before}.`,
+      },
+      " If you have any questions, just reply to this email and we'll help.",
+    ];
+  }
+  return [
+    { bold: `To keep your photos, you can subscribe to Premium before ${before}.` },
+    " If you have a new code, you can add it on your Account page. If you need more time to try Premium, just reply to this email and we'll help.",
+  ];
+}
+
+/**
+ * The start of the 90-day photo grace period (phase D3): the person's Premium ended, so their
+ * plan no longer includes photos. Says what ended (a trial from a code, or a subscription), that
+ * the photos are kept until the date and then permanently deleted, and how to keep them. The
+ * button opens the Account page (`accountUrl`; none where the app's address isn't known).
  */
 export function photoGraceStartedEmail(
   to: { email: string; name: string },
   deleteAfter: Date,
+  ended: PremiumEnded,
+  accountUrl: string | null,
 ): EmailContent {
   const date = longDate(deleteAfter);
-  const lines = [
+  const before = monthDay(deleteAfter);
+  const subject =
+    ended.kind === "subscription"
+      ? "Your Fennl Premium subscription has ended."
+      : ended.kind === "unknown"
+        ? "Your Fennl Premium has ended."
+        : "Your Fennl Premium trial has ended.";
+  const what =
+    ended.kind === "code"
+      ? `Thank you for trying Fennl Premium. Your free trial from your invite code ended on ${longDate(ended.endedAt)}, so your account is now on Fennl Free.`
+      : ended.kind === "admin"
+        ? `Thank you for trying Fennl Premium. Your free Premium trial ended on ${longDate(ended.endedAt)}, so your account is now on Fennl Free.`
+        : ended.kind === "subscription"
+          ? `Thank you for being a Fennl Premium subscriber. Your subscription ended on ${longDate(ended.endedAt)}, so your account is now on Fennl Free.`
+          : "Thank you for using Fennl Premium. Your account no longer has Premium, so it's now on Fennl Free.";
+  const lines: Paragraph[] = [
     greeting(to.name),
-    `Your Fennl plan no longer includes photos, so the photos you've added to recipes will be kept until ${date}, then deleted.`,
-    "Until then you can still see them, and download them with your recipes from Settings › Download your recipes.",
-    `If you have Premium again before ${date}, your photos stay. Your recipes themselves are never deleted.`,
+    what,
+    "Your recipes are all still here, and they always will be. You can keep opening, cooking from and editing them just as before.",
+    [
+      "Fennl Free doesn't include photos, so we'll keep the photos you've added safe for 90 days, until ",
+      { bold: date },
+      ". After that date, they will be permanently deleted. Until then you can see them as usual, and download them with your recipes any time from Settings › Download your recipes.",
+    ],
+    keepPhotos(ended, before, true),
   ];
+  const after: Paragraph[] = [
+    `If you'd rather stay on the free plan, please download any photos you want to keep before ${before}. We'll send you a reminder before then.`,
+    SIGN_OFF,
+  ];
+  const button = subscribeButton(accountUrl);
   return {
     to: to.email,
-    subject: `Your Fennl photos are kept until ${date}`,
-    text: `${lines.join("\n\n")}\n`,
-    html: layout(lines),
+    subject,
+    text: plainText(lines, button, after),
+    html: layout(lines, button, after),
   };
 }
 
-/** A reminder during the photo grace period (phase D3), some days before the photos go. */
+/**
+ * A reminder during the photo grace period (phase D3), at 30, 7 and 1 days left: the photos are
+ * kept until the date, then permanently deleted (the last one says they're deleted tomorrow).
+ */
 export function photoGraceReminderEmail(
   to: { email: string; name: string },
   deleteAfter: Date,
   daysLeft: number,
+  ended: PremiumEnded,
+  accountUrl: string | null,
 ): EmailContent {
   const date = longDate(deleteAfter);
-  const when = daysLeft <= 1 ? "tomorrow" : `in ${daysLeft} days`;
-  const lines = [
+  const tomorrow = daysLeft <= 1;
+  const lines: Paragraph[] = [
     greeting(to.name),
-    `The photos you've added to Fennl recipes will be deleted ${when}, on ${date}, because your plan no longer includes photos.`,
-    "To keep a copy, download them with your recipes from Settings › Download your recipes.",
-    `If you have Premium again before ${date}, your photos stay. Your recipes themselves are never deleted.`,
+    tomorrow
+      ? [
+          "Just a reminder: the photos you've added to Fennl recipes will be permanently deleted tomorrow, ",
+          { bold: date },
+          ".",
+        ]
+      : [
+          "Just a reminder: the photos you've added to Fennl recipes are kept until ",
+          { bold: date },
+          `, ${daysLeft} days from now. After that date, they will be permanently deleted.`,
+        ],
+    // Bold only in the first email; here the date above is the one to see.
+    paragraphText(keepPhotos(ended, "then", false)),
   ];
+  const after: Paragraph[] = [
+    "If you'd rather stay on the free plan, please download any photos you want to keep from Settings › Download your recipes. Your recipes themselves are never deleted.",
+    SIGN_OFF,
+  ];
+  const button = subscribeButton(accountUrl);
   return {
     to: to.email,
-    subject: `Your Fennl photos will be deleted ${when}`,
-    text: `${lines.join("\n\n")}\n`,
-    html: layout(lines),
+    subject: tomorrow
+      ? "Your Fennl photos will be deleted tomorrow"
+      : `A reminder: your Fennl photos are kept until ${date}`,
+    text: plainText(lines, button, after),
+    html: layout(lines, button, after),
   };
 }

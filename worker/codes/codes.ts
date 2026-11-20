@@ -244,3 +244,61 @@ export async function activeGrants(
   }
   return best;
 }
+
+/** How a household's free Premium last ended: where it came from, and when. */
+export interface EndedGrant {
+  source: "promo_code" | "admin_grant";
+  endedAt: Date;
+}
+
+/**
+ * The Premium from a code, or given by an admin, that ended most recently for a household (its
+ * end date passed, or an admin ended it early), so the photo emails can say what ended. Null when
+ * none did, such as a household that never had free Premium.
+ */
+export async function lastEndedGrant(
+  db: Database,
+  householdId: string,
+  now = new Date(),
+): Promise<EndedGrant | null> {
+  const [codeRows, adminRows] = await Promise.all([
+    db
+      .select({
+        tier: premiumGrant.tier,
+        endsAt: premiumGrant.endsAt,
+        revokedAt: premiumGrant.revokedAt,
+        accessUntil: promoCode.accessUntil,
+      })
+      .from(premiumGrant)
+      .innerJoin(promoCode, eq(premiumGrant.promoCodeId, promoCode.id))
+      .where(eq(premiumGrant.householdId, householdId))
+      .all(),
+    db
+      .select({ tier: adminGrant.tier, endsAt: adminGrant.endsAt, revokedAt: adminGrant.revokedAt })
+      .from(adminGrant)
+      .where(eq(adminGrant.householdId, householdId))
+      .all(),
+  ]);
+  const ended = [
+    ...codeRows.map((row) => ({
+      tier: row.tier,
+      endedAt: row.revokedAt ?? row.endsAt ?? row.accessUntil,
+      source: "promo_code" as const,
+    })),
+    ...adminRows.map((row) => ({
+      tier: row.tier,
+      endedAt: row.revokedAt ?? row.endsAt,
+      source: "admin_grant" as const,
+    })),
+  ].filter(
+    (row): row is EndedGrant & { tier: string } =>
+      isPaidTier(row.tier) && row.endedAt !== null && row.endedAt <= now,
+  );
+  let latest: EndedGrant | null = null;
+  for (const row of ended) {
+    if (!latest || row.endedAt > latest.endedAt) {
+      latest = { source: row.source, endedAt: row.endedAt };
+    }
+  }
+  return latest;
+}

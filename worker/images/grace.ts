@@ -1,6 +1,11 @@
+import { lastEndedGrant } from "../codes/codes";
 import type { Database } from "../db/client";
 import type { SendEmail } from "../email/email";
-import { photoGraceReminderEmail, photoGraceStartedEmail } from "../email/templates";
+import {
+  photoGraceReminderEmail,
+  photoGraceStartedEmail,
+  type PremiumEnded,
+} from "../email/templates";
 import { householdEntitlements } from "../entitlements/entitlements";
 import { activeHouseholdFor } from "../household/household";
 import { bump, seq } from "../sync/push";
@@ -84,14 +89,32 @@ export async function deletePhotosOf(db: Database, userId: string, now = Date.no
 }
 
 /**
+ * What a household had before its plan stopped including photos, for the emails: the free
+ * Premium (from a code, or given by an admin) that ended most recently. Paid subscriptions
+ * arrive in Stage I; until then anything else is "unknown".
+ */
+export async function premiumEnded(
+  db: Database,
+  householdId: string,
+  now: number,
+): Promise<PremiumEnded> {
+  const grant = await lastEndedGrant(db, householdId, new Date(now));
+  if (!grant) return { kind: "unknown" };
+  return { kind: grant.source === "admin_grant" ? "admin" : "code", endedAt: grant.endedAt };
+}
+
+/**
  * Starts, reminds, ends and finishes grace periods. Looks at everyone with photos or a grace
- * period under way, which only Premium (now or before) can have.
+ * period under way, which only Premium (now or before) can have. `appOrigin` is the app's own
+ * address, for the emails' button to the Account page (none where it isn't known).
  */
 export async function photoGracePeriods(
   db: Database,
   send: SendEmail,
   now = Date.now(),
+  appOrigin: string | null = null,
 ): Promise<GraceReport> {
+  const accountUrl = appOrigin ? `${appOrigin}/account` : null;
   const d1 = db.$client;
   const report: GraceReport = { started: 0, reminded: 0, ended: 0, deleted: 0 };
   const [owners, opened] = await Promise.all([
@@ -161,9 +184,10 @@ export async function photoGracePeriods(
           .all();
         if (started.results.length > 0) {
           report.started += 1;
+          const ended = await premiumEnded(db, householdId, now);
           await email(userId, (to) =>
             send({
-              ...photoGraceStartedEmail(to, new Date(deleteAfter)),
+              ...photoGraceStartedEmail(to, new Date(deleteAfter), ended, accountUrl),
               kind: "photo_grace_started",
               userId,
             }),
@@ -198,9 +222,16 @@ export async function photoGracePeriods(
         .all();
       if (marked.results.length > 0) {
         report.reminded += 1;
+        const ended = await premiumEnded(db, householdId, now);
         await email(userId, (to) =>
           send({
-            ...photoGraceReminderEmail(to, new Date(grace.deleteAfter), daysLeft),
+            ...photoGraceReminderEmail(
+              to,
+              new Date(grace.deleteAfter),
+              daysLeft,
+              ended,
+              accountUrl,
+            ),
             kind: "photo_grace_reminder",
             userId,
           }),
