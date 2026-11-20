@@ -123,6 +123,56 @@ describe("the overview", () => {
   });
 });
 
+describe("emails on the account page (U26)", () => {
+  it("names each email by its subject, says when its link was used, and opens Fennl's copy", async () => {
+    const { v, userId } = await person("copies");
+    const { userId: otherId } = await person("copiesother");
+    const page = await overview(userId);
+    const line = page.body.history.find((h) => h.text.startsWith("“Verify your email for Fennl”"));
+    expect(line?.email).toMatchObject({ copy: true, resendId: null });
+    // Signing up confirmed the address with the email's link.
+    expect(line?.detail).toMatch(
+      /^Link used today, \d{1,2}:\d{2}\s?[AP]M: the email was verified$/,
+    );
+
+    const copy = await call<{ subject: string; html: string }>(
+      `/api/admin/accounts/${userId}/emails/${line!.email!.id}`,
+    );
+    expect(copy.status).toBe(200);
+    expect(copy.body.subject).toBe("Verify your email for Fennl");
+    expect(copy.body.html).toContain("Its link is removed for safety.");
+    // Only the account's own emails, only for admins.
+    expect((await call(`/api/admin/accounts/${otherId}/emails/${line!.email!.id}`)).status).toBe(
+      404,
+    );
+    expect(
+      (await v.request(`/api/admin/accounts/${userId}/emails/${line!.email!.id}`)).status,
+    ).toBe(403);
+
+    // An email from before U26: no copy, and Open in Resend when Resend knows it.
+    const old = crypto.randomUUID();
+    await db().insert(emailMessage).values({
+      id: old,
+      providerId: "01a1edbb-efcc-73cc-b02d-31547ff4adba",
+      userId,
+      kind: "password_reset",
+      toAddress: "copies@example.com",
+      sentAt: new Date(),
+      status: "delivered",
+      statusAt: new Date(),
+    });
+    const again = await overview(userId);
+    const oldLine = again.body.history.find((h) => h.email?.id === old);
+    expect(oldLine?.text).toBe("“Reset your Fennl password” to copies@example.com was delivered.");
+    expect(oldLine?.email).toEqual({
+      id: old,
+      copy: false,
+      resendId: "01a1edbb-efcc-73cc-b02d-31547ff4adba",
+    });
+    expect((await call(`/api/admin/accounts/${userId}/emails/${old}`)).status).toBe(404);
+  });
+});
+
 describe("Extend Premium", () => {
   const extend = (userId: string, body: Record<string, unknown>) =>
     call<AccountDetail & { error?: string }>(`/api/admin/accounts/${userId}/premium`, { body });

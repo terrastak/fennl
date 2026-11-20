@@ -6,6 +6,7 @@ import { database, type Database } from "../db/client";
 import { session, user } from "../db/schema";
 import { createEmailSender } from "../email/email";
 import { removeSuppression } from "../email/suppressions";
+import { markLinkUsed } from "../email/links";
 import { emailChangeEmail, emailChangedNotice } from "../email/templates";
 import { requireHousehold } from "../household/requireHousehold";
 import { withinRateLimit } from "../rateLimit";
@@ -41,6 +42,8 @@ export async function sendEmailChangeLink(
     ...emailChangeEmail(to, link, bySupport),
     kind: "email_change",
     userId,
+    // The token, so the email's record shows when the link was used (U26).
+    linkRef: new URL(link).searchParams.get("token") ?? undefined,
   }).catch((error: unknown) => console.error("Email change link not sent", error));
 }
 
@@ -147,6 +150,19 @@ accountRoutes.post("/api/account/email/address-is-right", requireHousehold, asyn
   if (result === null) return c.json({ error: "unauthorized" }, 401);
   if (result !== "removed") console.log(`"This address is right": suppression ${result}`);
   return c.json({ ok: true });
+});
+
+/**
+ * The Account page opened from a photo email's button (U26): `{ref}` from the link marks that
+ * email as used, only the signed-in person's own and only the first time. Nothing is recorded
+ * while an admin acts as the person. Always 204, so it says nothing about the ref.
+ */
+accountRoutes.post("/api/account/email-link", requireHousehold, async (c) => {
+  const { db, userId, impersonating } = c.var.signedIn;
+  if (impersonating) return c.body(null, 204);
+  const body = (await c.req.json().catch(() => null)) as { ref?: unknown } | null;
+  if (typeof body?.ref === "string") await markLinkUsed(db, body.ref, { userId });
+  return c.body(null, 204);
 });
 
 /**

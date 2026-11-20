@@ -10,6 +10,11 @@ export interface EmailContent {
   subject: string;
   text: string;
   html: string;
+  /**
+   * The copy Fennl keeps (U26), when it differs from `html`: a link that works like a key to the
+   * account replaced by a note. Left out, `html` is kept as it is.
+   */
+  copyHtml?: string;
 }
 
 /** One email to send: its content, which kind it is and whose account it's about. */
@@ -17,6 +22,11 @@ export interface EmailMessage extends EmailContent {
   kind: EmailKind;
   /** The account it's sent for; null for notices to Fennl's owner (not recorded). */
   userId: string | null;
+  /**
+   * What identifies the email's link when it's used (U26): the token in a verify or reset link,
+   * or a photo email's ref. Only its SHA-256 is kept (./links.ts).
+   */
+  linkRef?: string | undefined;
 }
 
 /** What the email service answered: its id for the email, when it gives one. */

@@ -395,7 +395,11 @@ describe("the 90-day photo grace period", () => {
     // It says the code's trial ended, and links to the Account page.
     expect(mine().map((m) => m.subject)).toEqual(["Your Fennl Premium trial has ended."]);
     expect(mine()[0]?.text).toContain("Your free trial from your invite code ended on");
-    expect(mine()[0]?.text).toContain("Subscribe to Premium: https://app.example/account");
+    // Its button carries a ref, so the console can show it was used (U26).
+    expect(mine()[0]?.text).toMatch(
+      /Subscribe to Premium: https:\/\/app\.example\/account\?email=[0-9a-f-]{36}/,
+    );
+    expect(mine()[0]?.linkRef).toMatch(/^[0-9a-f-]{36}$/);
     // Settings shows until when, and the photos are still there to see.
     const usage = (await pullAll(june)).usage.photos;
     expect(usage).toMatchObject({ enabled: false, count: 1 });

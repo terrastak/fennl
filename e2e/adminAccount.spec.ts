@@ -98,6 +98,23 @@ test("Needs attention lists an address that bounces; marking it handled takes it
   await expect(events.getByRole("listitem").filter({ hasText: "bounced" }).first()).toContainText(
     "Problem",
   );
+  // Each email opens Fennl's copy, as sent, its sign-up link removed (U26).
+  const signUpEmail = events
+    .getByRole("listitem")
+    .filter({ hasText: "“Verify your email for Fennl”" })
+    .first();
+  await signUpEmail.getByRole("button", { name: "Show email" }).click();
+  const copy = signUpEmail.frameLocator("iframe");
+  await expect(copy.getByText("Please verify your email address")).toBeVisible();
+  await expect(copy.getByText("Its link is removed for safety.")).toBeVisible();
+  // The checker can't run inside the email's frame, which runs nothing by design.
+  const withCopy = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "best-practice"])
+    .exclude("iframe")
+    .analyze();
+  expect(withCopy.violations.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
+  await signUpEmail.getByRole("button", { name: "Hide email" }).click();
+  await expect(signUpEmail.locator("iframe")).toHaveCount(0);
   await show.getByRole("button", { name: "Plan and limits" }).click();
   await expect(events.getByRole("listitem").first()).toContainText(/Signed up/);
   await period.selectOption({ label: "Everything" });

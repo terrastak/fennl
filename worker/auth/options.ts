@@ -8,6 +8,7 @@ import { checkSignUp, grantSignUpCode } from "../codes/signUp";
 import type { Database } from "../db/client";
 import * as schema from "../db/schema";
 import type { SendEmail } from "../email/email";
+import { markLinkUsed } from "../email/links";
 import { passwordResetEmail, verificationEmail } from "../email/templates";
 import { activeHouseholdFor } from "../household/household";
 import { signInMethodFor, type SignInMethod } from "./signInMethod";
@@ -86,11 +87,13 @@ export function authOptions(settings: AuthSettings) {
           .set({ mustChangePassword: false })
           .where(eq(schema.user.id, person.id));
       },
-      sendResetPassword: async ({ user, url }) => {
+      sendResetPassword: async ({ user, url, token }) => {
         await settings.sendEmail({
           ...passwordResetEmail(user, url),
           kind: "password_reset",
           userId: user.id,
+          // The email's record shows when its link chose a password (U26, worker/index.ts).
+          linkRef: token,
         });
       },
     },
@@ -100,12 +103,18 @@ export function authOptions(settings: AuthSettings) {
       sendOnSignIn: true,
       autoSignInAfterVerification: true,
       expiresIn: 60 * 60 * 24,
-      sendVerificationEmail: async ({ user, url }) => {
+      sendVerificationEmail: async ({ user, url, token }) => {
         await settings.sendEmail({
           ...verificationEmail(user, url),
           kind: "verification",
           userId: user.id,
+          linkRef: token,
         });
+      },
+      // The email whose link verified the address shows it was used (U26).
+      afterEmailVerification: async (_user, request) => {
+        const token = request ? new URL(request.url).searchParams.get("token") : null;
+        if (token) await markLinkUsed(settings.db, token);
       },
     },
     socialProviders,

@@ -3,14 +3,16 @@ import { EMAIL_RECORD_DAYS } from "../../shared/emailDelivery";
 import type { Database } from "../db/client";
 import { emailMessage } from "../db/schema";
 import type { EmailMessage, SentEmail } from "./email";
+import { linkRefHash } from "./links";
 
 /** The longest reason from a mail server Fennl keeps. */
 export const MAX_DETAIL_LENGTH = 500;
 
 /**
- * Records one email sent for an account (phase U14): its kind, the address and when, never its
- * words. A refusal by the email service is recorded as `failed` with its reason (which never
- * holds the key: ./resend.ts).
+ * Records one email sent for an account (phase U14): its kind, the address and when, and since
+ * U26 its subject and Fennl's copy of it (`copyHtml`: any link that works like a key to the
+ * account replaced by a note) and the SHA-256 of its link's token or ref. A refusal by the email
+ * service is recorded as `failed` with its reason (which never holds the key: ./resend.ts).
  */
 export async function recordSentEmail(
   db: Database,
@@ -30,6 +32,9 @@ export async function recordSentEmail(
     status: failed ? "failed" : "sent",
     statusAt: now,
     detail: failed ? outcome.message.slice(0, MAX_DETAIL_LENGTH) : null,
+    subject: message.subject,
+    copyHtml: message.copyHtml ?? message.html,
+    linkRef: message.linkRef ? await linkRefHash(message.linkRef) : null,
   });
 }
 

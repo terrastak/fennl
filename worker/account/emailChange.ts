@@ -6,6 +6,7 @@ import {
 } from "../../shared/email";
 import type { Database } from "../db/client";
 import { emailChange, user } from "../db/schema";
+import { markLinkUsed } from "../email/links";
 
 // Changing an account's email address (phase B7a). Better Auth's own email change is off; this
 // one keeps every change (email_change), so the admin console can show the history and put back
@@ -192,6 +193,8 @@ export async function completeEmailChange(
     if (isUniqueViolation(error)) return { result: "in_use" };
     throw error;
   }
+  // The email whose link this was shows it was used (U26).
+  await markLinkUsed(db, token, { userId: change.userId }, now);
   return {
     result: "done",
     userId: change.userId,

@@ -86,9 +86,9 @@ export function periodNote(days: number | null, shown: number, hidden: number): 
   if (hidden > 0) {
     return `${hidden} older ${hidden === 1 ? "entry" : "entries"} before ${days} days ago. Choose a longer period to see ${hidden === 1 ? "it" : "them"}.`;
   }
-  // The period hides nothing, so a longer one would show nothing more.
-  if (shown === 0) return `Nothing here yet, and nothing older. ${KEPT}`;
-  return `Nothing older is hidden: this is everything kept. ${KEPT}`;
+  // The period hides nothing: no words saying so (owner's choice 2026-11-20, U26).
+  if (shown === 0) return `Nothing here yet. ${KEPT}`;
+  return KEPT;
 }
 
 /** "2 things need you · 2 worth knowing · 6 checks fine". */

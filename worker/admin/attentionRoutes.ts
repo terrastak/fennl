@@ -95,6 +95,27 @@ adminAttentionRoutes.get("/accounts/:id/overview", async (c) => {
 });
 
 /**
+ * GET /api/admin/accounts/:id/emails/:emailId: Fennl's copy of one email sent to the account
+ * (U26), as sent, with any link that works like a key to the account already replaced by a note.
+ * 404 for an email recorded before U26 (no copy) or not the account's.
+ */
+adminAttentionRoutes.get("/accounts/:id/emails/:emailId", async (c) => {
+  const row = await c.var.admin.db
+    .select({
+      subject: emailMessage.subject,
+      sentAt: emailMessage.sentAt,
+      html: emailMessage.copyHtml,
+    })
+    .from(emailMessage)
+    .where(
+      and(eq(emailMessage.id, c.req.param("emailId")), eq(emailMessage.userId, c.req.param("id"))),
+    )
+    .get();
+  if (!row?.html) return c.json({ error: "not_found" }, 404);
+  return c.json({ subject: row.subject, sentAt: row.sentAt.toISOString(), html: row.html });
+});
+
+/**
  * "Extend Premium…": gives the person's household Premium until a date, without a code. The
  * passkey again and a reason; the admin's earlier grants for the person are replaced.
  */
