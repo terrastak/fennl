@@ -43,7 +43,7 @@ export const MERGE_ROWS: { id: MergeRow; label: string; fields: RecipeField[] }[
   { id: "title", label: "Title", fields: ["title"] },
   { id: "description", label: "About", fields: ["description"] },
   { id: "ingredients", label: "Ingredients", fields: ["ingredients"] },
-  { id: "directions", label: "Method", fields: ["directions"] },
+  { id: "directions", label: "Directions", fields: ["directions"] },
   { id: "times", label: "Times", fields: ["times"] },
   { id: "servings", label: "Servings", fields: ["servings"] },
   { id: "source", label: "Source", fields: ["source"] },
@@ -75,6 +75,39 @@ function normalized(content: RecipeContent, row: MergeRow): string {
     }
   };
   return JSON.stringify(rowFields(row).map(value));
+}
+
+interface LinkableLine {
+  text: string;
+  heading: boolean;
+  linkedRecipeId?: string | null;
+}
+
+/**
+ * The kept recipe's lines with the links only the other's same lines have, or null when there is
+ * none to add. Never a link to either of the two recipes (one would be a circle, the other goes
+ * to Trash).
+ */
+export function keptLinks<L extends LinkableLine>(
+  mine: readonly L[],
+  theirs: readonly L[],
+  skip: string[],
+): L[] | null {
+  const words = (lines: readonly L[]) => lines.filter((line) => line.text.trim() !== "");
+  const [a, b] = [words(mine), words(theirs)];
+  if (a.length !== b.length) return null;
+  const links = new Map<L, string>();
+  a.forEach((line, i) => {
+    const link = b[i]?.linkedRecipeId;
+    if (!line.heading && !line.linkedRecipeId && link && !skip.includes(link)) {
+      links.set(line, link);
+    }
+  });
+  if (links.size === 0) return null;
+  return mine.map((line) => {
+    const link = links.get(line);
+    return link ? { ...line, linkedRecipeId: link } : line;
+  });
 }
 
 /** Whether the two recipes say the same thing in this row. */
@@ -236,7 +269,21 @@ export function planMerge(input: MergeInput): MergePlan {
     }
     taken.push(row.label.toLowerCase());
   }
-  if (taken.length > 0) {
+  // Lines that read the same keep a link only the other recipe has (F3, U27), so nothing is lost
+  // when the kept recipe's words are kept.
+  let linksKept = false;
+  for (const row of ["ingredients", "directions"] as const) {
+    if (row in fields || !sameRow(keeper.recipe, other.recipe, row)) continue;
+    const lines = keptLinks(keeper.recipe[row], other.recipe[row], [
+      keeper.recipe.id,
+      other.recipe.id,
+    ]);
+    if (!lines) continue;
+    (fields as Record<string, unknown>)[row] = lines;
+    (before as Record<string, unknown>)[row] = keeper.recipe[row];
+    linksKept = true;
+  }
+  if (taken.length > 0 || linksKept) {
     const edit = (content: Partial<RecipeContent>): RecipeChange => ({
       kind: "recipe",
       id: keeper.recipe.id,
@@ -245,7 +292,8 @@ export function planMerge(input: MergeInput): MergePlan {
     });
     changes.push(edit(fields));
     undo.push(edit(before));
-    willDo.push(`Use the other recipe's ${taken.join(", ")}.`);
+    if (taken.length > 0) willDo.push(`Use the other recipe's ${taken.join(", ")}.`);
+    if (linksKept) willDo.push("Keep the other recipe's links to recipes.");
   }
 
   // 2. Categories: the kept recipe joins the other's.

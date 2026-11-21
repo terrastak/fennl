@@ -82,10 +82,17 @@ describe("recipeIssues", () => {
     recipe.ingredients[1] = { ...recipe.ingredients[1]!, id: recipe.ingredients[0]!.id };
     recipe.ingredients[2] = { ...recipe.ingredients[2]!, text: "" };
     recipe.ingredients[3] = { ...recipe.ingredients[3]!, linkedRecipeId: "not-an-id" };
+    // A step can link to a recipe too (U27).
+    recipe.directions[0] = { ...recipe.directions[0]!, linkedRecipeId: "not-an-id" };
+    recipe.directions[1] = {
+      ...recipe.directions[1]!,
+      linkedRecipeId: "8a1b2c3d-0000-4000-8000-000000000001",
+    };
     expect(recipeIssues(recipe, null)).toEqual([
       { path: "ingredients.1.id", problem: "duplicate_id" },
       { path: "ingredients.2.text", problem: "missing" },
       { path: "ingredients.3.linkedRecipeId", problem: "invalid" },
+      { path: "directions.0.linkedRecipeId", problem: "invalid" },
     ]);
   });
 

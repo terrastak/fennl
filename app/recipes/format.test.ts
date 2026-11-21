@@ -30,6 +30,8 @@ describe("recipe details as they read", () => {
       "Serves 8 · about 24 cookies",
     );
     expect(servingsText({ count: 8, yield: "Serves 8 to 10" })).toBe("Serves 8 to 10");
+    // The words give the count already (U27's one box keeps both).
+    expect(servingsText({ count: 24, yield: "24 cookies" })).toBe("24 cookies");
     expect(servingsText({ count: null, yield: null })).toBeNull();
   });
 
@@ -126,5 +128,23 @@ describe("what a recipe serves and makes", () => {
     ]);
     expect(servingsFacts({ count: 6, yield: null })).toEqual([{ label: "Serves", value: "6" }]);
     expect(servingsFacts({ count: null, yield: null })).toEqual([]);
+  });
+
+  it("reads servings and yields however they're written (U27)", () => {
+    expect(servingsFacts({ count: null, yield: "Yield: 12 muffins" })).toEqual([
+      { label: "Makes", value: "12 muffins" },
+    ]);
+    expect(servingsFacts({ count: 4, yield: "Yield: 4 to 6 servings" })).toEqual([
+      { label: "Serves", value: "4 to 6" },
+    ]);
+    expect(servingsFacts({ count: 8, yield: "8 servings" })).toEqual([
+      { label: "Serves", value: "8" },
+    ]);
+    expect(servingsFacts({ count: 6, yield: "Servings: 6" })).toEqual([
+      { label: "Serves", value: "6" },
+    ]);
+    expect(servingsFacts({ count: 12, yield: "Serves: 12" })).toEqual([
+      { label: "Serves", value: "12" },
+    ]);
   });
 });

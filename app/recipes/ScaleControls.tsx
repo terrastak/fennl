@@ -44,6 +44,14 @@ function servingsSaid(recipe: Recipe, scaling: Scaling) {
     : String(Math.round(servings));
   // "cookies" after the number, while it reads right ("1 cookies" doesn't).
   const words = makesCount ? (/^\d+\s+(.+)$/u.exec(facts[0]?.value ?? "")?.[1] ?? null) : null;
+  // "Serves 4 to 6" on a recipe counted as 4: the range, scaled with the recipe (U27).
+  const range =
+    !makesCount && count !== null && facts.length === 1 && facts[0]?.label === "Serves"
+      ? new RegExp(`^${count}\\s*(?:-|–|—|to|or)\\s*\\d+$`, "iu").test(facts[0].value)
+      : false;
+  const rangeShown = range
+    ? (servingsFacts(scaledServings(written, scaling.factor))[0]?.value ?? null)
+    : null;
   // Scaled for another pan, words naming the recipe's pan ("one 9-inch cake") give way.
   const panYield = scaling.pans !== null && written.yield !== null && namesAPan(written.yield);
   const others =
@@ -57,6 +65,7 @@ function servingsSaid(recipe: Recipe, scaling: Scaling) {
     servings,
     label: makesCount ? "Makes" : "Serves",
     shownCount,
+    rangeShown,
     words: words && shownCount !== "1" ? words : null,
     others,
   };
@@ -89,7 +98,9 @@ export function ServingsBar({
       ? [
           {
             label: said.label,
-            value: said.words ? `${said.shownCount} ${said.words}` : said.shownCount,
+            value:
+              said.rangeShown ??
+              (said.words ? `${said.shownCount} ${said.words}` : said.shownCount),
           },
         ]
       : []),

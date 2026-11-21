@@ -471,3 +471,38 @@ describe("the merge", () => {
     ]);
   });
 });
+
+describe("links on lines that read the same", () => {
+  const butter = uid("eeeeeeee");
+  const steps = (link: string | null) =>
+    lines("Make the butter.", "Sear the fish.").map((line, i) =>
+      i === 0 && link ? { ...line, linkedRecipeId: link } : line,
+    );
+
+  it("keeps a step's link only the other recipe has", () => {
+    const keeper = recipe({ directions: steps(null) });
+    const other = recipe({ directions: steps(butter) });
+    const result = plan(detail(keeper), detail(other));
+    const edit = ofKind(result.changes, "recipe").find((c) => c.id === keeper.id);
+    expect(edit?.fields.directions?.[0]?.linkedRecipeId).toBe(butter);
+    expect(edit?.fields.directions?.[1]?.linkedRecipeId).toBeUndefined();
+    const back = ofKind(result.undo, "recipe").find((c) => c.id === keeper.id);
+    expect(back?.fields.directions).toEqual(keeper.directions);
+    expect(result.willDo).toContain("Keep the other recipe's links to recipes.");
+  });
+
+  it("never links the kept recipe to itself, and leaves its own links alone", () => {
+    const keeper = recipe({ directions: steps(null) });
+    const self = recipe({ directions: steps(keeper.id) });
+    expect(
+      ofKind(plan(detail(keeper), detail(self)).changes, "recipe").some((c) => c.id === keeper.id),
+    ).toBe(false);
+    const linked = recipe({ directions: steps(butter) });
+    expect(
+      ofKind(
+        plan(detail(linked), detail(recipe({ directions: steps(uid("ffffffff")) }))).changes,
+        "recipe",
+      ).some((c) => c.id === linked.id),
+    ).toBe(false);
+  });
+});

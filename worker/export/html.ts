@@ -122,7 +122,7 @@ export function recipePage(recipe: ExportRecipe, people: ExportPerson[]): string
       ? `<p class="muted">Categories: ${recipe.categories.map(escape).join(", ")}</p>`
       : "",
     recipe.ingredients.length ? `<h2>Ingredients</h2>\n${lines(recipe.ingredients, false)}` : "",
-    recipe.directions.length ? `<h2>Method</h2>\n${lines(recipe.directions, true)}` : "",
+    recipe.directions.length ? `<h2>Directions</h2>\n${lines(recipe.directions, true)}` : "",
   ];
 
   // The recipe's own note, then the notes added in Fennl, each signed and dated (U7).

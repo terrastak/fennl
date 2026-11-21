@@ -45,11 +45,11 @@ test("Each step's number opens the ingredients it uses", async ({
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Cocoa Squares");
   await page.getByRole("textbox", { name: "Ingredients" }).fill(INGREDIENTS.join("\n"));
-  await page.getByRole("textbox", { name: "Method" }).fill(METHOD.join("\n"));
+  await page.getByRole("textbox", { name: "Directions" }).fill(METHOD.join("\n"));
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
 
-  const method = page.getByRole("region", { name: "Method" });
+  const method = page.getByRole("region", { name: "Directions" });
   const number = (n: number) => method.getByRole("button", { name: `Ingredients for step ${n}` });
   const list = (n: number) => page.locator(`#step-${n}`).getByRole("list");
   // A computer with a mouse says "Click" (U23, owner's choice 2026-11-06); a phone says "Tap".
@@ -144,7 +144,7 @@ test("A linked recipe shown in place has its own steps' ingredients", async ({
   await page.getByLabel("Title", { exact: true }).fill("Lime Crema");
   await ingredientsBox.fill("½ cup sour cream\n2 tablespoons lime juice\n¼ teaspoon salt");
   await page
-    .getByRole("textbox", { name: "Method" })
+    .getByRole("textbox", { name: "Directions" })
     .fill(
       "Whisk the sour cream and lime juice.\nStir the salt into the sour cream mixture.\nChill.",
     );
@@ -155,9 +155,11 @@ test("A linked recipe shown in place has its own steps' ingredients", async ({
   // The tacos use it, and have a step 1 of their own.
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Fish Tacos");
-  await page.getByRole("textbox", { name: "Method" }).fill("Warm the tortillas.\nAdd the crema.");
+  await page
+    .getByRole("textbox", { name: "Directions" })
+    .fill("Warm the tortillas.\nAdd the crema.");
   await ingredientsBox.fill("8 corn tortillas\n½ cup lime crema");
-  await page.getByRole("button", { name: "Link a recipe" }).click();
+  await page.getByRole("button", { name: "Link a recipe" }).first().click();
   await page
     .getByRole("list", { name: "Recipes to link" })
     .getByRole("button", { name: "Lime Crema" })

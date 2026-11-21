@@ -5,6 +5,7 @@ import {
   type RecipeSource,
   type SourceKind,
 } from "../../shared/recipe";
+import { servesOrMakesReading } from "../../shared/servings";
 import { lineAt, lineEnd, moveLine, webAddress } from "./editing";
 import { described, problemsFor } from "./fieldProblems";
 import editor from "./editor.module.css";
@@ -121,7 +122,10 @@ export function LinesBox({
   marks?: ReadonlyMap<string, string>;
   /** Words to highlight in lines, by line ID (the ones an AI import wasn't sure of, E10). */
   words?: ReadonlyMap<string, readonly string[]>;
-  /** The recipe being edited, so its ingredients can link to other recipes (phase F3). */
+  /**
+   * The recipe being edited, so its lines can link to other recipes: ingredients (phase F3) and
+   * steps (U27).
+   */
   linkFrom?: string;
   /**
    * The laptop look (U23: the recipe editor, and the import review screen since slice 6) adds
@@ -207,7 +211,7 @@ export function LinesBox({
             {laptopLook ? <LaptopIcon path={LAPTOP_ICONS.heading} /> : null}
             Heading
           </button>
-          {linkFrom && list === "ingredients" ? (
+          {linkFrom ? (
             <button
               type="button"
               className={editor.small}
@@ -252,9 +256,9 @@ export function LinesBox({
             onKeyDown={onKeyDown}
             onBlur={() => session.tidyBox(list)}
           />
+          {/* Fewer words (U27, owner's choice 2026-11-21): the Heading button says what it does. */}
           <p id={`${id}-hint`} className={styles.hint}>
-            {hint} <MoveKeys keys={laptopLook} /> moves the line you&rsquo;re on. Heading makes it a
-            section heading (&ldquo;For the crust&rdquo;).
+            {hint} <MoveKeys keys={laptopLook} /> reorders the line you&rsquo;re on.
           </p>
           {problems.length > 0 ? (
             <p id={`${id}-problem`} className={editor.problem}>
@@ -266,13 +270,13 @@ export function LinesBox({
           </p>
           {linkFrom && linking
             ? (() => {
-                const line = state.draft.ingredients.find((l) => l.id === linking);
+                const line = state.draft[list].find((l) => l.id === linking);
                 return line ? (
                   <LinkPicker
                     line={line}
                     recipeId={linkFrom}
                     onLink={(recipeId) => {
-                      session.setLink(line.id, recipeId);
+                      session.setLink(list, line.id, recipeId);
                       setLinking(null);
                       box.current?.focus();
                     }}
@@ -328,7 +332,7 @@ export function LinesBox({
                     line.linkedRecipeId ? (
                       <LinkedName
                         recipeId={line.linkedRecipeId}
-                        onUnlink={() => session.setLink(line.id, null)}
+                        onUnlink={() => session.setLink(list, line.id, null)}
                       />
                     ) : null}
                   </li>
@@ -339,6 +343,97 @@ export function LinesBox({
         </div>
       </div>
     </section>
+  );
+}
+
+/** Words and spacing aside, the same: "Serves 4" and "serves 4". */
+const sameReading = (a: string, b: string) =>
+  a
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim() ===
+  b
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+/**
+ * "Serves or makes" (U27, owner's choice 2026-11-21): one box for how many it serves and what it
+ * makes ("4", "24 cookies", "Serves 8, makes about 24 pancakes"; shared/servings.ts). On a laptop
+ * Fennl says quietly at the box's end how it reads it ("Serves 4", "Makes 24 cookies"), unless
+ * that's what the box already says or there isn't room.
+ */
+export function ServesOrMakesBox({
+  session,
+  state,
+  className,
+}: {
+  session: EditorSession;
+  state: EditorState;
+  className?: string | undefined;
+}) {
+  const id = "edit-servings";
+  const problems = problemsFor(state.issues, "servings");
+  const typed = state.boxes.servings;
+  const read = servesOrMakesReading(state.draft.servings);
+  const reading = typed.trim() && read && !sameReading(read, typed) ? read : null;
+  const input = useRef<HTMLInputElement>(null);
+  const said = useRef<HTMLSpanElement>(null);
+  const [fits, setFits] = useState(true);
+  // Whether it's on screen, so a screen reader hears it only where it's shown.
+  const [shown, setShown] = useState(false);
+
+  // Keep the typed words clear of the reading: the box makes room for it, and leaves it out
+  // when it would take more than half the box. Phones don't show it (CSS), so it takes no room.
+  useLayoutEffect(() => {
+    const box = input.current;
+    if (!box) return;
+    const measure = () => {
+      const width = said.current?.offsetWidth ?? 0;
+      const room = width > 0 && width <= box.offsetWidth / 2;
+      box.style.paddingRight = room ? `calc(${width}px + 1rem)` : "";
+      setFits(width === 0 || room);
+      setShown(room);
+    };
+    measure();
+    const watch = new ResizeObserver(measure);
+    watch.observe(box);
+    return () => watch.disconnect();
+  }, [reading]);
+
+  const describedBy = [
+    problems.length > 0 ? `${id}-problem` : "",
+    reading && shown ? `${id}-reading` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return (
+    <Field id={id} label="Serves or makes" problems={problems} className={className}>
+      <span className={editor.servesBox}>
+        <input
+          ref={input}
+          id={id}
+          aria-invalid={problems.length > 0 ? true : undefined}
+          aria-describedby={describedBy || undefined}
+          className={styles.input}
+          value={typed}
+          placeholder="4, or 24 cookies"
+          maxLength={RECIPE_RULES.shortTextLength}
+          onChange={(e) => session.setBox("servings", e.target.value)}
+          onBlur={() => session.tidyBox("servings")}
+        />
+        {reading ? (
+          <span
+            ref={said}
+            id={`${id}-reading`}
+            className={editor.reading}
+            data-fits={fits ? undefined : "no"}
+          >
+            {reading}
+          </span>
+        ) : null}
+      </span>
+    </Field>
   );
 }
 

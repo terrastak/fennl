@@ -109,9 +109,11 @@ test("A recipe that makes things says Makes, once, with the quick amounts", asyn
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
   await page.getByRole("link", { name: "Edit recipe" }).click();
-  await page.getByLabel("Serves").fill("14");
-  await page.getByLabel("Makes").fill("14 pancakes");
-  await expect(page.getByLabel("Makes")).toHaveValue("14 pancakes");
+  // One "Serves or makes" box (U27): its number is the count, its words what it makes.
+  const servesOrMakes = page.getByLabel("Serves or makes");
+  await expect(servesOrMakes).toHaveValue("Serves 4, makes about 12 pancakes");
+  await servesOrMakes.fill("14 pancakes");
+  await expect(servesOrMakes).toHaveValue("14 pancakes");
   await page.getByRole("button", { name: "Done" }).first().click();
 
   const ingredients = page.getByRole("region", { name: "Ingredients" });

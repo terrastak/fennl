@@ -94,6 +94,32 @@ describe("text boxes", () => {
     ]);
   });
 
+  it("keep how many it serves and makes in one box (U27)", () => {
+    const { session, state } = setUp(existing());
+    session.setBox("servings", "24 cookies");
+    expect(state().draft.servings).toEqual({ count: 24, yield: "24 cookies" });
+    session.setBox("servings", "Makes 24 pancakes, serves 8");
+    expect(state().draft.servings).toEqual({ count: 8, yield: "24 pancakes" });
+    session.tidyBox("servings");
+    expect(state().boxes.servings).toBe("Serves 8, makes 24 pancakes");
+    session.setBox("servings", "");
+    expect(state().draft.servings).toEqual({ count: null, yield: null });
+  });
+
+  it("link a step to a recipe, and unlink it (U27)", () => {
+    const { session, state } = setUp(existing());
+    session.setBox("directions", "Make the herb butter.\nSear the salmon.");
+    const step = state().draft.directions[0]!;
+    const LINK = "8a1b2c3d-0000-4000-8000-000000000003";
+    session.setLink("directions", step.id, LINK);
+    expect(state().draft.directions[0]?.linkedRecipeId).toBe(LINK);
+    // Typing elsewhere keeps it.
+    session.setBox("directions", "Make the herb butter.\nSear the salmon well.");
+    expect(state().draft.directions[0]?.linkedRecipeId).toBe(LINK);
+    session.setLink("directions", step.id, null);
+    expect(state().draft.directions[0]?.linkedRecipeId).toBeNull();
+  });
+
   it("keeps line IDs while typing, and the heading button's choice", () => {
     const { session, state } = setUp(existing());
     session.setBox("directions", "Brown the pork");

@@ -17,11 +17,11 @@ test("Scale a cake for a different pan, with a bake-time suggestion", async ({
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
   await page.getByRole("link", { name: /Lemon Olive Oil Cake/ }).click();
 
-  // The recipe's pan, read from the method, under "Adjust".
+  // The recipe's pan, read from the directions, under "Adjust".
   await expect(page.getByRole("note")).toHaveCount(0);
   await adjust(page, async (panel) => {
     const pans = panel.getByRole("group", { name: "Pan" });
-    await expect(pans).toContainText("Recipe’s pan: 9″ round, from the method");
+    await expect(pans).toContainText("Recipe’s pan: 9″ round, from the directions");
     await pans.getByLabel("Your pan").selectOption({ label: "9×13" });
   });
   await expect(

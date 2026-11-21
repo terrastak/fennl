@@ -9,8 +9,8 @@ import type { DirectionStep, IngredientLine } from "./recipe";
  *   are cleaned off and blank lines dropped. Headings are recognised ("For the crust:", or an
  *   ALL-CAPS line with no amount), unless the heading button decided.
  *
- * Every line that's recognisably the same as before keeps its ID, its heading choice and (for
- * ingredients) its linked recipe: unchanged lines wherever they moved, and lightly edited lines
+ * Every line that's recognisably the same as before keeps its ID, its heading choice and its
+ * linked recipe: unchanged lines wherever they moved, and lightly edited lines
  * ("1 cup BBQ sauce" → "1½ cups BBQ sauce") in the same place. A changed line loses how the
  * ingredient reader understood it, so it's read again.
  */
@@ -212,7 +212,7 @@ export function ingredientsFromText(
   });
 }
 
-/** Direction steps from the text box, keeping IDs and heading choices. */
+/** Direction steps from the text box, keeping IDs, heading choices and linked recipes (U27). */
 export function directionsFromText(
   text: string,
   previous: readonly DirectionStep[] = [],
@@ -221,6 +221,7 @@ export function directionsFromText(
   return rebuild(text, previous, "directions", newId, (old, line) => {
     const result: DirectionStep = { ...line };
     if (old?.headingByHand) result.headingByHand = true;
+    if (old?.linkedRecipeId && !line.heading) result.linkedRecipeId = old.linkedRecipeId;
     return result;
   });
 }

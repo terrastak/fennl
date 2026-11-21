@@ -388,9 +388,9 @@ function AiSettingsForm({
               <p id={`${id}-second-hint`} className={styles.hint}>
                 When on, a read whose amounts look doubtful is read again by the next model at once,
                 not counted as another import: an amount the first model only guessed, or amounts in
-                the method that don&rsquo;t add up to the ingredient list (on photos, screenshots
-                and PDFs). A word it couldn&rsquo;t read is only highlighted for the person. On
-                unless turned off.
+                the directions that don&rsquo;t add up to the ingredient list (on photos,
+                screenshots and PDFs). A word it couldn&rsquo;t read is only highlighted for the
+                person. On unless turned off.
               </p>
             </div>
             <div className={`${styles.field} ${styles.setField}`}>
@@ -418,7 +418,7 @@ function AiSettingsForm({
               />
               <p id={`${id}-off-hint`} className={styles.hint}>
                 0 turns the check off. A read with a doubtful amount, or missing a title,
-                ingredients or method, always gets a second look.
+                ingredients or directions, always gets a second look.
               </p>
             </div>
           </div>
@@ -493,8 +493,9 @@ function AiSettingsForm({
         <p id={`${id}-second-hint`} className={styles.hint}>
           When on, a read whose amounts look doubtful is read again by the next model at once, not
           counted as another import: an amount the first model only guessed, or amounts in the
-          method that don&rsquo;t add up to the ingredient list (on photos, screenshots and PDFs). A
-          word it couldn&rsquo;t read is only highlighted for the person. On unless turned off.
+          directions that don&rsquo;t add up to the ingredient list (on photos, screenshots and
+          PDFs). A word it couldn&rsquo;t read is only highlighted for the person. On unless turned
+          off.
         </p>
         <div className={styles.field}>
           <label htmlFor={`${id}-missing`}>
@@ -521,7 +522,7 @@ function AiSettingsForm({
           />
           <p id={`${id}-off-hint`} className={styles.hint}>
             0 turns the check off. A read with a doubtful amount, or missing a title, ingredients or
-            method, always gets a second look.
+            directions, always gets a second look.
           </p>
         </div>
         {error ? (

@@ -41,7 +41,7 @@ import { useHideNutrition } from "./nutritionSetting";
 import { Suggestion } from "./PanControls";
 import { StepNumber, StepUsesList } from "./StepIngredients";
 import { allOpen, toggled, usesByStep } from "./stepUses";
-import { SubRecipe } from "./SubRecipe";
+import { StepLink, SubRecipe } from "./SubRecipe";
 import { stepParts } from "../timers/stepParts";
 import { TimeLink } from "../timers/TimeLink";
 import { markStep } from "../timers/timersView";
@@ -538,7 +538,7 @@ function Ingredients({
 }
 
 /**
- * The method. `timers`: times in its steps start a timer (U11, owner's request 2026-10-29); not
+ * The directions. `timers`: times in its steps start a timer (U11, owner's request 2026-10-29); not
  * for a recipe in Trash.
  */
 function Method({
@@ -581,7 +581,7 @@ function Method({
   return (
     <section className={styles.method} aria-labelledby="method-title">
       <div className={styles.methodHead}>
-        <h2 id="method-title">Method</h2>
+        <h2 id="method-title">Directions</h2>
         {withUses.length > 0 ? (
           <button
             type="button"
@@ -635,6 +635,9 @@ function Method({
                           />
                         )}
                       />
+                      {step.linkedRecipeId ? (
+                        <StepLink targetId={step.linkedRecipeId} linked={linked} />
+                      ) : null}
                       {used.length > 0 ? (
                         <StepUsesList
                           id={listId}

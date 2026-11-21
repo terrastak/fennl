@@ -1,4 +1,4 @@
-import type { RecipeServings, RecipeSource, RecipeTime } from "./recipe";
+import { RECIPE_RULES, type RecipeServings, type RecipeSource, type RecipeTime } from "./recipe";
 
 // How a recipe's details read in words, wherever they're shown: the app (app/recipes/format.ts)
 // and the export's web pages (worker/export/). And the other way: a time in words read as
@@ -19,11 +19,32 @@ export function timeText(time: RecipeTime): string | null {
   return extra ? `${minutesText(time.minutes)} ${extra}` : minutesText(time.minutes);
 }
 
+/** A whole number at the start of the words, after "Serves", "Makes", "about" and the like. */
+const LEADING_COUNT = new RegExp(
+  String.raw`^(?:(?:serves|servings?|makes|yields?|about|approx(?:imately|\.)?|around|roughly|nearly|almost|up\s+to|at\s+least)\s*:?\s*)*` +
+    String.raw`(\d+)` +
+    // Not the start of a fraction or a decimal ("1/2 cup", "1½ loaves", "1.5 quarts", "2 1/2 dozen").
+    String.raw`(?![.,/]?\d|\s*[¼½¾⅓⅔⅕⅖⅗⅘⅙⅚⅛⅜⅝⅞]|\s+\d+/\d)`,
+  "iu",
+);
+
+/** The whole number words start with ("about 24 pancakes" → 24, "1/2 cup" → none), or null. */
+export function leadingCount(words: string): number | null {
+  const n = Number(LEADING_COUNT.exec(words.trim())?.[1]);
+  return Number.isSafeInteger(n) && n >= 1 && n <= RECIPE_RULES.maxServings ? n : null;
+}
+
 /** "Serves 6", "2 loaves", or "Serves 8 · about 24 cookies". */
 export function servingsText(servings: RecipeServings): string | null {
   const count = servings.count !== null ? `Serves ${servings.count}` : null;
   const made = servings.yield?.trim() || null;
-  if (count && made) return made.toLowerCase().startsWith("serves") ? made : `${count} · ${made}`;
+  if (count && made) {
+    // The words say it already: "Serves 8 to 10", or "24 cookies" for 24 (U27).
+    if (made.toLowerCase().startsWith("serves") || leadingCount(made) === servings.count) {
+      return made;
+    }
+    return `${count} · ${made}`;
+  }
   return count ?? made;
 }
 
@@ -111,9 +132,15 @@ export function servingsFacts(servings: RecipeServings): { label: string; value:
   const count = servings.count;
   const made = servings.yield?.trim() || null;
   if (!made) return count !== null ? [{ label: "Serves", value: String(count) }] : [];
-  const serves = /^serves\s+(.+)$/iu.exec(made);
+  const serves = /^(?:serves|servings)\b\s*:?\s*(.+)$/iu.exec(made);
   if (serves?.[1]) return [{ label: "Serves", value: serves[1] }];
-  const value = made.replace(/^(?:makes|yields?|yield:)\s*/iu, "") || made;
+  const value = made.replace(/^(?:makes|yields?)\s*:?\s*/iu, "") || made;
+  // "8 servings", "Makes 6 to 8 servings": how many it serves (U27).
+  const servingWords =
+    /^(\d+(?:\s*(?:-|–|to|or)\s*\d+)?)\s+(?:servings?|serving\(s\)|portions?|people|persons)$/iu.exec(
+      value,
+    );
+  if (servingWords?.[1]) return [{ label: "Serves", value: servingWords[1] }];
   // "Makes 14" on a recipe that serves 14: the same number, said once.
   const sameNumber = count !== null && new RegExp(`(^|\\D)${count}(\\D|$)`, "u").test(value);
   const facts = [{ label: "Makes", value }];

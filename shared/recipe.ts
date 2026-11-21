@@ -72,6 +72,11 @@ export interface DirectionStep {
   text: string;
   heading: boolean;
   headingByHand?: boolean;
+  /**
+   * A recipe to make for this step ("Make the herb butter." → the Herb Butter recipe; U27, owner's
+   * choice 2026-11-21). Absent from steps written before U27.
+   */
+  linkedRecipeId?: string | null;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -434,10 +439,10 @@ function lines(value: unknown, path: string, issue: Check, isIngredients: boolea
     if (l.headingByHand !== undefined && typeof l.headingByHand !== "boolean") {
       issue(`${at}.headingByHand`, "invalid");
     }
+    if (l.linkedRecipeId != null && !isId(l.linkedRecipeId)) {
+      issue(`${at}.linkedRecipeId`, "invalid");
+    }
     if (isIngredients) {
-      if (l.linkedRecipeId != null && !isId(l.linkedRecipeId)) {
-        issue(`${at}.linkedRecipeId`, "invalid");
-      }
       if (l.parsed != null && typeof l.parsed !== "object") issue(`${at}.parsed`, "invalid");
     }
   });

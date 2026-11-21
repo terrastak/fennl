@@ -5,6 +5,8 @@ import { TimeLink } from "../timers/TimeLink";
 import { linkView, type LinkedRecipe } from "../../shared/subRecipes";
 import { Link } from "../router";
 import { servingsText } from "./format";
+import { LaptopIcon } from "./LaptopIcon";
+import { LAPTOP_ICONS } from "./laptopIcons";
 import { ShownText } from "./ScaleControls";
 import { StepNumber, StepUsesList } from "./StepIngredients";
 import { toggled, usesByStep } from "./stepUses";
@@ -114,6 +116,45 @@ export function SubRecipe({
   );
 }
 
+/**
+ * A step's linked recipe (U27, owner's choice 2026-11-21): its name as a small link after the
+ * step's words, opening it (never shown in place). One that stopped working flags the step, whose
+ * words are kept, as an ingredient's link does.
+ */
+export function StepLink({
+  targetId,
+  linked,
+}: {
+  targetId: string;
+  linked: Readonly<Record<string, LinkedRecipe>>;
+}) {
+  const recipe = linked[targetId];
+  if (!recipe || recipe.status === "gone") {
+    return (
+      <p className={styles.brokenLink}>
+        The linked recipe isn&rsquo;t here any more (deleted, or no longer shared). The step is kept
+        as written.
+      </p>
+    );
+  }
+  if (recipe.status === "trash") {
+    return (
+      <p className={styles.brokenLink}>
+        The linked recipe, {recipe.title}, is in <Link href="/trash">Trash</Link>.
+      </p>
+    );
+  }
+  return (
+    <>
+      {" "}
+      <Link href={`/recipes/${recipe.id}`} className={styles.stepLink}>
+        <LaptopIcon path={LAPTOP_ICONS.book} className={styles.stepLinkIcon} />
+        {recipe.title}
+      </Link>
+    </>
+  );
+}
+
 const AS_WRITTEN_HELD: ReadonlySet<string> = new Set();
 
 /**
@@ -175,6 +216,9 @@ function SubRecipeSteps({
                     <ShownText key={k} line={part.line} />
                   ),
                 )}
+                {step.linkedRecipeId ? (
+                  <StepLink targetId={step.linkedRecipeId} linked={linked} />
+                ) : null}
                 {used.length > 0 ? (
                   <StepUsesList
                     id={listId}

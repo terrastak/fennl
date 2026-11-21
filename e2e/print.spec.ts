@@ -83,14 +83,14 @@ async function linkLimeCrema(page: Page) {
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Lime Crema");
   await ingredientsBox.fill("½ cup sour cream\nZest and juice of 1 lime");
-  await page.getByRole("textbox", { name: "Method" }).fill("Stir together.");
+  await page.getByRole("textbox", { name: "Directions" }).fill("Stir together.");
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
   await page.getByRole("link", { name: "← All recipes" }).click();
   await page.getByRole("link", { name: /Black Bean Tacos/ }).click();
   await page.getByRole("link", { name: "Edit recipe" }).click();
   await ingredientsBox.fill(`${await ingredientsBox.inputValue()}\n½ cup lime crema`);
-  await page.getByRole("button", { name: "Link a recipe" }).click();
+  await page.getByRole("button", { name: "Link a recipe" }).first().click();
   await page
     .getByRole("list", { name: "Recipes to link" })
     .getByRole("button", { name: "Lime Crema" })

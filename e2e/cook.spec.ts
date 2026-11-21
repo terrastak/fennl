@@ -143,7 +143,7 @@ test("Each step's ingredients: the rest worked out, the mixture's step, and doub
       "1 cup sugar, divided\n2 cups flour\n1 tsp salt\n1/2 cup butter\n1 cup shredded cheddar cheese\n1/2 cup grated Parmesan cheese",
     );
   await page
-    .getByRole("textbox", { name: "Method" })
+    .getByRole("textbox", { name: "Directions" })
     .fill(
       "Whisk the flour and salt.\nBeat the butter with 3/4 cup of the sugar. Add the flour mixture.\nSprinkle with the remaining sugar and the cheese.",
     );

@@ -22,7 +22,7 @@ import styles from "./recipes.module.css";
 // and Fennl's bake-time suggestion in a bubble under the step that gives the time.
 
 const FROM: Record<PanSource, string> = {
-  method: "from the method",
+  method: "from the directions",
   notes: "from the notes",
   makes: "from Makes",
   ingredients: "from the ingredients",

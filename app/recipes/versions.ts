@@ -4,7 +4,8 @@ import {
   type RecipeField,
   type RecipeOpinion,
 } from "../../shared/recipe";
-import { servingsText, sourceLine, timeText } from "../../shared/recipeText";
+import { sourceLine, timeText } from "../../shared/recipeText";
+import { formatServesOrMakes } from "../../shared/servings";
 import type { SyncChange } from "../../shared/sync";
 import type { RecipeVersion } from "../../shared/versions";
 import { FIELD_NAMES } from "../import/review";
@@ -35,7 +36,8 @@ function fieldText(content: RecipeContent, field: RecipeField): string {
         .filter(Boolean)
         .join("\n");
     case "servings":
-      return servingsText(content.servings) ?? "";
+      // As the "Serves or makes" box says it, so a change to the count alone shows (U27).
+      return formatServesOrMakes(content.servings);
     case "source": {
       const s = content.source;
       return [s.kind === "person" ? s.name : sourceLine(s), s.url].filter(Boolean).join("\n");

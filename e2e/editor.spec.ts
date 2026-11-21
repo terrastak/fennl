@@ -21,7 +21,7 @@ async function noAccessibilityProblems(page: Page) {
 }
 
 const ingredientsBox = (page: Page) => page.getByRole("textbox", { name: "Ingredients" });
-const methodBox = (page: Page) => page.getByRole("textbox", { name: "Method" });
+const methodBox = (page: Page) => page.getByRole("textbox", { name: "Directions" });
 
 test("A whole recipe written with the keyboard alone", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
@@ -66,13 +66,16 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
     "4 cloves garlic",
   ]);
 
-  // Method: steps, then the heading button for a line Fennl didn't read as a heading.
+  // Directions: steps, then the heading button for a line Fennl didn't read as a heading.
   await key.press("Tab");
   await expect(methodBox(page)).toBeFocused();
   await key.type(
     "1. Brown the pork.\n2. Add onion and garlic; simmer 2 hours.\nServing\nTop with cilantro.",
   );
   await key.press("ArrowUp");
+  // Back past Link a recipe (U27: steps link to recipes too) to Heading.
+  await key.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Link a recipe" }).nth(1)).toBeFocused();
   await key.press("Shift+Tab");
   const heading = page.getByRole("button", { name: "Heading" }).nth(1);
   await expect(heading).toBeFocused();
@@ -80,7 +83,7 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await key.press("Space");
   await expect(methodBox(page)).toBeFocused();
   await expect(heading).toHaveAttribute("aria-pressed", "true");
-  const methodPreview = page.getByRole("group", { name: "Method, as Fennl reads them" });
+  const methodPreview = page.getByRole("group", { name: "Directions, as Fennl reads them" });
   await expect(methodPreview.getByRole("listitem")).toHaveText([
     "1.Brown the pork.",
     "2.Add onion and garlic; simmer 2 hours.",
@@ -108,9 +111,9 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await key.press("Tab");
   await expect(page.getByLabel("Prep time")).toHaveValue("20 min");
   await expect(page.getByLabel("Cook time")).toHaveValue("2 hr");
-  await expect(page.getByLabel("Serves")).toBeFocused();
+  // One box for how many it serves or makes (U27).
+  await expect(page.getByLabel("Serves or makes")).toBeFocused();
   await key.type("6");
-  await key.press("Tab");
   await key.press("Tab");
   await expect(page.getByLabel("Difficulty")).toBeFocused();
   await key.press("e"); // Easy
@@ -155,7 +158,7 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
     "1 onion",
     "4 cloves garlic",
   ]);
-  const method = page.getByRole("region", { name: "Method" });
+  const method = page.getByRole("region", { name: "Directions" });
   await expect(method.getByRole("heading", { name: "Serving" })).toBeVisible();
   await expect(method.locator("ol").last()).toHaveAttribute("start", "3");
   await expect(page.getByText("2 hr 20 min")).toBeVisible();
@@ -326,9 +329,9 @@ test("Move to Trash at the bottom of the editor (U23)", async ({ page, context, 
   await expect(page.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);
   await page.getByLabel("Title", { exact: true }).fill("Arroz rojo");
   await expect(editorStatus(page)).toHaveText("All changes saved");
-  await expect(
-    page.getByText("It stays in Trash for 30 days, so you can put it back."),
-  ).toBeVisible();
+  // No words under it (U27, owner's choice 2026-11-21).
+  await expect(page.getByRole("button", { name: "Move to Trash" })).toBeVisible();
+  await expect(page.getByText("It stays in Trash for 30 days")).toHaveCount(0);
 
   // What was just typed is saved, the recipe goes to Trash, and the list says so with Undo.
   await page.getByLabel("Notes").fill("Toast the rice first.");

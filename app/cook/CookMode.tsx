@@ -320,6 +320,17 @@ export function CookMode({ id }: { id: string }) {
             ))}
           </p>
         ) : null}
+        {/* A step linked to a recipe (U27): cook that one first, then come back, as for an
+            ingredient's link. */}
+        {shown.step.linkedRecipeId && detail.linked[shown.step.linkedRecipeId]?.status === "ok" ? (
+          <Link
+            className={styles.cookFirst}
+            href={`/recipes/${shown.step.linkedRecipeId}/cook?back=${id}`}
+          >
+            Cook {detail.linked[shown.step.linkedRecipeId]?.title} first
+            <LaptopIcon path={LAPTOP_ICONS.right} className={styles.cookFirstIcon} />
+          </Link>
+        ) : null}
         <p className={styles.stepText}>
           <StepText
             step={shown.step}
