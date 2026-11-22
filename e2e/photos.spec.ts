@@ -111,7 +111,7 @@ test("Premium: Fennl arranges the photos, until someone moves one", async ({
   page,
   context,
   baseURL,
-}) => {
+}, testInfo) => {
   // Phase D4. The local test server's stand-in AI takes the last photo for the finished dish.
   test.setTimeout(120_000);
   await useOwnAccount(context, baseURL!);
@@ -133,10 +133,12 @@ test("Premium: Fennl arranges the photos, until someone moves one", async ({
   const [first] = await order();
   await input.setInputFiles("test_images/Image_phos.png");
   await expect(photos(page).getByRole("listitem")).toHaveCount(2, { timeout: 60_000 });
-  // The new photo is the finished dish, so it becomes the cover.
+  // The new photo is the finished dish, so it becomes the cover. The editor says so on a phone;
+  // on a laptop it doesn't (U27, fewer words).
+  const laptop = testInfo.project.name !== "phone";
   const arranged = section.getByText("Arranged by Fennl.");
-  await expect(arranged).toBeVisible({ timeout: 30_000 });
-  await expect.poll(order).toEqual([expect.not.stringMatching(first!), first]);
+  if (!laptop) await expect(arranged).toBeVisible({ timeout: 30_000 });
+  await expect.poll(order, { timeout: 30_000 }).toEqual([expect.not.stringMatching(first!), first]);
   await expectAccessible(page);
 
   // Moved by hand: the order is the person's from then on.
@@ -144,10 +146,111 @@ test("Premium: Fennl arranges the photos, until someone moves one", async ({
   await expect.poll(order).toEqual([first, expect.any(String)]);
   await expect(arranged).toHaveCount(0);
   await input.setInputFiles("test_images/Image_stew.png");
-  await expect(photos(page).getByRole("listitem")).toHaveCount(3, { timeout: 60_000 });
+  // On a laptop the editor shows the first two (U27).
+  await expect(section.getByText("3 of 10")).toBeVisible({ timeout: 60_000 });
+  await expect(photos(page).getByRole("listitem")).toHaveCount(laptop ? 2 : 3);
   await expect(editorStatus(page)).toHaveText("All changes saved");
   expect((await order())[0]).toBe(first);
   await expect(arranged).toHaveCount(0);
+});
+
+test("Premium, on a laptop: the first two photos, and all of them in the All photos sheet", async ({
+  page,
+  context,
+  baseURL,
+}, testInfo) => {
+  // U27 (owner's choices 2026-11-21, the mockup "C3").
+  test.skip(testInfo.project.name === "phone", "The sheet is the laptop's.");
+  test.setTimeout(120_000);
+  await useOwnAccount(context, baseURL!);
+  await premium(context, baseURL!);
+  await page.goto("/");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await addRecipe(page, "Ramen");
+  await page.getByRole("link", { name: /Ramen/ }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  const section = page.getByRole("region", { name: "Photos" });
+  // Fennl puts them in order once they're in; then they're the person's to move.
+  const arranged = page.waitForResponse((r) => r.url().includes("/api/photos/arrange"));
+  await section
+    .locator('input[type="file"][multiple]')
+    .setInputFiles([
+      "test_images/Image_pho.png",
+      "test_images/Image_stew.png",
+      "test_images/Image_shakshuka.png",
+    ]);
+  await expect(section.getByText("3 of 10")).toBeVisible({ timeout: 60_000 });
+  await arranged;
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(photos(page).getByRole("listitem")).toHaveCount(2);
+  await expect(section.getByText("Arranged by Fennl.")).toHaveCount(0);
+  await expect(photos(page).getByRole("listitem").nth(1).getByText("+1")).toBeVisible();
+  // The second photo, with Make cover, ←, → and the bin under it, is as wide as the cover.
+  const widths = await photos(page)
+    .getByRole("listitem")
+    .evaluateAll((items) =>
+      items.map((li) => Math.round(li.querySelector("img")!.getBoundingClientRect().width)),
+    );
+  expect(widths[1]).toBe(widths[0]);
+
+  const show = section.getByRole("button", { name: "Show all 3 photos / reorder" });
+  await show.click();
+  const sheet = page.getByRole("dialog", { name: "All photos" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByText("3 of 10")).toBeVisible();
+  const all = sheet.getByRole("list", { name: "All photos" });
+  const items = all.locator("li[data-hash]");
+  await expect(items).toHaveCount(3);
+  await expect(items.first().getByText("Cover")).toBeVisible();
+  await expect(sheet.getByText("Add photos")).toBeVisible();
+  await expectAccessible(page);
+  const order = () => items.evaluateAll((li) => li.map((el) => el.getAttribute("data-hash")));
+  const [a, b, c] = await order();
+
+  // With the keyboard: → on a focused photo moves it a place later; screen readers hear it.
+  const tile = sheet.getByRole("group", { name: "Photo 1 of 3, the cover" });
+  await tile.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(order).toEqual([b, a, c]);
+  await expect(sheet.getByRole("group", { name: "Photo 2 of 3" })).toBeFocused();
+  await expect(sheet.getByRole("status").last()).toHaveText("Moved photo 1 to place 2.");
+
+  // Dragged with the mouse: photo 3 to the first place.
+  const from = (await sheet.locator("[data-tile]").nth(2).boundingBox())!;
+  const to = (await sheet.locator("[data-tile]").nth(0).boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(from.x + from.width / 2 - 20, from.y + from.height / 2, { steps: 4 });
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await expect(sheet.getByRole("status").last()).toHaveText("Moving photo 3 to place 1.");
+  await page.mouse.up();
+  await expect.poll(order).toEqual([c, b, a]);
+
+  // The arrow buttons work here too, and the editor follows.
+  await sheet.getByRole("button", { name: "Move photo 2 later" }).click();
+  await expect.poll(order).toEqual([c, a, b]);
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+
+  // Escape goes back to the editor, the focus on the button that opened it.
+  await page.keyboard.press("Escape");
+  await expect(sheet).toHaveCount(0);
+  await expect(show).toBeFocused();
+  await expect
+    .poll(() =>
+      photos(page)
+        .getByRole("listitem")
+        .evaluateAll((li) => li.map((el) => el.getAttribute("data-hash"))),
+    )
+    .toEqual([c, a]);
+
+  // Moved by hand: a new photo doesn't change the order.
+  await section.locator('input[type="file"][multiple]').setInputFiles("test_images/Image_phos.png");
+  await expect(section.getByText("4 of 10")).toBeVisible({ timeout: 60_000 });
+  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await show.or(section.getByRole("button", { name: "Show all 4 photos / reorder" })).click();
+  await expect.poll(order).toEqual([c, a, b, expect.any(String)]);
+  await sheet.getByRole("button", { name: "Close" }).click();
+  await expect(sheet).toHaveCount(0);
 });
 
 test("Free: photos are a Premium feature", async ({ page, context, baseURL }) => {

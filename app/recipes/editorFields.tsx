@@ -1,4 +1,11 @@
-import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
 import {
   RECIPE_RULES,
   SOURCE_KINDS,
@@ -6,13 +13,15 @@ import {
   type SourceKind,
 } from "../../shared/recipe";
 import { servesOrMakesReading } from "../../shared/servings";
-import { lineAt, lineEnd, moveLine, webAddress } from "./editing";
+import { lineAt, lineEnd, moveLine, typedLineAt, typedLines, webAddress } from "./editing";
 import { described, problemsFor } from "./fieldProblems";
 import editor from "./editor.module.css";
 import type { EditorSession, EditorState } from "./editorSession";
 import styles from "./recipes.module.css";
 import { highlightWords } from "./highlight";
-import { LinkPicker, LinkedName } from "./LinkControl";
+import { LinkPicker, LinkStrip, LinkedName } from "./LinkControl";
+import { ExampleRows, MarginMark } from "./marginMarks";
+import { StepBoxes, type StepBoxesHandle } from "./StepBoxes";
 import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
 import { usePointer } from "./usePointer";
@@ -47,6 +56,38 @@ function MoveKeys({ keys }: { keys: boolean }) {
       {plus}
       <kbd className={editor.key}>↓</kbd>
     </>
+  );
+}
+
+/**
+ * The one hint under Ingredients and Directions in the editor on a laptop (U27, the owner's words
+ * 2026-11-21), and at its end the button that shows how Fennl reads the lines.
+ */
+export function LinesHint({
+  id,
+  reads,
+  onReads,
+}: {
+  id: string;
+  reads: boolean;
+  onReads: (reads: boolean) => void;
+}) {
+  return (
+    <div className={editor.sharedHint}>
+      <p id={id}>
+        One step per line; <kbd className={editor.key}>Enter</kbd> starts a new one.{" "}
+        <MoveKeys keys /> reorders the line you&rsquo;re on.
+      </p>
+      <button
+        type="button"
+        className={editor.readsButton}
+        aria-pressed={reads}
+        onClick={() => onReads(!reads)}
+      >
+        <LaptopIcon path={LAPTOP_ICONS.eye} />
+        How Fennl reads it
+      </button>
+    </div>
   );
 }
 
@@ -106,12 +147,17 @@ export function LinesBox({
   words,
   linkFrom,
   laptopLook = false,
+  margins = false,
+  reads = false,
+  footer,
+  describedBy,
 }: {
   session: EditorSession;
   state: EditorState;
   list: "ingredients" | "directions";
   label: string;
-  hint: string;
+  /** Under the box (not with `margins`, where the editor has one hint under both boxes). */
+  hint?: string;
   /**
    * More buttons beside Heading (the review screen's), for the line the cursor is on. `run`
    * changes the text and says where the cursor goes next, or null to leave it; `icon` is drawn
@@ -132,17 +178,39 @@ export function LinesBox({
    * icons to the buttons and draws the keys in the hint.
    */
   laptopLook?: boolean;
+  /**
+   * The recipe editor on a laptop (U27, owner's choices 2026-11-21): how Fennl reads each line is
+   * shown in the box's margin (step numbers in thin circles, the H of a heading and its grey
+   * band, the link mark, an accent edge on the line being typed), and the read-out under the box
+   * only when `reads` is on.
+   */
+  margins?: boolean;
+  /** With `margins`: the read-out ("How Fennl reads it") under the box. */
+  reads?: boolean;
+  /** With `margins`: what goes under the box (the editor's shared hint, under Directions). */
+  footer?: ReactNode;
+  /** With `margins`: the ID of words that describe the box (the shared hint). */
+  describedBy?: string;
 }) {
   const id = `edit-${list}`;
   const box = useRef<HTMLTextAreaElement>(null);
+  const mirror = useRef<HTMLDivElement>(null);
+  const section = useRef<HTMLElement>(null);
   const cursorTo = useRef<number | null>(null);
   const [cursorLine, setCursorLine] = useState<number | null>(null);
+  // The line as typed the cursor is on (blank lines count), and whether the box has the cursor:
+  // the margin's accent edge.
+  const [cursorTyped, setCursorTyped] = useState(0);
+  const [focused, setFocused] = useState(false);
   const [moved, setMoved] = useState("");
   // The line a recipe is being chosen for (phase F3), by ID.
   const [linking, setLinking] = useState<string | null>(null);
+  // With margins, where the link panel opens: under the line being linked.
+  const linkSpot = useRef<HTMLDivElement>(null);
   const lines = state.draft[list];
   const current = cursorLine === null ? undefined : lines[cursorLine];
   const problems = problemsFor(state.issues, list);
+  const text = state.boxes[list];
 
   // Put the cursor back after the text changed under it (a line moved, the heading button).
   useLayoutEffect(() => {
@@ -151,10 +219,51 @@ export function LinesBox({
     cursorTo.current = null;
   });
 
+  const typed = margins ? typedLines(text, list) : [];
+  // Directions in the editor on a laptop: a box for each step (U27).
+  const stepBoxes = margins && list === "directions";
+  const steps = useRef<StepBoxesHandle>(null);
+  /** Back to the box (the step the cursor was in), as it was. */
+  const focusBox = (end = false) => {
+    if (stepBoxes) steps.current?.focus(cursorTyped, end ? "end" : undefined);
+    else box.current?.focus();
+  };
+
+  // With margins, the link panel opens under the line it's for.
+  useLayoutEffect(() => {
+    const spot = linkSpot.current;
+    if (!spot || linking === null) return;
+    const index = typedLines(state.boxes[list], list).findIndex(
+      (t) => t.line !== null && state.draft[list][t.line]?.id === linking,
+    );
+    const row = mirror.current?.children[index];
+    const top = section.current?.getBoundingClientRect().top;
+    if (row && top !== undefined) {
+      spot.style.top = `${row.getBoundingClientRect().bottom - top + 8}px`;
+    }
+  }, [linking, list, state.boxes, state.draft]);
+
   const track = () => {
     const el = box.current;
-    if (el) setCursorLine(lineAt(el.value, el.selectionStart, list));
+    if (!el) return;
+    setCursorLine(lineAt(el.value, el.selectionStart, list));
+    setCursorTyped(typedLineAt(el.value, el.selectionStart));
   };
+
+  // With margins, the accent edge follows the cursor however it moves (a click, the keys, or a
+  // change made by Fennl), which the box's own select event doesn't always say.
+  useEffect(() => {
+    if (!margins) return;
+    const moved = () => {
+      const el = box.current;
+      if (el && document.activeElement === el) {
+        setCursorLine(lineAt(el.value, el.selectionStart, list));
+        setCursorTyped(typedLineAt(el.value, el.selectionStart));
+      }
+    };
+    document.addEventListener("selectionchange", moved);
+    return () => document.removeEventListener("selectionchange", moved);
+  }, [margins, list]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     const up = event.key === "ArrowUp";
@@ -167,6 +276,7 @@ export function LinesBox({
     cursorTo.current = result.cursor;
     session.setBox(list, result.text);
     setCursorLine(lineAt(result.text, result.cursor, list));
+    setCursorTyped(typedLineAt(result.text, result.cursor));
     setMoved(up ? "Moved up" : "Moved down");
   };
 
@@ -174,6 +284,10 @@ export function LinesBox({
     if (cursorLine === null) return;
     session.toggleHeading(list, cursorLine);
     // Back to the end of the same line, ready to carry on typing.
+    if (stepBoxes) {
+      focusBox(true);
+      return;
+    }
     cursorTo.current = lineEnd(session.getSnapshot().boxes[list], cursorLine, list);
     box.current?.focus();
   };
@@ -183,7 +297,9 @@ export function LinesBox({
     const at = run(cursorLine);
     if (at === null) return;
     cursorTo.current = at;
-    setCursorLine(lineAt(session.getSnapshot().boxes[list], at, list));
+    const after = session.getSnapshot().boxes[list];
+    setCursorLine(lineAt(after, at, list));
+    setCursorTyped(typedLineAt(after, at));
     box.current?.focus();
   };
 
@@ -192,8 +308,142 @@ export function LinesBox({
     (all, line) => [...all, (all.at(-1) ?? 0) + (line.heading ? 0 : 1)],
     [],
   );
+  const linkedTo = (line: (typeof lines)[number] | undefined) =>
+    line && !line.heading && "linkedRecipeId" in line ? (line.linkedRecipeId ?? null) : null;
+
+  const preview = (
+    <div className={editor.preview} role="group" aria-label={`${label}, as Fennl reads them`}>
+      <p className={editor.previewTitle} aria-hidden="true">
+        How Fennl reads it
+      </p>
+      {lines.length === 0 ? (
+        <p className={styles.hint}>Nothing yet.</p>
+      ) : (
+        <ul className={editor.previewList}>
+          {lines.map((line, i) => {
+            const linked = linkFrom ? linkedTo(line) : null;
+            return (
+              <li
+                key={line.id}
+                className={`${line.heading ? editor.previewHeading : ""} ${
+                  i === cursorLine ? editor.previewCurrent : ""
+                }`}
+              >
+                {line.heading ? (
+                  <span className="visually-hidden">Heading: </span>
+                ) : list === "directions" ? (
+                  <span className={editor.stepNumber}>
+                    {numbers[i]}
+                    <span className={editor.stepDot}>.</span>
+                  </span>
+                ) : null}
+                {highlightWords(line.text, words?.get(line.id) ?? []).map((piece, k) =>
+                  piece.marked ? (
+                    <mark key={k} className={editor.unsure}>
+                      {piece.text}
+                      <span className="visually-hidden"> (not sure)</span>
+                    </mark>
+                  ) : (
+                    piece.text
+                  ),
+                )}
+                {marks?.has(line.id) ? (
+                  <span className={editor.mark}> {marks.get(line.id)}</span>
+                ) : null}
+                {linked ? (
+                  <LinkedName
+                    recipeId={linked}
+                    onUnlink={() => session.setLink(list, line.id, null)}
+                  />
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+
+  const picker =
+    linkFrom && linking
+      ? (() => {
+          const line = state.draft[list].find((l) => l.id === linking);
+          return line ? (
+            <LinkPicker
+              line={line}
+              recipeId={linkFrom}
+              onLink={(recipeId) => {
+                session.setLink(list, line.id, recipeId);
+                setLinking(null);
+                focusBox();
+              }}
+              onClose={() => {
+                setLinking(null);
+                focusBox();
+              }}
+            />
+          ) : null;
+        })()
+      : null;
+
+  const textarea = (
+    <textarea
+      ref={box}
+      {...described(id, !margins && Boolean(hint), problems)}
+      {...(margins
+        ? {
+            "aria-describedby":
+              [describedBy ?? "", problems.length > 0 ? `${id}-problem` : ""]
+                .filter(Boolean)
+                .join(" ") || undefined,
+            // The shared hint under Directions says so on screen; here for screen readers.
+            "aria-keyshortcuts": "Alt+ArrowUp Alt+ArrowDown",
+          }
+        : {})}
+      className={`${styles.input} ${editor.textarea} ${margins ? editor.marginArea : ""}`}
+      value={text}
+      rows={margins ? 1 : 8}
+      spellCheck
+      onChange={(e) => {
+        session.setBox(list, e.target.value);
+        setCursorLine(lineAt(e.target.value, e.target.selectionStart, list));
+        setCursorTyped(typedLineAt(e.target.value, e.target.selectionStart));
+      }}
+      onSelect={track}
+      onKeyDown={onKeyDown}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false);
+        session.tidyBox(list);
+      }}
+      // The box is as tall as its words (the margin's copy sizes it), so it never scrolls.
+      onScroll={margins ? (e) => (e.currentTarget.scrollTop = 0) : undefined}
+    />
+  );
+
+  const problemText =
+    problems.length > 0 ? (
+      <p id={`${id}-problem`} className={editor.problem}>
+        {problems.join(" ")}
+      </p>
+    ) : null;
+  const movedText = (
+    <p className="visually-hidden" aria-live="polite">
+      {moved}
+    </p>
+  );
+
+  // The line the cursor is on links to a recipe: say which, with Unlink (margins only: the
+  // read-out under the box does this otherwise).
+  const linkedHere = margins && linkFrom ? linkedTo(current) : null;
+
   return (
-    <section className={editor.lines} aria-labelledby={`${id}-label`}>
+    <section
+      ref={section}
+      className={`${editor.lines} ${margins ? editor.marginLines : ""}`}
+      aria-labelledby={`${id}-label`}
+      data-list={list}
+    >
       <div className={editor.linesHead}>
         <label id={`${id}-label`} htmlFor={id} className={editor.linesLabel}>
           {label}
@@ -239,109 +489,131 @@ export function LinesBox({
           ))}
         </div>
       </div>
-      <div className={editor.linesBody}>
-        <div className={editor.field}>
-          <textarea
-            ref={box}
-            {...described(id, true, problems)}
-            className={`${styles.input} ${editor.textarea}`}
-            value={state.boxes[list]}
-            rows={8}
-            spellCheck
-            onChange={(e) => {
-              session.setBox(list, e.target.value);
-              setCursorLine(lineAt(e.target.value, e.target.selectionStart, list));
-            }}
-            onSelect={track}
-            onKeyDown={onKeyDown}
-            onBlur={() => session.tidyBox(list)}
-          />
-          {/* Fewer words (U27, owner's choice 2026-11-21): the Heading button says what it does. */}
-          <p id={`${id}-hint`} className={styles.hint}>
-            {hint} <MoveKeys keys={laptopLook} /> reorders the line you&rsquo;re on.
-          </p>
-          {problems.length > 0 ? (
-            <p id={`${id}-problem`} className={editor.problem}>
-              {problems.join(" ")}
-            </p>
-          ) : null}
-          <p className="visually-hidden" aria-live="polite">
-            {moved}
-          </p>
-          {linkFrom && linking
-            ? (() => {
-                const line = state.draft[list].find((l) => l.id === linking);
-                return line ? (
-                  <LinkPicker
-                    line={line}
-                    recipeId={linkFrom}
-                    onLink={(recipeId) => {
-                      session.setLink(list, line.id, recipeId);
-                      setLinking(null);
-                      box.current?.focus();
-                    }}
-                    onClose={() => {
-                      setLinking(null);
-                      box.current?.focus();
-                    }}
-                  />
-                ) : null;
-              })()
-            : null}
-        </div>
-        <div className={editor.preview} role="group" aria-label={`${label}, as Fennl reads them`}>
-          <p className={editor.previewTitle} aria-hidden="true">
-            How Fennl reads it
-          </p>
-          {lines.length === 0 ? (
-            <p className={styles.hint}>Nothing yet.</p>
-          ) : (
-            <ul className={editor.previewList}>
-              {lines.map((line, i) => {
-                return (
-                  <li
-                    key={line.id}
-                    className={`${line.heading ? editor.previewHeading : ""} ${
-                      i === cursorLine ? editor.previewCurrent : ""
-                    }`}
-                  >
-                    {line.heading ? (
-                      <span className="visually-hidden">Heading: </span>
-                    ) : list === "directions" ? (
-                      <span className={editor.stepNumber}>
-                        {numbers[i]}
-                        <span className={editor.stepDot}>.</span>
-                      </span>
-                    ) : null}
-                    {highlightWords(line.text, words?.get(line.id) ?? []).map((piece, k) =>
-                      piece.marked ? (
-                        <mark key={k} className={editor.unsure}>
-                          {piece.text}
-                          <span className="visually-hidden"> (not sure)</span>
-                        </mark>
-                      ) : (
-                        piece.text
-                      ),
-                    )}
-                    {marks?.has(line.id) ? (
-                      <span className={editor.mark}> {marks.get(line.id)}</span>
-                    ) : null}
-                    {linkFrom &&
-                    !line.heading &&
-                    "linkedRecipeId" in line &&
-                    line.linkedRecipeId ? (
-                      <LinkedName
-                        recipeId={line.linkedRecipeId}
-                        onUnlink={() => session.setLink(list, line.id, null)}
-                      />
-                    ) : null}
-                  </li>
-                );
+      {margins ? (
+        <>
+          {stepBoxes ? (
+            <StepBoxes
+              id={id}
+              text={text}
+              lines={lines}
+              marks={typed.map((row) => {
+                const line = row.line === null ? undefined : lines[row.line];
+                if (!line) return null;
+                return {
+                  heading: line.heading,
+                  linked: linkedTo(line) !== null,
+                  number: row.line === null ? null : (numbers[row.line] ?? null),
+                };
               })}
-            </ul>
+              invalid={typed.map((row, i) =>
+                state.issues.some(
+                  (issue) =>
+                    (row.line !== null && issue.path.startsWith(`${list}.${row.line}.`)) ||
+                    (i === 0 && issue.path === list),
+                ),
+              )}
+              describedBy={
+                [describedBy ?? "", problems.length > 0 ? `${id}-problem` : ""]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
+              example={<ExampleRows list={list} />}
+              rowsRef={mirror}
+              handle={steps}
+              onChange={(changed, apart) =>
+                apart
+                  ? session.setBoxApart(list, changed, apart === true)
+                  : session.setBox(list, changed)
+              }
+              onCursor={(step) => {
+                setFocused(true);
+                setCursorTyped(step);
+                setCursorLine(
+                  typedLines(session.getSnapshot().boxes[list], list)[step]?.line ?? null,
+                );
+              }}
+              onLeave={() => {
+                setFocused(false);
+                session.tidyBox(list);
+              }}
+              onMoved={setMoved}
+              onUndo={() => session.undo()}
+              onRedo={() => session.redo()}
+            />
+          ) : (
+            <div className={editor.marginBox}>
+              {/* A copy of the box's words, unseen, lined up under them: it sizes the box and puts
+                  each line's marks beside it. An empty box shows a faded example instead. */}
+              <div ref={mirror} className={editor.mirror} aria-hidden="true" data-margin="">
+                {text === "" ? (
+                  <ExampleRows list={list} />
+                ) : (
+                  typed.map((row, i) => {
+                    const line = row.line === null ? undefined : lines[row.line];
+                    const heading = line?.heading ?? false;
+                    const linked = linkedTo(line) !== null;
+                    return (
+                      <div
+                        key={i}
+                        className={editor.marginRow}
+                        data-heading={heading ? "" : undefined}
+                        data-linked={linked ? "" : undefined}
+                        data-current={focused && i === cursorTyped ? "" : undefined}
+                      >
+                        <span className={editor.margin}>
+                          {line ? (
+                            <MarginMark
+                              list={list}
+                              heading={heading}
+                              linked={linked}
+                              number={row.line === null ? null : (numbers[row.line] ?? null)}
+                            />
+                          ) : null}
+                        </span>
+                        {/* A blank last line still takes its height. */}
+                        {row.text || "​"}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+              {textarea}
+            </div>
           )}
+          {linkedHere && current ? (
+            <LinkStrip
+              recipeId={linkedHere}
+              step={list === "directions"}
+              onUnlink={() => session.setLink(list, current.id, null)}
+            />
+          ) : null}
+          {footer}
+          {problemText}
+          {movedText}
+          {picker ? (
+            <div ref={linkSpot} className={editor.linkSpot}>
+              {picker}
+            </div>
+          ) : null}
+          {reads ? preview : null}
+        </>
+      ) : (
+        <div className={editor.linesBody}>
+          <div className={editor.field}>
+            {textarea}
+            {/* Fewer words (U27, owner's choice 2026-11-21): the Heading button says what it does. */}
+            {hint ? (
+              <p id={`${id}-hint`} className={styles.hint}>
+                {hint} <MoveKeys keys={laptopLook} /> reorders the line you&rsquo;re on.
+              </p>
+            ) : null}
+            {problemText}
+            {movedText}
+            {picker}
+          </div>
+          {preview}
         </div>
-      </div>
+      )}
     </section>
   );
 }

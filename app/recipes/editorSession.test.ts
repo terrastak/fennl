@@ -193,6 +193,23 @@ describe("undo and redo", () => {
     await session.flush();
     expect(state().canRedo).toBe(false);
   });
+
+  it("go back through a step split on its own, apart from the typing before it (U27)", async () => {
+    const { session, saves, state } = setUp(existing());
+    session.setBox("directions", "Mix well. Bake.");
+    // Enter in the middle of the step, before the typing has saved.
+    session.setBoxApart("directions", "Mix well.\nBake.");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(saves).toHaveLength(2);
+    expect(state().draft.directions.map((l) => l.text)).toEqual(["Mix well.", "Bake."]);
+    await session.undo();
+    expect(state().boxes.directions).toBe("Mix well. Bake.");
+    await session.undo();
+    expect(state().boxes.directions).toBe("");
+    await session.redo();
+    await session.redo();
+    expect(state().boxes.directions).toBe("Mix well.\nBake.");
+  });
 });
 
 describe("changes from elsewhere", () => {
@@ -205,6 +222,44 @@ describe("changes from elsewhere", () => {
     await vi.advanceTimersByTimeAsync(200);
     // Only the field typed here is sent; the other device's notes aren't sent back.
     expect(saves).toEqual([expect.objectContaining({ fields: { title: "Stew, typed here" } })]);
+  });
+
+  it("that arrive while a save is going aren't sent back by the save after it (U27)", async () => {
+    const sent: RecipeChange[] = [];
+    let release: (() => void) | null = null;
+    let fail = false;
+    const make = () =>
+      new EditorSession({
+        id: ID,
+        initial: existing(),
+        delayMs: 100,
+        save: async (change) => {
+          sent.push(change);
+          if (sent.length === 1) {
+            await new Promise<void>((resolve) => (release = resolve));
+            if (fail) throw new Error("Refused");
+          }
+        },
+      });
+
+    for (const failFirst of [false, true]) {
+      sent.length = 0;
+      fail = failFirst;
+      const session = make();
+      session.setBox("directions", "Mix well");
+      // Enter: the typing saves, then the split, queued behind it.
+      session.setBoxApart("directions", "Mix well\nBake");
+      await vi.advanceTimersByTimeAsync(0);
+      session.receive({ ...existing(), notes: "Cold, from the phone" });
+      release!();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(sent.every((change) => !("notes" in change.fields))).toBe(true);
+      expect(session.getSnapshot().draft.notes).toBe("Cold, from the phone");
+      await vi.advanceTimersByTimeAsync(6000);
+      expect(sent.every((change) => !("notes" in change.fields))).toBe(true);
+      expect(session.getSnapshot().save).toBe("saved");
+      expect(session.getSnapshot().boxes.directions).toBe("Mix well\nBake");
+    }
   });
 
   it("refresh the text boxes", () => {

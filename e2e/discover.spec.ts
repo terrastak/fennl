@@ -165,7 +165,7 @@ test("The editor suggests categories from recipes with similar ingredients, and 
   await expect(editorStatus(page)).toHaveText("All changes saved");
 
   // The two Mexican recipes (stew and tacos) share onion, garlic and cumin with it.
-  const suggested = page.getByRole("list", { name: /^Suggested, from recipes/ });
+  const suggested = page.getByRole("list", { name: /^Suggested/ });
   await expect(suggested).toBeVisible();
   await expect(suggested.getByRole("button")).toHaveText(["+ Mexican: add this category"]);
   // Nothing was filed by suggesting it.
@@ -192,5 +192,5 @@ test("With too few recipes to learn from, nothing is suggested", async ({
   await page.getByLabel("Title", { exact: true }).fill("Lonely recipe");
   await page.getByRole("textbox", { name: "Ingredients" }).fill("1 onion\n2 cloves garlic");
   await expect(editorStatus(page)).toHaveText("All changes saved");
-  await expect(page.getByText("Suggested, from recipes")).toHaveCount(0);
+  await expect(page.getByText(/^Suggested/)).toHaveCount(0);
 });

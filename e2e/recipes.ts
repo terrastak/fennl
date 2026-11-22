@@ -276,3 +276,12 @@ export async function dragCategory(
         : target.y + target.height / 2;
   await page.mouse.move(x + across, y, { steps: 6 });
 }
+
+/**
+ * The editor's Directions text: one box, or on a laptop (U27) a box for each step, read back as
+ * one line per step.
+ */
+export const directionsText = (page: Page) =>
+  page
+    .locator('section[data-list="directions"] textarea')
+    .evaluateAll((boxes) => boxes.map((box) => (box as HTMLTextAreaElement).value).join("\n"));
