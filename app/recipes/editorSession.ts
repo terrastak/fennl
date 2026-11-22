@@ -4,6 +4,8 @@ import {
   emptyRecipeContent,
   recipeBytes,
   recipeIssues,
+  type DirectionStep,
+  type IngredientLine,
   type RecipeContent,
   type RecipeField,
   type RecipeIssue,
@@ -14,8 +16,9 @@ import {
   setHeading,
   textFromLines,
 } from "../../shared/recipeLines";
+import { formatServesOrMakes, parseServesOrMakes } from "../../shared/servings";
 import type { RecipeChange } from "../../shared/sync";
-import { changedFields, pick, timeFromText, wholeNumber } from "./editing";
+import { changedFields, pick, timeFromText } from "./editing";
 import { timeText } from "./format";
 
 /**
@@ -57,7 +60,8 @@ export function boxesFrom(content: RecipeContent): Boxes {
     prep: timeText(content.times.prep) ?? "",
     cook: timeText(content.times.cook) ?? "",
     total: timeText(content.times.total) ?? "",
-    servings: content.servings.count === null ? "" : String(content.servings.count),
+    // One "Serves or makes" box for the count and the words (U27, shared/servings.ts).
+    servings: formatServesOrMakes(content.servings),
   };
 }
 
@@ -68,7 +72,7 @@ function fromBox(draft: RecipeContent, box: BoxName, text: string): RecipeConten
     case "directions":
       return { ...draft, directions: directionsFromText(text, draft.directions) };
     case "servings":
-      return { ...draft, servings: { ...draft.servings, count: wholeNumber(text) } };
+      return { ...draft, servings: parseServesOrMakes(text) };
     default:
       return { ...draft, times: { ...draft.times, [box]: timeFromText(text) } };
   }
@@ -202,12 +206,16 @@ export class EditorSession {
     this.changed();
   }
 
-  /** Links an ingredient line to a recipe in the household, or unlinks it (phase F3). */
-  setLink(lineId: string, recipeId: string | null): void {
-    if (!this.draft.ingredients.some((line) => line.id === lineId && !line.heading)) return;
+  /**
+   * Links an ingredient line (phase F3) or a step (U27) to a recipe in the household, or unlinks
+   * it.
+   */
+  setLink(list: "ingredients" | "directions", lineId: string, recipeId: string | null): void {
+    const lines: readonly (IngredientLine | DirectionStep)[] = this.draft[list];
+    if (!lines.some((line) => line.id === lineId && !line.heading)) return;
     this.draft = {
       ...this.draft,
-      ingredients: this.draft.ingredients.map((line) =>
+      [list]: lines.map((line) =>
         line.id === lineId ? { ...line, linkedRecipeId: recipeId } : line,
       ),
     };

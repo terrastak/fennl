@@ -137,7 +137,11 @@ describe("exporting the library", () => {
         title: "Lemon <Olive> Oil Cake",
         description: "Bright & tender.",
         ingredients: lines(["For the cake:", true], ["1 cup flour", false], ["2 lemons", false]),
-        directions: lines(["Mix.", false], ["Bake 40 minutes.", false]),
+        // A step linked to another recipe (U27) goes out like an ingredient's link.
+        directions: [
+          { id: id(), text: "Make the stew first.", heading: false, linkedRecipeId: stew },
+          ...lines(["Mix.", false], ["Bake 40 minutes.", false]),
+        ],
         times: {
           prep: { minutes: 15, text: null },
           cook: { minutes: 40, text: null },
@@ -181,6 +185,10 @@ describe("exporting the library", () => {
     const cakePage = strFromU8(first.files[pages.find((p) => p.includes("lemon"))!]!);
     expect(cakePage).toContain("<h1>Lemon &lt;Olive&gt; Oil Cake</h1>");
     expect(cakePage).toContain("<h3>For the cake:</h3>");
+    expect(cakePage).toContain("<h2>Directions</h2>");
+    expect(
+      first.file.recipes.find((r) => r.title === "Lemon <Olive> Oil Cake")!.directions[0],
+    ).toMatchObject({ text: "Make the stew first.", linkedRecipeId: stew });
     expect(cakePage).toMatch(
       /Mom's favorite<\/p><p class="muted">— June, [A-Z][a-z]{2} \d+, \d{4}/,
     );

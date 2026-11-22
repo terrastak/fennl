@@ -189,7 +189,8 @@ function TimerList({ timers, now, titleId }: { timers: Timer[]; now: number; tit
       <div className={styles.panelBody}>
         {ordered.length === 0 ? (
           <p className={styles.empty}>
-            No timers running. Add one of your own here, or tap a time in a recipe&rsquo;s method.
+            No timers running. Add one of your own here, or tap a time in a recipe&rsquo;s
+            directions.
           </p>
         ) : (
           <>

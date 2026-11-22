@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import type { IngredientLine } from "../../shared/recipe";
 import { wouldLoop } from "../../shared/subRecipes";
 import { Link } from "../router";
 import { useRecipeLinks, useRecipeList } from "../sync/useSync";
@@ -8,8 +7,9 @@ import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
 
 // Linking an ingredient to another recipe in the household, in the editor's preview (phase F3):
-// "1 cup BBQ sauce" → the BBQ sauce recipe. A recipe that already uses this one (directly or
-// through its own links) is never offered, so links can't go round in a circle.
+// "1 cup BBQ sauce" → the BBQ sauce recipe; or a step (U27): "Make the herb butter." → Herb
+// Butter. A recipe that already uses this one (directly or through its own links, from
+// ingredients or steps) is never offered, so links can't go round in a circle.
 
 const words = (text: string) =>
   text
@@ -17,7 +17,7 @@ const words = (text: string) =>
     .split(/[^\p{L}\p{N}]+/u)
     .filter((w) => w.length >= 3);
 
-/** How well a recipe's title matches an ingredient line: how many of its words the line has. */
+/** How well a recipe's title matches a line: how many of its words the line has. */
 function likeness(title: string, line: string): number {
   const said = new Set(words(line));
   return words(title).filter(
@@ -54,7 +54,8 @@ export function LinkPicker({
   onLink,
   onClose,
 }: {
-  line: IngredientLine;
+  /** The ingredient or step being linked. */
+  line: { text: string };
   recipeId: string;
   onLink: (recipeId: string) => void;
   onClose: () => void;

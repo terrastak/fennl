@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { IngredientLine } from "./recipe";
+import type { DirectionStep, IngredientLine } from "./recipe";
 import {
   MAX_LINK_DEPTH,
   linkView,
   linkedIds,
   reachable,
+  recipeLinkIds,
   wouldLoop,
   type LinkedRecipe,
 } from "./subRecipes";
@@ -62,6 +63,51 @@ describe("links", () => {
     // A circle already in the data (made on two devices at once) doesn't hang the check.
     const circle: Record<string, string[]> = { a: ["b"], b: ["a"] };
     expect(wouldLoop("c", "a", (id) => circle[id] ?? [])).toBe(false);
+  });
+});
+
+describe("links from steps (U27)", () => {
+  const step = (
+    text: string,
+    linkedRecipeId: string | null = null,
+    heading = false,
+  ): DirectionStep => ({
+    id: text,
+    text,
+    heading,
+    linkedRecipeId,
+  });
+
+  it("lists a recipe's links from its ingredients, then its steps, each once", () => {
+    expect(
+      recipeLinkIds({
+        ingredients: [line("1 cup BBQ sauce", "bbq"), line("2 lb ribs")],
+        directions: [
+          step("Make the rub.", "rub"),
+          step("For serving", "slaw", true),
+          step("Brush on the sauce.", "bbq"),
+          step("Serve with the slaw.", "slaw"),
+        ],
+      }),
+    ).toEqual(["bbq", "rub", "slaw"]);
+    expect(recipeLinkIds({ ingredients: [], directions: [step("Stir.")] })).toEqual([]);
+  });
+
+  it("refuses a circle made through a step", () => {
+    // Ribs' step links to the herb butter; the butter's ingredient linking back would be a circle.
+    const recipes: Record<string, { ingredients: IngredientLine[]; directions: DirectionStep[] }> =
+      {
+        ribs: { ingredients: [], directions: [step("Make the herb butter.", "butter")] },
+        butter: { ingredients: [line("1 cup herbs", "herbs")], directions: [] },
+        herbs: { ingredients: [], directions: [] },
+      };
+    const linksOf = (id: string) => {
+      const r = recipes[id];
+      return r ? recipeLinkIds(r) : [];
+    };
+    expect(wouldLoop("butter", "ribs", linksOf)).toBe(true);
+    expect(wouldLoop("herbs", "ribs", linksOf)).toBe(true);
+    expect(wouldLoop("ribs", "herbs", linksOf)).toBe(false);
   });
 });
 

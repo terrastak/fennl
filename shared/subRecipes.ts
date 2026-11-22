@@ -1,9 +1,11 @@
 import type { DirectionStep, IngredientLine, RecipeServings } from "./recipe";
 
 // Linked sub-recipes (phase F3): "1 cup BBQ sauce" linked to the household's BBQ sauce recipe.
-// A link is the `linkedRecipeId` on an ingredient line; the line's words are always kept, so a
-// link that stops working (the recipe deleted, or no longer shared) only flags the line. Links
-// can't go round in a circle (A uses B uses A), and expanding them in place stops a few deep.
+// A link is the `linkedRecipeId` on an ingredient line, or on a step of the directions ("Make the
+// herb butter." → Herb Butter; U27, owner's choice 2026-11-21); the line's words are always kept,
+// so a link that stops working (the recipe deleted, or no longer shared) only flags the line.
+// Links of either kind can't go round in a circle (A uses B uses A), and expanding ingredient
+// links in place stops a few deep. A step's link only opens its recipe.
 
 /** How many levels of linked recipes expand in place; deeper ones are opened instead. */
 export const MAX_LINK_DEPTH = 3;
@@ -19,8 +21,8 @@ export interface LinkedRecipe {
   directions: DirectionStep[];
 }
 
-/** The recipes a list of ingredients links to, in order, each once. */
-export function linkedIds(lines: readonly IngredientLine[]): string[] {
+/** The recipes a list of ingredients (or steps) links to, in order, each once. */
+export function linkedIds(lines: readonly (IngredientLine | DirectionStep)[]): string[] {
   const ids: string[] = [];
   for (const line of lines) {
     if (!line.heading && line.linkedRecipeId && !ids.includes(line.linkedRecipeId)) {
@@ -28,6 +30,17 @@ export function linkedIds(lines: readonly IngredientLine[]): string[] {
     }
   }
   return ids;
+}
+
+/**
+ * Every recipe a recipe links to, from its ingredients then its steps, each once: what the
+ * circle check, the recipe page and printing ("linked recipes") follow.
+ */
+export function recipeLinkIds(recipe: {
+  ingredients: readonly IngredientLine[];
+  directions: readonly DirectionStep[];
+}): string[] {
+  return [...new Set([...linkedIds(recipe.ingredients), ...linkedIds(recipe.directions)])];
 }
 
 /** Every recipe reachable from `start` by links (not `start` itself unless a link leads back). */
@@ -53,8 +66,8 @@ export function reachable(
 }
 
 /**
- * Whether linking `recipeId`'s ingredient to `targetId` would go round in a circle: the target
- * is the recipe itself, or already uses it through its own links.
+ * Whether linking a line of `recipeId` (an ingredient or a step) to `targetId` would go round in
+ * a circle: the target is the recipe itself, or already uses it through its own links.
  */
 export function wouldLoop(
   recipeId: string,

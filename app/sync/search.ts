@@ -130,7 +130,7 @@ function findHit(
 ): SearchHit | null {
   const places: [string, string[]][] = [
     ["Ingredients", recipe.ingredients.map((l) => l.text)],
-    ["Method", recipe.directions.map((l) => l.text)],
+    ["Directions", recipe.directions.map((l) => l.text)],
     ["Notes", [recipe.notes, ...notes].flatMap((n) => n.split("\n"))],
     ["About", [recipe.description]],
     [

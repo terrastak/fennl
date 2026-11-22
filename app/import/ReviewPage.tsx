@@ -18,7 +18,7 @@ import { currentPhotoCache } from "../photos/usePhoto";
 import { Link } from "../router";
 import { lineEnd } from "../recipes/editing";
 import editor from "../recipes/editor.module.css";
-import { Field, LinesBox, SourceFields, TimeBox } from "../recipes/editorFields";
+import { Field, LinesBox, ServesOrMakesBox, SourceFields, TimeBox } from "../recipes/editorFields";
 import { LaptopIcon } from "../recipes/LaptopIcon";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 import { usePointer } from "../recipes/usePointer";
@@ -207,7 +207,7 @@ function Review({
 
   const lineTools = (from: "ingredients" | "directions") => [
     {
-      label: from === "ingredients" ? "Move to method" : "Move to ingredients",
+      label: from === "ingredients" ? "Move to directions" : "Move to ingredients",
       icon: LAPTOP_ICONS.swap,
       run: (line: number) => {
         const moved = moveLineTo(session.getSnapshot().draft, from, line);
@@ -215,7 +215,7 @@ function Review({
         session.setBox("ingredients", moved.ingredients);
         session.setBox("directions", moved.directions);
         void session.flush();
-        setAnnounce(from === "ingredients" ? "Moved to the method." : "Moved to ingredients.");
+        setAnnounce(from === "ingredients" ? "Moved to directions." : "Moved to ingredients.");
         return line > 0 ? lineEnd(moved[from], line - 1, from) : 0;
       },
     },
@@ -636,7 +636,7 @@ function Review({
                   </li>
                 ))}
                 {marks.size > 0 ? (
-                  <li>Lines marked &ldquo;Worth a look&rdquo; in the ingredients or method</li>
+                  <li>Lines marked &ldquo;Worth a look&rdquo; in the ingredients or directions</li>
                 ) : null}
                 {words.size > 0 ? (
                   <li>
@@ -709,7 +709,7 @@ function Review({
               session={session}
               state={state}
               list="directions"
-              label="Method"
+              label="Directions"
               hint="One step per line. Enter splits a step; Backspace at the start of a step joins it to the one before."
               tools={lineTools("directions")}
               marks={marks}
@@ -784,35 +784,11 @@ function Review({
                   <TimeBox session={session} state={state} which="total" label="Total time" />
                 </div>
                 <div className={editor.row}>
-                  <Field
-                    id="edit-servings"
-                    label="Serves"
-                    problems={problemsFor(state.issues, "servings")}
-                    className={editor.narrow}
-                  >
-                    <input
-                      {...described("edit-servings", false, problemsFor(state.issues, "servings"))}
-                      className={recipes.input}
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={RECIPE_RULES.maxServings}
-                      value={state.boxes.servings}
-                      onChange={(e) => session.setBox("servings", e.target.value)}
-                      onBlur={() => session.tidyBox("servings")}
-                    />
-                  </Field>
-                  <Field id="edit-yield" label="Makes">
-                    <input
-                      id="edit-yield"
-                      className={recipes.input}
-                      value={draft.servings.yield ?? ""}
-                      maxLength={RECIPE_RULES.shortTextLength}
-                      onChange={(e) =>
-                        set({ servings: { ...draft.servings, yield: e.target.value || null } })
-                      }
-                    />
-                  </Field>
+                  <ServesOrMakesBox
+                    session={session}
+                    state={state}
+                    className={editor.servesField}
+                  />
                 </div>
               </div>
             </fieldset>
@@ -867,7 +843,7 @@ const FIELD_LABEL: Record<string, string> = {
   title: "the title",
   description: "the description",
   ingredients: "the ingredients",
-  directions: "the method",
+  directions: "the directions",
   times: "the times",
   servings: "the servings",
   source: "where it's from",

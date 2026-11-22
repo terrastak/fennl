@@ -123,6 +123,27 @@ describe("ingredients from the text box", () => {
     expect(rewritten[0]).toEqual({ id: "x", text: "A splash of hot sauce", heading: false });
   });
 
+  it("keep a step's link while it's there, and drop it when it goes (U27)", () => {
+    const LINK = "8a1b2c3d-0000-4000-8000-000000000002";
+    const first = directionsFromText("Make the herb butter.\nSear the salmon.", [], ids());
+    const linked = first.map((l, i) => (i === 0 ? { ...l, linkedRecipeId: LINK } : l));
+    const edited = directionsFromText(
+      "Sear the salmon.\nMake the herb butter first.",
+      linked,
+      () => "new",
+    );
+    expect(edited.find((l) => l.text === "Make the herb butter first.")).toMatchObject({
+      id: first[0]!.id,
+      linkedRecipeId: LINK,
+    });
+    expect(directionsFromText("Sear the salmon.", linked).some((l) => l.linkedRecipeId)).toBe(
+      false,
+    );
+    // A step made a heading isn't a link.
+    const heading = setHeading(linked, first[0]!.id, true);
+    expect(directionsFromText(textFromLines(heading), heading)[0]!.linkedRecipeId).toBeUndefined();
+  });
+
   it("keep a heading chosen with the heading button", () => {
     const first = ingredientsFromText("Spice rub\n1 tablespoon paprika", [], ids());
     const marked = setHeading(first, first[0]!.id, true);

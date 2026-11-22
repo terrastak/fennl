@@ -12,7 +12,7 @@ import { Link } from "../router";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, saveChanges, useRecipe, useSyncStatus } from "../sync/useSync";
 import editor from "./editor.module.css";
-import { Field, LinesBox, SourceFields, TimeBox } from "./editorFields";
+import { Field, LinesBox, ServesOrMakesBox, SourceFields, TimeBox } from "./editorFields";
 import { NutritionFields } from "./NutritionFields";
 import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
@@ -24,7 +24,8 @@ import styles from "./recipes.module.css";
 // The recipe editor (phase C6): /recipes/<id>/edit, or /recipes/<new id>/edit?new for a new
 // recipe. It saves as you type, through the sync engine (editorSession.ts has the rules).
 // Ingredients and directions are one text box each (CLAUDE.md, "Data model rules"), with a
-// preview of how each line was read and a heading button. Alt+↑ / Alt+↓ moves a line.
+// preview of how each line was read, a heading button and a link button (a line can link to
+// another recipe). Alt+↑ / Alt+↓ reorders a line.
 
 async function saveChange(change: RecipeChange): Promise<void> {
   const client = activeSyncClient();
@@ -155,7 +156,6 @@ function Editor({
 
   const set = session.set.bind(session);
   const titleProblems = state.created ? problemsFor(state.issues, "title") : [];
-  const servingsProblems = problemsFor(state.issues, "servings");
   const draft = state.draft;
   const saveState = editable || state.save === "saved" ? state.save : "paused";
 
@@ -264,8 +264,9 @@ function Editor({
             session={session}
             state={state}
             list="directions"
-            label="Method"
-            hint="One step per line; numbers are added for you."
+            label="Directions"
+            hint="One step per line; step numbers are added for you."
+            linkFrom={id}
             laptopLook
           />
 
@@ -280,35 +281,7 @@ function Editor({
                 <TimeBox session={session} state={state} which="total" label="Total time" />
               </div>
               <div className={editor.row}>
-                <Field
-                  id="edit-servings"
-                  label="Serves"
-                  problems={servingsProblems}
-                  className={editor.narrow}
-                >
-                  <input
-                    {...described("edit-servings", false, servingsProblems)}
-                    className={styles.input}
-                    type="number"
-                    inputMode="numeric"
-                    min={1}
-                    max={RECIPE_RULES.maxServings}
-                    value={state.boxes.servings}
-                    onChange={(e) => session.setBox("servings", e.target.value)}
-                    onBlur={() => session.tidyBox("servings")}
-                  />
-                </Field>
-                <Field id="edit-yield" label="Makes" hint="For example 2 loaves, or 24 cookies.">
-                  <input
-                    {...described("edit-yield", true, [])}
-                    className={styles.input}
-                    value={draft.servings.yield ?? ""}
-                    maxLength={RECIPE_RULES.shortTextLength}
-                    onChange={(e) =>
-                      set({ servings: { ...draft.servings, yield: e.target.value || null } })
-                    }
-                  />
-                </Field>
+                <ServesOrMakesBox session={session} state={state} className={editor.servesField} />
                 <Field id="edit-difficulty" label="Difficulty" className={editor.narrow}>
                   <select
                     id="edit-difficulty"
@@ -335,16 +308,10 @@ function Editor({
 
           <SourceFields session={session} state={state} />
 
-          <Field
-            id="edit-notes"
-            label="Notes"
-            // "notes" since U7: there can be several (owner's choice 2026-11-07, every screen).
-            hint="Notes that go with the recipe. Your own signed notes are on the recipe's page."
-            problems={problemsFor(state.issues, "notes")}
-            boxed
-          >
+          {/* No hint (U27, owner's choice 2026-11-21: fewer words). */}
+          <Field id="edit-notes" label="Notes" problems={problemsFor(state.issues, "notes")} boxed>
             <textarea
-              {...described("edit-notes", true, problemsFor(state.issues, "notes"))}
+              {...described("edit-notes", false, problemsFor(state.issues, "notes"))}
               className={`${styles.input} ${editor.textarea}`}
               value={draft.notes}
               rows={4}
@@ -371,7 +338,6 @@ function Editor({
             <LaptopIcon path={LAPTOP_ICONS.trash} />
             Move to Trash
           </button>
-          <p className={editor.trashHint}>It stays in Trash for 30 days, so you can put it back.</p>
         </div>
       ) : null}
     </article>

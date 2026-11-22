@@ -678,10 +678,10 @@ export function stillUncertain(draft: RecipeDraft): boolean {
 
 const LISTS = [
   ["ingredients", "ingredients"],
-  ["directions", "method"],
+  ["directions", "directions"],
 ] as const;
 
-/** A recipe's data on its page has no ingredients, or no method. */
+/** A recipe's data on its page has no ingredients, or no directions. */
 export function missingLists(draft: RecipeDraft): boolean {
   return LISTS.some(([field]) => !draft.fields[field]?.value.length);
 }

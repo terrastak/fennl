@@ -91,10 +91,3 @@ export function issueMessage(issue: RecipeIssue): string {
   if (issue.path === "servings.count") return "A number from 1 up.";
   return "This can't be saved as it is.";
 }
-
-/** A whole number from a number box, or null when it's empty or not a number. */
-export function wholeNumber(value: string): number | null {
-  if (!value.trim()) return null;
-  const n = Number(value);
-  return Number.isFinite(n) ? Math.round(n) : null;
-}

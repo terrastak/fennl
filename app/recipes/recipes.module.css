@@ -1991,6 +1991,24 @@ label.card {
   font-size: var(--text-sm);
 }
 
+/* A step's linked recipe (U27): its name, small, after the step's words. */
+.stepLink {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+/* With a small book on a laptop (U23's icons beside words). */
+@media (min-width: 900px) and (pointer: fine) {
+  .stepLink .stepLinkIcon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.25em;
+    vertical-align: -0.125em;
+  }
+}
+
 /* Each step's ingredients (U16, owner's choices 2026-11-04). "Show all ingredients" beside the
    Method heading, and a line saying the step numbers open them. */
 .methodHead {

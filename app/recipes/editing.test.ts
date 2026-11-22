@@ -9,7 +9,6 @@ import {
   pick,
   timeFromText,
   webAddress,
-  wholeNumber,
 } from "./editing";
 import { timeText } from "./format";
 
@@ -101,12 +100,5 @@ describe("changes to save", () => {
     expect(issueMessage({ path: "ingredients.2.text", problem: "too_long" })).toBe(
       "Line 3 is too long.",
     );
-  });
-
-  it("reads number boxes", () => {
-    expect(wholeNumber("")).toBeNull();
-    expect(wholeNumber("45")).toBe(45);
-    expect(wholeNumber("2.6")).toBe(3);
-    expect(wholeNumber("abc")).toBeNull();
   });
 });

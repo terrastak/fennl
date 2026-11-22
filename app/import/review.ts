@@ -29,7 +29,7 @@ export const FIELD_NAMES: Record<RecipeField, string> = {
   title: "Title",
   description: "About this recipe",
   ingredients: "Ingredients",
-  directions: "Method",
+  directions: "Directions",
   times: "Times",
   servings: "Servings",
   source: "Where it's from",

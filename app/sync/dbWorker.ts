@@ -12,7 +12,12 @@ import {
   type RecipePhoto,
 } from "../../shared/recipe";
 import { printOrder } from "../../shared/print";
-import { MAX_LINK_DEPTH, linkedIds, reachable, type LinkedRecipe } from "../../shared/subRecipes";
+import {
+  MAX_LINK_DEPTH,
+  reachable,
+  recipeLinkIds,
+  type LinkedRecipe,
+} from "../../shared/subRecipes";
 import type { PullResponse, SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type {
@@ -416,7 +421,7 @@ function recipeById(id: string): Recipe | undefined {
 
 /**
  * The recipes a recipe links to, and theirs, as deep as a page expands them and one more (so the
- * deepest can still be named), for showing in place (phase F3).
+ * deepest can still be named), for showing in place (phase F3) or naming after a step (U27).
  */
 function linkedRecipes(recipe: Recipe): Record<string, LinkedRecipe> {
   const found = new Map<string, Recipe | undefined>([[recipe.id, recipe]]);
@@ -428,7 +433,7 @@ function linkedRecipes(recipe: Recipe): Record<string, LinkedRecipe> {
     recipe.id,
     (id) => {
       const r = load(id);
-      return r && !r.expungedAt ? linkedIds(r.ingredients) : [];
+      return r && !r.expungedAt ? recipeLinkIds(r) : [];
     },
     MAX_LINK_DEPTH + 1,
   );
@@ -448,11 +453,14 @@ function linkedRecipes(recipe: Recipe): Record<string, LinkedRecipe> {
   return linked;
 }
 
-/** Every recipe's links, for refusing a link that would go round in a circle (phase F3). */
+/**
+ * Every recipe's links, from ingredients and steps, for refusing a link that would go round in a
+ * circle (phase F3, U27).
+ */
 function recipeLinks(): Record<string, string[]> {
   const links: Record<string, string[]> = {};
   for (const recipe of values<Recipe>("recipe")) {
-    if (!recipe.expungedAt) links[recipe.id] = linkedIds(recipe.ingredients);
+    if (!recipe.expungedAt) links[recipe.id] = recipeLinkIds(recipe);
   }
   return links;
 }
@@ -502,7 +510,8 @@ function printRecipes(ids: string[], withLinked: boolean): PrintSet {
   };
   const linksOf = (id: string) => {
     const recipe = load(id);
-    return recipe ? linkedIds(recipe.ingredients).filter((linked) => load(linked)) : [];
+    // Recipes linked from ingredients and from steps (U27), each printed once.
+    return recipe ? recipeLinkIds(recipe).filter((linked) => load(linked)) : [];
   };
   const order = printOrder(
     ids.filter((id) => load(id)),

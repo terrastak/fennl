@@ -194,7 +194,7 @@ function Recipe({
         </section>
 
         <section className={styles.method}>
-          <h3 className={styles.part}>Method</h3>
+          <h3 className={styles.part}>Directions</h3>
           {groups.map((group, i) => (
             <div key={group.key} className={styles.group}>
               {group.heading ? <h4 className={styles.subheading}>{group.heading}</h4> : null}
@@ -203,6 +203,15 @@ function Recipe({
                   {group.items.map((step) => (
                     <li key={step.id}>
                       <Shown line={showStep(step.text, scale)} />
+                      {/* A step linked to a recipe (U27), named as an ingredient's link is. */}
+                      {step.linkedRecipeId && item.links[step.linkedRecipeId] !== undefined ? (
+                        <span className={styles.see}>
+                          {" "}
+                          {follows(step.linkedRecipeId)
+                            ? "(recipe follows)"
+                            : `(see ${item.links[step.linkedRecipeId]})`}
+                        </span>
+                      ) : null}
                       {note?.stepId === step.id ? (
                         <p className={styles.suggestion}>
                           <strong>Fennl&rsquo;s suggestion:</strong> {note.text}

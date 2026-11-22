@@ -5,7 +5,7 @@ import {
   PRINT_LAYOUTS,
   type PrintOptions,
 } from "../../shared/print";
-import { linkedIds } from "../../shared/subRecipes";
+import { recipeLinkIds } from "../../shared/subRecipes";
 import { LaptopIcon } from "../recipes/LaptopIcon";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
 import { useHideNutrition } from "../recipes/nutritionSetting";
@@ -53,7 +53,7 @@ export function PrintPage({ ids, back }: { ids: string[]; back: string }) {
   const first = set?.recipes[0]?.recipe;
   const chosen = set?.recipes.filter((r) => !r.linkedFrom).length ?? 0;
   const linked = (set?.recipes.length ?? 0) - chosen;
-  const hasLinks = set?.recipes.some((r) => linkedIds(r.recipe.ingredients).length > 0) ?? false;
+  const hasLinks = set?.recipes.some((r) => recipeLinkIds(r.recipe).length > 0) ?? false;
 
   // The title names the PDF a browser saves: the recipe's own name for one recipe.
   useEffect(() => {

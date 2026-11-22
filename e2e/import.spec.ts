@@ -31,7 +31,7 @@ async function importSavedPage(page: Page, file: string) {
 }
 
 const ingredients = (page: Page) => page.getByRole("textbox", { name: "Ingredients" });
-const method = (page: Page) => page.getByRole("textbox", { name: "Method" });
+const method = (page: Page) => page.getByRole("textbox", { name: "Directions" });
 
 test("review a web page's recipe, fix it, and save it", async ({
   page,
@@ -135,7 +135,7 @@ test("lines can move between the lists and the draft be discarded", async ({
   const box = ingredients(page);
   await box.click();
   await page.keyboard.press(keys.textEnd);
-  await page.getByRole("button", { name: "Move to method" }).click();
+  await page.getByRole("button", { name: "Move to directions" }).click();
   await expect(box).not.toHaveValue(/deep pie dish/);
   await expect(method(page)).toHaveValue(/A 9" deep pie dish; a candy thermometer$/);
   await page.getByRole("button", { name: "Undo" }).click();
@@ -161,7 +161,7 @@ test("the review can be done with the keyboard alone", async ({ page, context, b
   await expect(ingredients(page)).toBeFocused();
   await page.keyboard.press(keys.textStart);
   await page.keyboard.press("Shift+Tab");
-  await expect(page.getByRole("button", { name: "Move to method" })).toBeFocused();
+  await expect(page.getByRole("button", { name: "Move to directions" })).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(ingredients(page)).not.toHaveValue(/^3\/4 cup butter/);
   await expect(method(page)).toHaveValue(/3\/4 cup butter, softened$/);

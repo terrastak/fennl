@@ -127,18 +127,18 @@ test("A timer of your own: add, pause, adjust and dismiss it", async ({
   await expect(timers).toContainText("No timers running.");
 });
 
-// U11 (owner's request 2026-10-29): a time in the recipe page's method, quietly marked, asks
+// U11 (owner's request 2026-10-29): a time in the recipe page's directions, quietly marked, asks
 // before it starts a timer named from its step (owner's choice 2026-10-29), with either end of a
 // range; on a scaled recipe a step's words still show the original and the working.
-test("A time in a recipe's method starts a timer", async ({ page, context, baseURL }) => {
+test("A time in a recipe's directions starts a timer", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Rice");
-  await page.getByLabel("Serves").fill("4");
+  await page.getByLabel("Serves or makes").fill("4");
   await page.getByRole("textbox", { name: "Ingredients" }).fill("1 cup rice");
   await page
-    .getByRole("textbox", { name: "Method" })
+    .getByRole("textbox", { name: "Directions" })
     .fill(
       "Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.\nToast the crust for 9-11 minutes.",
     );
@@ -147,7 +147,7 @@ test("A time in a recipe's method starts a timer", async ({ page, context, baseU
 
   // Doubled: the amount changes, the times don't, and the words still open the working.
   await quickScale(page, "2×");
-  const method = page.getByRole("region", { name: "Method" });
+  const method = page.getByRole("region", { name: "Directions" });
   await expect(method).toContainText(
     "Add 4 cups water and simmer for ⏱18 minutes, then rest ⏱5 minutes.",
   );
