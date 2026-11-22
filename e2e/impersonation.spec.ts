@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus } from "./recipes";
+import { DRAFT_SAVED, editorStatus, recipeCard, syncStatus } from "./recipes";
 import { PASSWORD, adminEmail, signUpConfirmed, useFreshAddress } from "./support";
 
 // Phase C12: an admin acting as a user, locally at /admin and / on one address
@@ -94,14 +94,18 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   await expect(banner).toBeVisible();
   await page.getByRole("link", { name: "Edit recipe" }).click();
   await page.getByLabel("Notes").fill("Checked by support: it's all here.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByText("Checked by support: it's all here.")).toBeVisible();
+  // Done hands the change to sync (U27 part 3): sent a moment later.
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
   // Petra sees the edit, and nothing else: one device (hers), no banner.
   await petraPage.reload();
   await petraPage.getByRole("link", { name: /Green Chile Stew/ }).click();
-  await expect(petraPage.getByText("Checked by support: it's all here.")).toBeVisible();
+  await expect(petraPage.getByText("Checked by support: it's all here.")).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(petraPage.getByRole("region", { name: "Acting as this person" })).toHaveCount(0);
   await petraPage.goto("/account");
   const devices = petraPage.getByRole("list", { name: "Devices" });
@@ -119,9 +123,12 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   await expect(log.getByRole("row").filter({ hasText: "Started acting as them" })).toContainText(
     "Reason: Petra says her stew is missing",
   );
-  await expect(
-    log.getByRole("row").filter({ hasText: "Changed something while acting as them" }).first(),
-  ).toContainText("edited: notes");
+  // The edit, applied at Done; the draft it was kept in first is logged too (U27 part 3).
+  const changes = log
+    .getByRole("row")
+    .filter({ hasText: "Changed something while acting as them" });
+  await expect(changes.filter({ hasText: "edited: notes" })).toHaveCount(1);
+  await expect(changes.filter({ hasText: "/api/drafts/" }).first()).toBeVisible();
   await expect(log.getByText("Stopped acting as them")).toBeVisible();
   await expectAccessible(page);
 

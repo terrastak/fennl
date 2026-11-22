@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type BrowserContext, type Page } from "@playwright/test";
-import { addRecipe, editorStatus, recipeCard, syncStatus } from "./recipes";
+import { addRecipe, DRAFT_SAVED, editorStatus, recipeCard, syncStatus } from "./recipes";
 import { testSetup, useOwnAccount } from "./support";
 
 // Phase C11: plan limits, the usage bar, and what happens over a limit.
@@ -78,7 +78,7 @@ test("The bar warns, then blocks Add recipe; editing and download still work; Tr
   await page.getByRole("link", { name: /Green Chile Stew/ }).click();
   await page.getByRole("link", { name: "Edit recipe" }).click();
   await page.getByLabel("Notes").fill("Even better the next day.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByText("Even better the next day.")).toBeVisible();
 
@@ -132,7 +132,7 @@ test("Over the limit (say, Premium ended): everything stays, adding waits", asyn
   await expect(storage(page)).toContainText("3 of 2 recipes");
 });
 
-test("A new recipe the server turns away stays on this device until there's room", async ({
+test("A new recipe with no room left stays a draft until there's room (U27 part 3)", async ({
   page,
   context,
   baseURL,
@@ -140,24 +140,29 @@ test("A new recipe the server turns away stays on this device until there's room
   await useOwnAccount(context, baseURL!);
   await addSamples(page);
 
-  // The editor opens with room; the limit drops before the recipe is saved (an admin, or the
-  // other person in a household adding one meanwhile).
+  // The editor opens with room; the limit drops before Done (an admin, or the other person in a
+  // household adding one meanwhile).
   await page.getByRole("button", { name: "Add recipe" }).click();
   await setLimit(context, baseURL!, "max_recipes", 4);
   await page.getByLabel("Title", { exact: true }).fill("Pozole");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
-  const held = page.getByRole("alert").filter({ hasText: "isn’t in your account yet" });
-  await expect(held).toBeVisible();
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
+  const editing = page.url();
+  // Done says why it can't, and the draft stays.
   await page.getByRole("button", { name: "Done" }).first().click();
-  await page.getByRole("link", { name: "← All recipes" }).click();
-  await expect(recipeCard(page, "Pozole")).toContainText("Not synced yet");
+  const noRoom = page.getByRole("alert").filter({ hasText: "as many as your plan includes" });
+  await expect(noRoom).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
 
-  // Making room sends it.
+  // Making room, then Done adds it.
+  await page.goto("/");
   await moveToTrash(page, "Buttermilk Pancakes");
-  await expect(held).toHaveCount(0);
-  await expect(recipeCard(page, "Pozole")).not.toContainText("Not synced yet");
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
-  await page.reload();
+  await page.goto(editing);
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("Pozole");
+  await page.getByRole("button", { name: "Done" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Pozole" })).toBeVisible();
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await page.goto("/");
   await expect(recipeCard(page, "Pozole")).toBeVisible();
   await expect(storage(page)).toContainText("4 of 4 recipes");
 });
@@ -185,6 +190,6 @@ test("An unusually large recipe isn't saved until it's shorter", async ({
   await expect(notice).toBeFocused();
 
   await notes.fill("Short again.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await expect(notice).toHaveCount(0);
 });

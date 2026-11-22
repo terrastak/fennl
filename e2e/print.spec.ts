@@ -3,7 +3,15 @@ import { expect, test, type Page } from "@playwright/test";
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { emptyRecipeContent } from "../shared/recipe";
 import { directionsFromText, ingredientsFromText } from "../shared/recipeLines";
-import { editorStatus, premium, recipeCard, syncStatus, quickScale, fromListMenu } from "./recipes";
+import {
+  DRAFT_SAVED,
+  editorStatus,
+  fromListMenu,
+  premium,
+  quickScale,
+  recipeCard,
+  syncStatus,
+} from "./recipes";
 import { signUpConfirmed, useFreshAddress, useOwnAccount } from "./support";
 
 // Phase F6: printing. Chrome makes real PDFs here, which are read back to check nothing is cut
@@ -84,7 +92,7 @@ async function linkLimeCrema(page: Page) {
   await page.getByLabel("Title", { exact: true }).fill("Lime Crema");
   await ingredientsBox.fill("½ cup sour cream\nZest and juice of 1 lime");
   await page.getByRole("textbox", { name: "Directions" }).fill("Stir together.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await page.getByRole("link", { name: "← All recipes" }).click();
   await page.getByRole("link", { name: /Black Bean Tacos/ }).click();
@@ -95,7 +103,7 @@ async function linkLimeCrema(page: Page) {
     .getByRole("list", { name: "Recipes to link" })
     .getByRole("button", { name: "Lime Crema" })
     .click();
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
 }
 

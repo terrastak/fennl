@@ -44,6 +44,27 @@ describe("applying a change here", () => {
     });
   });
 
+  it("puts each field of a waiting change down to the person (U27 part 3)", () => {
+    const server: Recipe = {
+      ...(applyChange(null, create, ctx) as Recipe),
+      serverSeq: 7,
+      fieldBy: { title: "user-partner", notes: "user-partner" },
+    };
+    const edited = applyChange(
+      server,
+      { kind: "recipe", id: recipeId, fields: { notes: "Mine" }, changedAt: 2 },
+      ctx,
+    ) as Recipe;
+    expect(edited.fieldBy).toEqual({ title: "user-partner", notes: me });
+    const trashed = applyChange(
+      server,
+      { kind: "recipe", id: recipeId, fields: {}, deleted: true, changedAt: 3 },
+      ctx,
+    ) as Recipe;
+    expect(trashed.fieldBy).toEqual(server.fieldBy);
+    expect((applyChange(null, create, ctx) as Recipe).fieldBy?.title).toBe(me);
+  });
+
   it("edits only the fields sent, and moves to Trash and back", () => {
     const server = { ...(applyChange(null, create, ctx) as Recipe), serverSeq: 7, notes: "Kept" };
     const edited = applyChange(

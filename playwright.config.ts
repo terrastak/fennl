@@ -12,6 +12,7 @@ const PHONE_TESTS = [
   "cook",
   "devices",
   "discover",
+  "drafts",
   "editor",
   "email",
   "feedback",

@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { quickScale } from "./recipes";
+import { DRAFT_SAVED, editorStatus, quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // U9 (owner's choices 2026-10-28): timers anywhere in the app, of your own or from a recipe's
@@ -142,7 +142,7 @@ test("A time in a recipe's directions starts a timer", async ({ page, context, b
     .fill(
       "Add 2 cups water and simmer for 18 minutes, then rest 5 minutes.\nToast the crust for 9-11 minutes.",
     );
-  await expect(page.getByText("All changes saved")).toBeVisible();
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
 
   // Doubled: the amount changes, the times don't, and the words still open the working.

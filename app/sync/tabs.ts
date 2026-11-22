@@ -3,7 +3,10 @@ import type { SyncChange } from "../../shared/sync";
 import type { CategoryData } from "../categories/tree";
 import type { ImportSource } from "../../shared/recipe";
 import type {
+  DraftItem,
   ImportedRecipe,
+  LocalDraft,
+  LocalDraftWrite,
   PrintSet,
   RecipeDetail,
   RecipeSummary,
@@ -39,6 +42,11 @@ interface Calls {
   getRecipe: { args: [string]; result: RecipeDetail | null };
   syncNow: { args: []; result: undefined };
   wipe: { args: []; result: undefined };
+  saveDraft: { args: [LocalDraftWrite]; result: number };
+  discardDraft: { args: [string, number | null]; result: boolean };
+  finishDraft: { args: [string, SyncChange[], number | null]; result: boolean };
+  getDraft: { args: [string]; result: LocalDraft | null };
+  listDrafts: { args: []; result: DraftItem[] };
 }
 type CallName = keyof Calls;
 
@@ -200,6 +208,36 @@ export class SyncClient {
     return this.call("wipe", []);
   }
 
+  /** Keeps what the editor has as the recipe's draft (U27 part 3); answers the version written. */
+  saveDraft(draft: LocalDraftWrite) {
+    return this.call("saveDraft", [draft]);
+  }
+
+  /**
+   * Throws a recipe's draft away (Discard), only the version given (the one the editor shows;
+   * null: whatever is here). False when a newer version is here, which stays.
+   */
+  discardDraft(recipeId: string, version: number | null = null) {
+    return this.call("discardDraft", [recipeId, version]);
+  }
+
+  /**
+   * Done: the draft's changes saved and the draft removed, together, only for the version given
+   * (as discardDraft). False when a newer version is here: nothing was saved.
+   */
+  finishDraft(recipeId: string, changes: SyncChange[], version: number | null = null) {
+    return this.call("finishDraft", [recipeId, changes, version]);
+  }
+
+  getDraft(recipeId: string) {
+    return this.call("getDraft", [recipeId]);
+  }
+
+  /** The person's drafts, newest change first. */
+  listDrafts() {
+    return this.call("listDrafts", []);
+  }
+
   // --- Owning the local copy -----------------------------------------------------------------
 
   /** This tab's turn: open the database and sync, until the tab closes. */
@@ -278,6 +316,20 @@ export class SyncClient {
         return engine.sync();
       case "wipe":
         return engine.wipe();
+      case "saveDraft":
+        return engine.saveDraft(args[0] as LocalDraftWrite);
+      case "discardDraft":
+        return engine.discardDraft(args[0] as string, (args[1] as number | null) ?? null);
+      case "finishDraft":
+        return engine.finishDraft(
+          args[0] as string,
+          args[1] as SyncChange[],
+          (args[2] as number | null) ?? null,
+        );
+      case "getDraft":
+        return engine.getDraft(args[0] as string);
+      case "listDrafts":
+        return engine.listDrafts();
     }
   }
 

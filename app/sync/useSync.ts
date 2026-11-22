@@ -1,8 +1,15 @@
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { SyncChange } from "../../shared/sync";
 import { deviceId } from "../devices/deviceId";
 import { categoryTree, type CategoryTree } from "../categories/tree";
-import type { PrintSet, RecipeDetail, RecipeSummary, TrashItem } from "./dbProtocol";
+import type {
+  DraftItem,
+  LocalDraft,
+  PrintSet,
+  RecipeDetail,
+  RecipeSummary,
+  TrashItem,
+} from "./dbProtocol";
 import type { SearchResults } from "./search";
 import { STARTING, type SyncStatus } from "./status";
 import { SyncClient } from "./tabs";
@@ -39,8 +46,13 @@ export function useSyncStatus(): SyncStatus {
   );
 }
 
-/** The recipe list from the local copy, read again whenever it changes. Null while loading. */
-export function useRecipeList(): RecipeSummary[] | null {
+/**
+ * The recipe list from the local copy, read again whenever it changes. Null while loading. With
+ * `drafts`, new recipes still drafts are in it too (U27 part 3: the recipe list and its counts);
+ * everything else (linking, finding duplicates) sees only the recipe box.
+ */
+export function useRecipeList({ drafts = false }: { drafts?: boolean } = {}):
+  RecipeSummary[] | null {
   const client = activeSyncClient();
   const [list, setList] = useState<RecipeSummary[] | null>(null);
   useEffect(() => {
@@ -62,7 +74,10 @@ export function useRecipeList(): RecipeSummary[] | null {
       unsubscribe();
     };
   }, [client]);
-  return list;
+  return useMemo(
+    () => (drafts || !list?.some((recipe) => recipe.draft) ? list : list.filter((r) => !r.draft)),
+    [list, drafts],
+  );
 }
 
 /**
@@ -340,4 +355,62 @@ export function usePrintSet(ids: readonly string[], withLinked: boolean): PrintS
     };
   }, [client, key]);
   return set?.key === key ? set.value : undefined;
+}
+
+/**
+ * The person's drafts (U27 part 3), newest change first, read again whenever the local copy
+ * changes. Null while loading.
+ */
+export function useDrafts(): DraftItem[] | null {
+  const client = activeSyncClient();
+  const [items, setItems] = useState<DraftItem[] | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .listDrafts()
+        .then((value) => {
+          if (call === latest) setItems(value);
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client]);
+  return items;
+}
+
+/**
+ * The person's draft of a recipe (U27 part 3), read again whenever the local copy changes.
+ * Undefined while loading; null when there's none.
+ */
+export function useDraft(recipeId: string): LocalDraft | null | undefined {
+  const client = activeSyncClient();
+  const [draft, setDraft] = useState<{ id: string; value: LocalDraft | null } | null>(null);
+  useEffect(() => {
+    if (!client) return;
+    let latest = 0;
+    const load = () => {
+      const call = ++latest;
+      client
+        .getDraft(recipeId)
+        .then((value) => {
+          if (call === latest) setDraft({ id: recipeId, value });
+        })
+        .catch(() => undefined);
+    };
+    load();
+    const unsubscribe = client.subscribeChanges(load);
+    return () => {
+      latest = -1;
+      unsubscribe();
+    };
+  }, [client, recipeId]);
+  return draft?.id === recipeId ? draft.value : undefined;
 }

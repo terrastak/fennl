@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus } from "./recipes";
+import { DRAFT_SAVED, editorStatus, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F4: nutrition entered by hand, and hidden everywhere without deleting it.
@@ -25,7 +25,7 @@ test("Correct a recipe's nutrition, then hide it in Settings and bring it back",
   await page.getByLabel("Calories (kcal)").fill("400");
   await page.getByLabel("Fiber (g)").fill("2.5");
   await page.getByLabel("Sugar (g)").fill("");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(nutrition).toContainText("400 kcal");
   await expect(nutrition).toContainText("2.5 g");

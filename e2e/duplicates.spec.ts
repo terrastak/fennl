@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, fromListMenu, recipeCard, syncStatus } from "./recipes";
+import { DRAFT_SAVED, editorStatus, fromListMenu, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase C14: the duplicate finder.
@@ -21,7 +21,7 @@ async function addRecipe(page: Page, title: string, ingredients: string, notes =
   await page.getByLabel("Title", { exact: true }).fill(title);
   await page.getByRole("textbox", { name: "Ingredients" }).fill(ingredients);
   if (notes) await page.getByLabel("Notes").fill(notes);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
 }

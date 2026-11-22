@@ -239,6 +239,11 @@ export interface Recipe extends RecipeContent, SyncColumns {
    * made before C9.
    */
   expungedAt?: string | null;
+  /**
+   * Who last changed each field (U27 part 3), so Done on a draft can name a partner who changed
+   * the same part meanwhile. Absent for fields last changed before it was kept.
+   */
+  fieldBy?: Partial<Record<RecipeField, string>>;
 }
 
 /** Days a recipe stays in Trash before it's deleted for good (CLAUDE.md, "Data model rules"). */
@@ -311,6 +316,8 @@ export interface RecipeCategory extends SyncColumns {
   recipeId: string;
   /** Always one of the recipe owner's categories. */
   categoryId: string;
+  /** Who last added or took out the link (U27 part 3); absent for links changed before. */
+  updatedByUserId?: string;
 }
 
 /** "photo": in the gallery. "import_original": a card or page kept from an import, out of it. */
@@ -345,6 +352,8 @@ export interface RecipePhoto extends SyncColumns {
    * never rearranges it. Absent or null: added, not arranged.
    */
   arrangedBy?: PhotoArranger | null;
+  /** Who last added, moved or removed it (U27 part 3); absent for photos changed before. */
+  updatedByUserId?: string;
 }
 
 export const PHOTO_ARRANGERS = ["fennl", "person"] as const;

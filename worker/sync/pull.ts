@@ -1,5 +1,6 @@
 import { recipeScale } from "../../shared/scale";
 import { and, asc, eq, gt } from "drizzle-orm";
+import { RECIPE_FIELDS } from "../../shared/recipe";
 import type {
   Category,
   Difficulty,
@@ -62,9 +63,20 @@ export function toRecipe(row: typeof recipe.$inferSelect): Recipe {
     nutrition: row.nutrition ? (JSON.parse(row.nutrition) as Recipe["nutrition"]) : null,
     scale: row.scale ? recipeScale(JSON.parse(row.scale)) : null,
     expungedAt: iso(row.expungedAt),
+    ...(row.fieldBy ? { fieldBy: fieldBy(row.fieldBy) } : {}),
     ...sync(row),
   };
 }
+
+/** Who last changed each field (U27 part 3), leaving out fields with nobody recorded. */
+function fieldBy(json: string): NonNullable<Recipe["fieldBy"]> {
+  const stored = JSON.parse(json) as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(stored).filter(([key, who]) => key in RECIPE_KEYS && typeof who === "string"),
+  ) as NonNullable<Recipe["fieldBy"]>;
+}
+
+const RECIPE_KEYS = Object.fromEntries(RECIPE_FIELDS.map((field) => [field, true]));
 
 function toOpinion(row: typeof recipeOpinion.$inferSelect): RecipeOpinion {
   return {
@@ -111,7 +123,12 @@ function toCategory(row: typeof category.$inferSelect): Category {
 }
 
 function toRecipeCategory(row: typeof recipeCategory.$inferSelect): RecipeCategory {
-  return { recipeId: row.recipeId, categoryId: row.categoryId, ...sync(row) };
+  return {
+    recipeId: row.recipeId,
+    categoryId: row.categoryId,
+    ...(row.updatedByUserId ? { updatedByUserId: row.updatedByUserId } : {}),
+    ...sync(row),
+  };
 }
 
 function toPhoto(row: typeof recipePhoto.$inferSelect): RecipePhoto {
@@ -126,6 +143,7 @@ function toPhoto(row: typeof recipePhoto.$inferSelect): RecipePhoto {
     addedByUserId: row.addedByUserId,
     takenAt: row.takenAt,
     arrangedBy: (row.arrangedBy as PhotoArranger | null) ?? null,
+    ...(row.updatedByUserId ? { updatedByUserId: row.updatedByUserId } : {}),
     ...sync(row),
   };
 }

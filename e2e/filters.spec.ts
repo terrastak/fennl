@@ -6,6 +6,8 @@ import {
   chooseInBar,
   clearFilters,
   countLine,
+  DRAFT_SAVED,
+  editorStatus,
   filterBar,
   filtersButton,
   library,
@@ -427,7 +429,9 @@ test("A recipe with no time written down is left out of a time filter, with no e
   // A new recipe with only a title has no time and no number served.
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Mystery Soup");
-  await expect(page.locator("[data-editor-status]")).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
+  await page.getByRole("button", { name: "Done" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Mystery Soup" })).toBeVisible();
   await page.goto("/");
   await expect(recipeCard(page, "Mystery Soup")).toBeVisible();
 

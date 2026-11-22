@@ -1,5 +1,5 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
-import type { Recipe, RecipeNote } from "../../shared/recipe";
+import type { RecipeContent, RecipeNote } from "../../shared/recipe";
 
 // Searching the browser's copy of the recipe box (phase C8). Search runs on this device, so it
 // works offline, and it's built on SQLite's full-text search (FTS5), chosen in C2.
@@ -123,7 +123,7 @@ function excerpt(line: string): string {
 
 /** The first place in a recipe where one of the words is found. */
 function findHit(
-  recipe: Recipe,
+  recipe: RecipeContent,
   notes: string[],
   categories: string[],
   terms: string[],
@@ -211,7 +211,7 @@ export function searchRecipes(
     }
     for (const [recipeId, data] of rows) {
       const hit = findHit(
-        JSON.parse(data) as Recipe,
+        JSON.parse(data) as RecipeContent,
         notes.get(recipeId) ?? [],
         categories.get(recipeId) ?? [],
         terms,
@@ -276,4 +276,94 @@ export function similarByIngredients(
       limit ?`,
     [`{ingredients} : (${terms.map((term) => `"${term}"*`).join(" OR ")})`, recipeId, limit],
   ) as string[];
+}
+
+// ---------------------------------------------------------------------------------------------
+// New recipes' drafts (U27 part 3)
+// ---------------------------------------------------------------------------------------------
+// A new recipe waiting for Done is in the person's own list (with its Draft tag), so it's found
+// by search and the ingredient filters like any recipe. Drafts aren't in the index (they change
+// with every pause in typing, and there are few of them): they're matched here by the same rule,
+// every word as the start of a word, ignoring case and accents.
+
+/** A new recipe's draft, as search sees it. */
+export interface DraftForSearch {
+  id: string;
+  content: RecipeContent;
+  /** Its category paths ("Desserts › Cakes"). */
+  categories: string[];
+}
+
+/** Every searchable line of a draft, title first. */
+function draftLines(draft: DraftForSearch): string[] {
+  const { content } = draft;
+  return [
+    content.title,
+    content.description,
+    ...content.ingredients.map((l) => l.text),
+    ...content.directions.map((l) => l.text),
+    content.notes,
+    content.source.name ?? "",
+    content.source.author ?? "",
+    content.source.page ?? "",
+    content.source.url ?? "",
+    ...draft.categories,
+  ];
+}
+
+/** Searches new recipes' drafts, answering as searchRecipes does. */
+export function searchDrafts(
+  drafts: DraftForSearch[],
+  terms: string[],
+): Omit<SearchResults, "terms"> {
+  const ids: string[] = [];
+  const titleIds: string[] = [];
+  const hits: Record<string, SearchHit> = {};
+  if (terms.length === 0) return { ids, titleIds, hits };
+  for (const draft of drafts) {
+    const lines = draftLines(draft);
+    if (!terms.every((term) => lines.some((line) => hasWordStarting(line, term)))) continue;
+    ids.push(draft.id);
+    if (terms.every((term) => hasWordStarting(draft.content.title, term))) {
+      titleIds.push(draft.id);
+      continue;
+    }
+    const hit = findHit(draft.content, [], draft.categories, terms);
+    if (hit) hits[draft.id] = hit;
+  }
+  return { ids, titleIds, hits };
+}
+
+/** Search's answer with new recipes' drafts added. */
+export function withDrafts(results: SearchResults, drafts: DraftForSearch[]): SearchResults {
+  const found = searchDrafts(drafts, results.terms);
+  if (found.ids.length === 0) return results;
+  return {
+    terms: results.terms,
+    ids: [...results.ids, ...found.ids],
+    titleIds: [...results.titleIds, ...found.titleIds],
+    hits: { ...results.hits, ...found.hits },
+  };
+}
+
+/** Which drafts have each of these words in their ingredients, as ingredientMatches answers. */
+export function draftIngredientMatches(
+  drafts: DraftForSearch[],
+  words: string[],
+): Record<string, string[]> {
+  const result: Record<string, string[]> = {};
+  for (const word of words) {
+    const terms = searchTerms(word);
+    result[word] =
+      terms.length === 0
+        ? []
+        : drafts
+            .filter((draft) =>
+              terms.every((term) =>
+                draft.content.ingredients.some((line) => hasWordStarting(line.text, term)),
+              ),
+            )
+            .map((draft) => draft.id);
+  }
+  return result;
 }

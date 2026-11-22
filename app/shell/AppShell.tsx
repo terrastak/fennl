@@ -297,13 +297,14 @@ function NavLink({ item, path }: { item: NavItem; path: string }) {
 }
 
 function isCurrent(href: string, path: string): boolean {
-  // Recipe pages, categories and Trash belong to Recipes.
+  // Recipe pages, categories, Trash and Drafts belong to Recipes.
   if (href === "/") {
     return (
       path === "/" ||
       path.startsWith("/recipes/") ||
       path === "/categories" ||
       path === "/trash" ||
+      path === "/drafts" ||
       path === "/duplicates"
     );
   }

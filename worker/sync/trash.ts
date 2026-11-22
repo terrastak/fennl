@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { TRASH_DAYS, emptyRecipeContent, isId } from "../../shared/recipe";
 import type { Database } from "../db/client";
 import { requireHousehold, type SignedIn } from "../household/requireHousehold";
+import { holdDraftPhotos } from "../drafts/hold";
 import { bump, seq, type Statement } from "./push";
 
 // Trash (phase C9). Moving a recipe to Trash and back is an ordinary synced change (its
@@ -89,6 +90,10 @@ export async function expungeRecipes(db: Database, recipeIds: string[], now = Da
       // Earlier versions kept from an import (phase E13), and what the AI made of its photos (D4).
       { sql: `delete from recipe_version where ${theirs}`, params: [now, ...ids] },
       { sql: `delete from photo_arrangement where ${theirs}`, params: [now, ...ids] },
+      // Anyone's draft of it (U27 part 3), already gone when it went to Trash; here in case,
+      // its photos held for the usual week first.
+      holdDraftPhotos(theirs, [now, ...ids], now),
+      { sql: `delete from recipe_draft where ${theirs}`, params: [now, ...ids] },
       bump(ids.length),
     );
     const results = await d1.batch(statements.map((s) => d1.prepare(s.sql).bind(...s.params)));

@@ -1,3 +1,4 @@
+import type { DraftPhoto } from "../../shared/drafts";
 import type { PhotoChange } from "../../shared/sync";
 import { saveChanges } from "../sync/useSync";
 import { PhotoCache } from "./cache";
@@ -36,6 +37,11 @@ export interface AddPhotosRequest {
   cache: PhotoCache;
   /** "person": the person chose this order (an import's cover), so Fennl leaves it (phase D4). */
   arrangedBy?: "person";
+  /**
+   * The recipe editor's draft (U27 part 3): each photo, once uploaded, goes into the draft here
+   * instead of onto the recipe (Done puts it there).
+   */
+  keep?: (photo: DraftPhoto) => void;
   onProgress?(done: number, total: number): void;
 }
 
@@ -109,6 +115,17 @@ export async function addPhotos(request: AddPhotosRequest): Promise<AddPhotosRes
         },
       );
       const hash = await uploadPrepared(prepared, ownerUserId, cache);
+      if (request.keep) {
+        request.keep({
+          id: crypto.randomUUID(),
+          imageHash: hash,
+          width: prepared.width,
+          height: prepared.height,
+          takenAt: prepared.takenAt,
+        });
+        added += 1;
+        continue;
+      }
       const sortOrder = orderAfter(orders);
       orders.push(sortOrder);
       const change: PhotoChange = {

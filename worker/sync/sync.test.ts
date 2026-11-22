@@ -466,6 +466,37 @@ describe("a shared household", () => {
     );
   });
 
+  it("records who last changed each field, for Done's question (U27 part 3)", async () => {
+    const june = await person("June Lee");
+    const sam = await person("Sam Park");
+    await share(june, sam);
+    const recipeId = id();
+    const t = Date.now() - 60_000;
+    await push(june, [create(recipeId, "Chiles rellenos", t)]);
+    const created = (await pullAll(june)).recipes[0]!;
+    expect(created.fieldBy).toMatchObject({
+      title: june.userId,
+      ingredients: june.userId,
+      notes: june.userId,
+    });
+
+    // Sam changes the notes; a change of June's made earlier arrives later and loses.
+    expect(
+      (await push(sam, [edit(recipeId, { notes: "Less cheese." }, t + 2000)])).body.results,
+    ).toEqual([applied]);
+    await push(june, [edit(recipeId, { notes: "More cheese.", title: "Rellenos" }, t + 1000)]);
+    const row = await stored(recipeId);
+    expect(row).toMatchObject({ notes: "Less cheese.", title: "Rellenos" });
+    const fetched = (await pullAll(sam)).recipes.find((r) => r.id === recipeId)!;
+    expect(fetched.fieldBy).toMatchObject({
+      notes: sam.userId,
+      title: june.userId,
+      ingredients: june.userId,
+    });
+    // Trash isn't a recipe field.
+    expect(Object.keys(fetched.fieldBy ?? {})).not.toContain("deleted");
+  });
+
   it("shares how a recipe is scaled with the whole household (phase F1)", async () => {
     const june = await person("June Lee");
     const sam = await person("Sam Park");
@@ -626,6 +657,21 @@ describe("a shared household", () => {
     expect(links).toEqual([
       expect.objectContaining({ recipeId, categoryId: junesSoups, deletedAt: null }),
     ]);
+    // Who changed the link is kept (U27 part 3: Done's question names only a partner's change).
+    expect(links[0]?.updatedByUserId).toBe(sam.userId);
+    await push(june, [
+      {
+        kind: "recipeCategory",
+        recipeId,
+        categoryId: junesSoups,
+        deleted: true,
+        changedAt: Date.now() + 1,
+      },
+    ]);
+    const byJune = (await pullAll(sam)).pages.flatMap((p) => p.recipeCategories);
+    expect(byJune.find((l) => l.categoryId === junesSoups)).toMatchObject({
+      updatedByUserId: june.userId,
+    });
 
     // Taking it out of the category is a change other devices see.
     await push(sam, [

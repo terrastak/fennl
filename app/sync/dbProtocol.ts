@@ -1,3 +1,4 @@
+import type { DraftData, DraftPart, RecipeDraft } from "../../shared/drafts";
 import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type {
   ImportSource,
@@ -48,6 +49,11 @@ export interface RecipeSummary {
   hasNutrition: boolean;
   /** The latest day anyone in the household made it ("2026-10-03"), or null if never. */
   lastMadeOn: string | null;
+  /**
+   * A new recipe still a draft (U27 part 3): in the person's own list with its Draft tag until
+   * Done adds it to the recipe box. Absent for a recipe.
+   */
+  draft?: true;
 }
 
 /** Enough to show a photo: its image, and its size to make room for it. */
@@ -109,6 +115,17 @@ export interface RecipeDetail {
   photos: RecipePhoto[];
   /** The recipes its ingredients link to, and theirs, by ID (phase F3). */
   linked: Record<string, LinkedRecipe>;
+  /**
+   * Who changed its gallery photos and its categories, and when (removed ones too), for Done's
+   * question on a draft (U27 part 3). Only changes that say who made them.
+   */
+  changes?: { photos: ChangeMark[]; categories: ChangeMark[] };
+}
+
+/** Someone changed a photo or a category link, at this time. */
+export interface ChangeMark {
+  userId: string;
+  at: string;
 }
 
 /** A recipe as printed (phase F6). */
@@ -130,6 +147,71 @@ export interface PrintedRecipe {
 export interface PrintSet {
   members: Member[];
   recipes: PrintedRecipe[];
+}
+
+/** A draft as this device keeps it (U27 part 3; app/sync/schema.ts, table draft). */
+export interface LocalDraft {
+  recipeId: string;
+  /** The recipe's owner; for a new recipe, the person. */
+  ownerUserId: string;
+  /** No recipe exists yet: Done creates it. */
+  isNew: boolean;
+  data: DraftData;
+  /** When the draft began and was last edited, in milliseconds. */
+  startedAt: number;
+  editedAt: number;
+  /** This version is in the account ("Draft saved"). */
+  inAccount: boolean;
+  /** The server turned this version away (too many drafts, too large); kept here meanwhile. */
+  problem: string | null;
+  /** Counts every write here: the editor acts (Done, Discard) only on the version it shows. */
+  version: number;
+  /** The latest write came from the account (a newer draft from another device). */
+  fromServer: boolean;
+}
+
+/** A draft as written by the editor. */
+export interface LocalDraftWrite {
+  recipeId: string;
+  ownerUserId: string;
+  isNew: boolean;
+  data: DraftData;
+  startedAt: number;
+  editedAt: number;
+}
+
+/** A draft waiting to go to the account: sent whole, or removed (Done, Discard). */
+export interface DraftToSend {
+  recipeId: string;
+  deleting: boolean;
+  data: DraftData;
+  startedAt: number;
+  editedAt: number;
+  /**
+   * For a removal, the newest version it may remove: the server's own time for the version this
+   * device has, or (written here and not yet confirmed) this device's time for it.
+   */
+  upTo: { editedAt: number } | { deviceEditedAt: number };
+}
+
+/** A draft as the Drafts page, the left panel and the recipe page show it (U27 part 3). */
+export interface DraftItem {
+  recipeId: string;
+  ownerUserId: string;
+  isNew: boolean;
+  /** The draft's title, else the saved recipe's; "" for an untitled new recipe. */
+  title: string;
+  /** What an untitled new recipe's card says after "Untitled · " (shared/drafts.ts). */
+  untitledHint: string | null;
+  /** The parts it changes (a saved recipe), or has something in (a new one). */
+  parts: DraftPart[];
+  startedAt: number;
+  editedAt: number;
+  inAccount: boolean;
+  /** For its card, the draft's over the saved recipe's. */
+  cover: PhotoRef | null;
+  totalMinutes: number | null;
+  categories: string[];
 }
 
 /** A change waiting to be sent, in the order it was made. */
@@ -160,6 +242,30 @@ export type DbRequest =
   | { op: "importedRecipes"; source: ImportSource }
   | { op: "recipeLinks" }
   | { op: "printRecipes"; recipeIds: string[]; withLinked: boolean }
+  | { op: "putDraft"; draft: LocalDraftWrite }
+  /** version: the version the editor shows; another one here (newer) stays. */
+  | { op: "dropDraft"; recipeId: string; version: number | null }
+  | {
+      op: "finishDraft";
+      recipeId: string;
+      changes: SyncChange[];
+      now: string;
+      version: number | null;
+    }
+  /** Done's changes the server refused for good: their drafts come back. */
+  | { op: "finishRefused"; seqs: number[] }
+  | { op: "getDraft"; recipeId: string }
+  | { op: "listDrafts" }
+  | { op: "draftsToSend" }
+  | { op: "draftSent"; recipeId: string; editedAt: number; server: RecipeDraft; kept: boolean }
+  | { op: "draftRefused"; recipeId: string; editedAt: number; problem: string }
+  | { op: "draftGone"; recipeId: string }
+  | {
+      op: "applyDrafts";
+      drafts: RecipeDraft[];
+      ids: { recipeId: string; editedAt: string }[] | null;
+    }
+  | { op: "tidyDrafts" }
   | { op: "wipe" };
 
 export interface DbResults {
@@ -191,6 +297,22 @@ export interface DbResults {
   recipeLinks: Record<string, string[]>;
   /** Recipes to print, each chosen one followed by those it links to when asked (phase F6). */
   printRecipes: PrintSet;
+  /** The version written. */
+  putDraft: { version: number };
+  /** stale: a newer version is here than the one the editor showed; nothing was removed. */
+  dropDraft: { stale: boolean };
+  /** The outbox's new entries, as enqueue; stale as dropDraft (nothing queued). */
+  finishDraft: { seqs: number[]; stale: boolean };
+  finishRefused: null;
+  getDraft: LocalDraft | null;
+  /** Newest change first. */
+  listDrafts: DraftItem[];
+  draftsToSend: DraftToSend[];
+  draftSent: null;
+  draftRefused: null;
+  draftGone: null;
+  applyDrafts: null;
+  tidyDrafts: null;
   wipe: null;
 }
 

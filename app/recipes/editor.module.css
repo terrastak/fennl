@@ -34,9 +34,25 @@
   font-size: var(--text-sm);
 }
 
+/* The dot between the status's words ("Draft saved · 3 changes"), lighter than the words. */
+.statusSep {
+  color: var(--color-text-subtle);
+}
+
 .barButtons {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+/* Four buttons on a phone (U27 part 3): Discard changes and Done go to a line of their own,
+   on the right, when they don't all fit. */
+.barButtons > button {
+  white-space: nowrap;
+}
+
+.finishButtons {
+  margin-left: auto;
 }
 
 .heading {
@@ -51,6 +67,104 @@
   border-radius: var(--radius-md);
   background: var(--color-warm-soft);
   color: var(--color-text);
+}
+
+/* The draft's status in red when a free account has no connection (U27 part 3). */
+.status[data-state="stopped"] {
+  color: var(--color-danger);
+  font-weight: var(--weight-semibold);
+}
+
+/* A question under a bar button (U27 part 3): Discard changes' in pale red, Done's partner
+   question in the warm note colours. On phones it's a block under the bar. */
+.askWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.ask {
+  flex-basis: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+  color: var(--color-text);
+  text-align: left;
+}
+
+.ask[data-tone="warm"] {
+  border-color: color-mix(in srgb, var(--color-warm) 40%, var(--color-border));
+  background: var(--color-warm-soft);
+}
+
+.askQuestion {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.askQuestion svg {
+  flex: none;
+  margin-top: 0.125rem;
+  color: var(--color-danger);
+}
+
+.askQuestion b {
+  display: block;
+  font-weight: var(--weight-semibold);
+}
+
+.askButtons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-3);
+}
+
+/* Discard in the question: a soft red button, never the page's ink. */
+.softRed,
+.plain,
+.ink {
+  min-height: var(--control);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius-control);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.softRed {
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+  font-weight: var(--weight-semibold);
+}
+
+.softRed:hover {
+  background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
+}
+
+.plain {
+  padding: 0 0.625rem;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.plain:hover {
+  background: var(--hover-fill);
+}
+
+/* Use mine: the finishing action, the ink button. */
+.ink {
+  background: var(--button-ink-bg);
+  color: var(--button-ink-text);
+  font-weight: var(--button-weight);
+}
+
+.ink:hover {
+  background: var(--button-ink-hover);
 }
 
 /* Fieldsets used only to switch every field off at once, or to group a few. */
@@ -530,6 +644,30 @@
     background: var(--color-warm);
   }
 
+  /* The draft's states (U27 part 3, bar-states.png): grey with no changes, a ring while saving,
+     navy once in the account, a warm ring while it waits on the device, red when it can't. */
+  .editor .dot[data-dot="none"] {
+    background: var(--color-border-strong);
+  }
+
+  .editor .dot[data-dot="saving"] {
+    background: none;
+    box-shadow: inset 0 0 0 1.5px var(--color-text-subtle);
+  }
+
+  .editor .dot[data-dot="draft"] {
+    background: var(--color-accent);
+  }
+
+  .editor .dot[data-dot="offline"] {
+    background: none;
+    box-shadow: inset 0 0 0 1.5px var(--color-warm-text);
+  }
+
+  .editor .dot[data-dot="stopped"] {
+    background: var(--color-danger);
+  }
+
   .editor .divider {
     display: block;
     flex: none;
@@ -563,19 +701,20 @@
     color: var(--color-text-muted);
   }
 
-  .editor .barButtons button:not(:disabled):hover {
+  .editor .barButtons button:not(:disabled):hover,
+  .editor .barButtons button[aria-expanded="true"] {
     background: var(--hover-fill);
     color: var(--color-text);
   }
 
-  .editor .barButtons button:last-child {
+  .editor .barButtons > button:last-child {
     margin-left: 0.375rem;
     color: var(--action-text);
     font-weight: var(--action-weight);
   }
 
-  .editor .barButtons button:last-child svg,
-  .editor .barButtons button:last-child:not(:disabled):hover {
+  .editor .barButtons > button:last-child svg,
+  .editor .barButtons > button:last-child:not(:disabled):hover {
     color: var(--action-text);
   }
 
@@ -1260,6 +1399,7 @@
   }
 
   .editor.columns .barButtons {
+    flex-wrap: nowrap;
     margin-left: auto;
   }
 
@@ -1291,6 +1431,73 @@
 
   .editor.columns .notice {
     margin: var(--space-3) 0 0;
+  }
+
+  /* The questions under Discard changes and Done: a small box below the button. */
+  .editor.columns .ask {
+    position: absolute;
+    top: calc(100% + 0.375rem);
+    right: 0;
+    z-index: 20;
+    width: 21rem;
+    padding: 0.75rem 0.875rem 0.625rem;
+    border-radius: var(--radius-pop);
+    box-shadow: var(--shadow-pop);
+    font-size: var(--ui-text);
+    white-space: normal;
+  }
+
+  .editor.columns .askWrap:not(:last-child) .ask {
+    right: -4.5rem;
+  }
+
+  .editor.columns .askButtons {
+    gap: 0.25rem;
+    margin: 0.625rem 0 0 1.5rem;
+  }
+
+  .editor.columns .ask[data-tone="warm"] .askButtons {
+    margin-left: 0;
+  }
+
+  .editor.columns .barButtons .ask button {
+    min-height: var(--button-height);
+    margin: 0;
+    padding: 0 0.875rem;
+    font-size: var(--ui-text);
+  }
+
+  .editor.columns .barButtons .ask .softRed {
+    background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+    color: var(--color-danger);
+    font-weight: var(--weight-semibold);
+  }
+
+  .editor.columns .barButtons .ask .softRed:hover {
+    background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
+    color: var(--color-danger);
+  }
+
+  .editor.columns .barButtons .ask .plain {
+    padding: 0 0.625rem;
+    font-weight: var(--weight-regular);
+  }
+
+  .editor.columns .barButtons .ask .ink,
+  .editor.columns .barButtons .ask .ink:hover {
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .editor.columns .barButtons .ask .ink:hover {
+    background: var(--button-ink-hover);
+  }
+
+  /* Done waits for the connection (a free account): greyed. */
+  .editor.columns .barButtons .done:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
   }
 
   /* --- The rows ------------------------------------------------------------------------------ */

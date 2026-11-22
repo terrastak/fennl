@@ -34,7 +34,7 @@ import { noteChanged, noteDate, noteDay, noteFrom } from "./notes";
 import { Gallery, Originals } from "../photos/Gallery";
 import { usePainting } from "../photos/painting";
 import { canEdit } from "../sync/status";
-import { activeSyncClient, useRecipe, useSyncStatus } from "../sync/useSync";
+import { activeSyncClient, useDrafts, useRecipe, useSyncStatus } from "../sync/useSync";
 import { PrintCopy } from "../print/PrintCopy";
 import { EarlierVersion } from "./EarlierVersion";
 import { useHideNutrition } from "./nutritionSetting";
@@ -47,6 +47,7 @@ import { TimeLink } from "../timers/TimeLink";
 import { markStep } from "../timers/timersView";
 import { ScaleStatus, ScaledLine, ServingsBar, ShownText } from "./ScaleControls";
 import { AS_WRITTEN, scaleNote, useScaling, type Scaling } from "./scaling";
+import { DraftStrip } from "./drafts/DraftStrip";
 import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
 import { usePointer } from "./usePointer";
@@ -1184,9 +1185,20 @@ function InTrash({ detail, editable }: { detail: RecipeDetail; editable: boolean
 
 export function RecipePage({ id }: { id: string }) {
   const detail = useRecipe(id);
+  // The person's draft of it (U27 part 3): a strip at the top, or, for a new recipe not yet in
+  // the recipe box, its editor.
+  const drafts = useDrafts();
+  const draft = drafts?.find((item) => item.recipeId === id);
+  const newDraft = detail === null && draft?.isNew === true;
+  useEffect(() => {
+    if (newDraft) navigate(`/recipes/${id}/edit`, { replace: true });
+  }, [newDraft, id]);
   const status = useSyncStatus();
   const editable = canEdit(status);
+  const wide = useWide();
   const heading = useRef<HTMLHeadingElement>(null);
+  // Discarded from the strip (U27 part 3): said once, and the focus goes to the title.
+  const [discarded, setDiscarded] = useState(false);
   const title = detail?.recipe.title;
   const scaling = useScaling(detail?.recipe ?? null);
 
@@ -1199,7 +1211,7 @@ export function RecipePage({ id }: { id: string }) {
     if (!active || active === document.body || active.id === "main") heading.current?.focus();
   }, [title]);
 
-  if (detail === undefined) {
+  if (detail === undefined || (detail === null && (drafts === null || newDraft))) {
     return (
       <p role="status" className="visually-hidden">
         Opening the recipe…
@@ -1244,6 +1256,17 @@ export function RecipePage({ id }: { id: string }) {
 
   const gallery = detail.photos.filter((p) => p.role === "photo");
   const cover = gallery[0] ?? null;
+  const strip =
+    draft && !draft.isNew ? (
+      <DraftStrip
+        recipeId={id}
+        editable={editable}
+        onDiscarded={() => {
+          setDiscarded(true);
+          heading.current?.focus();
+        }}
+      />
+    ) : null;
 
   return (
     <article className={`${cover ? styles.recipeWithPhoto : styles.recipe} ${styles.recipePage}`}>
@@ -1313,6 +1336,10 @@ export function RecipePage({ id }: { id: string }) {
           </button>
         </div>
       </div>
+      {strip && (wide || !cover) ? strip : null}
+      <p role="status" className="visually-hidden">
+        {discarded && !draft ? "Changes discarded." : ""}
+      </p>
       <div className={cover ? styles.hero : undefined}>
         {cover ? (
           <div className={styles.heroPhoto}>
@@ -1326,6 +1353,9 @@ export function RecipePage({ id }: { id: string }) {
           </div>
         ) : null}
         <header className={styles.recipeHeader}>
+          {/* A phone with a cover shows it from the screen's top edge: the strip starts the
+              words over its faded foot. */}
+          {strip && !wide && cover ? strip : null}
           <div className={styles.categoryLine}>
             {detail.categories.length > 0 ? (
               <ul className={styles.eyebrow} aria-label="Categories">
