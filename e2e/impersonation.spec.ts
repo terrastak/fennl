@@ -95,9 +95,14 @@ test("Act as an account, edit a recipe; they see the edit and no trace; the log 
   await page.getByRole("link", { name: "Edit recipe" }).click();
   await page.getByLabel("Notes").fill("Checked by support: it's all here.");
   await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
+  // Done hands the change to sync (U27 part 3), sent a moment later: until then the status
+  // still reads "Saved to cloud", so wait for the send itself (the editor sends only drafts).
+  const sent = page.waitForResponse(
+    (r) => r.url().includes("/api/sync/push") && r.request().method() === "POST" && r.ok(),
+  );
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByText("Checked by support: it's all here.")).toBeVisible();
-  // Done hands the change to sync (U27 part 3): sent a moment later.
+  await sent;
   await expect(syncStatus(page)).toHaveText("Saved to cloud");
 
   // Petra sees the edit, and nothing else: one device (hers), no banner.
