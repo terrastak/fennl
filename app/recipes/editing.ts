@@ -33,6 +33,24 @@ export function lineEnd(text: string, index: number, kind: ListKind): number {
   return text.length;
 }
 
+/**
+ * The box's lines as typed, each with the list line it makes (its index), or null for a blank
+ * line (U27: the marks in the box's margin go beside the lines they belong to).
+ */
+export function typedLines(text: string, kind: ListKind): { text: string; line: number | null }[] {
+  let kept = -1;
+  return text.split("\n").map((raw) => {
+    if (!cleanLine(raw, kind)) return { text: raw, line: null };
+    kept += 1;
+    return { text: raw, line: kept };
+  });
+}
+
+/** Which of the box's lines as typed the cursor is on (blank lines count here). */
+export function typedLineAt(text: string, cursor: number): number {
+  return text.slice(0, cursor).split("\n").length - 1;
+}
+
 export { timeFromText } from "../../shared/recipeText";
 
 /**

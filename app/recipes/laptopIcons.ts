@@ -66,4 +66,11 @@ export const LAPTOP_ICONS = {
   swap: "M4 8h13M13 4l4 4-4 4M20 16H7M11 12l-4 4 4 4",
   /** A link out of the page, for something that opens in a new tab. */
   external: "M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5",
+  /** An eye, for showing how Fennl reads the lines (U27). */
+  eye: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6",
+  /** A broken link, for Unlink (U27). */
+  unlink:
+    "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7M4 4l16 16",
+  /** Four squares, for showing every photo (U27). */
+  grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
 } as const;

@@ -185,19 +185,25 @@ test("A recipe's categories, chosen in the editor by typing", async ({
   await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
   await page.getByRole("link", { name: "Edit recipe" }).click();
 
+  // On a laptop (U27) "+ Add a category" opens a flyout with a box to find or add one.
   const chips = page.getByRole("list", { name: "This recipe's categories" });
   await expect(chips.getByRole("listitem")).toHaveText(["Breakfast×Take out of Breakfast"]);
-  const box = page.getByRole("combobox", { name: "Add a category" });
+  await page.getByRole("button", { name: "Add a category" }).click();
+  const box = page.getByRole("combobox", { name: "Find or add a category" });
+  await expect(box).toBeFocused();
   await box.fill("cak");
-  const options = page.getByRole("listbox", { name: "Add a category" }).getByRole("option");
-  await expect(options).toHaveText(["Desserts › Cakes", "New category: cak"]);
+  const options = page.getByRole("listbox", { name: "Categories" }).getByRole("option");
+  await expect(options).toHaveText([/^Desserts › Cakes/, "New category: “cak”"]);
+  // No row is picked until ↑ or ↓ picks one.
+  await expect(box).not.toHaveAttribute("aria-activedescendant");
+  await box.press("ArrowDown");
   await box.press("ArrowDown");
   await box.press("ArrowUp");
   await box.press("Enter");
   await expect(chips.getByRole("listitem")).toHaveCount(2);
   await expect(chips).toContainText("Desserts › Cakes");
+  await expect(options.first()).toHaveAttribute("aria-selected", "true");
   await expect(box).toBeFocused();
-  await expect(box).toHaveValue("");
   await noAccessibilityProblems(page);
 
   await page.getByRole("button", { name: "Take out of Breakfast" }).click();
@@ -219,6 +225,79 @@ test("A recipe's categories, chosen in the editor by typing", async ({
   await expect(page.getByRole("heading", { level: 1, name: "Desserts" })).toBeVisible();
   await expect(picked(page)).toHaveText(/^Desserts/);
   await expect(cardTitles(page)).toHaveText([/Buttermilk Pancakes/, /Lemon Olive Oil Cake/]);
+});
+
+test("On a laptop, the category flyout ticks, finds and makes categories", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  // U27 (owner's choices 2026-11-21): ticking adds or takes out at once, typing narrows the list,
+  // "New category" only when no category has that name, Escape or a click outside closes it.
+  await useOwnAccount(context, baseURL!);
+  await addSamples(page);
+  await page.getByRole("link", { name: /Buttermilk Pancakes/ }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  const chips = page.getByRole("list", { name: "This recipe's categories" });
+  const add = page.getByRole("button", { name: "Add a category" });
+  await expect(add).toHaveAttribute("aria-expanded", "false");
+  await add.click();
+  await expect(add).toHaveAttribute("aria-expanded", "true");
+  const flyout = page.getByRole("dialog", { name: "Add a category" });
+  const list = flyout.getByRole("listbox", { name: "Categories" });
+  // The person's categories as the left panel's tree: Cakes inside Desserts, Breakfast ticked.
+  const tree = list.getByRole("group", { name: "Your categories" }).getByRole("option");
+  await expect(tree.filter({ hasText: "Breakfast" })).toHaveAttribute("aria-selected", "true");
+  await expect(tree.filter({ hasText: "Cakes" })).toHaveAccessibleName("Desserts › Cakes");
+  await expect(flyout.getByText("For one inside another")).toHaveCount(0);
+  const height = (await flyout.boundingBox())!.height;
+  await noAccessibilityProblems(page);
+
+  // Ticking with the mouse: the chips follow; ticking again takes it out.
+  await tree.filter({ hasText: "Mexican" }).click();
+  await expect(chips).toContainText("Mexican");
+  await tree.filter({ hasText: "Breakfast" }).click();
+  await expect(chips.getByRole("listitem")).toHaveText(["Mexican×Take out of Mexican"]);
+
+  // Typing: the match in bold, New category last, with the hint under it; the panel keeps its size.
+  const box = flyout.getByRole("combobox", { name: "Find or add a category" });
+  await box.fill("mex");
+  await expect(list.getByRole("option")).toHaveText([/^Mexican/, "New category: “mex”"]);
+  await expect(list.locator("mark")).toHaveText("Mex");
+  await expect(flyout.getByText("For one inside another: Desserts › Cakes")).toBeVisible();
+  await expect(box).toHaveAccessibleDescription("For one inside another: Desserts › Cakes");
+  expect(Math.round((await flyout.boundingBox())!.height)).toBe(Math.round(height));
+  // A name a category already has: no New row.
+  await box.fill("mexican");
+  await expect(list.getByRole("option")).toHaveText([/^Mexican/]);
+  await expect(flyout.getByText("For one inside another")).toHaveCount(0);
+  // Enter with no row picked only ever adds: Mexican, already on the recipe, stays.
+  await box.press("Enter");
+  await expect(list.getByRole("option").first()).toHaveAttribute("aria-selected", "true");
+  await expect(chips).toContainText("Mexican");
+  // It adds the first match not ticked yet.
+  await box.fill("break");
+  await box.press("Enter");
+  await expect(chips).toContainText("Breakfast");
+  // A row picked with ↓: Enter then takes it out.
+  await box.press("ArrowDown");
+  await box.press("Enter");
+  await expect(chips).not.toContainText("Breakfast");
+  // One inside another, made by typing ›.
+  await box.fill("Desserts > Pies");
+  await box.press("Enter");
+  await expect(chips).toContainText("Desserts › Pies");
+  await expect(box).toHaveValue("");
+
+  // Escape closes it, back on its button; a click outside closes it too.
+  await box.press("Escape");
+  await expect(flyout).toHaveCount(0);
+  await expect(add).toBeFocused();
+  await add.click();
+  await expect(flyout).toBeVisible();
+  await page.getByRole("heading", { level: 1, name: "Edit recipe" }).click();
+  await expect(flyout).toHaveCount(0);
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
 });
 
 test("Premium: category changes sync between devices", async ({

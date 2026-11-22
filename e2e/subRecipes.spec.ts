@@ -6,8 +6,14 @@ import { useOwnAccount } from "./support";
 // Phase F3: linked sub-recipes.
 
 const ingredientsBox = (page: Page) => page.getByRole("textbox", { name: "Ingredients" });
-const preview = (page: Page) =>
-  page.getByRole("group", { name: "Ingredients, as Fennl reads them" });
+// The editor on a laptop (U27) says which recipe the cursor's line links to, under the box, and
+// marks a linked line in the box's margin.
+const linkStrip = (page: Page) => page.locator("p", { hasText: /^This (line|step) links to/ });
+const linkedLines = (page: Page, list: "ingredients" | "directions") =>
+  page.locator(`section[data-list="${list}"] [data-margin] [data-linked]`);
+// Directions is a box for each step there (U27): the linked steps' words.
+const linkedSteps = (page: Page) =>
+  page.locator('section[data-list="directions"] [data-linked] [data-step-words]');
 
 test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   page,
@@ -40,7 +46,9 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
     .getByRole("list", { name: "Recipes to link" })
     .getByRole("button", { name: "Lime Crema" })
     .click();
-  await expect(preview(page).getByRole("link", { name: "Lime Crema" })).toBeVisible();
+  await expect(linkStrip(page)).toHaveText("This line links to Lime Crema.Unlink");
+  await expect(linkStrip(page).getByRole("link", { name: "Lime Crema" })).toBeVisible();
+  await expect(linkedLines(page, "ingredients")).toHaveText(["½ cup lime crema"]);
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
 
@@ -110,6 +118,8 @@ test("Link a step to a recipe: named on the page, cooked first, never in a circl
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
   const directions = (p: Page) => p.getByRole("textbox", { name: "Directions" });
+  // The one box, or on a laptop (U27) the first step's.
+  const firstStep = (p: Page) => p.locator('section[data-list="directions"] textarea').first();
 
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Herb Butter");
@@ -125,20 +135,21 @@ test("Link a step to a recipe: named on the page, cooked first, never in a circl
   await ingredientsBox(page).fill("4 salmon fillets\n1 tsp salt");
   await directions(page).fill("Make the herb butter.\nSear the salmon for 5 minutes.");
   // On the first step: Link a recipe beside Directions' Heading.
-  await directions(page).click();
+  await firstStep(page).click();
   await page.keyboard.press(process.platform === "darwin" ? "Meta+ArrowUp" : "Control+Home");
   await page.getByRole("button", { name: "Link a recipe" }).nth(1).click();
   await page
     .getByRole("list", { name: "Recipes to link" })
     .getByRole("button", { name: "Herb Butter" })
     .click();
-  const stepsRead = page.getByRole("group", { name: "Directions, as Fennl reads them" });
-  await expect(stepsRead.getByRole("link", { name: "Herb Butter" })).toBeVisible();
-  await expect(directions(page)).toBeFocused();
-  // Typing in another step keeps the link.
+  await expect(linkStrip(page)).toHaveText("This step links to Herb Butter.Unlink");
+  await expect(firstStep(page)).toBeFocused();
+  await expect(linkedSteps(page)).toHaveText(["Make the herb butter."]);
+  // Typing in another step keeps the link (the strip is for the line the cursor is on).
   await page.keyboard.press(process.platform === "darwin" ? "Meta+ArrowDown" : "Control+End");
   await page.keyboard.type(" Serve.");
-  await expect(stepsRead.getByRole("link", { name: "Herb Butter" })).toBeVisible();
+  await expect(linkStrip(page)).toHaveCount(0);
+  await expect(linkedSteps(page)).toHaveText(["Make the herb butter."]);
   await expect(editorStatus(page)).toHaveText("All changes saved");
   await page.getByRole("button", { name: "Done" }).first().click();
 

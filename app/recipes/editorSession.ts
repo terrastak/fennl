@@ -190,6 +190,18 @@ export class EditorSession {
     this.changed();
   }
 
+  /**
+   * A change to a text box that's an undo step of its own (U27: a step split, joined, pasted or
+   * moved in Directions): what was typed before it saves first, then the change saves at once.
+   * `alone` false: the change saves with what's typed after it (a letter typed over words
+   * selected across steps, and the letters that follow).
+   */
+  setBoxApart(box: BoxName, text: string, alone = true): void {
+    void this.flush();
+    this.setBox(box, text);
+    if (alone) void this.flush();
+  }
+
   /** Leaving a text box: it shows what was understood ("90" → "1 hr 30 min"; bullets gone). */
   tidyBox(box: BoxName): void {
     const tidy = boxesFrom(this.draft)[box];
@@ -321,15 +333,25 @@ export class EditorSession {
     return new Set(issues.map((issue) => issue.path.split(".")[0] ?? ""));
   }
 
-  /** One save at a time, in order. */
+  /**
+   * One save at a time, in order, each of what was typed when it was asked for (so a step split
+   * in Directions is an undo step of its own). It keeps what was saved then too, so a field this
+   * editor didn't change is never sent back from an older copy: a newer value from elsewhere
+   * that arrived while an earlier save was going stays.
+   */
   private commit(mode: "edit" | "history"): Promise<void> {
-    this.chain = this.chain.then(() => this.commitNow(mode));
+    const draft = this.draft;
+    const from = this.saved;
+    this.chain = this.chain.then(() => this.commitNow(mode, draft, from));
     return this.chain;
   }
 
-  private async commitNow(mode: "edit" | "history"): Promise<void> {
+  private async commitNow(
+    mode: "edit" | "history",
+    draft: RecipeContent,
+    from: RecipeContent,
+  ): Promise<void> {
     if (!this.editable || this.tooLarge()) return;
-    const draft = this.draft;
     const base = this.saved;
     const blocked = this.blocked(recipeIssues(draft, null));
     let change: RecipeChange;
@@ -349,7 +371,10 @@ export class EditorSession {
         changedAt: this.now(),
       };
     } else {
-      const fields = changedFields(base, draft).filter((field) => !blocked.has(field));
+      const edited = new Set(changedFields(from, draft));
+      const fields = changedFields(base, draft).filter(
+        (field) => edited.has(field) && !blocked.has(field),
+      );
       if (fields.length === 0) return;
       const values = pick(draft, fields);
       sent = { ...base, ...values };
@@ -361,7 +386,8 @@ export class EditorSession {
     try {
       await this.saveChange(change);
       const fields = changedFields(base, sent);
-      this.saved = sent;
+      // Only what was sent: a value received while this save was going stays.
+      this.saved = { ...this.saved, ...pick(sent, fields) };
       if (this.created && mode === "edit" && fields.length > 0) {
         this.undoStack.push(pick(base, fields));
         if (this.undoStack.length > UNDO_LIMIT) this.undoStack.shift();

@@ -8,6 +8,8 @@ import {
   moveLine,
   pick,
   timeFromText,
+  typedLineAt,
+  typedLines,
   webAddress,
 } from "./editing";
 import { timeText } from "./format";
@@ -50,6 +52,29 @@ describe("the line the cursor is on", () => {
   it("finds where a line ends", () => {
     expect(lineEnd(text, 0, "ingredients")).toBe("- 1 cup flour".length);
     expect(lineEnd(text, 1, "ingredients")).toBe(text.length);
+  });
+});
+
+describe("the lines as typed, for the box's margin (U27)", () => {
+  it("pairs each typed line with the list line it makes; blank lines make none", () => {
+    expect(typedLines("- 1 cup flour\n\n2 eggs\n", "ingredients")).toEqual([
+      { text: "- 1 cup flour", line: 0 },
+      { text: "", line: null },
+      { text: "2 eggs", line: 1 },
+      { text: "", line: null },
+    ]);
+    // A bullet on its own is cleaned away, so it makes no line.
+    expect(typedLines("•\nBoil.", "directions")).toEqual([
+      { text: "•", line: null },
+      { text: "Boil.", line: 0 },
+    ]);
+    expect(typedLines("", "directions")).toEqual([{ text: "", line: null }]);
+  });
+
+  it("says which typed line the cursor is on", () => {
+    expect(typedLineAt("a\n\nb", 0)).toBe(0);
+    expect(typedLineAt("a\n\nb", 2)).toBe(1);
+    expect(typedLineAt("a\n\nb", 4)).toBe(2);
   });
 });
 

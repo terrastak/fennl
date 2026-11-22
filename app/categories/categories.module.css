@@ -523,6 +523,328 @@
   }
 }
 
+/* The recipe editor on a laptop since U27 (owner's choices 2026-11-21): no white frame; the
+   section's name a small heading; the chips, then the box to add one, then the suggestions. */
+@media (min-width: 900px) and (pointer: fine) {
+  .inEditor.compact {
+    gap: 0.25rem;
+  }
+
+  .inEditor.compact .sectionTitle {
+    min-height: 1.5rem;
+    font-size: var(--subheading-size);
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  .inEditor.compact .editorBox {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.375rem;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .inEditor.compact .editorBox > .chips {
+    margin-bottom: 0;
+  }
+
+  .inEditor.compact .editorBox > .chips:empty {
+    display: none;
+  }
+
+  .inEditor.compact .editorBox > .combobox {
+    max-width: 18rem;
+  }
+
+  .inEditor.compact .editorBox > .suggestions {
+    padding-top: 0;
+  }
+
+  .inEditor.compact .suggestions > p {
+    color: var(--color-text-muted);
+  }
+
+  /* A suggestion: a dashed edge, so it reads as one to add, not one already there. */
+  .inEditor.compact .suggestions .suggestion {
+    min-height: var(--chip);
+    padding: 0 0.625rem 0 0.5rem;
+    border: 1px dashed var(--color-border-strong);
+    background: transparent;
+  }
+
+  .inEditor.compact .suggestions .suggestion:hover {
+    background: var(--hover-fill);
+  }
+
+  .inEditor.compact .editorBox > .undoBar,
+  .inEditor.compact .suggestions ~ .undoBar {
+    margin-top: 0;
+  }
+
+  .inEditor.compact .editorBox > .combobox + .hint {
+    margin-top: 0;
+  }
+}
+
+/* "+ Add a category" and its flyout (U27, the mockup "C3"): the recipe editor on a laptop only,
+   so these pieces are drawn nowhere else. The chips and the button share one wrapping row. */
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.chipRow > .chips {
+  display: contents;
+}
+
+.flyWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.flyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: var(--chip-height);
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--ui-text-secondary);
+  cursor: pointer;
+}
+
+.flyButton svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+.flyButton .flyChevron {
+  width: 0.8125rem;
+  height: 0.8125rem;
+  margin-left: -0.125rem;
+  color: var(--color-text-muted);
+}
+
+.flyButton:not(:disabled):hover,
+.flyButtonOpen {
+  background: var(--hover-fill);
+}
+
+.flyButton:disabled {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.flyPanel {
+  position: absolute;
+  top: calc(100% + 0.375rem);
+  left: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: 19rem;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pop);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--ui-text);
+  line-height: 1.4;
+}
+
+.flyUp {
+  top: auto;
+  bottom: calc(100% + 0.375rem);
+}
+
+.flyFind {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.4375rem;
+  min-height: var(--control);
+  padding: 0 0.625rem;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: 0 0 0 1px var(--color-accent);
+  color: var(--color-text-muted);
+}
+
+.flyFind svg {
+  flex: none;
+  width: 0.9375rem;
+  height: 0.9375rem;
+}
+
+/* The box's own edge shows it has the focus. */
+.flyInput {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+}
+
+.flyInput:focus-visible {
+  outline: none;
+}
+
+/* The editor's own box edge, halo and size for its fields would draw a second box inside this
+   one: the edge around the magnifier and the words is the only one. */
+.flyPanel .flyFind input.flyInput,
+.flyPanel .flyFind input.flyInput:hover,
+.flyPanel .flyFind input.flyInput:focus {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  box-shadow: none;
+  font-size: inherit;
+}
+
+.flyInput::placeholder {
+  color: var(--color-text-subtle);
+  opacity: 1;
+}
+
+.flyList {
+  flex: 0 1 auto;
+  min-height: 0;
+  margin: 0.375rem 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.flyGroupItem + .flyGroupItem {
+  margin-top: 0.125rem;
+}
+
+.flyGroup {
+  margin: 0.5rem 0.375rem 0.125rem;
+  color: var(--color-text-muted);
+  font-size: 0.6875rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.flyGroupItem:first-child .flyGroup {
+  margin-top: 0.125rem;
+}
+
+.flyRows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A row: the tick, the name (inner categories indented as in the left panel), the count. */
+.flyRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 1.75rem;
+  padding: 0 0.5rem 0 calc(0.5rem + var(--depth, 0) * 1.375rem);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.flyRow[data-active] {
+  background: var(--hover-fill);
+}
+
+.flyName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flyName mark {
+  background: none;
+  color: inherit;
+  font-weight: var(--weight-bold);
+}
+
+.flyCount {
+  color: var(--color-text-muted);
+  font-size: var(--ui-text-label);
+}
+
+.flyTick {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 0.9375rem;
+  height: 0.9375rem;
+  border: 1.5px solid var(--color-border-strong);
+  border-radius: 0.25rem;
+  background: var(--color-surface);
+  color: var(--color-on-accent);
+}
+
+.flyTickOn {
+  border-color: var(--color-accent);
+  background: var(--color-accent);
+}
+
+.flyTick svg {
+  width: 0.75rem;
+  height: 0.75rem;
+  stroke-width: 2.6;
+}
+
+.flyNew .flyPlus {
+  flex: none;
+  width: 0.875rem;
+  height: 0.875rem;
+  margin: 0 0.0625rem;
+  color: var(--color-accent);
+}
+
+.flyNew b {
+  font-weight: var(--weight-semibold);
+}
+
+.flyNewHint {
+  flex: none;
+  margin: 0.125rem 0.375rem 0 2.125rem;
+  color: var(--color-text-subtle);
+  font-size: var(--ui-text-label);
+}
+
+@media (forced-colors: active) {
+  .flyFind:focus-within {
+    outline: 2px solid Highlight;
+  }
+
+  .flyRow[data-active] {
+    outline: 2px solid Highlight;
+  }
+
+  .flyTickOn {
+    background: Highlight;
+  }
+}
+
 @media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
   .inEditor .editorBox,
   .inEditor .chip,

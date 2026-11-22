@@ -436,6 +436,404 @@
   }
 }
 
+/* The recipe editor on a laptop since U27 (owner's choices 2026-11-21): beside the title in the
+   editor's narrow column, with no white frame; the section's name a small heading with the count
+   beside it; the photos 3:2, two across with Add photos after them. */
+@media (min-width: 900px) and (pointer: fine) {
+  .compact {
+    gap: 0.25rem;
+  }
+
+  .compact .top {
+    justify-content: flex-start;
+    gap: 0.5rem;
+    min-height: 1.5rem;
+  }
+
+  .compact .heading {
+    font-size: var(--subheading-size);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .compact .count {
+    font-size: var(--ui-text-label);
+  }
+
+  .compact .box {
+    gap: var(--space-2);
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  .compact.dropping .box {
+    border-radius: var(--radius-pop);
+    box-shadow:
+      0 0 0 4px var(--color-bg),
+      0 0 0 5px var(--color-accent),
+      0 0 0 8px var(--color-accent-soft);
+  }
+
+  .compact .strip {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 0.7fr);
+    gap: 0.625rem;
+  }
+
+  .compact .photos {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.625rem;
+  }
+
+  /* One column as wide as the photo's share, so a longer row of controls never widens one photo. */
+  .compact .photo {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.1875rem;
+    width: auto;
+  }
+
+  .compact .thumb {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 2;
+    object-fit: cover;
+  }
+
+  .compact .photoButtons {
+    min-height: 1.5rem;
+  }
+
+  /* The mockup's smaller controls, so Make cover and three icons fit under a narrow photo. */
+  .compact .small {
+    min-height: 1.5rem;
+  }
+
+  .compact .words {
+    margin-left: -0.25rem;
+    padding: 0 0.25rem;
+    font-size: var(--ui-text-label);
+    font-weight: var(--weight-semibold);
+    white-space: nowrap;
+  }
+
+  .compact .theCover {
+    padding-left: 0.125rem;
+    font-size: var(--ui-text-label);
+  }
+
+  .compact .iconButton {
+    width: 1.5rem;
+  }
+
+  /* Make cover with ←, → and the bin (a photo between two others): slightly narrower icons, so
+     the four fit under the photo. */
+  .compact .photoButtons:has(> .iconButton:nth-child(4)) > .iconButton {
+    width: 1.25rem;
+  }
+
+  .compact .iconButton svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .compact .tile {
+    width: auto;
+    height: auto;
+    min-height: 0;
+    aspect-ratio: auto;
+    align-self: stretch;
+    padding: 0 0.375rem;
+    font-size: var(--ui-text-secondary);
+    line-height: 1.3;
+  }
+
+  .compact .strip:not(:has(.photo)) {
+    display: block;
+  }
+
+  /* Add photos beside photos: as tall as a photo, its top and bottom level with theirs (the
+     space under it is the photos' Make cover line). */
+  .compact .strip:has(.photo) .buttons {
+    display: flex;
+    flex-direction: column;
+    align-self: stretch;
+    padding-bottom: calc(1.5rem + 0.1875rem);
+  }
+
+  .compact .strip:has(.photo) .tile {
+    flex: 1;
+  }
+
+  /* Add photos, in the editor and the All photos sheet: a white tile with a darker dashed edge,
+     so it reads as the place to add or drop photos. */
+  .compact .tile,
+  .sheetAdd .tile {
+    border: 1.5px dashed var(--color-border-strong);
+    background: var(--color-surface);
+    color: var(--color-text);
+    font-weight: var(--weight-semibold);
+  }
+
+  .compact .tile.off {
+    color: var(--color-text-muted);
+  }
+
+  .compact .tileSmall {
+    border-color: var(--color-border-strong);
+  }
+
+  .compact .tile .tileHint,
+  .sheetAdd .tile .tileHint {
+    color: var(--color-text-muted);
+    font-weight: var(--weight-regular);
+  }
+
+  /* No photos yet: why Add photos can't be used beside it ("Give the recipe a title first."). */
+  .compact .box:has(.tileSmall) > .note {
+    flex-basis: 10rem;
+  }
+}
+
+/* A window too narrow for the paired rows (the photos above Ingredients): the photos keep the
+   size they have beside the title, Add photos as tall as them. */
+@media (min-width: 900px) and (max-width: 1199px) and (pointer: fine) {
+  .compact .strip {
+    grid-template-columns: minmax(0, 22.625rem) minmax(0, 7.875rem);
+    justify-content: start;
+  }
+}
+
+/* "Show all photos / reorder", "+N" on the second photo, and the All photos sheet (U27, the mockup
+   "C3"): the recipe editor on a laptop only, so these pieces are drawn nowhere else. */
+.showAll {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: var(--control-sm);
+  margin: -0.125rem -0.5rem -0.125rem auto;
+  padding: 0 0.5rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--ui-text-secondary);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.showAll:hover {
+  background: var(--hover-fill);
+}
+
+.showAll svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* The photos not shown, on the last one shown: over its corner, so the photo below says where. */
+.more {
+  position: absolute;
+  right: 0.375rem;
+  bottom: calc(1.5rem + 0.1875rem + 0.375rem);
+  padding: 0.0625rem 0.4375rem;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-text) 72%, transparent);
+  color: var(--color-bg);
+  font-size: var(--ui-text-label);
+  font-weight: var(--weight-semibold);
+  pointer-events: none;
+}
+
+.sheet {
+  position: fixed;
+  inset: 0 0 0 var(--sidebar-width);
+  width: min(58rem, calc(100vw - var(--sidebar-width) - 4rem));
+  height: fit-content;
+  max-width: none;
+  max-height: calc(100vh - 4rem);
+  margin: auto;
+  padding: 1rem 1.25rem 1.25rem;
+  overflow: auto;
+  border: 0;
+  border-radius: 0.75rem;
+  background: var(--color-bg);
+  color: var(--color-text);
+  box-shadow: var(--shadow-pop);
+}
+
+.sheet::backdrop {
+  background: color-mix(in srgb, var(--color-text) 32%, transparent);
+}
+
+.sheetHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sheetTitle {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.sheetCount {
+  margin: 0.25rem 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--ui-text-label);
+}
+
+.sheetClose {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: var(--control);
+  margin-left: auto;
+  padding: 0 0.625rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--ui-text);
+  cursor: pointer;
+}
+
+.sheetClose:hover {
+  background: var(--hover-fill);
+}
+
+.sheetClose svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.sheetGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.875rem 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sheetPhoto {
+  display: grid;
+  align-content: start;
+  gap: 0.1875rem;
+  min-width: 0;
+}
+
+.sheetTile {
+  position: relative;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--radius-pop);
+  background: var(--color-surface-sunken);
+  cursor: grab;
+  touch-action: none;
+}
+
+.sheetTile:focus-visible {
+  outline: var(--focus-width) solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.sheetThumb {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.sheetTile .coverTag {
+  top: 0.375rem;
+  left: 0.375rem;
+}
+
+/* Its place, in the corner. */
+.place {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: var(--ui-text-label);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+}
+
+/* While dragging: where it will land, a dashed gap; the photo itself lifted under the mouse. */
+.sheetDragging .sheetTile {
+  cursor: grabbing;
+}
+
+.sheetGap .sheetTile {
+  border: 2px dashed color-mix(in srgb, var(--color-accent) 55%, transparent);
+  background: color-mix(in srgb, var(--color-accent-soft) 70%, transparent);
+}
+
+.sheetGap .sheetTile > *,
+.sheetGap .photoButtons {
+  visibility: hidden;
+}
+
+.lifted {
+  position: fixed;
+  z-index: 2;
+  aspect-ratio: 3 / 2;
+  overflow: hidden;
+  border-radius: var(--radius-pop);
+  box-shadow:
+    var(--shadow-pop),
+    0 0 0 2px var(--color-accent);
+  transform: rotate(-2.5deg);
+  pointer-events: none;
+}
+
+.placeLifted {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+
+.sheetAdd .tile {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 2;
+  padding: var(--space-2);
+}
+
+.sheetPhoto .photoButtons {
+  min-height: 1.5rem;
+}
+
+.sheet .note {
+  margin-top: 0.75rem;
+}
+
+@media (forced-colors: active) {
+  .sheet {
+    border: 1px solid;
+  }
+
+  .lifted {
+    outline: 2px solid Highlight;
+  }
+}
+
 /* A narrower laptop window: slightly smaller squares, so three photos and Add photos share a row. */
 @media (min-width: 900px) and (max-width: 1099px) and (pointer: fine) {
   .photo {

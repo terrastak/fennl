@@ -12,6 +12,7 @@ import { addPhotos, problemText, type AddPhotoProblem } from "./addPhotos";
 import { arrangeRecipePhotos } from "./arrange";
 import { orderAt } from "./order";
 import { PhotoImage } from "./PhotoImage";
+import { PhotoSheet } from "./PhotoSheet";
 import { currentPhotoCache } from "./usePhoto";
 import { LaptopIcon } from "../recipes/LaptopIcon";
 import { LAPTOP_ICONS } from "../recipes/laptopIcons";
@@ -53,6 +54,7 @@ export function PhotoEditor({
   ownerUserId,
   photos,
   created,
+  compact = false,
 }: {
   recipeId: string;
   ownerUserId: string;
@@ -60,6 +62,12 @@ export function PhotoEditor({
   photos: RecipePhoto[];
   /** The recipe exists (it has a title): photos can be added. */
   created: boolean;
+  /**
+   * The recipe editor on a laptop (U27): beside the title in the editor's narrow column, with no
+   * white frame; the first two photos, the rest in the All photos sheet (PhotoSheet.tsx). Phones
+   * look as before either way.
+   */
+  compact?: boolean;
 }) {
   const status = useSyncStatus();
   const plan = status.photos;
@@ -72,6 +80,8 @@ export function PhotoEditor({
   const [removed, setRemoved] = useState<{ photo: RecipePhoto | null; at: number } | null>(null);
   const [dropping, setDropping] = useState(false);
   const [touch] = useState(touchDevice);
+  // The All photos sheet, open (U27, on a laptop).
+  const [sheet, setSheet] = useState(false);
 
   useEffect(() => {
     const update = () => setOnline(navigator.onLine);
@@ -117,6 +127,10 @@ export function PhotoEditor({
     if (result.added > 0) void arrangeRecipePhotos(recipeId);
   };
 
+  // On a laptop the editor shows the first two; the rest are in the All photos sheet (U27).
+  const inEditor = compact ? gallery.slice(0, 2) : gallery;
+  const hidden = gallery.length - inEditor.length;
+
   const others = (photo: RecipePhoto) =>
     gallery.filter((p) => p.id !== photo.id).map((p) => p.sortOrder);
 
@@ -131,6 +145,65 @@ export function PhotoEditor({
     const photo = removed?.photo;
     if (photo && (await saveChanges([removal(photo, false)]))) setRemoved({ photo: null, at: 0 });
   };
+
+  // One row of small controls under each photo on a laptop (U23): Make cover (or "The cover"),
+  // then earlier, later and Remove as icons with tooltips.
+  const controls = (photo: RecipePhoto, index: number) => (
+    <div className={styles.photoButtons}>
+      {index > 0 ? (
+        <button
+          type="button"
+          className={`${styles.small} ${styles.words}`}
+          data-act="cover"
+          disabled={!editable}
+          onClick={() => moveTo(photo, 0)}
+        >
+          Make cover
+        </button>
+      ) : (
+        <span className={styles.theCover} aria-hidden="true" />
+      )}
+      {index > 0 ? (
+        <button
+          type="button"
+          className={`${styles.small} ${styles.iconButton}`}
+          disabled={!editable}
+          data-act="earlier"
+          aria-label={`Move photo ${index + 1} earlier`}
+          title="Move earlier"
+          onClick={() => moveTo(photo, index - 1)}
+        >
+          <span className={styles.glyph}>←</span>
+          <LaptopIcon path={LAPTOP_ICONS.left} />
+        </button>
+      ) : null}
+      {index < gallery.length - 1 ? (
+        <button
+          type="button"
+          className={`${styles.small} ${styles.iconButton}`}
+          disabled={!editable}
+          data-act="later"
+          aria-label={`Move photo ${index + 1} later`}
+          title="Move later"
+          onClick={() => moveTo(photo, index + 1)}
+        >
+          <span className={styles.glyph}>→</span>
+          <LaptopIcon path={LAPTOP_ICONS.right} />
+        </button>
+      ) : null}
+      <button
+        type="button"
+        className={`${styles.small} ${styles.iconButton}`}
+        disabled={!editable}
+        aria-label={`Remove photo ${index + 1}`}
+        title="Remove"
+        onClick={() => void remove(photo)}
+      >
+        <span className={styles.glyph}>Remove</span>
+        <LaptopIcon path={LAPTOP_ICONS.trash} />
+      </button>
+    </div>
+  );
 
   const onDrop = (event: DragEvent) => {
     event.preventDefault();
@@ -170,9 +243,36 @@ export function PhotoEditor({
     </label>
   );
 
+  const messages = (
+    <>
+      {adding ? (
+        <p role="status" className={styles.note}>
+          Adding photo {Math.min(adding.done + 1, adding.total)} of {adding.total}…
+        </p>
+      ) : null}
+      {problem ? (
+        <WarmNote role="alert" className={styles.problem}>
+          {problemText(problem, max)}
+        </WarmNote>
+      ) : null}
+      {removed ? (
+        <DoneBar
+          message={removed.photo ? "Photo removed." : "Undone."}
+          onUndo={removed.photo ? () => void undo() : null}
+          focusKey={removed.at}
+          className={styles.note}
+          messageClassName={styles.inline}
+          undoClassName={styles.link}
+        />
+      ) : null}
+    </>
+  );
+
   return (
     <section
-      className={`${styles.section} ${dropping ? styles.dropping : ""}`}
+      className={`${styles.section} ${compact ? styles.compact : ""} ${
+        dropping ? styles.dropping : ""
+      }`}
       aria-labelledby="photos-heading"
       onDragOver={(event) => {
         if (!canAdd || touch) return;
@@ -186,16 +286,22 @@ export function PhotoEditor({
         <h2 id="photos-heading" className={styles.heading}>
           Photos
         </h2>
-        {premium && max !== null ? (
+        {premium && max !== null && !(compact && gallery.length === 0) ? (
           <p className={styles.count}>
             {gallery.length} of {max}
           </p>
+        ) : null}
+        {compact && gallery.length > 1 ? (
+          <button type="button" className={styles.showAll} onClick={() => setSheet(true)}>
+            <LaptopIcon path={LAPTOP_ICONS.grid} />
+            {gallery.length > 2 ? `Show all ${gallery.length} photos` : "Show all photos"} / reorder
+          </button>
         ) : null}
       </div>
 
       {/* The white box on a laptop (U23); adds nothing on phones. */}
       <div className={styles.box}>
-        {arrangedByFennl(gallery) ? (
+        {!compact && arrangedByFennl(gallery) ? (
           <p className={`${styles.note} ${styles.arranged}`}>
             <LaptopIcon path={LAPTOP_ICONS.spark} />
             Arranged by Fennl. Moving a photo keeps your own order from then on.
@@ -204,7 +310,7 @@ export function PhotoEditor({
         <div className={styles.strip}>
           {gallery.length > 0 ? (
             <ol className={styles.photos} aria-label="Photos, the first is the cover">
-              {gallery.map((photo, index) => (
+              {inEditor.map((photo, index) => (
                 <li key={photo.id} className={styles.photo} data-hash={photo.imageHash}>
                   <PhotoImage
                     hash={photo.imageHash}
@@ -220,59 +326,12 @@ export function PhotoEditor({
                       Cover
                     </span>
                   ) : null}
-                  {/* One row of small controls under each photo on a laptop (U23): Make cover (or
-                  "The cover"), then earlier, later and Remove as icons with tooltips. */}
-                  <div className={styles.photoButtons}>
-                    {index > 0 ? (
-                      <button
-                        type="button"
-                        className={`${styles.small} ${styles.words}`}
-                        disabled={!editable}
-                        onClick={() => moveTo(photo, 0)}
-                      >
-                        Make cover
-                      </button>
-                    ) : (
-                      <span className={styles.theCover} aria-hidden="true" />
-                    )}
-                    {index > 0 ? (
-                      <button
-                        type="button"
-                        className={`${styles.small} ${styles.iconButton}`}
-                        disabled={!editable}
-                        aria-label={`Move photo ${index + 1} earlier`}
-                        title="Move earlier"
-                        onClick={() => moveTo(photo, index - 1)}
-                      >
-                        <span className={styles.glyph}>←</span>
-                        <LaptopIcon path={LAPTOP_ICONS.left} />
-                      </button>
-                    ) : null}
-                    {index < gallery.length - 1 ? (
-                      <button
-                        type="button"
-                        className={`${styles.small} ${styles.iconButton}`}
-                        disabled={!editable}
-                        aria-label={`Move photo ${index + 1} later`}
-                        title="Move later"
-                        onClick={() => moveTo(photo, index + 1)}
-                      >
-                        <span className={styles.glyph}>→</span>
-                        <LaptopIcon path={LAPTOP_ICONS.right} />
-                      </button>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={`${styles.small} ${styles.iconButton}`}
-                      disabled={!editable}
-                      aria-label={`Remove photo ${index + 1}`}
-                      title="Remove"
-                      onClick={() => void remove(photo)}
-                    >
-                      <span className={styles.glyph}>Remove</span>
-                      <LaptopIcon path={LAPTOP_ICONS.trash} />
-                    </button>
-                  </div>
+                  {index === inEditor.length - 1 && hidden > 0 ? (
+                    <span className={styles.more} aria-hidden="true">
+                      +{hidden}
+                    </span>
+                  ) : null}
+                  {controls(photo, index)}
                 </li>
               ))}
             </ol>
@@ -297,7 +356,11 @@ export function PhotoEditor({
               <p className={`${styles.note} ${styles.dropNote}`}>Or drop photos here.</p>
             ) : null}
             {!created ? (
-              <p className={styles.note}>Give the recipe a title first, then add photos.</p>
+              <p className={styles.note}>
+                {compact
+                  ? "Give the recipe a title first."
+                  : "Give the recipe a title first, then add photos."}
+              </p>
             ) : !online ? (
               <p className={styles.note}>
                 Adding photos needs a connection. Everything else here still saves.
@@ -316,27 +379,24 @@ export function PhotoEditor({
           </>
         ) : null}
 
-        {adding ? (
-          <p role="status" className={styles.note}>
-            Adding photo {Math.min(adding.done + 1, adding.total)} of {adding.total}…
-          </p>
-        ) : null}
-        {problem ? (
-          <WarmNote role="alert" className={styles.problem}>
-            {problemText(problem, max)}
-          </WarmNote>
-        ) : null}
-        {removed ? (
-          <DoneBar
-            message={removed.photo ? "Photo removed." : "Undone."}
-            onUndo={removed.photo ? () => void undo() : null}
-            focusKey={removed.at}
-            className={styles.note}
-            messageClassName={styles.inline}
-            undoClassName={styles.link}
-          />
-        ) : null}
+        {sheet && compact ? null : messages}
       </div>
+      {sheet && compact ? (
+        <PhotoSheet
+          gallery={gallery}
+          max={premium ? max : null}
+          editable={editable}
+          controls={controls}
+          addTile={premium ? filePicker("Add photos", false, true, true) : null}
+          messages={messages}
+          onMove={moveTo}
+          onClose={() => {
+            setSheet(false);
+            // "Photo removed." comes back to the editor without taking the focus from Show all.
+            setRemoved((last) => (last ? { ...last, at: 0 } : last));
+          }}
+        />
+      ) : null}
     </section>
   );
 }

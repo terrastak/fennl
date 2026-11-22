@@ -47,6 +47,50 @@ export function LinkedName({ recipeId, onUnlink }: { recipeId: string; onUnlink:
   );
 }
 
+/**
+ * Under the box while the cursor is on a linked line (U27, the editor on a laptop, where the
+ * margin shows the link mark): which recipe it links to, and Unlink.
+ */
+export function LinkStrip({
+  recipeId,
+  step,
+  onUnlink,
+}: {
+  recipeId: string;
+  /** A step ("This step links to…"), or an ingredient ("This line links to…"). */
+  step: boolean;
+  onUnlink: () => void;
+}) {
+  const recipes = useRecipeList();
+  const linked = recipes?.find((r) => r.id === recipeId);
+  if (!recipes) return null;
+  const what = step ? "step" : "line";
+  return (
+    <p className={editor.linkStrip}>
+      <LaptopIcon path={LAPTOP_ICONS.link} />
+      <span>
+        {linked ? (
+          <>
+            This {what} links to <Link href={`/recipes/${linked.id}`}>{linked.title}</Link>.
+          </>
+        ) : (
+          <>This {what}&rsquo;s linked recipe is in Trash or gone.</>
+        )}
+      </span>
+      <button
+        type="button"
+        className={editor.linkStripButton}
+        // Keeps the cursor in the box, on the line.
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={onUnlink}
+      >
+        <LaptopIcon path={LAPTOP_ICONS.unlink} />
+        Unlink
+      </button>
+    </p>
+  );
+}
+
 /** Finding a recipe to link a line to. */
 export function LinkPicker({
   line,

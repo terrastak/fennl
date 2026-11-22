@@ -1221,6 +1221,665 @@
   }
 }
 
+/* --- The editor on a laptop since U27 (owner's choices 2026-11-21, the mockup "C3") ------------- */
+/* A slim bar, then the recipe in paired rows up to 1280px wide, centred in a big window: title,
+   about, time and servings beside the photos; Ingredients beside Directions, how Fennl reads each
+   line in the boxes' margins; categories and notes beside where it's from and nutrition. No white
+   frames around sections: only the boxes you type in are white. U23's laptop sizes throughout. */
+@media (min-width: 900px) and (pointer: fine) {
+  .editor.columns {
+    /* 1280px with the page's sides, centred once the main area is wider. */
+    --page-column: calc(80rem - 2 * var(--space-8));
+    --page-start: max(0px, (100% - var(--page-column)) / 2);
+    /* The narrow column: the photos, Ingredients, where it's from, nutrition. */
+    --side: clamp(21rem, 33%, 26rem);
+    --column-gap: 1.75rem;
+    /* A line in Ingredients and Directions. */
+    --line: 1.3125rem;
+  }
+
+  /* --- The bar: the heading, how saving is going beside it, then the actions ------------------ */
+  .editor.columns .head {
+    flex-wrap: nowrap;
+    gap: 0;
+    min-height: 3rem;
+    padding-block: 0;
+  }
+
+  .editor.columns .heading,
+  .editor.columns .head[data-scrolled] .heading {
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+
+  .editor.columns .status {
+    margin: 0 0 0 var(--space-4);
+  }
+
+  .editor.columns .barButtons {
+    margin-left: auto;
+  }
+
+  .editor.columns .barButtons button {
+    padding: 0 0.625rem;
+  }
+
+  /* Move to Trash: red words with a bin, at the start of the actions. */
+  .editor.columns .barButtons .trashButton,
+  .editor.columns .barButtons .trashButton svg {
+    margin: 0;
+    color: var(--color-danger);
+  }
+
+  /* Done: the ink button, words only (U23's rule: where a form is finished). */
+  .editor.columns .barButtons .done {
+    min-height: var(--button-height);
+    margin-left: var(--space-2);
+    padding: 0 0.875rem;
+    background: var(--button-ink-bg);
+    color: var(--button-ink-text);
+    font-weight: var(--button-weight);
+  }
+
+  .editor.columns .barButtons .done:not(:disabled):hover {
+    background: var(--button-ink-hover);
+    color: var(--button-ink-text);
+  }
+
+  .editor.columns .notice {
+    margin: var(--space-3) 0 0;
+  }
+
+  /* --- The rows ------------------------------------------------------------------------------ */
+  .editor.columns form {
+    margin-top: 0.625rem;
+  }
+
+  .editor.columns .fields {
+    gap: var(--space-3);
+  }
+
+  .editor.columns .topRow,
+  .editor.columns .linesRow,
+  .editor.columns .bottomRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--side);
+    column-gap: var(--column-gap);
+    align-items: start;
+  }
+
+  .editor.columns .linesRow {
+    grid-template-columns: var(--side) minmax(0, 1fr);
+  }
+
+  /* "How Fennl reads it" on: the two boxes share the width, each with its read-out under it. */
+  .editor.columns .linesRow[data-reads] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .editor.columns .basics,
+  .editor.columns .stack {
+    display: grid;
+    gap: var(--space-2);
+    min-width: 0;
+  }
+
+  .editor.columns .stack {
+    gap: 0.625rem;
+  }
+
+  /* No white frames: a section is its small heading and its boxes. */
+  .editor.columns .groupBox,
+  .editor.columns .fieldBox {
+    gap: 0.1875rem;
+    padding: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+
+  /* A section's name: a small heading. */
+  .editor.columns .group legend,
+  .editor.columns .linesLabel,
+  .editor.columns .field.boxedField > label,
+  .editor.columns .nutritionHeading {
+    min-height: 1.5rem;
+    margin: 0 0 var(--space-1);
+    font-size: var(--subheading-size);
+    line-height: 1.6;
+    letter-spacing: 0;
+  }
+
+  /* Time and servings need no heading: their labels say it. */
+  .editor.columns .basics .group legend {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .editor.columns .field {
+    gap: 0.1875rem;
+  }
+
+  .editor.columns .field p {
+    font-size: var(--ui-text-label);
+  }
+
+  .editor.columns input.titleInput {
+    min-height: 2.375rem;
+    font-size: 1.1875rem;
+  }
+
+  /* About: its hint beside its label; the box one line tall until there's more. */
+  .editor.columns .aboutField {
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: var(--space-1);
+    align-items: baseline;
+  }
+
+  .editor.columns .aboutField > * {
+    grid-column: 1 / -1;
+  }
+
+  .editor.columns .aboutField > label {
+    grid-column: 1;
+  }
+
+  .editor.columns .aboutField > [id$="-hint"] {
+    grid-row: 1;
+    grid-column: 2;
+    overflow: hidden;
+    color: var(--color-text-subtle);
+    font-size: var(--ui-text-label);
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .editor.columns textarea.textarea {
+    padding: 0.375rem 0.625rem;
+    line-height: 1.45;
+    resize: none;
+  }
+
+  .editor.columns textarea.textarea.short {
+    min-height: calc(1.45em + 0.75rem + 2px);
+  }
+
+  .editor.columns .boxedField textarea.textarea {
+    min-height: calc(2 * 1.45em + 0.75rem + 2px);
+  }
+
+  .editor.columns .timeBox {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.6fr) 6.5rem;
+    gap: var(--space-2);
+  }
+
+  .editor.columns .timeBox .servesField {
+    grid-column: auto;
+  }
+
+  /* Where it's from: the kind of source, then its name; more fields wrap under them. */
+  .editor.columns .groupBox > .row {
+    gap: var(--space-2);
+  }
+
+  .editor.columns .groupBox > .row > :first-child {
+    flex: 0 0 8.5rem;
+  }
+
+  /* Each box keeps to its own share of the row, so the kind's list never runs under the name. */
+  .editor.columns .groupBox > .row > * {
+    min-width: 0;
+  }
+
+  .editor.columns .groupBox > .row select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Nutrition: a row that says what's there; the help when its boxes are open. */
+  .editor.columns .nutrition {
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+
+  .editor.columns .nutrition summary {
+    min-height: var(--control);
+    padding: 0 0.125rem 0 var(--space-3);
+  }
+
+  .editor.columns .summaryFrom {
+    font-weight: var(--weight-semibold);
+  }
+
+  .editor.columns .nutrition:not([open]) .summaryHelp {
+    display: none;
+  }
+
+  .editor.columns .summaryButton {
+    min-height: var(--control-sm);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .editor.columns .nutritionGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* --- Ingredients and Directions: how Fennl reads each line, in the box's margin ------------- */
+  .editor.columns .linesHead {
+    min-height: 1.5rem;
+    margin-bottom: var(--space-1);
+  }
+
+  .editor.columns .linesLabel {
+    margin: 0;
+  }
+
+  .editor.columns .lineTools {
+    margin-right: -0.5rem;
+    gap: 0.125rem;
+  }
+
+  .marginLines {
+    /* The margin: wide enough for a link mark and a step's circle in Directions. */
+    --gutter: 1.625rem;
+  }
+
+  .marginLines[data-list="directions"] {
+    --gutter: 2.75rem;
+  }
+
+  /* The white box; the typing box and an unseen copy of its words share it, one over the other,
+     so the copy's lines (and their marks) sit exactly beside the typed ones and size the box. */
+  .marginBox {
+    display: grid;
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+  }
+
+  .marginBox > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+
+  .mirror,
+  .editor .marginLines textarea.marginArea {
+    margin: 0;
+    padding: 0.4375rem 0.625rem 0.4375rem var(--gutter);
+    font: var(--weight-regular) var(--read-text) / var(--line) var(--font-ui);
+    letter-spacing: normal;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    tab-size: 4;
+  }
+
+  .mirror {
+    border: 1px solid transparent;
+    color: transparent;
+    pointer-events: none;
+  }
+
+  /* Over the copy, whose lines are positioned (so would be drawn on top otherwise). */
+  .editor .marginLines textarea.marginArea {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    background: transparent;
+    resize: none;
+    field-sizing: fixed;
+  }
+
+  .marginRow {
+    position: relative;
+    margin-left: calc(-1 * var(--gutter));
+    padding-left: var(--gutter);
+  }
+
+  /* The marks, beside the line's first line. */
+  .margin {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.1875rem;
+    width: var(--gutter);
+    height: var(--line);
+    padding-right: 0.4375rem;
+    color: var(--color-text-subtle);
+    font-size: var(--ui-text-label);
+  }
+
+  .marginLines[data-list="ingredients"] .margin {
+    padding-right: var(--space-2);
+  }
+
+  /* Room for the accent edge before a linked step's link mark. */
+  .marginLines[data-list="directions"] .margin {
+    gap: 0.125rem;
+    padding-right: 0.3125rem;
+  }
+
+  /* A heading: the H mark and a grey band. */
+  .marginRow[data-heading] {
+    border-radius: var(--radius-tag);
+    background: var(--color-surface-sunken);
+  }
+
+  .headingMark {
+    display: inline-grid;
+    place-items: center;
+    width: 1.125rem;
+    height: 1.125rem;
+    border-radius: 0.2rem;
+    background: var(--color-border);
+    color: var(--color-text);
+    font: var(--weight-bold) var(--ui-text-eyebrow) / 1 var(--font-ui);
+  }
+
+  /* A step's number in a thin circle, as on the recipe page. */
+  .stepCircle {
+    display: inline-grid;
+    place-items: center;
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 0.25rem;
+    border: 1px solid var(--color-step-number-edge);
+    border-radius: var(--radius-full);
+    background: var(--color-step-number);
+    color: var(--color-text-muted);
+    font: var(--weight-semibold) var(--ui-text-label) / 1 var(--font-ui);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A linked line: the link mark (before a step's circle, whose ring takes a little accent). */
+  .linkMark {
+    flex: none;
+    width: 0.75rem;
+    height: 0.75rem;
+    color: var(--color-accent);
+  }
+
+  .marginRow[data-linked] .stepCircle {
+    border-color: color-mix(in srgb, var(--color-accent) 45%, var(--color-step-number-edge));
+  }
+
+  /* The line being typed: a thin accent edge. */
+  .marginRow[data-current]::before {
+    content: "";
+    position: absolute;
+    top: 0.1875rem;
+    bottom: 0.1875rem;
+    left: 0.125rem;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--color-accent);
+  }
+
+  .marginLines[data-list="ingredients"] .marginRow[data-current]::before {
+    left: var(--space-1);
+  }
+
+  /* An empty box: an example in the placeholder's grey, with the marks it would get. */
+  .marginRow[data-example] {
+    color: var(--color-text-subtle);
+  }
+
+  .marginRow[data-example][data-heading] {
+    background: color-mix(in srgb, var(--color-surface-sunken) 60%, var(--color-surface));
+  }
+
+  /* Directions: each step its own box, growing with its words, 5px from the next, inside the one
+     white area, which takes the accent and halo while any step has the cursor. No lines between
+     the steps, just the gap. */
+  .steps {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+    padding: 0.375rem 0.625rem 0.375rem var(--gutter);
+    border: 1px solid color-mix(in srgb, var(--color-border-strong) 65%, var(--color-border));
+    border-radius: var(--radius-control);
+    background: var(--color-surface);
+    cursor: text;
+  }
+
+  .steps:hover {
+    border-color: var(--color-border-strong);
+  }
+
+  .steps:focus-within {
+    border-color: var(--color-accent);
+    box-shadow:
+      0 0 0 1px var(--color-accent),
+      0 0 0 4px var(--color-accent-soft);
+  }
+
+  /* Nothing in any step: the one box is as tall as the example drawn in it, so a click anywhere
+     on the example lands in it. */
+  .steps[data-empty] .step {
+    min-height: calc(4 * var(--line) + 3 * 0.3125rem);
+  }
+
+  /* A step: its box and an unseen copy of its words share the row, the copy sizing it. */
+  .step {
+    display: grid;
+  }
+
+  .step > .stepCopy,
+  .editor .steps textarea.stepText {
+    grid-area: 1 / 1;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    font: var(--weight-regular) var(--read-text) / var(--line) var(--font-ui);
+    letter-spacing: normal;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    tab-size: 4;
+  }
+
+  .stepCopy {
+    min-height: var(--line);
+    color: transparent;
+    pointer-events: none;
+  }
+
+  .editor .steps textarea.stepText,
+  .editor .steps textarea.stepText:hover,
+  .editor .steps textarea.stepText:focus {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    background: transparent;
+    box-shadow: none;
+    color: var(--color-text);
+    resize: none;
+    field-sizing: fixed;
+    cursor: text;
+  }
+
+  /* Words selected across steps: the step with the cursor shows the browser's selection, the
+     others are drawn in the same colour. */
+  .stepText::selection,
+  .stepSelected {
+    background: color-mix(in srgb, var(--color-accent) 24%, transparent);
+  }
+
+  .stepText:not(:focus)::selection {
+    background: transparent;
+  }
+
+  .stepSelected {
+    color: transparent;
+  }
+
+  .stepExample {
+    position: absolute;
+    inset: 0.375rem 0.625rem 0.375rem var(--gutter);
+    display: flex;
+    flex-direction: column;
+    gap: 0.3125rem;
+    font: var(--weight-regular) var(--read-text) / var(--line) var(--font-ui);
+    pointer-events: none;
+  }
+
+  /* "This step links to Herb Butter", with Unlink, while the cursor is on a linked line. */
+  .linkStrip {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    margin: 0.375rem 0 0;
+    padding: 0.125rem 0.25rem 0.125rem var(--space-2);
+    border-radius: var(--radius-control);
+    background: var(--color-accent-soft);
+    color: var(--color-accent-soft-text);
+    font-size: var(--ui-text-secondary);
+  }
+
+  .linkStrip > span {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .linkStrip a {
+    color: inherit;
+    font-weight: var(--weight-semibold);
+  }
+
+  .linkStripButton {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control-sm);
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+  }
+
+  .linkStripButton:hover {
+    background: color-mix(in srgb, currentColor 10%, transparent);
+  }
+
+  /* The link panel opens under the line it's for (the top is set from the line). */
+  .linkSpot {
+    position: absolute;
+    z-index: 4;
+    top: 100%;
+    left: 2.25rem;
+    width: min(23rem, calc(100% - 2.25rem));
+  }
+
+  .editor .linkSpot .linkPicker {
+    position: static;
+    width: 100%;
+  }
+
+  /* The one hint under the boxes, and How Fennl reads it at its end. */
+  .sharedHint {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-top: var(--space-1);
+  }
+
+  .editor.columns .sharedHint p {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    color: var(--color-text-subtle);
+    font-size: var(--ui-text-label);
+    line-height: 1.5;
+  }
+
+  .readsButton {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 0.375rem;
+    min-height: var(--control-sm);
+    margin-right: -0.5rem;
+    padding: 0 var(--space-2);
+    border: 0;
+    border-radius: var(--radius-control);
+    background: transparent;
+    color: var(--color-text-muted);
+    font: inherit;
+    font-size: var(--ui-text-secondary);
+    cursor: pointer;
+  }
+
+  .readsButton:hover {
+    background: var(--hover-fill);
+    color: var(--color-text);
+  }
+
+  .readsButton[aria-pressed="true"] {
+    color: var(--color-accent);
+    font-weight: var(--weight-semibold);
+  }
+
+  /* The read-out under each box. */
+  .editor.columns .marginLines .preview {
+    margin-top: var(--space-2);
+    background: var(--color-surface-sunken);
+  }
+}
+
+/* A window too narrow for the paired rows: one column, each row under the last. */
+@media (min-width: 900px) and (max-width: 1199px) and (pointer: fine) {
+  .editor.columns .topRow,
+  .editor.columns .linesRow,
+  .editor.columns .linesRow[data-reads],
+  .editor.columns .bottomRow {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: var(--space-3);
+  }
+}
+
+/* Windows contrast themes draw no fills: a heading's band (an outline, so its line keeps its
+   size beside the typed one) and the linked line's strip keep an edge. */
+@media (min-width: 900px) and (pointer: fine) and (forced-colors: active) {
+  .marginRow[data-heading] {
+    outline: 1px solid;
+    outline-offset: -1px;
+  }
+
+  .linkStrip {
+    border: 1px solid;
+  }
+
+  .steps:focus-within {
+    outline: 2px solid Highlight;
+  }
+
+  .stepText::selection,
+  .stepSelected {
+    background: Highlight;
+    forced-color-adjust: none;
+  }
+}
+
 /* A window a little narrower than usual: time and servings on two lines. */
 @media (min-width: 900px) and (max-width: 1099px) and (pointer: fine) {
   :is(.editor, .laptopFields) .timeBox {
