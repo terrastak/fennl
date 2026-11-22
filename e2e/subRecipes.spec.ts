@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus, quickScale } from "./recipes";
+import { DRAFT_SAVED, editorStatus, quickScale, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F3: linked sub-recipes.
@@ -30,7 +30,7 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   await page.getByLabel("Title", { exact: true }).fill("Lime Crema");
   await ingredientsBox(page).fill("½ cup sour cream\nZest and juice of 1 lime");
   await page.getByRole("textbox", { name: "Directions" }).fill("Stir together.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await page.getByRole("link", { name: "← All recipes" }).click();
 
@@ -49,7 +49,7 @@ test("Link a sauce to a main dish, expand it, and never in a circle", async ({
   await expect(linkStrip(page)).toHaveText("This line links to Lime Crema.Unlink");
   await expect(linkStrip(page).getByRole("link", { name: "Lime Crema" })).toBeVisible();
   await expect(linkedLines(page, "ingredients")).toHaveText(["½ cup lime crema"]);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
 
   // On the recipe page it opens in place.
@@ -125,7 +125,7 @@ test("Link a step to a recipe: named on the page, cooked first, never in a circl
   await page.getByLabel("Title", { exact: true }).fill("Herb Butter");
   await ingredientsBox(page).fill("4 Tbsp butter, softened\n1 Tbsp chopped parsley");
   await directions(page).fill("Mix together until smooth.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: "Herb Butter" })).toBeVisible();
   await page.getByRole("link", { name: "← All recipes" }).click();
@@ -150,7 +150,7 @@ test("Link a step to a recipe: named on the page, cooked first, never in a circl
   await page.keyboard.type(" Serve.");
   await expect(linkStrip(page)).toHaveCount(0);
   await expect(linkedSteps(page)).toHaveText(["Make the herb butter."]);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
 
   // The recipe page: the step's words, then the linked recipe's name, opening it.

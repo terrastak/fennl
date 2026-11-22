@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NOTHING_LOST, restoreBlockedText } from "../limits/limitText";
 import { reportRefused } from "../limits/reportRefused";
 import { useAddBlocked } from "../limits/useLimits";
@@ -9,6 +9,7 @@ import type { TrashItem } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import { activeSyncClient, useSyncStatus, useTrash } from "../sync/useSync";
 import { CardFace } from "./CardFace";
+import { CardQuestion } from "./CardQuestion";
 import { dayText, localDay, trashText } from "./format";
 import { LaptopIcon } from "./LaptopIcon";
 import { LAPTOP_ICONS } from "./laptopIcons";
@@ -52,52 +53,6 @@ async function putBack(item: TrashItem): Promise<boolean> {
   }
 }
 
-/** A warning sign, beside the question on a laptop. */
-const WARNING = "M12 4 2.5 20h19zM12 10v4M12 17.2v.1";
-
-/** "Delete … for good?", asked right where the button was. */
-function Confirm({
-  question,
-  action,
-  busy,
-  onConfirm,
-  onCancel,
-}: {
-  question: string;
-  action: string;
-  busy: boolean;
-  onConfirm: () => void;
-  onCancel: () => void;
-}) {
-  const noteId = useId();
-  return (
-    <div className={styles.confirm} role="group" aria-label={question} aria-describedby={noteId}>
-      <LaptopIcon path={WARNING} className={styles.confirmIcon} />
-      <p>
-        <span className={styles.confirmQuestion}>{question}</span>{" "}
-        <span id={noteId} className={styles.confirmNote}>
-          This can&rsquo;t be undone.
-        </span>
-      </p>
-      <div className={styles.trashButtons}>
-        <button
-          type="button"
-          className={styles.dangerButton}
-          disabled={busy}
-          autoFocus
-          onClick={onConfirm}
-        >
-          <LaptopIcon path={LAPTOP_ICONS.trash} />
-          {busy ? "Deleting…" : action}
-        </button>
-        <button type="button" className={styles.secondary} onClick={onCancel}>
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /** One recipe in Trash as the recipe list's card (U24). */
 function TrashCard({
   item,
@@ -139,10 +94,13 @@ function TrashCard({
           <span>{trashText(item.deletedAt)}</span>
         </p>
         {asking ? (
-          <Confirm
+          <CardQuestion
             question={`Delete “${title}” for good?`}
+            note="This can’t be undone."
             action="Delete for good"
+            actionIcon={LAPTOP_ICONS.trash}
             busy={busy}
+            busyText="Deleting…"
             onConfirm={onConfirm}
             onCancel={onCancel}
           />
@@ -268,10 +226,13 @@ export function TrashPage() {
           <div className={styles.trashTop}>
             <span className={styles.trashCount}>{recipesText(list.length)}</span>
             {asking === "all" ? (
-              <Confirm
+              <CardQuestion
                 question={`Delete all ${recipesText(list.length)} in Trash for good?`}
+                note="This can’t be undone."
                 action="Empty Trash"
+                actionIcon={LAPTOP_ICONS.trash}
                 busy={busy}
+                busyText="Deleting…"
                 onConfirm={() => void deleteForGood(undefined)}
                 onCancel={() => cancel("all")}
               />

@@ -56,7 +56,7 @@ import { printRecipes } from "../print/booklet";
 import type { RecipeSummary } from "../sync/dbProtocol";
 import { canEdit } from "../sync/status";
 import type { SearchHit } from "../sync/search";
-import { activeSyncClient, useSyncStatus } from "../sync/useSync";
+import { activeSyncClient, useDrafts, useSyncStatus } from "../sync/useSync";
 import { SearchIcon } from "../shell/Library";
 import { PhoneLibrary } from "../shell/PhoneLibrary";
 import { typeIntoSearch } from "../shell/typeToSearch";
@@ -131,7 +131,15 @@ function RecipeCard({
   hit: SearchHit | undefined;
 }) {
   const titleId = `card-title-${recipe.id}`;
-  const body = <CardFace recipe={recipe} terms={terms} hit={hit} titleId={titleId} />;
+  const body = (
+    <CardFace
+      recipe={recipe}
+      terms={terms}
+      hit={hit}
+      titleId={titleId}
+      tag={recipe.draft ? "Draft" : undefined}
+    />
+  );
   // Choosing recipes to file (phase C7): the card becomes a checkbox.
   if (selecting) {
     return (
@@ -149,9 +157,13 @@ function RecipeCard({
       </li>
     );
   }
+  // A new recipe still a draft opens in the editor (U27 part 3).
   return (
     <li>
-      <Link href={`/recipes/${recipe.id}`} className={styles.card}>
+      <Link
+        href={recipe.draft ? `/recipes/${recipe.id}/edit` : `/recipes/${recipe.id}`}
+        className={styles.card}
+      >
         {body}
       </Link>
     </li>
@@ -163,11 +175,14 @@ function EmptyState({
   onAdd,
   onSamples,
   addingSamples,
+  drafts,
 }: {
   disabled: boolean;
   onAdd: () => void;
   onSamples: () => void;
   addingSamples: boolean;
+  /** Drafts waiting (U27 part 3): with no recipes, the way to them (a phone has no left panel). */
+  drafts: number;
 }) {
   // Even with no recipes, text left in Trash can fill the plan (phase C11).
   const usage = useUsage();
@@ -201,6 +216,12 @@ function EmptyState({
             <LaptopIcon path={LAPTOP_ICONS.import} />
             Import
           </Link>
+          {drafts > 0 ? (
+            <Link href="/drafts" className={styles.secondary}>
+              <LaptopIcon path={LAPTOP_ICONS.pen} />
+              Drafts {drafts}
+            </Link>
+          ) : null}
         </div>
         <button
           type="button"
@@ -283,6 +304,8 @@ export function RecipesPage() {
   const [surprise, setSurprise] = useState<string | null>(null);
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(() => new Set());
+  // How many drafts there are, for a phone's ⋯ (U27 part 3).
+  const drafts = useDrafts()?.length ?? 0;
   // A recipe just moved to Trash from its page can be put back from here (phase C9).
   const { done, failed, run, undo } = useUndoable(recentlyTrashed);
   useEffect(forgetTrashed, []);
@@ -371,9 +394,17 @@ export function RecipesPage() {
   }
   const filtering = activeFilterCount(filters);
   const narrowing = searching || filtering > 0;
+  // New recipes still drafts (U27 part 3) are shown, but can't be picked, printed or offered
+  // by Surprise me until Done adds them to the recipe box.
+  const recipesShown = shown.some((recipe) => recipe.draft)
+    ? shown.filter((recipe) => !recipe.draft)
+    : shown;
+  const cards = selecting ? recipesShown : shown;
   // "Surprise me" (phase C13c): a recipe from what the list shows; gone if the list moves on.
-  const surpriseRecipe = shown.find((recipe) => recipe.id === surprise) ?? null;
-  const chosen = shown.filter((recipe) => selected.has(recipe.id)).map((recipe) => recipe.id);
+  const surpriseRecipe = recipesShown.find((recipe) => recipe.id === surprise) ?? null;
+  const chosen = recipesShown
+    .filter((recipe) => selected.has(recipe.id))
+    .map((recipe) => recipe.id);
   const select = (id: string, on: boolean) =>
     setSelected((before) => {
       const next = new Set(before);
@@ -582,11 +613,13 @@ export function RecipesPage() {
               <ListMenu
                 selecting={selecting}
                 onSelect={() => (selecting ? stopSelecting() : setSelecting(true))}
-                onSurprise={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
-                onPrint={() => print(shown.map((recipe) => recipe.id))}
-                canSurprise={shown.length > 0}
+                onSurprise={() => setSurprise(pickSurprise(recipesShown, surprise)?.id ?? null)}
+                onPrint={() => print(recipesShown.map((recipe) => recipe.id))}
+                canSurprise={recipesShown.length > 0}
                 shown={busy ? null : shown.length}
+                printable={busy ? null : recipesShown.length}
                 trash={!wide}
+                drafts={drafts}
               />
             </div>
           ) : null}
@@ -734,7 +767,7 @@ export function RecipesPage() {
               <button
                 type="button"
                 className={styles.secondary}
-                onClick={() => setSurprise(pickSurprise(shown, surprise)?.id ?? null)}
+                onClick={() => setSurprise(pickSurprise(recipesShown, surprise)?.id ?? null)}
               >
                 <LaptopIcon path={LAPTOP_ICONS.shuffle} />
                 Another one
@@ -764,18 +797,20 @@ export function RecipesPage() {
         <section className={styles.bulk} aria-label="Selected recipes">
           <div className={styles.bulkHead}>
             <p aria-live="polite">
-              {chosen.length} of {shown.length} selected
+              {chosen.length} of {recipesShown.length} selected
             </p>
             <button
               type="button"
               className={styles.textButton}
               onClick={() =>
                 setSelected(
-                  chosen.length === shown.length ? new Set() : new Set(shown.map((r) => r.id)),
+                  chosen.length === recipesShown.length
+                    ? new Set()
+                    : new Set(recipesShown.map((r) => r.id)),
                 )
               }
             >
-              {chosen.length === shown.length && shown.length > 0
+              {chosen.length === recipesShown.length && recipesShown.length > 0
                 ? "Select none"
                 : "Select all shown"}
             </button>
@@ -810,7 +845,7 @@ export function RecipesPage() {
             {shown.length} {shown.length === 1 ? "recipe" : "recipes"}
           </h2>
           <ul className={`${styles.grid} ${styles.twoUp}`}>
-            {shown.slice(0, limit).map((recipe) => (
+            {cards.slice(0, limit).map((recipe) => (
               <RecipeCard
                 key={recipe.id}
                 recipe={recipe}
@@ -822,16 +857,16 @@ export function RecipesPage() {
               />
             ))}
           </ul>
-          {shown.length > limit ? (
+          {cards.length > limit ? (
             <div className={styles.more}>
               <button
                 type="button"
                 className={styles.secondary}
                 onClick={() => setLimit(limit + PAGE)}
               >
-                Show {Math.min(PAGE, shown.length - limit)} more
+                Show {Math.min(PAGE, cards.length - limit)} more
               </button>
-              <span className={styles.hint}>{shown.length - limit} more to see</span>
+              <span className={styles.hint}>{cards.length - limit} more to see</span>
             </div>
           ) : null}
         </section>
@@ -841,6 +876,7 @@ export function RecipesPage() {
           onAdd={add}
           onSamples={() => void addSamples()}
           addingSamples={addingSamples}
+          drafts={drafts}
         />
       )}
       <p className={`${styles.hint} ${styles.footnote}`}>

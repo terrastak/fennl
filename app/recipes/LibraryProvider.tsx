@@ -65,7 +65,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
     () => (listAddress ? filtersFromParams(new URLSearchParams(listAddress)) : NO_FILTERS),
     [listAddress],
   );
-  const recipes = useRecipeList();
+  // New recipes still drafts are in the person's own list and its counts (U27 part 3).
+  const recipes = useRecipeList({ drafts: true });
   const tree = useCategoryTree();
   const search = useSearch(query);
   const words = ingredientWords(filters);

@@ -22,8 +22,8 @@ import { isDay, type SyncChange } from "./sync";
  */
 
 export const EXPORT_FORMAT = "fennl-export";
-/** 2: photos (phase D3). 3: notes as signed entries (U7). */
-export const EXPORT_VERSION = 3;
+/** 2: photos (phase D3). 3: notes as signed entries (U7). 4: the person's drafts (U27). */
+export const EXPORT_VERSION = 4;
 
 export interface ExportPerson {
   userId: string;
@@ -83,6 +83,25 @@ export interface ExportRecipe extends RecipeContent {
   photos?: ExportPhoto[];
 }
 
+/**
+ * One of the exporting person's drafts (version 4, U27 part 3): changes made in the editor and
+ * not yet applied with Done, so nothing they typed is held back. Not read back on import.
+ */
+export interface ExportDraft {
+  /** The recipe it changes (one of `recipes`), or the new recipe's id when `newRecipe`. */
+  recipeId: string;
+  /** A recipe not added yet. */
+  newRecipe: boolean;
+  startedAt: string;
+  editedAt: string;
+  /** The fields changed (a new recipe: all of them), as recipes store them. */
+  fields: Partial<RecipeContent>;
+  /** The gallery as the draft has it, in order; null when its photos weren't changed. */
+  photos: Omit<ExportPhoto, "role">[] | null;
+  /** Category paths ("Desserts › Cakes"); null when its categories weren't changed. */
+  categories: string[] | null;
+}
+
 export interface ExportFile {
   format: typeof EXPORT_FORMAT;
   version: number;
@@ -94,6 +113,8 @@ export interface ExportFile {
   /** Every category path, including empty ones. */
   categories: string[];
   recipes: ExportRecipe[];
+  /** The exporting person's own drafts (version 4; absent before). */
+  drafts?: ExportDraft[];
 }
 
 /** Reads an export file, or null if it isn't one this version of Fennl understands. */

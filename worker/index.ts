@@ -50,6 +50,7 @@ import { exportRoutes } from "./export/export";
 import { extensionLinkRoutes, extensionRoutes } from "./extension/routes";
 import { duplicateRoutes } from "./duplicates/routes";
 import { savedSearchRoutes } from "./savedSearches/routes";
+import { draftRoutes } from "./drafts/routes";
 import { removeImportPhotos, removeOldImportJobs } from "./import/jobs";
 import { removeOldOutcomes } from "./ai/outcomes";
 import { importRoutes } from "./import/routes";
@@ -237,6 +238,9 @@ app.route("/", extensionRoutes);
 
 // A person's saved searches for the recipe list (phase C13b).
 app.route("/", savedSearchRoutes);
+
+// Drafts: what a person changed in the recipe editor before Done (U27 part 3).
+app.route("/", draftRoutes);
 
 // "Not a duplicate" answers for the duplicate finder (phase C14).
 app.route("/", duplicateRoutes);

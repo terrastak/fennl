@@ -31,14 +31,18 @@ export const syncStatus = (page: Page) =>
 export const recipeCard = (page: Page, title: string) =>
   page.getByRole("listitem").filter({ hasText: title });
 
-/** The editor's saving status ("All changes saved"). */
+/** The editor's status ("Draft saved · 2 changes", U27 part 3). */
 export const editorStatus = (page: Page) => page.locator("[data-editor-status]");
+
+/** The editor's draft is in the account ("Draft saved", "Draft saved · 3 changes"). */
+export const DRAFT_SAVED = /^Draft saved/;
 
 /** Adds a recipe with just a title, from the recipe list, and comes back to the list. */
 export async function addRecipe(page: Page, title: string) {
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill(title);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  // In the account, or (Premium, offline) waiting on this device.
+  await expect(editorStatus(page)).toHaveText(/^Draft (saved|kept on this device)/);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
   await page.getByRole("link", { name: "← All recipes" }).click();

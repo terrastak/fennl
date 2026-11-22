@@ -3,6 +3,7 @@ import { devices, expect, test, type Page } from "@playwright/test";
 import { keys } from "./keys";
 import {
   addRecipe,
+  DRAFT_SAVED,
   directionsText,
   editorStatus,
   premium,
@@ -38,9 +39,10 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await key.press("Enter");
   await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
   await expect(page.getByLabel("Title", { exact: true })).toBeFocused();
-  await expect(editorStatus(page)).toHaveText("Give it a title to save it");
+  // Nothing typed yet: nothing kept (U27 part 3).
+  await expect(editorStatus(page)).toHaveText("No changes yet");
   await key.type("Green Chile Stew");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText("Draft saved");
 
   await key.press("Tab");
   await expect(page.getByLabel("About this recipe")).toBeFocused();
@@ -172,8 +174,7 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
     await key.press("Escape");
     await expect(page.getByRole("button", { name: "Add a category" })).toBeFocused();
   }
-  await key.press("Tab");
-  await expect(page.getByRole("button", { name: "Undo", exact: true }).last()).toBeFocused();
+  // Into the draft: no "Added to" bar of its own (the editor's Undo takes it back).
   await key.press("Tab");
   if (laptop) {
     await notes();
@@ -186,7 +187,7 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
     await key.press("Tab");
     await notes();
   }
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText("Draft saved");
   await noAccessibilityProblems(page);
 
   // Nutrition (phase F4) is closed until opened: one stop on the way.
@@ -194,13 +195,9 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await expect(page.locator("summary").filter({ hasText: "Nutrition per serving" })).toBeFocused();
   const done = page.getByRole("button", { name: "Done" });
   await expect(done).toHaveCount(1);
-  if (!laptop) {
-    // Move to Trash at the very bottom, and the only Done in the bar at the top, which stays in
-    // view; back up to it (U23, owner's choice 2026-11-07). On a laptop Move to Trash is in the
-    // bar (U27).
-    await key.press("Tab");
-    await expect(page.getByRole("button", { name: "Move to Trash" })).toBeFocused();
-  }
+  // The only Done is in the bar at the top, which stays in view; back up to it (U23, owner's
+  // choice 2026-11-07). A new recipe has no Move to Trash (U27 part 3: it's only a draft).
+  await expect(page.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);
   for (let i = 0; i < 60; i++) {
     if (await done.evaluate((el) => el === document.activeElement)) break;
     await key.press("Shift+Tab");
@@ -231,7 +228,7 @@ test("A whole recipe written with the keyboard alone", async ({ page, context, b
   await expect(page.getByText("Better the next day.")).toBeVisible();
 });
 
-test("Undo and redo go back and forward one save at a time", async ({ page, context, baseURL }) => {
+test("Undo and redo go back and forward through the draft", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
   await addRecipe(page, "Pozole");
@@ -241,12 +238,13 @@ test("Undo and redo go back and forward one save at a time", async ({ page, cont
   const undo = page.getByRole("button", { name: "Undo" });
   const redo = page.getByRole("button", { name: "Redo" });
   await expect(undo).toBeDisabled();
+  await expect(editorStatus(page)).toHaveText("No changes yet");
 
   const title = page.getByLabel("Title", { exact: true });
   await title.fill("Pozole rojo");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change");
   await page.getByLabel("Notes").fill("Hominy from the can is fine.");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 2 changes");
 
   await undo.click();
   await expect(page.getByLabel("Notes")).toHaveValue("");
@@ -254,14 +252,19 @@ test("Undo and redo go back and forward one save at a time", async ({ page, cont
   await undo.click();
   await expect(title).toHaveValue("Pozole");
   await expect(undo).toBeDisabled();
+  await expect(editorStatus(page)).toHaveText("No changes yet");
   await redo.click();
   await expect(title).toHaveValue("Pozole rojo");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change");
 
-  // What undo left is what's saved.
+  // What undo left is the draft, kept when the page reloads; the recipe box hasn't changed.
   await page.reload();
   await expect(title).toHaveValue("Pozole rojo");
   await expect(page.getByLabel("Notes")).toHaveValue("");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change");
+  await page.goto("/");
+  await expect(recipeCard(page, "Pozole rojo")).toHaveCount(0);
+  await expect(recipeCard(page, "Pozole")).toBeVisible();
 });
 
 test("A problem holds back only its own field", async ({ page, context, baseURL }) => {
@@ -277,7 +280,8 @@ test("A problem holds back only its own field", async ({ page, context, baseURL 
   await page.getByLabel("Notes").fill("Use guajillo and ancho.");
   await expect(address).toHaveAttribute("aria-invalid", "true");
   await expect(page.getByText("This doesn't look like a web address.")).toBeVisible();
-  await expect(editorStatus(page)).toHaveText("Fix the marked fields to save them");
+  // Kept in the draft as typed (U27 part 3); Done holds the check.
+  await expect(editorStatus(page)).toHaveText("Draft saved · 2 changes");
 
   // Done points at the problem instead of leaving.
   await page.getByRole("button", { name: "Done" }).first().click();
@@ -286,7 +290,7 @@ test("A problem holds back only its own field", async ({ page, context, baseURL 
   await address.fill("example.com/birria");
   await address.blur();
   await expect(address).toHaveValue("https://example.com/birria");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(page.getByRole("link", { name: "example.com" })).toBeVisible();
   await expect(page.getByText("Use guajillo and ancho.")).toBeVisible();
@@ -308,7 +312,7 @@ test("Premium: a typo fixed on the phone shows on the laptop", async ({
   await phone.getByRole("link", { name: /Tamales de rajsa/ }).click();
   await phone.getByRole("link", { name: "Edit recipe" }).click();
   await phone.getByLabel("Title", { exact: true }).fill("Tamales de rajas");
-  await expect(editorStatus(phone)).toHaveText("All changes saved");
+  await expect(editorStatus(phone)).toHaveText("Draft saved · 1 change");
   await noAccessibilityProblems(phone);
   await phone.getByRole("button", { name: "Done" }).first().click();
   await expect(phone.getByRole("heading", { level: 1, name: "Tamales de rajas" })).toBeVisible();
@@ -357,7 +361,7 @@ test("Your rating, favorite and note are kept, and only you set them", async ({
   await expect(yours.getByRole("radio", { name: "No rating" })).toBeChecked();
 });
 
-test("Free: editing pauses offline, and what was typed saves when the connection is back", async ({
+test("Free: editing pauses offline, and the draft is kept when the connection is back", async ({
   page,
   context,
   baseURL,
@@ -373,13 +377,43 @@ test("Free: editing pauses offline, and what was typed saves when the connection
   await context.setOffline(true);
   await expect(page.getByText("Editing is paused until this device is back online.")).toBeVisible();
   await expect(page.getByLabel("Notes")).toBeDisabled();
+  // In red, and Done waits for the connection (U27 part 3).
+  await expect(editorStatus(page)).toHaveText("Can’t save the draft: no connection");
+  await expect(page.getByRole("button", { name: "Done" })).toBeDisabled();
 
   await context.setOffline(false);
   await expect(page.getByLabel("Notes")).toBeEnabled({ timeout: 15_000 });
-  await expect(editorStatus(page)).toHaveText("All changes saved");
-  await expect(syncStatus(page)).toHaveText("Saved to cloud", { timeout: 15_000 });
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change", { timeout: 15_000 });
   await page.reload();
   await expect(page.getByLabel("Notes")).toHaveValue("Toast the rice first.");
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Toast the rice first.")).toBeVisible();
+});
+
+test("Premium: the draft waits on the device with no connection, then goes to the account", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await premium(context, baseURL!);
+  await page.goto("/");
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await addRecipe(page, "Sopa de lima");
+  await page.getByRole("link", { name: /Sopa de lima/ }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+
+  await context.setOffline(true);
+  await page.getByLabel("Notes").fill("Charred tortillas on top.");
+  await expect(editorStatus(page)).toHaveText("Draft kept on this device · waiting to connect");
+  await expect(page.getByLabel("Notes")).toBeEnabled();
+  await context.setOffline(false);
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change", { timeout: 15_000 });
+  const drafts = (await (await page.request.get("/api/drafts")).json()) as {
+    drafts: { data: { fields: { notes?: string } } }[];
+  };
+  expect(drafts.drafts.map((d) => d.data.fields.notes)).toEqual(["Charred tortillas on top."]);
 });
 
 // At the bottom of the editor on a phone (U23); in the bar on a laptop (U27).
@@ -387,18 +421,21 @@ test("Move to Trash from the editor", async ({ page, context, baseURL }) => {
   await useOwnAccount(context, baseURL!);
   await page.goto("/");
 
-  // Not for a new recipe that has no title yet: nothing has been saved.
+  // Not for a new recipe: until Done it's only a draft (U27 part 3).
   await page.getByRole("button", { name: "Add recipe" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);
   await page.getByLabel("Title", { exact: true }).fill("Arroz rojo");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText("Draft saved");
+  await expect(page.getByRole("button", { name: "Move to Trash" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Done" }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
   // No words under it (U27, owner's choice 2026-11-21).
   await expect(page.getByRole("button", { name: "Move to Trash" })).toBeVisible();
   await expect(page.getByText("It stays in Trash for 30 days")).toHaveCount(0);
 
-  // What was just typed is saved, the recipe goes to Trash, and the list says so with Undo.
+  // The saved recipe goes to Trash, its draft with it, and the list says so with Undo.
   await page.getByLabel("Notes").fill("Toast the rice first.");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change");
   await page.getByRole("button", { name: "Move to Trash" }).click();
   await expect(page.getByRole("status").filter({ hasText: "to Trash." })).toHaveText(
     "Moved “Arroz rojo” to Trash.",
@@ -407,7 +444,11 @@ test("Move to Trash from the editor", async ({ page, context, baseURL }) => {
   await page.getByRole("button", { name: "Undo" }).click();
   await expect(recipeCard(page, "Arroz rojo")).toBeVisible();
   await recipeCard(page, "Arroz rojo").getByRole("link").first().click();
-  await expect(page.getByText("Toast the rice first.")).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Arroz rojo" })).toBeVisible();
+  await expect(page.getByText("Toast the rice first.")).toHaveCount(0);
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  await expect(editorStatus(page)).toHaveText("No changes yet");
+  await expect(page.getByLabel("Notes")).toHaveValue("");
 });
 
 // U27 (owner's choices 2026-11-21, the mockup "C3"): on a laptop the editor's bar has Move to
@@ -426,8 +467,10 @@ test("On a laptop, the bar and how Fennl reads each line in the box's margin", a
   await page.getByRole("button", { name: "Add recipe" }).click();
   await expect(page.getByRole("heading", { level: 1, name: "New recipe" })).toBeVisible();
   const bar = page.locator("article > div").first();
-  // A new recipe with no title: no Move to Trash.
-  await expect(bar.getByRole("button")).toHaveText(["Undo", "Redo", "Done"]);
+  // A new recipe: no Move to Trash. Discard changes is greyed with nothing typed (U27 part 3).
+  await expect(bar.getByRole("button")).toHaveText(["Undo", "Redo", "Discard changes", "Done"]);
+  await expect(bar.getByRole("button", { name: "Discard changes" })).toBeDisabled();
+  await expect(editorStatus(page)).toHaveText("No changes yet");
   // An empty box shows a faded example with its marks, which screen readers don't hear.
   const margin = (list: "ingredients" | "directions") =>
     page.locator(`section[data-list="${list}"] [data-margin]`);
@@ -439,8 +482,8 @@ test("On a laptop, the bar and how Fennl reads each line in the box's margin", a
   ]);
 
   await page.getByLabel("Title", { exact: true }).fill("Pozole");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
-  await expect(bar.getByRole("button")).toHaveText(["Move to Trash", "Undo", "Redo", "Done"]);
+  await expect(editorStatus(page)).toHaveText("Draft saved");
+  await expect(bar.getByRole("button", { name: "Discard changes" })).toBeEnabled();
 
   // The one hint, in the owner's words.
   await expect(page.locator("#edit-lines-hint")).toHaveText(
@@ -503,7 +546,7 @@ test("On a laptop, the bar and how Fennl reads each line in the box's margin", a
     page.getByRole("group", { name: "Directions, as Fennl reads them" }).getByRole("listitem"),
   ).toHaveCount(14);
   await expect(page.getByRole("group", { name: "Ingredients, as Fennl reads them" })).toBeVisible();
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await noAccessibilityProblems(page);
 });
 
@@ -519,7 +562,7 @@ test("On a laptop, Directions is a box for each step that types like one box", a
   await page.goto("/");
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Pozole");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   const key = page.keyboard;
   const group = (count: number) =>
     page.getByRole("group", { name: `Directions, ${count} ${count === 1 ? "step" : "steps"}` });
@@ -737,7 +780,7 @@ test("On a laptop, Directions is a box for each step that types like one box", a
   await expect(stepWords(page).last()).toHaveText("Serve hot.");
 
   // Saved as the recipe's lines.
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await noAccessibilityProblems(page);
   await page.getByRole("button", { name: "Done" }).click();
   const method = page.getByRole("region", { name: "Directions" });
@@ -748,4 +791,117 @@ test("On a laptop, Directions is a box for each step that types like one box", a
     /Rest \W*10 minutes\.$/,
     /Serve hot\.$/,
   ]);
+});
+
+// U27 part 3 (owner's choices 2026-11-21 and 22, the mockup "C3"): every change is kept as a
+// draft; the recipe box changes only at Done, and Discard changes throws the draft away after
+// asking.
+test("Drafts: Done applies them, Discard changes asks first and throws them away", async ({
+  page,
+  context,
+  baseURL,
+}) => {
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  await addRecipe(page, "Caldo de res");
+  await page.getByRole("link", { name: /Caldo de res/ }).click();
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  const discardChanges = page.getByRole("button", { name: "Discard changes" });
+  await expect(editorStatus(page)).toHaveText("No changes yet");
+  await expect(discardChanges).toBeDisabled();
+
+  await page.getByLabel("Notes").fill("Corn on the cob in each bowl.");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change");
+  await expect(discardChanges).toBeEnabled();
+
+  // Left without Done: the recipe page shows the saved recipe; the editor brings the draft back.
+  await page.goto("/");
+  await page.getByRole("link", { name: /Caldo de res/ }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Caldo de res" })).toBeVisible();
+  await expect(page.getByText("Corn on the cob in each bowl.")).toHaveCount(0);
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  await expect(page.getByLabel("Notes")).toHaveValue("Corn on the cob in each bowl.");
+
+  // The question, under the button; Escape and Cancel close it, back on the button.
+  await discardChanges.click();
+  const question = page.getByRole("alertdialog", { name: "Discard your changes?" });
+  await expect(question).toContainText("The recipe goes back to how it was saved.");
+  await expect(question.getByRole("button", { name: "Discard" })).toBeFocused();
+  await noAccessibilityProblems(page);
+  await page.keyboard.press("Escape");
+  await expect(question).toHaveCount(0);
+  await expect(discardChanges).toBeFocused();
+  await discardChanges.click();
+  await question.getByRole("button", { name: "Cancel" }).click();
+  await expect(question).toHaveCount(0);
+  await expect(discardChanges).toBeFocused();
+  await expect(page.getByLabel("Notes")).toHaveValue("Corn on the cob in each bowl.");
+
+  // Discard: back to the saved recipe, still in the editor.
+  await discardChanges.click();
+  await question.getByRole("button", { name: "Discard" }).click();
+  await expect(page.getByLabel("Notes")).toHaveValue("");
+  await expect(editorStatus(page)).toHaveText("No changes yet");
+  await expect(discardChanges).toBeDisabled();
+
+  // Done applies what's changed.
+  await page.getByLabel("Notes").fill("Lime on the side.");
+  await expect(editorStatus(page)).toHaveText("Draft saved · 1 change");
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByText("Lime on the side.")).toBeVisible();
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await expect
+    .poll(async () => ((await (await page.request.get("/api/drafts")).json()) as { ids: [] }).ids)
+    .toEqual([]);
+});
+
+test("Drafts: a new recipe with nothing in it isn't kept; discarded, it leaves no category", async ({
+  page,
+  context,
+  baseURL,
+}, info) => {
+  const laptop = info.project.name === "desktop";
+  await useOwnAccount(context, baseURL!);
+  await page.goto("/");
+  const drafts = async () =>
+    ((await (await page.request.get("/api/drafts")).json()) as { ids: unknown[] }).ids;
+
+  // Opened and left with nothing typed: no draft.
+  await page.getByRole("button", { name: "Add recipe" }).click();
+  await expect(editorStatus(page)).toHaveText("No changes yet");
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
+  expect(await drafts()).toEqual([]);
+
+  // A category before a title (the draft holds it); made only at Done.
+  await page.getByRole("button", { name: "Add recipe" }).click();
+  if (laptop) {
+    await page.getByRole("button", { name: "Add a category" }).click();
+    await page.getByRole("combobox", { name: "Find or add a category" }).fill("Brand New Shelf");
+  } else {
+    await page.getByRole("combobox", { name: "Add a category" }).fill("Brand New Shelf");
+  }
+  await page.keyboard.press("Enter");
+  if (laptop) await page.keyboard.press("Escape");
+  await expect(page.getByRole("list", { name: "This recipe's categories" })).toContainText(
+    "Brand New Shelf",
+  );
+  await expect(editorStatus(page)).toHaveText("Draft saved");
+  await expect.poll(drafts).toHaveLength(1);
+
+  // Done needs a title.
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect(page.getByLabel("Title", { exact: true })).toBeFocused();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveAttribute("aria-invalid", "true");
+
+  const discardChanges = page.getByRole("button", { name: "Discard changes" });
+  await discardChanges.click();
+  const question = page.getByRole("alertdialog", { name: "Discard this new recipe?" });
+  await expect(question).toContainText("It won’t be added to your recipes.");
+  await question.getByRole("button", { name: "Discard" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "All recipes" })).toBeVisible();
+  await expect.poll(drafts).toEqual([]);
+  await page.goto("/categories");
+  await expect(page.getByRole("heading", { level: 1, name: "Categories" })).toBeVisible();
+  await expect(page.getByText("Brand New Shelf")).toHaveCount(0);
 });

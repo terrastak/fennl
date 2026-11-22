@@ -341,6 +341,12 @@ export const recipe = sqliteTable(
     scale: text("scale"),
     /** JSON: when each field last changed, { "title": 1791331703372, ... }. */
     fieldTimes: text("field_times").notNull(),
+    /**
+     * JSON: who last changed each recipe field, { "title": "<user id>", ... } (U27 part 3), so
+     * Done on a draft can name a partner who changed the same part. Null, or missing a field,
+     * for changes made before it was kept.
+     */
+    fieldBy: text("field_by"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     /** Who last changed it (the owner or their partner). Null if that account was deleted. */
     updatedByUserId: text("updated_by_user_id").references(() => user.id, {
@@ -499,6 +505,11 @@ export const recipeCategory = sqliteTable(
     /** The recipe's owner, who also owns the category. */
     ownerUserId: text("owner_user_id").notNull(),
     fieldTimes: text("field_times").notNull(),
+    /**
+     * Who last added or took out the link (U27 part 3), so Done on a draft asks about a partner's
+     * change, never the person's own. Null for links last changed before it was kept.
+     */
+    updatedByUserId: text("updated_by_user_id"),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
     serverSeq: integer("server_seq").notNull(),
@@ -545,6 +556,11 @@ export const image = sqliteTable(
      * the same photo can't be added again (worker/images/images.ts, countImage).
      */
     purgedAt: integer("purged_at", { mode: "timestamp_ms" }),
+    /**
+     * Kept until then (U27 part 3): set to a week after a draft that showed it was thrown away,
+     * applied or moved to Trash with its recipe, so the usual 7 days start when the draft let go.
+     */
+    heldUntil: integer("held_until", { mode: "timestamp_ms" }),
   },
   (table) => [
     primaryKey({ columns: [table.ownerUserId, table.hash] }),
@@ -580,6 +596,8 @@ export const recipePhoto = sqliteTable(
     /** "fennl" or "person": who put it where it is (phase D4); null when just added. */
     arrangedBy: text("arranged_by"),
     fieldTimes: text("field_times").notNull(),
+    /** Who last added, moved or removed it (U27 part 3; as recipe_category's). Null before. */
+    updatedByUserId: text("updated_by_user_id"),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
     deletedAt: integer("deleted_at", { mode: "timestamp_ms" }),
@@ -770,6 +788,53 @@ export const recipeVersion = sqliteTable(
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull(),
   },
   (table) => [index("recipe_version_recipe_idx").on(table.recipeId)],
+);
+
+/**
+ * Drafts (U27 part 3; shared/drafts.ts, worker/drafts/): what a person changed in the recipe
+ * editor and hasn't applied with Done yet, one per person per recipe, with no time limit. The
+ * person's own: no other person ever reads it. Removed when the recipe goes to Trash (for every
+ * person), when the recipe is deleted for good, when the recipe's owner is no longer in the
+ * person's household, and with the person's account. Photos it shows count as in use for photo
+ * housekeeping.
+ */
+export const recipeDraft = sqliteTable(
+  "recipe_draft",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    /** The recipe, saved or not yet created. No foreign key: a new recipe has no row yet. */
+    recipeId: text("recipe_id").notNull(),
+    /** The recipe's owner; for a new recipe, the person. Housekeeping and visibility use it. */
+    ownerUserId: text("owner_user_id").notNull(),
+    /** No recipe existed when it was last written. */
+    isNew: integer("is_new", { mode: "boolean" }).notNull(),
+    /** JSON: DraftData (shared/drafts.ts). */
+    content: text("content").notNull(),
+    /**
+     * A new recipe's text size as recipeBytes counts it, for the plan's limits (a new recipe's
+     * drafts count toward the room left for recipes); 0 for a saved recipe's draft.
+     */
+    textBytes: integer("text_bytes").notNull().default(0),
+    startedAt: integer("started_at", { mode: "timestamp_ms" }).notNull(),
+    /** The latest edit, by the device's clock moved onto the server's. The newest edit wins. */
+    editedAt: integer("edited_at", { mode: "timestamp_ms" }).notNull(),
+    /**
+     * The same edit by the writing device's own clock, as it sent it, so that device can remove
+     * exactly its version after Done or Discard without having heard back about it.
+     */
+    deviceEditedAt: integer("device_edited_at"),
+    updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull(),
+    /** From the sync counter on every write, for GET /api/drafts?since= (never out of order). */
+    serverSeq: integer("server_seq").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.recipeId] }),
+    index("recipe_draft_recipe_idx").on(table.recipeId),
+    index("recipe_draft_owner_idx").on(table.ownerUserId),
+    index("recipe_draft_user_seq_idx").on(table.userId, table.serverSeq),
+  ],
 );
 
 /**

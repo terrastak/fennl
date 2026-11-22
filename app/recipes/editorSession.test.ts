@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { emptyRecipeContent, type RecipeContent } from "../../shared/recipe";
 import type { RecipeChange } from "../../shared/sync";
-import { EditorSession } from "./editorSession";
+import type { DraftData } from "../../shared/drafts";
+import { EditorSession, type DraftWrite, type SavedState } from "./editorSession";
 
 const ID = "6f1c2a4e-8a1b-4c3d-9e2f-0a1b2c3d4e5f";
 
@@ -325,5 +326,240 @@ describe("the plan's per-recipe size (phase C11)", () => {
     await vi.advanceTimersByTimeAsync(200);
     expect(saves).toHaveLength(2);
     expect(state().save).toBe("saved");
+  });
+});
+
+// --- Draft mode (U27 part 3) ---------------------------------------------------------------------
+
+const HASH_A = "a".repeat(64);
+const HASH_B = "b".repeat(64);
+const photo = (n: number, hash = HASH_A) => ({
+  id: `00000000-0000-4000-8000-00000000000${n}`,
+  imageHash: hash,
+  width: 400,
+  height: 300,
+  takenAt: null,
+});
+
+function draftSetUp(
+  saved: SavedState | null,
+  existingDraft: { data: DraftData; startedAt: number } | null = null,
+) {
+  const kept: (DraftWrite | null)[] = [];
+  let refuse = false;
+  let clock = 1_700_000_000_000;
+  const session = new EditorSession({
+    id: ID,
+    initial: null,
+    delayMs: 100,
+    now: () => (clock += 1000),
+    draft: {
+      saved,
+      existing: existingDraft,
+      keep: async (write) => {
+        if (refuse) throw new Error("Editing is paused.");
+        kept.push(write);
+      },
+    },
+  });
+  return {
+    session,
+    kept,
+    last: () => kept[kept.length - 1],
+    state: () => session.getSnapshot(),
+    drafting: () => session.getSnapshot().drafting!,
+    refuse: (value: boolean) => {
+      refuse = value;
+    },
+  };
+}
+
+const savedStew = (): SavedState => ({
+  content: existing(),
+  photos: [photo(1)],
+  categories: [["Dinner"]],
+});
+
+describe("draft mode", () => {
+  it("keeps what's typed as a draft, never as a change, with the saved value it started from", async () => {
+    const { session, kept, last, drafting } = draftSetUp(savedStew());
+    expect(drafting()).toMatchObject({ save: "unchanged", parts: [], isNew: false });
+    session.set({ notes: "Very hot" });
+    expect(drafting().save).toBe("saving");
+    await vi.advanceTimersByTimeAsync(200);
+    expect(kept).toHaveLength(1);
+    expect(last()?.data).toMatchObject({
+      fields: { notes: "Very hot" },
+      base: { notes: "Hot" },
+      photos: null,
+      categories: null,
+    });
+    expect(drafting()).toMatchObject({ save: "kept", parts: ["Notes"] });
+
+    // Typing again keeps the first base and the first start.
+    const startedAt = last()?.startedAt;
+    session.set({ title: "Stew 2" });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(last()?.data.base).toEqual({ notes: "Hot", title: "Stew" });
+    expect(last()?.startedAt).toBe(startedAt);
+    expect(drafting().parts).toEqual(["Title", "Notes"]);
+  });
+
+  it("never keeps a new recipe with nothing in it, and drops one emptied again", async () => {
+    const { session, kept, drafting } = draftSetUp(null);
+    session.set({ title: "   " });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(kept).toHaveLength(0);
+    expect(drafting()).toMatchObject({ save: "unchanged", isNew: true });
+
+    // Ingredients with no title: kept (photos and categories don't need a title either).
+    session.setBox("ingredients", "2 cups flour");
+    await vi.advanceTimersByTimeAsync(200);
+    expect(kept).toHaveLength(1);
+    expect(kept[0]?.data.fields.title).toBe("   ");
+
+    session.setBox("ingredients", "");
+    await vi.advanceTimersByTimeAsync(200);
+    expect(kept).toEqual([expect.anything(), null]);
+    expect(drafting().save).toBe("unchanged");
+  });
+
+  it("drops a saved recipe's draft that is back to the recipe", async () => {
+    const { session, kept } = draftSetUp(savedStew());
+    session.set({ notes: "Mild" });
+    await vi.advanceTimersByTimeAsync(200);
+    session.set({ notes: "Hot" });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(kept).toEqual([expect.anything(), null]);
+  });
+
+  it("follows the recipe box for untouched parts, and keeps what's typed", async () => {
+    const { session, drafting, state, last } = draftSetUp(savedStew());
+    session.set({ notes: "Mine" });
+    await vi.advanceTimersByTimeAsync(200);
+    session.receiveSaved({
+      content: { ...existing(), title: "Stew from Sarah", notes: "Sarah's" },
+      photos: [photo(1), photo(2, HASH_B)],
+      categories: [["Dinner"], ["Soups"]],
+    });
+    expect(state().draft).toMatchObject({ title: "Stew from Sarah", notes: "Mine" });
+    expect(drafting().photos).toHaveLength(2);
+    expect(drafting().categories).toEqual([["Dinner"], ["Soups"]]);
+    expect(drafting().parts).toEqual(["Notes"]);
+    // The base stays what the draft started from, so Done can tell Sarah changed it too.
+    expect(last()?.data.base).toEqual({ notes: "Hot" });
+    expect(state().canUndo).toBe(true);
+  });
+
+  it("drops the draft when the same change arrives from elsewhere", async () => {
+    const { session, kept, drafting } = draftSetUp(savedStew());
+    session.set({ notes: "Very hot" });
+    await vi.advanceTimersByTimeAsync(200);
+    session.receiveSaved({ ...savedStew(), content: { ...existing(), notes: "Very hot" } });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(kept).toEqual([expect.anything(), null]);
+    expect(drafting().save).toBe("unchanged");
+  });
+
+  it("carries a category renamed elsewhere, keeping what the draft added", async () => {
+    const { session, last, drafting } = draftSetUp(savedStew());
+    session.setCategories([["Dinner"], ["Quick"]]);
+    await vi.advanceTimersByTimeAsync(0);
+    // "Dinner" renamed "Suppers" on the Categories page meanwhile.
+    session.receiveSaved({ ...savedStew(), categories: [["Suppers"]] });
+    expect(drafting().categories).toEqual([["Suppers"], ["Quick"]]);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(last()?.data).toMatchObject({
+      categories: [["Suppers"], ["Quick"]],
+      baseCategories: ["suppers"],
+    });
+  });
+
+  it("keeps photos and categories, and undoes them with the words", async () => {
+    const { session, last, drafting, state } = draftSetUp(savedStew());
+    session.addPhoto(photo(2, HASH_B));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(last()?.data).toMatchObject({
+      photos: [photo(1), photo(2, HASH_B)],
+      basePhotos: [photo(1).id],
+      photosArranged: false,
+    });
+    session.setPhotos([photo(2, HASH_B), photo(1)], true);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(last()?.data.photosArranged).toBe(true);
+    session.setCategories([["Dinner"], ["Quick"]]);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(last()?.data).toMatchObject({
+      categories: [["Dinner"], ["Quick"]],
+      baseCategories: ["dinner"],
+    });
+    expect(drafting().parts).toEqual(["Photos", "Categories"]);
+
+    await session.undo();
+    expect(drafting().categories).toEqual([["Dinner"]]);
+    await session.undo();
+    expect(drafting().photos.map((p) => p.id)).toEqual([photo(1).id, photo(2).id]);
+    await session.undo();
+    expect(drafting().photos).toEqual([photo(1)]);
+    expect(last()).toBeNull();
+    expect(state().canUndo).toBe(false);
+    await session.redo();
+    expect(drafting().photos).toHaveLength(2);
+    expect(last()?.data.photos).toHaveLength(2);
+  });
+
+  it("carries on a draft kept earlier", async () => {
+    const { session, state, drafting, kept } = draftSetUp(savedStew(), {
+      data: {
+        fields: { notes: "From the phone" },
+        base: { notes: "Hot" },
+        photos: null,
+        basePhotos: null,
+        photosArranged: false,
+        categories: null,
+        baseCategories: null,
+      },
+      startedAt: 5,
+    });
+    expect(state().draft.notes).toBe("From the phone");
+    expect(drafting()).toMatchObject({ save: "kept", parts: ["Notes"] });
+    session.set({ title: "Stew!" });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(kept[0]).toMatchObject({
+      startedAt: 5,
+      data: { base: { notes: "Hot", title: "Stew" } },
+    });
+  });
+
+  it("discards: back to the saved recipe, the draft removed, undo forgotten", async () => {
+    const { session, kept, state, drafting } = draftSetUp(savedStew());
+    session.set({ notes: "Mild" });
+    session.setCategories([]);
+    await vi.advanceTimersByTimeAsync(200);
+    await session.discard();
+    expect(kept[kept.length - 1]).toBeNull();
+    expect(state().draft.notes).toBe("Hot");
+    expect(drafting()).toMatchObject({ save: "unchanged", categories: [["Dinner"]] });
+    expect(state().canUndo).toBe(false);
+  });
+
+  it("waits while editing is paused, then keeps it; nothing after close", async () => {
+    const { session, kept, drafting, refuse } = draftSetUp(savedStew());
+    refuse(true);
+    session.set({ notes: "Offline" });
+    await vi.advanceTimersByTimeAsync(200);
+    expect(drafting().save).toBe("failed");
+    session.setEditable(false);
+    expect(drafting().save).toBe("paused");
+    refuse(false);
+    session.setEditable(true);
+    await vi.advanceTimersByTimeAsync(10);
+    expect(kept).toHaveLength(1);
+    expect(drafting().save).toBe("kept");
+
+    session.close();
+    session.set({ notes: "After Done" });
+    await session.flush();
+    expect(kept).toHaveLength(1);
   });
 });

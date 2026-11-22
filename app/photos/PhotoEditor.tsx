@@ -1,4 +1,5 @@
 import { useEffect, useState, type DragEvent } from "react";
+import type { DraftPhoto } from "../../shared/drafts";
 import { photoLevel } from "../../shared/limits";
 import { arrangedByFennl } from "../../shared/photoOrder";
 import type { RecipePhoto } from "../../shared/recipe";
@@ -49,12 +50,58 @@ const removal = (photo: RecipePhoto, deleted: boolean): PhotoChange => ({
   changedAt: Date.now(),
 });
 
+/** The recipe editor's draft gallery (U27 part 3), changed by the editor, applied at Done. */
+export interface DraftGallery {
+  photos: DraftPhoto[];
+  /** The person moved a photo or chose the cover in this draft: the order is theirs. */
+  arranged: boolean;
+  /** The gallery as the person changed it; `arranged`: they moved a photo or chose the cover. */
+  onSet: (photos: DraftPhoto[], arranged: boolean) => void;
+  /** A photo just uploaded, added at the end. */
+  onAdd: (photo: DraftPhoto) => void;
+}
+
+/** A draft's photo as the editor shows it (its place in the draft is its order). */
+function shownPhoto(
+  photo: DraftPhoto,
+  index: number,
+  recipeId: string,
+  saved: Map<string, RecipePhoto>,
+  arranged: boolean,
+): RecipePhoto {
+  const stored = saved.get(photo.id);
+  return {
+    id: photo.id,
+    recipeId,
+    imageHash: photo.imageHash,
+    role: "photo",
+    width: photo.width,
+    height: photo.height,
+    sortOrder: index,
+    addedByUserId: stored?.addedByUserId ?? "",
+    takenAt: photo.takenAt,
+    arrangedBy: arranged ? "person" : (stored?.arrangedBy ?? null),
+    updatedAt: stored?.updatedAt ?? "",
+    deletedAt: null,
+    serverSeq: stored?.serverSeq ?? 0,
+  };
+}
+
+const asDraftPhoto = (photo: RecipePhoto): DraftPhoto => ({
+  id: photo.id,
+  imageHash: photo.imageHash,
+  width: photo.width,
+  height: photo.height,
+  takenAt: photo.takenAt ?? null,
+});
+
 export function PhotoEditor({
   recipeId,
   ownerUserId,
   photos,
   created,
   compact = false,
+  draft,
 }: {
   recipeId: string;
   ownerUserId: string;
@@ -68,6 +115,11 @@ export function PhotoEditor({
    * look as before either way.
    */
   compact?: boolean;
+  /**
+   * The recipe editor (U27 part 3): photos added, removed, moved and made the cover go into the
+   * draft; `photos` is then the saved recipe's.
+   */
+  draft?: DraftGallery;
 }) {
   const status = useSyncStatus();
   const plan = status.photos;
@@ -77,7 +129,12 @@ export function PhotoEditor({
   const [problem, setProblem] = useState<AddPhotoProblem | null>(null);
   // "Photo removed." with Undo, then "Undone." once used: the bar stays after its first use, so
   // the focus has somewhere to go when the Remove button goes with its photo, and after Undo.
-  const [removed, setRemoved] = useState<{ photo: RecipePhoto | null; at: number } | null>(null);
+  const [removed, setRemoved] = useState<{
+    photo: RecipePhoto | null;
+    at: number;
+    /** Where it was, to put it back there (in a draft). */
+    index?: number;
+  } | null>(null);
   const [dropping, setDropping] = useState(false);
   const [touch] = useState(touchDevice);
   // The All photos sheet, open (U27, on a laptop).
@@ -93,7 +150,10 @@ export function PhotoEditor({
     };
   }, []);
 
-  const gallery = photos.filter((p) => p.role === "photo");
+  const saved = new Map(photos.map((p) => [p.id, p]));
+  const gallery = draft
+    ? draft.photos.map((p, i) => shownPhoto(p, i, recipeId, saved, draft.arranged))
+    : photos.filter((p) => p.role === "photo");
   const max = plan?.maxPerRecipe ?? null;
   const room = max === null ? null : Math.max(0, max - gallery.length);
   const premium = plan?.enabled ?? false;
@@ -120,11 +180,13 @@ export function PhotoEditor({
       maxFileBytes: plan?.maxFileBytes ?? null,
       cache,
       onProgress: (done, total) => setAdding({ done, total }),
+      ...(draft ? { keep: draft.onAdd } : {}),
     });
     setAdding(null);
     setProblem(result.problem);
-    // Fennl puts them in order, unless they were arranged by hand (phase D4).
-    if (result.added > 0) void arrangeRecipePhotos(recipeId);
+    // Fennl puts them in order, unless they were arranged by hand (phase D4); in the editor
+    // that happens after Done, on the photos applied.
+    if (result.added > 0 && !draft) void arrangeRecipePhotos(recipeId);
   };
 
   // On a laptop the editor shows the first two; the rest are in the All photos sheet (U27).
@@ -134,15 +196,38 @@ export function PhotoEditor({
   const others = (photo: RecipePhoto) =>
     gallery.filter((p) => p.id !== photo.id).map((p) => p.sortOrder);
 
-  const moveTo = (photo: RecipePhoto, index: number) =>
+  const moveTo = (photo: RecipePhoto, index: number) => {
+    if (draft) {
+      const list = draft.photos.filter((p) => p.id !== photo.id);
+      list.splice(index, 0, asDraftPhoto(photo));
+      draft.onSet(list, true);
+      return;
+    }
     void saveChanges([move(photo, orderAt(others(photo), index))]);
+  };
 
   const remove = async (photo: RecipePhoto) => {
+    if (draft) {
+      const index = draft.photos.findIndex((p) => p.id === photo.id);
+      draft.onSet(
+        draft.photos.filter((p) => p.id !== photo.id),
+        false,
+      );
+      setRemoved({ photo, at: Date.now(), index });
+      return;
+    }
     if (await saveChanges([removal(photo, true)])) setRemoved({ photo, at: Date.now() });
   };
 
   const undo = async () => {
     const photo = removed?.photo;
+    if (photo && draft) {
+      const list = draft.photos.filter((p) => p.id !== photo.id);
+      list.splice(Math.min(removed.index ?? list.length, list.length), 0, asDraftPhoto(photo));
+      draft.onSet(list, false);
+      setRemoved({ photo: null, at: 0 });
+      return;
+    }
     if (photo && (await saveChanges([removal(photo, false)]))) setRemoved({ photo: null, at: 0 });
   };
 

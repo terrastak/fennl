@@ -85,6 +85,17 @@ export function ownerOfRecord(kind: RecordKind, value: RecordValue, ctx: ApplyCo
 
 const unsynced = (now: string) => ({ updatedAt: now, serverSeq: 0 });
 
+/** Who last changed each field (recipe.field_by), with a change's fields put down to `userId`. */
+function changedBy(
+  was: Recipe["fieldBy"],
+  fields: Partial<RecipeContent>,
+  userId: string,
+): Pick<Recipe, "fieldBy"> {
+  const changed = Object.keys(fields);
+  if (changed.length === 0) return was ? { fieldBy: was } : {};
+  return { fieldBy: { ...was, ...Object.fromEntries(changed.map((field) => [field, userId])) } };
+}
+
 /**
  * One change applied to a record (null: no record yet). Returns the new record, or null when
  * the change doesn't make one (an edit of something not here).
@@ -109,6 +120,7 @@ export function applyChange(
           copiedFrom: null,
           import: change.create.import,
           ...(change.fields as RecipeContent),
+          ...changedBy(undefined, change.fields, ctx.userId),
           deletedAt: deletedAt(change.deleted, null),
           ...unsynced(ctx.now),
         };
@@ -122,6 +134,8 @@ export function applyChange(
         ...change.fields,
         ...(sameSource ? { import: change.import ?? null } : {}),
         ...(change.scale !== undefined ? { scale: change.scale } : {}),
+        // Who changed each field: a change of mine still waiting is mine at Done (U27 part 3).
+        ...changedBy(base.fieldBy, change.fields, ctx.userId),
         updatedByUserId: ctx.userId,
         updatedAt: ctx.now,
         deletedAt: deletedAt(change.deleted, base.deletedAt),
@@ -207,6 +221,8 @@ export function applyChange(
         recipeId: change.recipeId,
         categoryId: change.categoryId,
         ...(base ?? unsynced(ctx.now)),
+        // A change of mine still waiting is mine at Done (U27 part 3).
+        updatedByUserId: ctx.userId,
         updatedAt: ctx.now,
         deletedAt: change.deleted ? ctx.now : null,
       };
@@ -221,6 +237,7 @@ export function applyChange(
           ...change.create,
           sortOrder: change.fields.sortOrder ?? 0,
           addedByUserId: ctx.userId,
+          updatedByUserId: ctx.userId,
           deletedAt: deletedAt(change.deleted, null),
           ...unsynced(ctx.now),
         };
@@ -228,6 +245,7 @@ export function applyChange(
       return {
         ...base,
         ...change.fields,
+        updatedByUserId: ctx.userId,
         updatedAt: ctx.now,
         deletedAt: deletedAt(change.deleted, base.deletedAt),
       };

@@ -71,6 +71,10 @@ export const LAPTOP_ICONS = {
   /** A broken link, for Unlink (U27). */
   unlink:
     "M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7M4 4l16 16",
+  /** A round arrow turning back, for Discard changes (U27 part 3). */
+  discard: "M3 12a9 9 0 1 0 2.8-6.5L3 8M3 3v5h5",
+  /** A warning sign, for a question before something can't be taken back. */
+  warning: "M12 4 2.5 20h19zM12 10v4M12 17.2v.1",
   /** Four squares, for showing every photo (U27). */
   grid: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
 } as const;

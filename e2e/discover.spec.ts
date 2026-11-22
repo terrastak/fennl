@@ -1,6 +1,7 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
+  DRAFT_SAVED,
   editorStatus,
   fromListMenu,
   library,
@@ -162,7 +163,7 @@ test("The editor suggests categories from recipes with similar ingredients, and 
   await page
     .getByRole("textbox", { name: "Ingredients" })
     .fill("1 onion, chopped\n2 cloves garlic\n1 teaspoon ground cumin\n2 eggs\n1 cup flour");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
 
   // The two Mexican recipes (stew and tacos) share onion, garlic and cumin with it.
   const suggested = page.getByRole("list", { name: /^Suggested/ });
@@ -172,7 +173,6 @@ test("The editor suggests categories from recipes with similar ingredients, and 
   await expect(page.getByRole("list", { name: "This recipe's categories" })).toHaveCount(0);
 
   await suggested.getByRole("button", { name: /Mexican/ }).click();
-  await expect(page.getByText("Added to Mexican.")).toBeVisible();
   await expect(page.getByRole("list", { name: "This recipe's categories" })).toContainText(
     "Mexican",
   );
@@ -191,6 +191,6 @@ test("With too few recipes to learn from, nothing is suggested", async ({
   await page.getByRole("button", { name: "Add recipe" }).click();
   await page.getByLabel("Title", { exact: true }).fill("Lonely recipe");
   await page.getByRole("textbox", { name: "Ingredients" }).fill("1 onion\n2 cloves garlic");
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await expect(page.getByText(/^Suggested/)).toHaveCount(0);
 });

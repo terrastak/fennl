@@ -222,6 +222,65 @@
   line-height: 1;
 }
 
+/* --- Drafts on a card (U27 part 3, C3 mockup) ------------------------------------------------ */
+/* A small white tag with a pencil on the cover's corner: "Draft" in the recipe list, "New
+   recipe" or "Changes not saved" on the Drafts page. */
+.coverWrap {
+  position: relative;
+  display: grid;
+}
+
+.coverTag {
+  position: absolute;
+  top: var(--space-2);
+  left: var(--space-2);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: calc(100% - 2 * var(--space-2));
+  padding: 0.0625rem var(--space-2) 0.0625rem 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1.5;
+  white-space: nowrap;
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.coverTag > svg {
+  flex: none;
+}
+
+/* A tag too long for a narrow card ("Changes not saved" at 320 px) ends in "…" inside its pill. */
+.coverTagText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A new recipe with no title yet: "Untitled" in quiet italics, then the start of what's typed. */
+.untitled {
+  /* A little room so the italic word doesn't lean into the dot after it. */
+  padding-right: 0.125em;
+  color: var(--color-text-muted);
+  font-style: italic;
+  font-weight: var(--weight-medium);
+}
+
+/* The "…" where an untitled label is cut off takes the label's grey, not the title's ink. */
+.untitledTitle {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+}
+
+.untitledHint {
+  color: var(--color-text-muted);
+  font-weight: var(--weight-regular);
+}
+
 /* --- Empty state: ghosted cards behind a quiet invitation -------------------------------- */
 
 .empty {
@@ -3747,12 +3806,12 @@ button.stepNumber:focus-visible::after {
     border-top: 1px solid var(--color-border-soft);
   }
 
-  .trashCard > .trashCardButtons > button {
+  .trashCard > .trashCardButtons > :is(button, a) {
     max-width: 100%;
   }
 
   /* They sit close to the card's edge, which clips, so their keyboard ring is drawn inside. */
-  .trashCard > .trashCardButtons > button:focus-visible {
+  .trashCard > .trashCardButtons > :is(button, a):focus-visible {
     outline-offset: calc(-1 * var(--focus-width));
   }
 
@@ -4386,7 +4445,7 @@ button.stepNumber:focus-visible::after {
     border-top: 1px solid var(--color-border-soft);
   }
 
-  .trashCard > .trashCardButtons > button {
+  .trashCard > .trashCardButtons > :is(button, a) {
     display: inline-flex;
     flex: 1 1 auto;
     align-items: center;
@@ -4409,12 +4468,12 @@ button.stepNumber:focus-visible::after {
   }
 
   @media (max-width: 599px) {
-    .twoUp .trashCard > .trashCardButtons > button {
+    .twoUp .trashCard > .trashCardButtons > :is(button, a) {
       padding-left: var(--space-3);
     }
   }
 
-  .trashCard > .trashCardButtons > button > .laptopIcon {
+  .trashCard > .trashCardButtons > :is(button, a) > .laptopIcon {
     color: var(--color-text-muted);
   }
 
@@ -4422,17 +4481,17 @@ button.stepNumber:focus-visible::after {
     color: var(--color-text-muted);
   }
 
-  .trashCard > .trashCardButtons > button:not(:disabled):active {
+  .trashCard > .trashCardButtons > :is(button, a):not(:disabled):active {
     background: var(--hover-fill);
   }
 
-  .trashCard > .trashCardButtons > button:disabled {
+  .trashCard > .trashCardButtons > :is(button, a):disabled {
     cursor: not-allowed;
     opacity: 0.5;
   }
 
   /* They sit at the card's edge, which clips, so their keyboard ring is drawn inside. */
-  .trashCard > .trashCardButtons > button:focus-visible {
+  .trashCard > .trashCardButtons > :is(button, a):focus-visible {
     outline-offset: calc(-1 * var(--focus-width));
   }
 
@@ -4557,6 +4616,190 @@ button.stepNumber:focus-visible::after {
   }
 
   .trashPage .dangerButton {
+    border: 1px solid ButtonText;
+  }
+}
+
+/* --- Drafts (U27 part 3, C3 mockup) --------------------------------------------------------- */
+/* The Drafts page is Trash's page with drafts' cards (DraftsPage.tsx uses Trash's classes), so it
+   looks and lays out as Trash does on every screen. At each card's foot, Continue editing in the
+   page's navy words and Discard in red words; neither is ever the page's ink. */
+.draftsPage .trashCardButtons > .continueEditing,
+.draftsPage .trashCardButtons > .continueEditing:hover,
+.draftsPage .trashCardButtons > .continueEditing > svg {
+  color: var(--action-text);
+  font-weight: var(--action-weight);
+  text-decoration: none;
+}
+
+.draftsPage .trashCardButtons > .discardDraft,
+.draftsPage .trashCardButtons > .discardDraft:not(:disabled):hover,
+.draftsPage .trashCardButtons > .discardDraft > svg {
+  color: var(--color-danger);
+}
+
+/* No explanation under the heading: the count line follows it closely, as in the mockup. */
+@media (min-width: 900px) and (pointer: fine) {
+  .draftsPage > .trashTop {
+    margin-top: var(--space-1);
+  }
+}
+
+/* The recipe page while a draft of it waits: a pale warm strip at the top, its words, then
+   Continue editing (navy words) and Discard (red words). Discard's question takes the strip, in
+   Trash's pale red. */
+.draftStrip {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0.375rem 0.375rem 0.375rem var(--space-3);
+  border-radius: var(--radius-pop);
+  background: var(--color-warm-soft);
+  color: var(--color-text);
+  font-size: var(--ui-text);
+  line-height: 1.45;
+}
+
+.draftStrip > p {
+  flex: 1 1 14rem;
+  margin: 0;
+}
+
+.draftStrip .laptopIcon {
+  display: block;
+  flex: none;
+  width: 1.125rem;
+  height: 1.125rem;
+}
+
+.draftStripIcon {
+  color: var(--color-warm-text);
+}
+
+.draftStripButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.125rem;
+  margin-left: auto;
+}
+
+.draftStripButtons > :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: var(--control);
+  padding: 0 0.625rem;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  font: inherit;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.draftStripButtons > :is(a, button):not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-warm) 12%, transparent);
+  text-decoration: none;
+}
+
+.draftStripButtons > .continueEditing,
+.draftStripButtons > .continueEditing:hover {
+  color: var(--action-text);
+  font-weight: var(--action-weight);
+}
+
+.draftStripButtons > .discardDraft {
+  color: var(--color-danger);
+}
+
+.draftStripButtons > .discardDraft:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* The question: the strip's whole width, pale red, the soft red Discard then Cancel. */
+.draftStripAsking {
+  display: block;
+  padding: 0;
+  background: none;
+}
+
+.draftStrip > .confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: 0.625rem 0.625rem 0.625rem var(--space-3);
+  border-radius: var(--radius-pop);
+  background: color-mix(in srgb, var(--color-danger) 5%, var(--color-surface));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-danger) 35%, var(--color-border-soft));
+}
+
+.draftStrip > .confirm > .confirmIcon {
+  color: var(--color-danger);
+}
+
+.draftStrip > .confirm > p {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.draftStrip .confirmNote {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--ui-text-secondary);
+}
+
+.draftStrip > .confirm > .trashButtons {
+  gap: 0.375rem;
+  margin-left: auto;
+}
+
+.draftStrip .dangerButton {
+  min-height: var(--button-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: color-mix(in srgb, var(--color-danger) 12%, var(--color-surface));
+  color: var(--color-danger);
+  font-size: var(--ui-text);
+  white-space: nowrap;
+}
+
+.draftStrip .dangerButton:not(:disabled):hover {
+  background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
+}
+
+.draftStrip .confirm .secondary {
+  min-height: var(--button-height);
+  padding: 0 var(--space-3);
+  border: 0;
+  background: none;
+  font-size: var(--ui-text);
+}
+
+.draftStrip .confirm .secondary:hover {
+  background: var(--hover-fill);
+}
+
+/* Windows contrast themes draw no fills: the strip and its question keep an edge. */
+@media (forced-colors: active) {
+  .draftStrip,
+  .draftStrip > .confirm,
+  .coverTag {
+    border: 1px solid CanvasText;
+  }
+
+  .draftStripAsking {
+    border: 0;
+  }
+
+  .draftStrip .dangerButton {
     border: 1px solid ButtonText;
   }
 }

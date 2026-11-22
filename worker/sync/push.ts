@@ -19,6 +19,7 @@ import type {
   RecipeChange,
   SyncChange,
 } from "../../shared/sync";
+import { holdDraftPhotos } from "../drafts/hold";
 import type { Database } from "../db/client";
 import { category, member, recipe } from "../db/schema";
 import { householdUsage } from "../limits/usage";
@@ -97,8 +98,34 @@ function lastChangeWins(fields: Field[], time: string, table: string) {
   };
 }
 
+/**
+ * Who last changed each recipe field (recipe.field_by, U27 part 3): set to the caller for each
+ * field this change wins, like field_times. Null when the change has no recipe field.
+ */
+function fieldBySet(fields: Field[], time: string, who: string, table: string): string | null {
+  const keys = fields
+    .map((f) => f.key)
+    .filter((key) => (RECIPE_FIELDS as readonly string[]).includes(key));
+  if (keys.length === 0) return null;
+  const stored = (key: string) => `coalesce(json_extract(${table}.field_times, '$.${key}'), 0)`;
+  return `field_by = json_set(coalesce(${table}.field_by, '{}'), ${keys
+    .map(
+      (key) =>
+        `'$.${key}', case when ${time} > ${stored(key)} then ${who} else json_extract(${table}.field_by, '$.${key}') end`,
+    )
+    .join(", ")})`;
+}
+
 function fieldTimesObject(keys: string[], time: string): string {
   return `json_object(${keys.map((key) => `'${key}', ${time}`).join(", ")})`;
+}
+
+/** A new recipe's field_by: the caller for every recipe field it has. */
+function fieldByObject(fields: Field[], who: string): string {
+  const keys = fields
+    .map((f) => f.key)
+    .filter((key) => (RECIPE_FIELDS as readonly string[]).includes(key));
+  return `json_object(${keys.map((key) => `'${key}', ${who}`).join(", ")})`;
 }
 
 const RECIPE_COLUMNS: Record<RecipeField, { column: string; json: boolean }> = {
@@ -159,9 +186,11 @@ function recipeStatement(
   const at = p.add(now);
   const update = (table: string) => {
     const lww = lastChangeWins(fields, t, table);
+    const by = fieldBySet(fields, t, who, table);
     return {
       set: [
         ...lww.set,
+        ...(by ? [by] : []),
         lww.fieldTimes,
         `updated_by_user_id = ${who}`,
         `updated_at = ${at}`,
@@ -177,8 +206,9 @@ function recipeStatement(
     const same = `(json_extract(recipe.import, '$.source') = ${p.add(change.import.source)}
       and json_extract(recipe.import, '$.externalId') = ${p.add(change.import.externalId)})`;
     const json = p.add(JSON.stringify(change.import));
+    const by = lww ? fieldBySet(fields, t, who, "recipe") : null;
     const set = [
-      ...(lww ? [...lww.set, lww.fieldTimes] : []),
+      ...(lww ? [...lww.set, ...(by ? [by] : []), lww.fieldTimes] : []),
       `import = case when ${same} then ${json} else recipe.import end`,
       `updated_by_user_id = ${who}`,
       `updated_at = ${at}`,
@@ -208,13 +238,13 @@ function recipeStatement(
   const u = update("recipe");
   return {
     sql: `insert into recipe (id, owner_user_id, copied_from, ${columns.join(", ")}, import,
-        field_times, created_at, updated_by_user_id, updated_at, deleted_at, server_seq)
+        field_times, field_by, created_at, updated_by_user_id, updated_at, deleted_at, server_seq)
       select ${p.add(change.id)}, ${who}, null, ${RECIPE_FIELDS.map(value).join(", ")},
         ${p.add(change.create.import ? JSON.stringify(change.create.import) : null)},
         ${fieldTimesObject(
           fields.map((f) => f.key),
           t,
-        )},
+        )}, ${fieldByObject(fields, who)},
         ${p.add(Date.parse(change.create.createdAt))}, ${who}, ${at}, ${value("deleted")}, ${seq(k)}
       where true
       on conflict (id) do update set ${u.set}
@@ -439,6 +469,7 @@ function recipeCategoryStatement(
   const deletedAt = p.add(change.deleted ? time : null);
   const at = p.add(now);
   const visible = members(p, caller);
+  const who = p.add(caller.userId);
   const lww = lastChangeWins(
     [{ column: "deleted_at", key: "deleted", value: deletedAt }],
     t,
@@ -446,14 +477,20 @@ function recipeCategoryStatement(
   );
   return {
     sql: `insert into recipe_category (recipe_id, category_id, owner_user_id, field_times,
-        updated_at, deleted_at, server_seq)
-      select r.id, c.id, r.owner_user_id, ${fieldTimesObject(["deleted"], t)}, ${at},
+        updated_by_user_id, updated_at, deleted_at, server_seq)
+      select r.id, c.id, r.owner_user_id, ${fieldTimesObject(["deleted"], t)}, ${who}, ${at},
         ${deletedAt}, ${seq(k)}
       from recipe r join category c on c.owner_user_id = r.owner_user_id
       where r.id = ${p.add(change.recipeId)} and c.id = ${p.add(change.categoryId)}
         and r.owner_user_id in ${visible} and r.expunged_at is null
       on conflict (recipe_id, category_id) do update set
-        ${[...lww.set, lww.fieldTimes, `updated_at = ${at}`, `server_seq = ${seq(k)}`].join(", ")}
+        ${[
+          ...lww.set,
+          lww.fieldTimes,
+          `updated_by_user_id = ${who}`,
+          `updated_at = ${at}`,
+          `server_seq = ${seq(k)}`,
+        ].join(", ")}
       where recipe_category.owner_user_id in ${visible} and ${lww.newer}
       returning recipe_id`,
     params: p.values,
@@ -495,10 +532,16 @@ function photoStatement(
   }
   const at = p.add(now);
   const visible = members(p, caller);
+  const who = p.add(caller.userId);
   const lww = lastChangeWins(fields, t, "recipe_photo");
-  const set = [...lww.set, lww.fieldTimes, `updated_at = ${at}`, `server_seq = ${seq(k)}`].join(
-    ", ",
-  );
+  // Who last changed it (U27 part 3), so Done on a draft asks only about a partner's change.
+  const set = [
+    ...lww.set,
+    lww.fieldTimes,
+    `updated_by_user_id = ${who}`,
+    `updated_at = ${at}`,
+    `server_seq = ${seq(k)}`,
+  ].join(", ");
   const id = p.add(change.id);
   // Putting a photo back needs its image still stored: not deleted by the housekeeping job or
   // after the photo grace period (phase D3).
@@ -528,14 +571,14 @@ function photoStatement(
       : `${galleryCount("r.id")} < ${p.add(maxPhotos)}`;
   return {
     sql: `insert into recipe_photo (id, recipe_id, owner_user_id, image_hash, role, width, height,
-        sort_order, added_by_user_id, taken_at, arranged_by, field_times, created_at, updated_at,
-        deleted_at, server_seq)
+        sort_order, added_by_user_id, taken_at, arranged_by, field_times, updated_by_user_id,
+        created_at, updated_at, deleted_at, server_seq)
       select ${id}, r.id, r.owner_user_id, ${hash}, ${role}, ${p.add(c.width)}, ${p.add(c.height)},
-        ${value("sortOrder")}, ${p.add(caller.userId)}, ${p.add(c.takenAt ?? null)},
+        ${value("sortOrder")}, ${who}, ${p.add(c.takenAt ?? null)},
         ${value("arrangedBy")}, ${fieldTimesObject(
           fields.map((f) => f.key),
           t,
-        )}, ${at}, ${at}, ${value("deleted")}, ${seq(k)}
+        )}, ${who}, ${at}, ${at}, ${value("deleted")}, ${seq(k)}
       from recipe r
       where r.id = ${p.add(change.recipeId)} and r.owner_user_id in ${visible}
         and r.expunged_at is null and ${room}
@@ -999,9 +1042,21 @@ export async function applyChanges(
   const d1 = db.$client;
   const outcome = (rows: unknown[]): ChangeResult =>
     rows.length > 0 ? { status: "applied" } : { status: "unchanged" };
+  // Recipes this push moves to Trash: everyone's drafts of them go too, in the same batch, once
+  // the move has landed (U27 part 3, owner's choice 2026-11-21).
+  const trashing = [
+    ...new Set(
+      toRun.flatMap(({ i }) => {
+        const change = changes[i];
+        return change?.kind === "recipe" && change.deleted === true ? [change.id] : [];
+      }),
+    ),
+  ];
+  const dropDrafts = draftsOfTrashed(trashing, Date.now());
   try {
     const done = await d1.batch([
       ...toRun.map((run, k) => prepare(d1, run.build(k + 1))),
+      ...dropDrafts.map((statement) => prepare(d1, statement)),
       prepare(d1, bump(toRun.length)),
     ]);
     toRun.forEach((run, k) => {
@@ -1020,6 +1075,24 @@ export async function applyChanges(
         results[run.i] = { status: "rejected", reason: "failed" };
       }
     }
+    for (const statement of dropDrafts) await prepare(d1, statement).run();
   }
   return results as ChangeResult[];
+}
+
+/**
+ * Removes every person's drafts of these recipes, for those now in Trash (in chunks), holding
+ * their photos for the usual week first (worker/drafts/hold.ts).
+ */
+export function draftsOfTrashed(recipeIds: string[], now: number): Statement[] {
+  const statements: Statement[] = [];
+  for (let i = 0; i < recipeIds.length; i += CHUNK) {
+    const ids = recipeIds.slice(i, i + CHUNK);
+    const marks = ids.map((_, k) => `?${k + 1}`).join(", ");
+    const which = `recipe_draft.recipe_id in (${marks}) and recipe_draft.recipe_id in
+      (select id from recipe where id in (${marks}) and deleted_at is not null)`;
+    statements.push(holdDraftPhotos(which, ids, now));
+    statements.push({ sql: `delete from recipe_draft where ${which}`, params: ids });
+  }
+  return statements;
 }

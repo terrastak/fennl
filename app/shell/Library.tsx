@@ -25,9 +25,10 @@ import {
   showingEverything,
 } from "../recipes/library";
 import { useLibrary } from "../recipes/libraryContext";
+import { usePath } from "../navigation";
 import { Link } from "../router";
 import { canEdit } from "../sync/status";
-import { activeSyncClient, saveChanges, useSyncStatus } from "../sync/useSync";
+import { activeSyncClient, saveChanges, useDrafts, useSyncStatus } from "../sync/useSync";
 import styles from "./Library.module.css";
 import { keepOpen, moveOpen, rememberedOpen } from "./openCategories";
 import { QuickSearches } from "./QuickSearches";
@@ -170,6 +171,8 @@ export function LibrarySearch({
 export function Library() {
   const library = useLibrary();
   const { query, filters, counts, tree, onList } = library;
+  const drafts = useDrafts()?.length ?? 0;
+  const onDrafts = usePath() === "/drafts";
   const [open, setOpen] = useState(rememberedOpen);
   const panel = useRef<HTMLElement>(null);
   const editable = canEdit(useSyncStatus());
@@ -390,6 +393,25 @@ export function Library() {
             <Count n={counts?.total} />
           </Link>
         </li>
+        {/* The person's drafts (U27 part 3), only while there is one. */}
+        {drafts > 0 ? (
+          <li>
+            <Link
+              href="/drafts"
+              className={styles.tile}
+              aria-current={onDrafts ? "page" : undefined}
+            >
+              <span className={styles.icon}>
+                <PencilIcon />
+              </span>
+              <span className={styles.name}>Drafts</span>
+              <span className={styles.count} aria-hidden="true">
+                {drafts}
+              </span>
+              <span className="visually-hidden">, {drafts}</span>
+            </Link>
+          </li>
+        ) : null}
       </ul>
 
       <QuickSearches shownSearch={shownSearch?.id ?? null} />
@@ -506,6 +528,14 @@ function BookIcon() {
     <SvgIcon>
       <path d="M5 4h11a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z" />
       <path d="M5 18a2 2 0 0 1 2-2h11" />
+    </SvgIcon>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <SvgIcon>
+      <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />
     </SvgIcon>
   );
 }

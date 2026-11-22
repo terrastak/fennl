@@ -2,6 +2,7 @@ import { env } from "cloudflare:test";
 import { strFromU8, unzipSync } from "fflate";
 import { and, eq, inArray } from "drizzle-orm";
 import { beforeAll, describe, expect, it } from "vitest";
+import { emptyDraftData, type DraftData } from "../../shared/drafts";
 import { EXPORT_VERSION, readExportFile } from "../../shared/exportFormat";
 import { RECIPE_SCHEMA_VERSION, emptyRecipeContent } from "../../shared/recipe";
 import {
@@ -199,6 +200,21 @@ async function age(p: Person, hash: string, days: number) {
     .where(and(eq(recipePhoto.ownerUserId, p.userId), eq(recipePhoto.imageHash, hash)));
 }
 
+/** A draft (U27 part 3) of a new recipe with this photo in its gallery. */
+async function putDraft(p: Person, recipeId: string, imageHash: string, title = "Draft soup") {
+  const now = Date.now();
+  const draft: DraftData = {
+    ...emptyDraftData(),
+    fields: { ...emptyRecipeContent(), title },
+    photos: [{ id: id(), imageHash, width: 800, height: 600, takenAt: null }],
+  };
+  const res = await p.v.request(`/api/drafts/${recipeId}`, {
+    method: "PUT",
+    body: { draft, startedAt: now, editedAt: now, sentAt: now },
+  });
+  expect(res.status).toBe(200);
+}
+
 describe("photos nothing shows", () => {
   it("are removed a week after they stop being used, and their stored copies deleted", async () => {
     const june = await premiumPerson();
@@ -263,6 +279,54 @@ describe("photos nothing shows", () => {
     expect((await june.v.request("/api/trash/empty", { body: {} })).status).toBe(200);
     await age(june, hash, UNUSED_DAYS + 1);
     await markUnusedImages(db());
+    expect((await row(june, hash))?.deletedAt).not.toBeNull();
+  });
+
+  it("keeps a photo a draft shows, however long it waits, then the usual week (U27)", async () => {
+    const june = await premiumPerson();
+    const recipeId = id();
+    const hash = await uploadWithThumb(june);
+    await putDraft(june, recipeId, hash);
+    await age(june, hash, 60);
+    await markUnusedImages(db());
+    expect((await row(june, hash))?.deletedAt).toBeNull();
+
+    // Discarded: nothing shows it any more, so the usual week starts now.
+    expect((await june.v.request(`/api/drafts/${recipeId}`, { method: "DELETE" })).status).toBe(
+      200,
+    );
+    const day = 24 * 60 * 60 * 1000;
+    await markUnusedImages(db());
+    expect((await row(june, hash))?.deletedAt).toBeNull();
+    await markUnusedImages(db(), Date.now() + 6 * day);
+    expect((await row(june, hash))?.deletedAt).toBeNull();
+    await markUnusedImages(db(), Date.now() + 8 * day);
+    expect((await row(june, hash))?.deletedAt).not.toBeNull();
+  });
+
+  it("holds a draft's photos for the usual week when its recipe goes to Trash (U27)", async () => {
+    const june = await premiumPerson();
+    const recipeId = id();
+    const [result] = await push(june, [
+      {
+        kind: "recipe",
+        id: recipeId,
+        create: { createdAt: new Date().toISOString(), import: null },
+        fields: { ...emptyRecipeContent(), title: "Soup" },
+        changedAt: Date.now(),
+      },
+    ]);
+    expect(result).toEqual({ status: "applied" });
+    const hash = await uploadWithThumb(june);
+    await putDraft(june, recipeId, hash);
+    await age(june, hash, 60);
+    await push(june, [
+      { kind: "recipe", id: recipeId, fields: {}, deleted: true, changedAt: Date.now() },
+    ]);
+    const day = 24 * 60 * 60 * 1000;
+    await markUnusedImages(db(), Date.now() + 6 * day);
+    expect((await row(june, hash))?.deletedAt).toBeNull();
+    await markUnusedImages(db(), Date.now() + 8 * day);
     expect((await row(june, hash))?.deletedAt).not.toBeNull();
   });
 
@@ -545,6 +609,28 @@ describe("photos in the export", () => {
     )![1];
     expect(strFromU8(page)).toContain(`<img src="../photos/${cover}.jpg" alt="Shakshuka"`);
     expect(strFromU8(page)).toContain(`alt="Shakshuka, photo 2"`);
+
+    // The person's own drafts come too (U27 part 3), with their photos.
+    const draftPhoto = (await upload(june, jpeg(90))).body.hash;
+    const newOne = id();
+    await putDraft(june, newOne, draftPhoto, "Half-written");
+    const withDrafts = unzipSync(
+      new Uint8Array(await (await june.v.request("/api/export")).arrayBuffer()),
+    );
+    const again = readExportFile(JSON.parse(strFromU8(withDrafts["fennl-recipes.json"]!)))!;
+    expect(again.recipes.map((r) => r.id).sort()).toEqual([first, second].sort());
+    expect(again.drafts).toEqual([
+      expect.objectContaining({
+        recipeId: newOne,
+        newRecipe: true,
+        fields: expect.objectContaining({ title: "Half-written" }) as unknown,
+        photos: [{ hash: draftPhoto, file: `photos/${draftPhoto}.jpg`, width: 800, height: 600 }],
+        categories: null,
+      }),
+    ]);
+    expect(withDrafts[`photos/${draftPhoto}.jpg`]).toBeDefined();
+    // Not a recipe, so no page.
+    expect(Object.keys(withDrafts).some((f) => f.startsWith("recipes/half-written"))).toBe(false);
 
     const small = await june.v.request("/api/export?photos=0");
     const without = unzipSync(new Uint8Array(await small.arrayBuffer()));

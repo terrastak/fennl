@@ -2,6 +2,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 import {
   addRecipe,
+  DRAFT_SAVED,
   editorStatus,
   premium,
   recipeCard,
@@ -64,7 +65,7 @@ test("Premium: add photos, choose the cover, and see them everywhere", async ({
   await expect(photos(page).getByRole("listitem")).toHaveCount(1);
   await section.getByRole("button", { name: "Undo" }).click();
   await expect(photos(page).getByRole("listitem")).toHaveCount(2);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await expectAccessible(page);
 
   // The recipe page: the cover, and the full-screen viewer.
@@ -133,12 +134,19 @@ test("Premium: Fennl arranges the photos, until someone moves one", async ({
   const [first] = await order();
   await input.setInputFiles("test_images/Image_phos.png");
   await expect(photos(page).getByRole("listitem")).toHaveCount(2, { timeout: 60_000 });
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
+  // Fennl puts them in order once Done has put them on the recipe (U27 part 3).
+  const arranging = page.waitForResponse((r) => r.url().includes("/api/photos/arrange"));
+  await page.getByRole("button", { name: "Done" }).first().click();
+  await expect(page.getByRole("heading", { level: 1, name: "Pho" })).toBeVisible();
+  await arranging;
+  await page.getByRole("link", { name: "Edit recipe" }).click();
   // The new photo is the finished dish, so it becomes the cover. The editor says so on a phone;
   // on a laptop it doesn't (U27, fewer words).
   const laptop = testInfo.project.name !== "phone";
   const arranged = section.getByText("Arranged by Fennl.");
-  if (!laptop) await expect(arranged).toBeVisible({ timeout: 30_000 });
   await expect.poll(order, { timeout: 30_000 }).toEqual([expect.not.stringMatching(first!), first]);
+  if (!laptop) await expect(arranged).toBeVisible();
   await expectAccessible(page);
 
   // Moved by hand: the order is the person's from then on.
@@ -149,7 +157,11 @@ test("Premium: Fennl arranges the photos, until someone moves one", async ({
   // On a laptop the editor shows the first two (U27).
   await expect(section.getByText("3 of 10")).toBeVisible({ timeout: 60_000 });
   await expect(photos(page).getByRole("listitem")).toHaveCount(laptop ? 2 : 3);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
+  await page.getByRole("button", { name: "Done" }).first().click();
+  await expect(syncStatus(page)).toHaveText("Saved to cloud");
+  await page.getByRole("link", { name: "Edit recipe" }).click();
+  await expect(section.getByText("3 of 10")).toBeVisible();
   expect((await order())[0]).toBe(first);
   await expect(arranged).toHaveCount(0);
 });
@@ -170,8 +182,7 @@ test("Premium, on a laptop: the first two photos, and all of them in the All pho
   await page.getByRole("link", { name: /Ramen/ }).click();
   await page.getByRole("link", { name: "Edit recipe" }).click();
   const section = page.getByRole("region", { name: "Photos" });
-  // Fennl puts them in order once they're in; then they're the person's to move.
-  const arranged = page.waitForResponse((r) => r.url().includes("/api/photos/arrange"));
+  // Kept in the draft in the order added; Fennl arranges them only after Done (U27 part 3).
   await section
     .locator('input[type="file"][multiple]')
     .setInputFiles([
@@ -180,8 +191,7 @@ test("Premium, on a laptop: the first two photos, and all of them in the All pho
       "test_images/Image_shakshuka.png",
     ]);
   await expect(section.getByText("3 of 10")).toBeVisible({ timeout: 60_000 });
-  await arranged;
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await expect(photos(page).getByRole("listitem")).toHaveCount(2);
   await expect(section.getByText("Arranged by Fennl.")).toHaveCount(0);
   await expect(photos(page).getByRole("listitem").nth(1).getByText("+1")).toBeVisible();
@@ -229,7 +239,7 @@ test("Premium, on a laptop: the first two photos, and all of them in the All pho
   // The arrow buttons work here too, and the editor follows.
   await sheet.getByRole("button", { name: "Move photo 2 later" }).click();
   await expect.poll(order).toEqual([c, a, b]);
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
 
   // Escape goes back to the editor, the focus on the button that opened it.
   await page.keyboard.press("Escape");
@@ -246,7 +256,7 @@ test("Premium, on a laptop: the first two photos, and all of them in the All pho
   // Moved by hand: a new photo doesn't change the order.
   await section.locator('input[type="file"][multiple]').setInputFiles("test_images/Image_phos.png");
   await expect(section.getByText("4 of 10")).toBeVisible({ timeout: 60_000 });
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await show.or(section.getByRole("button", { name: "Show all 4 photos / reorder" })).click();
   await expect.poll(order).toEqual([c, a, b, expect.any(String)]);
   await sheet.getByRole("button", { name: "Close" }).click();

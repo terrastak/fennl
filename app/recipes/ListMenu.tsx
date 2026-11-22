@@ -9,7 +9,8 @@ import listStyles from "./list.module.css";
 // tap anywhere else. U21 (owner's choices 2026-11-06): headed "These N recipes", it holds what
 // acts on the recipes shown (Select recipes, Print these with how many, Surprise me), then Find
 // duplicates. Categories went (the left panel's Edit opens them), and Trash moved to the left
-// panel; a phone, with no left panel, keeps Trash here.
+// panel; a phone, with no left panel, keeps Trash here, and Drafts with its count while there is
+// one (U27 part 3).
 
 export function ListMenu({
   selecting,
@@ -19,6 +20,8 @@ export function ListMenu({
   canSurprise,
   shown,
   trash,
+  drafts = 0,
+  printable = shown,
 }: {
   selecting: boolean;
   onSelect: () => void;
@@ -29,6 +32,10 @@ export function ListMenu({
   shown: number | null;
   /** Whether Trash is here too (a phone's; a computer has it in the left panel). */
   trash: boolean;
+  /** How many drafts the person has: shown with Trash (a phone's) while there is one. */
+  drafts?: number;
+  /** How many of them can be printed (not new recipes still drafts); `shown` when absent. */
+  printable?: number | null;
 }) {
   const [open, setOpen] = useState(false);
   const menuId = useId();
@@ -62,13 +69,13 @@ export function ListMenu({
 
   // A printout holds MAX_PRINT_RECIPES at most (F6), so Print these is off past that, saying so;
   // and off with nothing shown, or while the list is still searching.
-  const canPrint = shown !== null && shown > 0 && shown <= MAX_PRINT_RECIPES;
+  const canPrint = printable !== null && printable > 0 && printable <= MAX_PRINT_RECIPES;
   const printSide =
-    shown === null
+    printable === null
       ? "Searching…"
-      : shown > MAX_PRINT_RECIPES
+      : printable > MAX_PRINT_RECIPES
         ? `${MAX_PRINT_RECIPES} at most`
-        : String(shown);
+        : String(printable);
 
   return (
     // Marked while open, so typing on the list doesn't start a search behind it.
@@ -133,6 +140,15 @@ export function ListMenu({
                 Find duplicates
               </Link>
             </li>
+            {trash && drafts > 0 ? (
+              <li>
+                <Link href="/drafts" className={listStyles.menuItem}>
+                  {DRAFTS_ICON}
+                  Drafts
+                  <span className={listStyles.menuSide}>{drafts}</span>
+                </Link>
+              </li>
+            ) : null}
             {trash ? (
               <li>
                 <Link href="/trash" className={listStyles.menuItem}>
@@ -198,5 +214,11 @@ const DUPLICATES_ICON = (
 const TRASH_ICON = (
   <MenuIcon>
     <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+  </MenuIcon>
+);
+
+const DRAFTS_ICON = (
+  <MenuIcon>
+    <path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" />
   </MenuIcon>
 );

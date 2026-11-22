@@ -1,3 +1,4 @@
+import type { DraftPutResponse, DraftsResponse } from "../../shared/drafts";
 import type { DuplicateMatch, DuplicatePair, DuplicateQuery } from "../../shared/duplicates";
 import type { Entitlements } from "../../shared/entitlements";
 import { addBlockedBy, type Usage } from "../../shared/limits";
@@ -16,7 +17,11 @@ import { PhotoCache, photoAccount } from "../photos/cache";
 import { LocalDb, LocalDbError } from "./dbClient";
 import type { SearchResults } from "./search";
 import type {
+  DraftItem,
+  DraftToSend,
   ImportedRecipe,
+  LocalDraft,
+  LocalDraftWrite,
   OutboxEntry,
   PrintSet,
   RecipeDetail,
@@ -68,6 +73,38 @@ async function request(path: string, init?: RequestInit): Promise<unknown> {
   if (body?.error === "upgrade_required") throw new SyncProblem("upgrade");
   throw new SyncProblem("waiting");
 }
+
+/** A draft request's answer (U27 part 3): the body, or the refusal's status and error. */
+type DraftAnswer =
+  { ok: true; body: unknown } | { ok: false; status: number; error: string | undefined };
+
+async function draftRequest(path: string, init?: RequestInit): Promise<DraftAnswer> {
+  let res: Response;
+  try {
+    res = await fetch(path, init);
+  } catch {
+    throw new SyncProblem("offline");
+  }
+  if (res.status === 401) throw new SyncProblem("signed_out");
+  if (res.ok) return { ok: true, body: await res.json() };
+  const body = (await res.json().catch(() => null)) as { error?: string } | null;
+  return { ok: false, status: res.status, error: body?.error };
+}
+
+/** A draft's removal, only up to the version this device has (DELETE /api/drafts/:id). */
+function removalQuery(draft: DraftToSend): string {
+  if ("editedAt" in draft.upTo) return `?editedAt=${draft.upTo.editedAt}`;
+  return `?deviceEditedAt=${draft.upTo.deviceEditedAt}&sentAt=${Date.now()}`;
+}
+
+/** Refusals that sending the same draft again won't change: it's kept here, not sent again. */
+const DRAFT_KEPT_HERE = new Set([
+  "invalid_request",
+  "invalid_draft",
+  "too_large",
+  "too_many",
+  "limit",
+]);
 
 /**
  * Whether the plan allows offline editing, as last heard from the server, so an app opened with
@@ -148,6 +185,8 @@ export class SyncEngine {
   private releases = 0;
   private cleanup: (() => void)[] = [];
   private photoCache: PhotoCache;
+  /** Where fetching the person's drafts got to (GET /api/drafts?since=); 0 fetches them all. */
+  private draftsCursor = 0;
 
   /**
    * acting: an admin is acting as this person (phase C12). Their copy is kept apart from the
@@ -304,8 +343,21 @@ export class SyncEngine {
   /** Saves several changes at once (filing many recipes): all of them, or none. */
   async saveMany(changes: SyncChange[]): Promise<void> {
     if (changes.length === 0) return;
-    // Each change is later than the one before, even within a millisecond, so the server keeps
-    // the last of two quick changes to the same field.
+    const checkedChanges = this.checked(changes);
+    const { seqs } = await this.db.call({
+      op: "enqueue",
+      changes: checkedChanges,
+      now: new Date().toISOString(),
+    });
+    this.queued(checkedChanges, seqs);
+  }
+
+  /**
+   * Changes checked and stamped: each later than the one before, even within a millisecond, so
+   * the server keeps the last of two quick changes to the same field. Throws when editing is
+   * paused.
+   */
+  private checked(changes: SyncChange[]): SyncChange[] {
     const checkedChanges = changes.map((change) => {
       const changedAt = Math.max(change.changedAt, this.lastChangedAt + 1);
       this.lastChangedAt = changedAt;
@@ -314,16 +366,74 @@ export class SyncEngine {
       return checked.value;
     });
     if (!canEdit(this.status)) throw new Error("Editing is paused.");
-    const { seqs } = await this.db.call({
-      op: "enqueue",
-      changes: checkedChanges,
-      now: new Date().toISOString(),
-    });
-    checkedChanges.forEach((change, i) => this.outbox.push({ seq: seqs[i] ?? 0, change }));
+    return checkedChanges;
+  }
+
+  private queued(changes: SyncChange[], seqs: number[]) {
+    changes.forEach((change, i) => this.outbox.push({ seq: seqs[i] ?? 0, change }));
     this.setStatus({});
+    this.sendSoon();
+  }
+
+  /** The local copy changed: lists read it again, and it's sent in a moment. */
+  private sendSoon() {
     this.events.changed();
     if (this.sendTimer) clearTimeout(this.sendTimer);
     this.sendTimer = setTimeout(() => void this.sync(), SEND_AFTER_MS);
+  }
+
+  // --- Drafts (U27 part 3) -------------------------------------------------------------------
+  // The editor keeps what's typed as a draft: written here, then sent whole to the account. On
+  // Premium a draft waits here while there's no connection; on Free editing pauses, as for any
+  // change (canEdit). Done turns the draft into ordinary changes (finishDraft).
+
+  /** Keeps a draft here and sends it in a moment; answers the version written. Throws when editing is paused. */
+  async saveDraft(draft: LocalDraftWrite): Promise<number> {
+    if (!canEdit(this.status)) throw new Error("Editing is paused.");
+    const { version } = await this.db.call({ op: "putDraft", draft });
+    this.sendSoon();
+    return version;
+  }
+
+  /**
+   * Throws a draft away (Discard): here at once, from the account when it can be. Only the
+   * version the editor shows (null: whatever is here); false when a newer one is here.
+   */
+  async discardDraft(recipeId: string, version: number | null = null): Promise<boolean> {
+    const { stale } = await this.db.call({ op: "dropDraft", recipeId, version });
+    this.sendSoon();
+    return !stale;
+  }
+
+  /**
+   * Done: the draft's changes queued and the draft removed, in one go, for the version the
+   * editor shows; false (nothing queued) when a newer one is here. The removal reaches the
+   * account only once every one of these changes has been taken (pushDrafts).
+   */
+  async finishDraft(
+    recipeId: string,
+    changes: SyncChange[],
+    version: number | null = null,
+  ): Promise<boolean> {
+    const checkedChanges = this.checked(changes);
+    const { seqs, stale } = await this.db.call({
+      op: "finishDraft",
+      recipeId,
+      changes: checkedChanges,
+      now: new Date().toISOString(),
+      version,
+    });
+    if (stale) return false;
+    this.queued(checkedChanges, seqs);
+    return true;
+  }
+
+  getDraft(recipeId: string): Promise<LocalDraft | null> {
+    return this.db.call({ op: "getDraft", recipeId });
+  }
+
+  listDrafts(): Promise<DraftItem[]> {
+    return this.db.call({ op: "listDrafts" });
   }
 
   /** Empties this browser's copy (an admin's, when they stop acting as someone). */
@@ -442,9 +552,13 @@ export class SyncEngine {
     if (this.status.phase === "signed_out" || this.status.phase === "upgrade") return;
     this.setStatus({ phase: "syncing" });
     try {
+      // Done's changes go before its draft's removal, so the account never has neither.
       await this.push();
+      await this.pushDrafts();
       await this.pull();
+      await this.pullDrafts();
       await this.db.call({ op: "recheck", now: new Date().toISOString() });
+      await this.db.call({ op: "tidyDrafts" });
       this.retryMs = RETRY_MS.first;
       this.setStatus({ phase: "saved", lastSyncedAt: new Date().toISOString() });
       // Every photo's small copy is kept here, so lists show them offline (phase D2).
@@ -500,6 +614,7 @@ export class SyncEngine {
       // Kept, already there, or refused for good: no longer waiting. A failed save stays, and so
       // does a new recipe turned away for a plan limit (with everything for it).
       let failed = false;
+      const refused: number[] = [];
       const done = batch.filter((entry, i) => {
         const result = results[i];
         if (result?.status !== "rejected") return true;
@@ -514,9 +629,12 @@ export class SyncEngine {
           return false;
         }
         console.warn("The server refused a change", result, entry.change);
+        refused.push(entry.seq);
         return true;
       });
       await this.db.call({ op: "ack", seqs: done.map((e) => e.seq) });
+      // Done's changes refused for good: the draft comes back, still in the account (U27 part 3).
+      if (refused.length > 0) await this.db.call({ op: "finishRefused", seqs: refused });
       const sent = new Set(done.map((e) => e.seq));
       this.outbox = this.outbox.filter((e) => !sent.has(e.seq));
       this.setStatus({});
@@ -542,7 +660,110 @@ export class SyncEngine {
     }
   }
 
+  /** Drafts written or removed here, to the account. */
+  private async pushDrafts() {
+    const waiting = await this.db.call({ op: "draftsToSend" });
+    for (const draft of waiting) await this.sendDraft(draft);
+  }
+
+  private async sendDraft(draft: DraftToSend) {
+    const path = `/api/drafts/${encodeURIComponent(draft.recipeId)}`;
+    if (draft.deleting) {
+      // Only the version this device knew: a newer one written on another device stays.
+      const answer = await draftRequest(`${path}${removalQuery(draft)}`, { method: "DELETE" });
+      if (!answer.ok && answer.status !== 404) throw new SyncProblem("waiting");
+      // A newer one stayed: fetch every draft again, so this device has it.
+      if (answer.ok && !(answer.body as { removed?: boolean }).removed) this.draftsCursor = 0;
+      await this.db.call({ op: "draftGone", recipeId: draft.recipeId });
+      return;
+    }
+    const answer = await draftRequest(path, {
+      method: "PUT",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        draft: draft.data,
+        startedAt: draft.startedAt,
+        editedAt: draft.editedAt,
+        sentAt: Date.now(),
+      }),
+    });
+    if (answer.ok) {
+      const { draft: server, kept } = answer.body as DraftPutResponse;
+      await this.db.call({
+        op: "draftSent",
+        recipeId: draft.recipeId,
+        editedAt: draft.editedAt,
+        server,
+        kept,
+      });
+      return;
+    }
+    // Its recipe went to Trash, or out of sight: the draft goes too.
+    if (answer.error === "in_trash" || answer.error === "not_found") {
+      await this.db.call({ op: "draftGone", recipeId: draft.recipeId });
+      return;
+    }
+    if (answer.error && DRAFT_KEPT_HERE.has(answer.error)) {
+      console.warn("The server refused a draft", answer.error, draft.recipeId);
+      await this.db.call({
+        op: "draftRefused",
+        recipeId: draft.recipeId,
+        editedAt: draft.editedAt,
+        problem: answer.error,
+      });
+      return;
+    }
+    throw new SyncProblem("waiting");
+  }
+
+  /** The person's drafts from the account: another device's, or this one's after a reload. */
+  private async pullDrafts() {
+    for (let page = 0; page < 100; page++) {
+      const answer = (await request(`/api/drafts?since=${this.draftsCursor}`)) as DraftsResponse;
+      await this.db.call({
+        op: "applyDrafts",
+        drafts: answer.drafts,
+        ids: answer.more ? null : answer.ids,
+      });
+      this.draftsCursor = answer.cursor;
+      if (!answer.more) return;
+    }
+  }
+
+  /** Drafts not in the account yet go as the page closes too, those small enough (best effort). */
+  private flushDraftsOnClose() {
+    void this.db
+      .call({ op: "draftsToSend" })
+      .then((waiting) => {
+        for (const draft of waiting) {
+          const path = `/api/drafts/${encodeURIComponent(draft.recipeId)}`;
+          if (draft.deleting) {
+            void fetch(`${path}${removalQuery(draft)}`, {
+              method: "DELETE",
+              keepalive: true,
+            }).catch(() => undefined);
+            continue;
+          }
+          const body = JSON.stringify({
+            draft: draft.data,
+            startedAt: draft.startedAt,
+            editedAt: draft.editedAt,
+            sentAt: Date.now(),
+          });
+          if (body.length > KEEPALIVE_BYTES) continue;
+          void fetch(path, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body,
+            keepalive: true,
+          }).catch(() => undefined);
+        }
+      })
+      .catch(() => undefined);
+  }
+
   private flushOnClose() {
+    this.flushDraftsOnClose();
     const waiting = this.sendable();
     if (waiting.length === 0) return;
     const fits: OutboxEntry[] = [];

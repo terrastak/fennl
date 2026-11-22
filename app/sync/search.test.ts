@@ -3,12 +3,16 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { emptyRecipeContent, type Recipe, type RecipeNote } from "../../shared/recipe";
 import { MIGRATIONS } from "./schema";
 import {
+  draftIngredientMatches,
   indexRecipe,
   ingredientMatches,
+  searchDrafts,
   searchRecipes,
   searchTerms,
   similarByIngredients,
   unindexRecords,
+  withDrafts,
+  type DraftForSearch,
 } from "./search";
 
 // Search over the browser's copy (phase C8), on the same SQLite build the browser uses (here
@@ -336,5 +340,59 @@ describe("recipes like one (phase C13c)", () => {
     const { db, mine, soupA } = box();
     put(db, { ...soupA, deletedAt: "2026-10-09T00:00:00Z" });
     expect(similarByIngredients(db, mine.id, ["mushroom"], 10)).not.toContain(soupA.id);
+  });
+});
+
+describe("new recipes' drafts (U27 part 3)", () => {
+  const draft = (
+    id: string,
+    fields: Partial<Recipe>,
+    categories: string[] = [],
+  ): DraftForSearch => ({
+    id,
+    content: { ...emptyRecipeContent(), ...fields },
+    categories,
+  });
+  const stew = draft("stew", {
+    title: "Green Chile Stew",
+    ingredients: lines("2 lb pork shoulder", "6 roasted green chiles"),
+    directions: lines("Brown the pork in batches."),
+  });
+  const untitled = draft("untitled", { notes: "From the jalapeño farm" }, ["Soups"]);
+
+  it("finds a draft by the start of every word, its title first", () => {
+    const found = searchDrafts([stew, untitled], searchTerms("green stew"));
+    expect(found.ids).toEqual(["stew"]);
+    expect(found.titleIds).toEqual(["stew"]);
+    expect(found.hits).toEqual({});
+  });
+
+  it("says where a draft matched when it wasn't the title", () => {
+    const found = searchDrafts([stew, untitled], searchTerms("batch"));
+    expect(found.ids).toEqual(["stew"]);
+    expect(found.titleIds).toEqual([]);
+    expect(found.hits.stew).toEqual({ field: "Directions", text: "Brown the pork in batches." });
+  });
+
+  it("ignores accents and matches category paths", () => {
+    expect(searchDrafts([untitled], searchTerms("jalapeno soups")).ids).toEqual(["untitled"]);
+    expect(searchDrafts([untitled], searchTerms("jalapeno cakes")).ids).toEqual([]);
+  });
+
+  it("adds drafts to search's answer", () => {
+    const merged = withDrafts(
+      { terms: ["pork"], ids: ["a"], titleIds: [], hits: { a: { field: "Notes", text: "pork" } } },
+      [stew],
+    );
+    expect(merged.ids).toEqual(["a", "stew"]);
+    expect(Object.keys(merged.hits)).toEqual(["a", "stew"]);
+  });
+
+  it("matches the ingredient filters' words in a draft's ingredients only", () => {
+    expect(draftIngredientMatches([stew, untitled], ["green chile", "jalapeno", ""])).toEqual({
+      "green chile": ["stew"],
+      jalapeno: [],
+      "": [],
+    });
   });
 });

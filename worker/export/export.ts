@@ -1,9 +1,11 @@
 import { and, asc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { Zip, ZipDeflate, ZipPassThrough } from "fflate";
 import { Hono } from "hono";
+import type { DraftData } from "../../shared/drafts";
 import {
   EXPORT_FORMAT,
   EXPORT_VERSION,
+  type ExportDraft,
   type ExportFile,
   type ExportPerson,
   type ExportPhoto,
@@ -217,6 +219,81 @@ async function batch(db: Database, home: Household, after: string): Promise<Expo
   });
 }
 
+/**
+ * The exporting person's own drafts (U27 part 3), of recipes they can still apply them to (not in
+ * Trash, owner in the household) and new ones, one at a time (a draft can be large); their photos
+ * are added to the .zip like recipes'.
+ */
+async function* drafts(db: Database, home: Household, userId: string): AsyncGenerator<ExportDraft> {
+  const d1 = db.$client;
+  const owners = home.ids.map((_, k) => `?${k + 2}`).join(", ");
+  const rows = (
+    await d1
+      .prepare(
+        `select d.recipe_id, d.started_at, d.edited_at, r.id is null as is_new,
+            coalesce(r.owner_user_id, d.owner_user_id) as owner
+          from recipe_draft d left join recipe r on r.id = d.recipe_id
+          where d.user_id = ?1 and (r.id is null or (r.deleted_at is null
+            and r.expunged_at is null and r.owner_user_id in (${owners})))
+          order by d.edited_at desc`,
+      )
+      .bind(userId, ...home.ids)
+      .all<{
+        recipe_id: string;
+        started_at: number;
+        edited_at: number;
+        is_new: number;
+        owner: string;
+      }>()
+  ).results;
+  for (const row of rows) {
+    const stored = await d1
+      .prepare("select content from recipe_draft where user_id = ?1 and recipe_id = ?2")
+      .bind(userId, row.recipe_id)
+      .first<{ content: string }>();
+    if (!stored) continue;
+    const data = JSON.parse(stored.content) as DraftData;
+    // The photos' file types, to name them in the .zip.
+    const hashes = [...new Set((data.photos ?? []).map((photo) => photo.imageHash))];
+    const types = new Map<string, string>();
+    if (hashes.length > 0) {
+      const found = await db
+        .select({ hash: image.hash, contentType: image.contentType })
+        .from(image)
+        .where(
+          and(
+            eq(image.ownerUserId, row.owner),
+            inArray(image.hash, hashes),
+            isNull(image.deletedAt),
+          ),
+        )
+        .all();
+      for (const f of found) types.set(f.hash, f.contentType);
+    }
+    yield {
+      recipeId: row.recipe_id,
+      newRecipe: Boolean(row.is_new),
+      startedAt: new Date(row.started_at).toISOString(),
+      editedAt: new Date(row.edited_at).toISOString(),
+      fields: data.fields,
+      photos: data.photos
+        ? data.photos.map((photo) => {
+            const type = types.get(photo.imageHash);
+            let file: string | null = null;
+            if (home.withPhotos && type) {
+              file = `photos/${photo.imageHash}.${EXTENSIONS[type] ?? "img"}`;
+              home.photoFiles.set(file, imageKey(row.owner, photo.imageHash));
+            }
+            return { hash: photo.imageHash, file, width: photo.width, height: photo.height };
+          })
+        : null,
+      categories: data.categories
+        ? data.categories.map((names) => names.join(CATEGORY_SEPARATOR))
+        : null,
+    };
+  }
+}
+
 /** Every batch, one after another. */
 async function* allRecipes(db: Database, home: Household): AsyncGenerator<ExportRecipe[]> {
   let after = "";
@@ -277,6 +354,14 @@ export function exportZip(
         json(`${first ? "" : ",\n"}${JSON.stringify(r)}`);
         first = false;
       }
+      await writer.ready;
+    }
+    // Then the person's own drafts (U27 part 3).
+    json('\n],\n"drafts": [\n');
+    first = true;
+    for await (const draft of drafts(db, home, userId)) {
+      json(`${first ? "" : ",\n"}${JSON.stringify(draft)}`);
+      first = false;
       await writer.ready;
     }
     json("\n]}\n", true);

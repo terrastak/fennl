@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, recipeCard, syncStatus, quickScale } from "./recipes";
+import { DRAFT_SAVED, editorStatus, quickScale, recipeCard, syncStatus } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // Phase F5, made simpler in U8 (owner's choices 2026-10-27): cook mode.
@@ -147,7 +147,7 @@ test("Each step's ingredients: the rest worked out, the mixture's step, and doub
     .fill(
       "Whisk the flour and salt.\nBeat the butter with 3/4 cup of the sugar. Add the flour mixture.\nSprinkle with the remaining sugar and the cheese.",
     );
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await expect(
     page.getByRole("heading", { level: 1, name: "Sugared Cheese Shortbread" }),

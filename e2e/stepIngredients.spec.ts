@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
-import { editorStatus, quickScale } from "./recipes";
+import { DRAFT_SAVED, editorStatus, quickScale } from "./recipes";
 import { useOwnAccount } from "./support";
 
 // U16 (owner's choices 2026-11-04): each step's number opens the ingredients it uses, in a plain
@@ -46,7 +46,7 @@ test("Each step's number opens the ingredients it uses", async ({
   await page.getByLabel("Title", { exact: true }).fill("Cocoa Squares");
   await page.getByRole("textbox", { name: "Ingredients" }).fill(INGREDIENTS.join("\n"));
   await page.getByRole("textbox", { name: "Directions" }).fill(METHOD.join("\n"));
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
 
   const method = page.getByRole("region", { name: "Directions" });
@@ -148,7 +148,7 @@ test("A linked recipe shown in place has its own steps' ingredients", async ({
     .fill(
       "Whisk the sour cream and lime juice.\nStir the salt into the sour cream mixture.\nChill.",
     );
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
   await page.getByRole("link", { name: "← All recipes" }).click();
 
@@ -164,7 +164,7 @@ test("A linked recipe shown in place has its own steps' ingredients", async ({
     .getByRole("list", { name: "Recipes to link" })
     .getByRole("button", { name: "Lime Crema" })
     .click();
-  await expect(editorStatus(page)).toHaveText("All changes saved");
+  await expect(editorStatus(page)).toHaveText(DRAFT_SAVED);
   await page.getByRole("button", { name: "Done" }).first().click();
 
   const ingredients = page.getByRole("region", { name: "Ingredients" });

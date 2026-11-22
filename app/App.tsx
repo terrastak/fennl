@@ -26,6 +26,7 @@ import { ReviewPage } from "./import/ReviewPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { RecipesPage } from "./pages/RecipesPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { DraftsPage } from "./recipes/DraftsPage";
 import { DuplicatesPage } from "./recipes/DuplicatesPage";
 import { RecipeEditor } from "./recipes/RecipeEditor";
 import { RecipePage } from "./recipes/RecipePage";
@@ -41,6 +42,7 @@ const ROUTES: Record<string, Route> = {
   "/categories": { title: "Categories", Page: CategoriesPage },
   "/import": { title: "Import", Page: ImportPage },
   "/trash": { title: "Trash", Page: TrashPage },
+  "/drafts": { title: "Drafts", Page: DraftsPage },
   "/duplicates": { title: "Find duplicates", Page: DuplicatesPage },
   "/settings": { title: "Settings", Page: SettingsPage },
   "/account": { title: "Account", Page: AccountPage },
